@@ -1,0 +1,16 @@
+SCR_AIWorld : "{E0A05C76552E7F58}Prefabs/AI/SCR_AIWorld.et" {
+ coords 149.531 1 108.943
+}
+IA_InvadeAnnexZoneEntity {
+ components {
+  RplComponent "{64F611E251903480}" {
+  }
+ }
+ coords 147.686 1 110.232
+ TriggerShapeType Sphere
+ SphereRadius 100
+ DrawShape 1
+ TriggerActivationType "All changes"
+ m_fZoneRadius 100
+ m_sFactionName "USSR"
+}
