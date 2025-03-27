@@ -11,6 +11,7 @@ IA_InvadeAnnexZoneEntity {
  SphereRadius 100
  DrawShape 1
  TriggerActivationType "All changes"
- m_fZoneRadius 100
- m_sFactionName "USSR"
+}
+IA_ReplicationWorkaround {
+ coords 154.202 1 125.368
 }
