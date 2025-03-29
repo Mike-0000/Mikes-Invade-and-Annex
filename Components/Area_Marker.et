@@ -1,0 +1,8 @@
+IA_AreaMarker {
+ ID "64F935A1015AFBEE"
+ components {
+  RplComponent "{64F935A10B000D5C}" {
+  }
+ }
+ coords 9694.263 13.135 1549.607
+}

@@ -1,0 +1,8 @@
+IA_ReplicationWorkaround {
+ ID "64F8048C7E3F6D47"
+ components {
+  RplComponent "{64F8048F9E7699FC}" {
+  }
+ }
+ coords 4826.927 28.5 11735.086
+}

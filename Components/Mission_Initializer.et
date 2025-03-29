@@ -1,0 +1,8 @@
+IA_MissionInitializer {
+ ID "64F8048C72DB0AAE"
+ components {
+  RplComponent "{64F8048F8C8A6136}" {
+  }
+ }
+ coords 4830.262 28.5 11735.97
+}

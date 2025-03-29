@@ -1,0 +1,37 @@
+SCR_TriggerTask {
+ ID "64F81B9BA1646514"
+ components {
+  SCR_MapDescriptorComponent "{64F81B9BA1646511}" {
+   DisplayName "Task"
+   ImagesetQuadElement "Icon_M_Task_Seize"
+   MainType "Radio/ Tower"
+  }
+  RplComponent "{64F81B9BA16464E5}" {
+   Streamable Disabled
+  }
+ }
+ m_sTaskListIconName "Task_Seize"
+ m_sMapUIElementResourceName "{18D016EBAA9CE8CE}UI/layouts/Campaign/TaskCapture.layout"
+ {
+  SCR_BaseFactionTriggerEntity {
+   ID "64F81B9BA1646515"
+   components {
+    SCR_TriggerAreaMeshComponent "{64F81B9BA16464FC}" {
+     m_vResolution 48
+     m_bStretchMaterial 1
+     m_Material "{E65E61D1541003E2}Assets/Editor/VirtualArea/VirtualArea.emat"
+    }
+    Hierarchy "{64F81B9BA16464F6}" {
+    }
+   }
+   Flags 2
+   TriggerShapeType Sphere
+   SphereRadius 500
+   TriggerActivationType "All changes"
+   PeriodicQueries 1
+   ClassesFilter {
+    "ChimeraCharacter"
+   }
+  }
+ }
+}

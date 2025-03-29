@@ -1,0 +1,96 @@
+SCR_MapEntity MapEntity : "{731564B66F91B107}Prefabs/World/Game/MapEntity.et" {
+ coords 7114.537 103.319 6281.017
+ "Map Geometry Data" "{984B832A2B86D79B}worlds/Eden/Eden.topo"
+ {
+  CommentEntity {
+   coords 0 1 0
+   m_Comment "MapEntity: "\
+   "Set up map textures"
+   m_Color 0 0 0
+   m_FaceCamera 1
+   m_TextBackground 1
+   m_BackgroundColor 1 0.6 0
+   m_BackgroundTransparency 0
+  }
+ }
+}
+SCR_AIWorld SCR_AIWorld : "{E0A05C76552E7F58}Prefabs/AI/SCR_AIWorld.et" {
+ components {
+  NavmeshWorldComponent "{5584F30E67F617AD}" {
+   NavmeshSettings NavmeshWorld "{50FC63BEBE3973C5}" {
+    NavmeshFilesConfig BaseNavmeshFilesConfig "{64F8048F236BC21B}" {
+     NavmeshFile "{AD5F99CD7C59D5E0}worlds/GameMaster/Navmeshes/GM_Eden.nmn"
+    }
+   }
+  }
+  NavmeshWorldComponent "{5584F30EEFEE1223}" {
+   NavmeshSettings ChimeraNavmeshWorld "{50FC63BEBE3973C5}" {
+    NavmeshFilesConfig BaseNavmeshFilesConfig "{60CA9BE5536BF701}" {
+     NavmeshFile "{C35ECF3276824654}worlds/GameMaster/Navmeshes/GM_Eden_vehicles.nmn"
+    }
+   }
+  }
+  NavmeshWorldComponent "{5C8C9B750D124A63}" {
+   NavmeshSettings NavmeshWorld "{5C8C9B750B60C6E2}" {
+    NavmeshFilesConfig BaseNavmeshFilesConfig "{5C90BD0EC793647D}" {
+     NavmeshFile "{5E19E60F26327356}worlds/MP/Navmeshes/LowResEden.nmn"
+    }
+   }
+  }
+  SCR_AISettingsComponent "{512CCCD0856CB4B9}" {
+   m_EnableLeaderStop 1
+  }
+ }
+ coords 6759.934 91.698 5584.187
+ {
+  CommentEntity {
+   coords 0 1 0
+   m_Comment "SCR_AIWorld: "\
+   "Configure navigation mesh"
+   m_Color 0 0 0
+   m_FaceCamera 1
+   m_TextBackground 1
+   m_BackgroundColor 1 0.6 0
+   m_BackgroundTransparency 0
+  }
+ }
+}
+PerceptionManager PerceptionManager : "{028DAEAD63E056BE}Prefabs/World/Game/PerceptionManager.et" {
+ coords 7114.537 103.567 6279.017
+}
+SCR_GameModeEditor GameMode_Editor_Full : "{DA3986AF1B5032B7}Prefabs/MP/Modes/Editor/GameMode_Editor_Full.et" {
+ coords 7114.537 103.771 6278.017
+}
+IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
+ coords 4829.486 28.5 11737.061
+}
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ {
+  components {
+   RplComponent "{64F935A10B000D5C}" {
+    "Rpl State Override" Runtime
+   }
+  }
+  coords 9371.941 46.661 1807.185
+  m_areaName "CaptureZoneb"
+ }
+ {
+  coords 9701.003 12.531 1548.52
+  m_areaName "CaptureZonea"
+  m_radius 150
+ }
+ {
+  components {
+   RplComponent "{64F935A10B000D5C}" {
+    "Rpl State Override" Runtime
+   }
+  }
+  coords 9645.044 48.296 1836.715
+  m_areaName "CaptureZoneb1"
+  m_areaType "Property"
+  m_radius 100
+ }
+}
+IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
+ coords 4828.903 28.5 11735.593
+}
