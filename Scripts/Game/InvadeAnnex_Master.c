@@ -601,11 +601,14 @@ class IA_Area
         m_radius = rad;
     }
 
-    static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
-    {
-        Print("[DEBUG] IA_Area.Create called for area: " + nm, LogLevel.NORMAL);
-        return new IA_Area(nm, t, org, rad);
-    }
+static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
+{
+    Print("[DEBUG] IA_Area.Create called for area: " + nm, LogLevel.NORMAL);
+    IA_Area area = new IA_Area(nm, t, org, rad);
+    IA_Game.s_allAreas.Insert(area); // <-- Keeps strong ref
+    return area;
+}
+
 
     string GetName()
     {
@@ -824,6 +827,10 @@ class IA_AreaInstance
 	
 static IA_AreaInstance Create(IA_Area area, IA_Faction faction, int startStrength = 0)
 {
+	if(!area){
+		Print("[DEBUG] area is NULL! ", LogLevel.NORMAL);
+		return null;
+	}
     IA_AreaInstance inst = new IA_AreaInstance();  // uses implicit no-arg constructor
 
     inst.m_area = area;
@@ -842,8 +849,8 @@ static IA_AreaInstance Create(IA_Area area, IA_Faction faction, int startStrengt
 
     return inst;
 }
-
 /*
+
     // Constructor
     void IA_AreaInstance(IA_Area area, IA_Faction faction, int startStrength = 0)
     {
@@ -1051,9 +1058,16 @@ static IA_AreaInstance Create(IA_Area area, IA_Faction faction, int startStrengt
 
     private void MilitaryOrderTask()
     {
-		    if (!m_area)
+	if (!this)
     {
-        Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR);
+        Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: this is null!", LogLevel.ERROR); // Never seems to happen
+        return;
+    }
+		
+		
+		if (!m_area)
+    {
+        Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR); // Always seems to happen
         return;
     } else {
 			Print("NOT NULL!", LogLevel.NORMAL);
@@ -1174,10 +1188,11 @@ static IA_AreaInstance Create(IA_Area area, IA_Faction faction, int startStrengt
 };
 
 ///////////////////////////////////////////////////////////////////////
-// 9) IA_Game SINGLETON - simplified (automatic objectives only)
+// 9) IA_Game SINGLETON
 ///////////////////////////////////////////////////////////////////////
 class IA_Game
 {
+	static ref array<ref IA_Area> s_allAreas = {};
     static private ref IA_Game m_instance = null;
     static bool HasInstance()
     {
@@ -1187,8 +1202,8 @@ class IA_Game
     static ref RandomGenerator rng = new RandomGenerator();
 
     private bool m_periodicTaskActive = false;
-    private ref array<ref IA_AreaInstance> m_areas = {};
-
+    private ref array<IA_AreaInstance> m_areas = {};
+	static private bool beenInstantiated = false;
     static private ref array<IEntity> m_entityGc = {};
 
     private bool m_hasInit = false;
@@ -1202,24 +1217,33 @@ class IA_Game
         m_hasInit = true;
         ActivatePeriodicTask();
     }
-
-static IA_Game Instantiate()
-{
-    if (m_instance)
-        return m_instance;
-
-    m_instance = new IA_Game();
-    m_instance.Init();
-    return m_instance;
-}
-
-
+	
+	static IA_Game Instantiate()
+	{
+		if(!Replication.IsServer()){
+			return m_instance;
+		}
+		Print("[DEBUG] IA_Game.Instantiate called.", LogLevel.NORMAL);
+		
+	    if (beenInstantiated){
+			Print("[DEBUG] IA_Game.Instantiate Already Instantiated. = "+beenInstantiated, LogLevel.NORMAL);
+	        return m_instance;
+		}
+		Print("[DEBUG] IA_Game.Instantiate Going.", LogLevel.NORMAL);
+		
+	    m_instance = new IA_Game();
+	    m_instance.Init();
+		beenInstantiated = true;
+	    return m_instance;
+	}
+	
+/*
     void ~IA_Game()
     {
         m_areas.Clear();
         m_entityGc.Clear();
     }
-
+*/
     static void AddEntityToGc(IEntity e)
     {
         m_entityGc.Insert(e);
@@ -1233,35 +1257,64 @@ static IA_Game Instantiate()
         m_entityGc.Remove(0);
     }
 
-    private void ActivatePeriodicTask()
-    {
-        if (m_periodicTaskActive)
-            return;
-        m_periodicTaskActive = true;
-        GetGame().GetCallqueue().CallLater(PeriodicalGameTask, 200, true);
-        GetGame().GetCallqueue().CallLater(EntityGcTask, 250, true);
-    }
+private void ActivatePeriodicTask()
+{
+    if (m_periodicTaskActive)
+        return;
+    m_periodicTaskActive = true;
+    // Use a static wrapper so the instance’s PeriodicalGameTask is called correctly.
+    GetGame().GetCallqueue().CallLater(PeriodicalGameTaskWrapper, 200, true);
+    GetGame().GetCallqueue().CallLater(EntityGcTask, 250, true);
+}
 
-    void PeriodicalGameTask()
+	// Static wrapper that retrieves the singleton instance and calls its PeriodicalGameTask.
+	static void PeriodicalGameTaskWrapper()
+	{
+	    IA_Game gameInstance = IA_Game.Instantiate();
+	    if (gameInstance)
+	    {
+	        gameInstance.PeriodicalGameTask();
+	    }
+	}
+
+
+void PeriodicalGameTask()
+{
+    Print("IA_Game.PeriodicalGameTask: Periodical Game Task has started", LogLevel.NORMAL);
+    if (m_areas.IsEmpty())
     {
-		Print("DEBUG 1",LogLevel.NORMAL);
-        if (m_areas.IsEmpty())
-            return;
-        foreach (IA_AreaInstance areaInst : m_areas)
-        {
-            areaInst.RunNextTask();
-        }
+        // Log that no areas exist yet so you can see that the task is running.
+        Print("IA_Game.PeriodicalGameTask: m_areas is empty. Waiting for initialization.", LogLevel.NORMAL);
+        return;
     }
+    foreach (IA_AreaInstance areaInst : m_areas)
+    {
+			if(!areaInst.m_area){
+				Print("areaInst.m_area is Null!!!",LogLevel.WARNING);
+				return;
+			}else{
+				Print("areaInst.m_area "+ areaInst.m_area.GetName() +"is NOT Null",LogLevel.NORMAL);
+			areaInst.RunNextTask();
+			}
+        
+    }
+}
+
 
     IA_AreaInstance AddArea(IA_Area area, IA_Faction fac, int strength = 0)
     {
 		IA_AreaInstance inst = IA_AreaInstance.Create(area, fac, strength);
-		
+		if(!inst.m_area){
+			Print("IA_AreaInstance inst.m_area is NULL!", LogLevel.ERROR);
+		}
+		Print("Adding Area " + area.GetName(), LogLevel.WARNING);
         m_areas.Insert(inst);
-
+		Print("m_areas.Count() = " + m_areas.Count(), LogLevel.WARNING);
         IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
-        if (rep)
-            rep.AddArea(inst);
+        if (rep){
+            Print("Adding Area in Replication " + area.GetName(), LogLevel.WARNING);
+			rep.AddArea(inst);
+		}
         return inst;
     }
 
@@ -1329,9 +1382,11 @@ class IA_ReplicationWorkaround : GenericEntity
     [RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
     private void RpcDo_SetFaction(string areaName, int facInt)
     {
+		if(!Replication.IsRunning())
+			return;
         if (!IA_Game.HasInstance())
             return;
-        IA_Game g = IA_Game.Instantiate();
+          IA_Game g = IA_Game.Instantiate();
         IA_AreaInstance inst = g.FindAreaInstance(areaName);
         if (!inst)
             return;
@@ -1342,6 +1397,8 @@ class IA_ReplicationWorkaround : GenericEntity
     [RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
     private void RpcDo_SetStrength(string areaName, int s)
     {
+		if(!Replication.IsRunning())
+			return;
         if (!IA_Game.HasInstance())
             return;
         IA_Game g = IA_Game.Instantiate();
@@ -1623,17 +1680,15 @@ class IA_MissionInitializer : GenericEntity
 	}
 
 	
+	void InitDelayed(IEntity owner){
 	
-	
-    override void EOnInit(IEntity owner)
-    {
-        super.EOnInit(owner);
-        Print("[DEBUG] IA_MissionInitializer EOnInit called.", LogLevel.NORMAL);
+		Print("[DEBUG] IA_MissionInitializer EOnInit called.", LogLevel.NORMAL);
 
         // Only execute on the server
         if (!Replication.IsServer())
         {
             Print("[IA_MissionInitializer] Client/Proxy detected => skipping area initialization.", LogLevel.NORMAL);
+			
             return;
         }
 
@@ -1656,6 +1711,7 @@ class IA_MissionInitializer : GenericEntity
             Print("[IA_MissionInitializer] WARNING: No IA_ReplicationWorkaround entity found!", LogLevel.ERROR);
             Print("[IA_MissionInitializer] Please place a GenericEntity with the IA_ReplicationWorkaround script in the world!", LogLevel.NORMAL);
         }
+       	Print("[IA_MissionInitializer] DEBUG 5!", LogLevel.ERROR);
 
         // 2) Initialize the IA_Game Singleton.
         IA_Game game = IA_Game.Instantiate();
@@ -1676,6 +1732,14 @@ class IA_MissionInitializer : GenericEntity
       
 
         Print("[IA_MissionInitializer] Dynamic areas/tasks set up. Initialization complete.", LogLevel.NORMAL);
+	
+	}
+	
+    override void EOnInit(IEntity owner)
+    {
+        super.EOnInit(owner);
+		GetGame().GetCallqueue().CallLater(InitDelayed, 5000, false, owner);
+        
     }
 }
 
