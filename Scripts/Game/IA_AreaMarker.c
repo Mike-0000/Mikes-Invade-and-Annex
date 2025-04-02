@@ -118,149 +118,159 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     }
 	
 	
+	protected bool FilterPlayerAndAI(IEntity entity) 
+	{
+	
+		if (!entity || !ChimeraCharacter.Cast(entity)) // only humans
+			return false;
+		if(ChimeraCharacter.Cast(entity))
+			return true;
+		return false;
+	}
+	
 	// EOnFrame: actively scan the area around the zone
    override void EOnFrame(IEntity owner, float timeSlice)
-{
-	super.EOnFrame(owner);
-    if (!owner)
-    {
-        //Print("[ERROR] owner is NULL", LogLevel.ERROR);
-        return;
-    }
-
-    if (IsProxy())
-    {
-        //Print("[DEBUG] Entity is proxy, skipping frame update", LogLevel.NORMAL);
-        return;
-    }
-
-    // Accumulate the elapsed time every frame
-    m_fTimeAccumulator += timeSlice;
-
-    // Throttle every 200 frames
-    if (m_iFrameCount < 200)
-    {
-        m_iFrameCount++;
-        return;
-    }
-    m_iFrameCount = 0;
-
-    // Use the accumulated time since the last sphere query
-    float elapsedTime = m_fTimeAccumulator;
-    m_fTimeAccumulator = 0.0; // reset accumulator
-
-    // Verify world and radius
-    World world = owner.GetWorld();
-    if (!world)
-    {
-        Print("[ERROR] World object is NULL", LogLevel.ERROR);
-        return;
-    }
-
-    //Print("[DEBUG] Starting EOnFrame sphere query", LogLevel.NORMAL);
-
-    array<IEntity> entitiesFound = {};
-    MIKE_QueryCallback cb = new MIKE_QueryCallback(entitiesFound);
-
-    vector center = GetZoneCenter();
-
-   // Print("[DEBUG] Zone center=" + center + " Radius=" + m_fZoneRadius, LogLevel.NORMAL);
-
-    world.QueryEntitiesBySphere(center, m_fZoneRadius*6.66, cb.OnEntityFound, null, EQueryEntitiesFlags.DYNAMIC | EQueryEntitiesFlags.WITH_OBJECT);
-
-    if (!entitiesFound)
-    {
-        Print("[WARNING] No entities found in sphere query", LogLevel.WARNING);
-        return;
-    }
-
-    IA_DictStringInt localCounts = new IA_DictStringInt();
-
-    foreach (IEntity ent : entitiesFound)
-    {
-        if (!ent)
-        {
-            //Print("[WARNING] NULL entity encountered in entitiesFound", LogLevel.WARNING);
-            continue;
-        }
-
-        SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(ent);
-        if (!character)
-        {
-            //Print("[DEBUG] Entity is not a SCR_ChimeraCharacter, skipping", LogLevel.NORMAL);
-            continue;
-        }
-
-        string factionKey = GetFactionOfCharacter(character);
-        if (factionKey == "" || factionKey == "CIV")
-        {
-            Print("[DEBUG] Character has empty or Civilian factionKey, skipping", LogLevel.NORMAL);
-            continue;
-        }
-
-        int oldCount = localCounts.Get(factionKey);
-        localCounts.Set(factionKey, oldCount + 1);
-    }
-
-    //Print("[DEBUG] Local counts updated, total factions=" + localCounts.GetCount(), LogLevel.NORMAL);
-
-    m_FactionCounts.Clear();
-    int localTotal = localCounts.GetCount();
-
-    for (int i = 0; i < localTotal; i++)
-    {
-        string fKey;
-        int fVal;
-        localCounts.GetPair(i, fKey, fVal);
-        m_FactionCounts.Set(fKey, fVal);
-
-        //Print("[DEBUG] Faction=" + fKey + " Count=" + fVal, LogLevel.NORMAL);
-    }
-
-    string leadFactionKey = "";
-    int leadCount = 0;
-    int secondCount = 0;
-
-    for (int j = 0; j < localCounts.GetCount(); j++)
-    {
-        string testKey;
-        int testVal;
-        localCounts.GetPair(j, testKey, testVal);
-
-        if (testVal > leadCount)
-        {
-            secondCount = leadCount;
-            leadCount = testVal;
-            leadFactionKey = testKey;
-        }
-        else if (testVal > secondCount)
-        {
-            secondCount = testVal;
-        }
-    }
-
-    Print("[DEBUG] Leading faction=" + leadFactionKey + " LeadCount=" + leadCount + " SecondCount=" + secondCount, LogLevel.NORMAL);
-
-    if (leadFactionKey == "" || leadCount == secondCount)
-    {
-        Print("[DEBUG] No clear leading faction or tie encountered", LogLevel.NORMAL);
-        return;
-    }
-
-    int gap = leadCount - secondCount;
+	{
+		super.EOnFrame(owner);
+	    if (!owner)
+	    {
+	        //Print("[ERROR] owner is NULL", LogLevel.ERROR);
+	        return;
+	    }
 	
-    float oldScore = 0.0;
-    if (m_FactionScores.Contains(leadFactionKey))
-        oldScore = m_FactionScores.Get(leadFactionKey);
+	    if (IsProxy())
+	    {
+	        //Print("[DEBUG] Entity is proxy, skipping frame update", LogLevel.NORMAL);
+	        return;
+	    }
 	
-    // Use the full elapsed time rather than just the last frame's timeSlice.
-    float newScore = oldScore + ((gap * elapsedTime)*score_limiter_ratio);
-    m_FactionScores.Set(leadFactionKey, newScore);
-
-    Print("[INFO] Score updated for faction=" + leadFactionKey + " OldScore=" + oldScore + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
-}
+	    // Accumulate the elapsed time every frame
+	    m_fTimeAccumulator += timeSlice;
 	
+	    // Throttle every 200 frames
+	    if (m_iFrameCount < 200)
+	    {
+	        m_iFrameCount++;
+	        return;
+	    }
+	    m_iFrameCount = 0;
 	
+	    // Use the accumulated time since the last sphere query
+	    float elapsedTime = m_fTimeAccumulator;
+	    m_fTimeAccumulator = 0.0; // reset accumulator
+	
+	    // Verify world and radius
+	    World world = owner.GetWorld();
+	    if (!world)
+	    {
+	        Print("[ERROR] World object is NULL", LogLevel.ERROR);
+	        return;
+	    }
+	
+	    //Print("[DEBUG] Starting EOnFrame sphere query", LogLevel.NORMAL);
+	
+	    array<IEntity> entitiesFound = {};
+	    MIKE_QueryCallback cb = new MIKE_QueryCallback(entitiesFound);
+	
+	    vector center = GetZoneCenter();
+	
+	   // Print("[DEBUG] Zone center=" + center + " Radius=" + m_fZoneRadius, LogLevel.NORMAL);
+	
+	    world.QueryEntitiesBySphere(center, m_fZoneRadius*6.66, cb.OnEntityFound, FilterPlayerAndAI);
+	
+	    if (!entitiesFound)
+	    {
+	        Print("[WARNING] No entities found in sphere query", LogLevel.WARNING);
+	        return;
+	    }
+	
+	    IA_DictStringInt localCounts = new IA_DictStringInt();
+	
+	    foreach (IEntity ent : entitiesFound)
+	    {
+	        if (!ent)
+	        {
+	            //Print("[WARNING] NULL entity encountered in entitiesFound", LogLevel.WARNING);
+	            continue;
+	        }
+	
+	        SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(ent);
+	        if (!character)
+	        {
+	            //Print("[DEBUG] Entity is not a SCR_ChimeraCharacter, skipping", LogLevel.NORMAL);
+	            continue;
+	        }
+	
+	        string factionKey = GetFactionOfCharacter(character);
+	        if (factionKey == "" || factionKey == "CIV")
+	        {
+	            Print("[DEBUG] Character has empty or Civilian factionKey, skipping", LogLevel.NORMAL);
+	            continue;
+	        }
+	
+	        int oldCount = localCounts.Get(factionKey);
+	        localCounts.Set(factionKey, oldCount + 1);
+	    }
+	
+	    Print("[DEBUG] Local counts updated, total factions=" + localCounts.GetCount(), LogLevel.NORMAL);
+	
+	    m_FactionCounts.Clear();
+	    int localTotal = localCounts.GetCount();
+	
+	    for (int i = 0; i < localTotal; i++)
+	    {
+	        string fKey;
+	        int fVal;
+	        localCounts.GetPair(i, fKey, fVal);
+	        m_FactionCounts.Set(fKey, fVal);
+	
+	        Print("[DEBUG] Faction=" + fKey + " Count=" + fVal, LogLevel.NORMAL);
+	    }
+	
+	    string leadFactionKey = "";
+	    int leadCount = 0;
+	    int secondCount = 0;
+	
+	    for (int j = 0; j < localCounts.GetCount(); j++)
+	    {
+	        string testKey;
+	        int testVal;
+	        localCounts.GetPair(j, testKey, testVal);
+	
+	        if (testVal > leadCount)
+	        {
+	            secondCount = leadCount;
+	            leadCount = testVal;
+	            leadFactionKey = testKey;
+	        }
+	        else if (testVal > secondCount)
+	        {
+	            secondCount = testVal;
+	        }
+	    }
+	
+	    Print("[DEBUG] Leading faction=" + leadFactionKey + " LeadCount=" + leadCount + " SecondCount=" + secondCount, LogLevel.NORMAL);
+	
+	    if (leadFactionKey == "" || leadCount == secondCount)
+	    {
+	        Print("[DEBUG] No clear leading faction or tie encountered", LogLevel.NORMAL);
+	        return;
+	    }
+	
+	    int gap = leadCount - secondCount;
+		
+	    float oldScore = 0.0;
+	    if (m_FactionScores.Contains(leadFactionKey))
+	        oldScore = m_FactionScores.Get(leadFactionKey);
+		
+	    // Use the full elapsed time rather than just the last frame's timeSlice.
+	    float newScore = oldScore + ((gap * elapsedTime)*score_limiter_ratio);
+	    m_FactionScores.Set(leadFactionKey, newScore);
+	
+	    Print("[INFO] Score updated for faction=" + leadFactionKey + " OldScore=" + oldScore + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
+	}
+		
+		
 	override void EOnInit(IEntity owner)
 	{
 		super.EOnInit(owner);

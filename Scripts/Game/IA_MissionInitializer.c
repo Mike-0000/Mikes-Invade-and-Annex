@@ -11,6 +11,8 @@ class IA_MissionInitializerClass : GenericEntityClass
 
 class IA_MissionInitializer : GenericEntity
 {
+
+	
     // Simple flag to ensure we only run once.
     protected bool m_bInitialized = false;
 	ref array<IA_AreaMarker> m_shuffledMarkers = {};
