@@ -118,15 +118,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     }
 	
 	
-	protected bool FilterPlayerAndAI(IEntity entity) 
-	{
-	
-		if (!entity || !ChimeraCharacter.Cast(entity)) // only humans
-			return false;
-		if(ChimeraCharacter.Cast(entity))
-			return true;
-		return false;
-	}
+
 	
 	// EOnFrame: actively scan the area around the zone
    override void EOnFrame(IEntity owner, float timeSlice)
@@ -253,7 +245,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	
 	    if (leadFactionKey == "" || leadCount == secondCount)
 	    {
-	        //Print("[DEBUG] No clear leading faction or tie encountered", LogLevel.NORMAL);
+	        Print("[DEBUG] No clear leading faction or tie encountered", LogLevel.NORMAL);
 	        return;
 	    }
 	
@@ -294,10 +286,12 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	 // Called when an entity enters the trigger
     override protected void OnActivate(IEntity ent)
     {
-        if (IsProxy()) return;
+        if (IsProxy()) 
+			return;
 
         SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(ent);
-        if (!character) return;
+        if (!character || character.GetDamageManager().GetHealth() < 0.05) 
+			return;
 
         string factionKey = GetFactionOfCharacter(character);
         int    charHash   = GetCharacterHash(character);
@@ -408,8 +402,43 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             }
         }
         return markers;
-    }
+	}
+		protected bool FilterPlayerAndAI(IEntity entity) 
+	{	
+		if (!entity) // only humans
+			return false;
+		
+		if(!SCR_ChimeraCharacter.Cast(entity))
+			return false;
+		
+		SCR_ChimeraCharacter char = SCR_ChimeraCharacter.Cast(entity);
+		Print("Character found with "+char.GetDamageManager().GetHealth()+" damage!",LogLevel.NORMAL);
+		if(char.GetDamageManager().GetHealth() < 0.01 || char.GetDamageManager().IsDestroyed())
+			return false;
+		Print("Character is Alive!",LogLevel.NORMAL);
+		return true;
+	}
 };
+
+class MIKE_QueryCallback
+{
+    protected array<IEntity> m_CollectedEntities;
+
+    // Constructor: pass in the array to fill
+    void MIKE_QueryCallback(array<IEntity> collectedEntities)
+    {
+        m_CollectedEntities = collectedEntities;
+    }
+
+    // This is the callback method for each entity found in the query
+    bool OnEntityFound(IEntity entity)
+    {
+        m_CollectedEntities.Insert(entity);
+        return true;  // return true to continue searching
+    }
+}
+
+
 
 class ZoneChecker
 {

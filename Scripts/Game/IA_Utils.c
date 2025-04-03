@@ -535,22 +535,4 @@ class IA_DictStringFloat
 }
 
 
-class MIKE_QueryCallback
-{
-    protected array<IEntity> m_CollectedEntities;
 
-    // Constructor: pass in the array to fill
-    void MIKE_QueryCallback(array<IEntity> collectedEntities)
-    {
-        m_CollectedEntities = collectedEntities;
-    }
-
-    // This is the callback method for each entity found in the query
-    bool OnEntityFound(IEntity entity)
-    {
-		if (!entity || !ChimeraCharacter.Cast(entity)) // only humans
-			return false;
-        m_CollectedEntities.Insert(entity);
-        return true;  // return true to continue searching
-    }
-}
