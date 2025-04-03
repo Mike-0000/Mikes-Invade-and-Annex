@@ -163,7 +163,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    World world = owner.GetWorld();
 	    if (!world)
 	    {
-	        Print("[ERROR] World object is NULL", LogLevel.ERROR);
+	        //Print("[ERROR] World object is NULL", LogLevel.ERROR);
 	        return;
 	    }
 	
@@ -180,7 +180,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	
 	    if (!entitiesFound)
 	    {
-	        Print("[WARNING] No entities found in sphere query", LogLevel.WARNING);
+	        //Print("[WARNING] No entities found in sphere query", LogLevel.WARNING);
 	        return;
 	    }
 	
@@ -204,7 +204,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        string factionKey = GetFactionOfCharacter(character);
 	        if (factionKey == "" || factionKey == "CIV")
 	        {
-	            Print("[DEBUG] Character has empty or Civilian factionKey, skipping", LogLevel.NORMAL);
+	            //Print("[DEBUG] Character has empty or Civilian factionKey, skipping", LogLevel.NORMAL);
 	            continue;
 	        }
 	
@@ -212,7 +212,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        localCounts.Set(factionKey, oldCount + 1);
 	    }
 	
-	    Print("[DEBUG] Local counts updated, total factions=" + localCounts.GetCount(), LogLevel.NORMAL);
+	    //Print("[DEBUG] Local counts updated, total factions=" + localCounts.GetCount(), LogLevel.NORMAL);
 	
 	    m_FactionCounts.Clear();
 	    int localTotal = localCounts.GetCount();
@@ -224,7 +224,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        localCounts.GetPair(i, fKey, fVal);
 	        m_FactionCounts.Set(fKey, fVal);
 	
-	        Print("[DEBUG] Faction=" + fKey + " Count=" + fVal, LogLevel.NORMAL);
+	        //Print("[DEBUG] Faction=" + fKey + " Count=" + fVal, LogLevel.NORMAL);
 	    }
 	
 	    string leadFactionKey = "";
@@ -249,11 +249,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        }
 	    }
 	
-	    Print("[DEBUG] Leading faction=" + leadFactionKey + " LeadCount=" + leadCount + " SecondCount=" + secondCount, LogLevel.NORMAL);
+	    //Print("[DEBUG] Leading faction=" + leadFactionKey + " LeadCount=" + leadCount + " SecondCount=" + secondCount, LogLevel.NORMAL);
 	
 	    if (leadFactionKey == "" || leadCount == secondCount)
 	    {
-	        Print("[DEBUG] No clear leading faction or tie encountered", LogLevel.NORMAL);
+	        //Print("[DEBUG] No clear leading faction or tie encountered", LogLevel.NORMAL);
 	        return;
 	    }
 	
@@ -282,11 +282,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		if (!s_areaMarkers.Contains(this) && this != null)
 		{
 			s_areaMarkers.Insert(this);
-			Print("[DEBUG] IA_AreaMarker added to static list: " + m_areaName + " at " + m_origin, LogLevel.NORMAL);
+			//Print("[DEBUG] IA_AreaMarker added to static list: " + m_areaName + " at " + m_origin, LogLevel.NORMAL);
 		}
 		else
 		{
-			Print("[WARNING] IA_AreaMarker duplicate or null skipped: " + m_areaName, LogLevel.WARNING);
+			//Print("[WARNING] IA_AreaMarker duplicate or null skipped: " + m_areaName, LogLevel.WARNING);
 		}
 	}
 
@@ -316,8 +316,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             m_FactionCounts.Set(factionKey, 1);
         }
 
-        Print("Character ENTER zone. Faction=" + factionKey 
-            + " newCount=" + m_FactionCounts.Get(factionKey));
+        //Print("Character ENTER zone. Faction=" + factionKey 
+         //   + " newCount=" + m_FactionCounts.Get(factionKey));
     }
 
     //----------------------------------------------------------------------------------------------
@@ -344,8 +344,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             else
                 m_FactionCounts.Set(factionKey, newCount);
 
-            Print("Character LEFT zone. Faction=" + factionKey 
-                + " newCount=" + GetFactionCount(factionKey));
+            //Print("Character LEFT zone. Faction=" + factionKey 
+           //     + " newCount=" + GetFactionCount(factionKey));
         }
     }
 
@@ -390,7 +390,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         array<IA_AreaMarker> markers = {};
         if (!s_areaMarkers)
         {
-            Print("[IA_AreaMarker.GetAreaMarkersForArea] s_areaMarkers is NULL - areaName = " + areaName, LogLevel.ERROR);
+//            Print("[IA_AreaMarker.GetAreaMarkersForArea] s_areaMarkers is NULL - areaName = " + areaName, LogLevel.ERROR);
             return markers;
         }
         for (int i = 0; i < s_areaMarkers.Count(); ++i)

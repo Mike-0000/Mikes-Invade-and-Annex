@@ -84,30 +84,31 @@ class IA_MissionInitializer : GenericEntity
 	
 	
 	void CheckCurrentZoneComplete()
-{
-    if (!m_currentAreaInstance)
-        return;
-
-    if (!m_currentAreaInstance.GetCurrentTaskEntity())
-        return;
-		
-	IA_AreaMarker marker = m_shuffledMarkers[m_currentIndex];
-
-	if(marker.m_FactionScores.Get("US") >= 5){
-			m_currentAreaInstance.GetCurrentTaskEntity().Finish();
-			
-			
-		}
-
-    if (m_currentAreaInstance.GetCurrentTaskEntity().GetTaskState() == SCR_TaskState.FINISHED && !m_currentAreaInstance.HasPendingTasks())
-    {
-        //Print("[INFO] Zone complete. Proceeding to next.", LogLevel.NORMAL);
-        m_currentIndex++;
-        m_currentAreaInstance = null;
-        GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Clean up the loop
-        ProceedToNextZone();
-    }
-}
+	{
+		Print("Running CheckCurrentZoneComplete", LogLevel.NORMAL);
+	    if (!m_currentAreaInstance)
+	        return;
+	
+	    if (!m_currentAreaInstance.GetCurrentTaskEntity())
+	        return;
+		Print("CheckCurrentZoneComplete DEBUG 1", LogLevel.NORMAL);
+		IA_AreaMarker marker = m_shuffledMarkers[m_currentIndex];
+	
+		if(marker.m_FactionScores.Get("US") >= 5){
+				m_currentAreaInstance.GetCurrentTaskEntity().Finish();
+				Print("CheckCurrentZoneComplete DEBUG 2", LogLevel.NORMAL);
+				
+			}
+	
+	    if (m_currentAreaInstance.GetCurrentTaskEntity().GetTaskState() == SCR_TaskState.FINISHED && !m_currentAreaInstance.HasPendingTasks())
+	    {
+	        Print("[INFO] Zone complete. Proceeding to next.", LogLevel.NORMAL);
+	        m_currentIndex++;
+	        m_currentAreaInstance = null;
+	        GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Clean up the loop
+	        ProceedToNextZone();
+	    }
+	}
 
 	void InitDelayed(IEntity owner){
 	

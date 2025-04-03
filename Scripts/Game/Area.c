@@ -28,7 +28,7 @@ class IA_Area
 
     private void IA_Area(string nm, IA_AreaType t, vector org, float rad)
     {
-        Print("[DEBUG] IA_Area constructor called with name: " + nm + ", type: " + t + ", origin: " + org + ", radius: " + rad, LogLevel.NORMAL);
+        //Print("[DEBUG] IA_Area constructor called with name: " + nm + ", type: " + t + ", origin: " + org + ", radius: " + rad, LogLevel.NORMAL);
         m_name   = nm;
         m_type   = t;
         m_origin = org;
@@ -37,7 +37,7 @@ class IA_Area
 
 static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
 {
-    Print("[DEBUG] IA_Area.Create called for area: " + nm, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_Area.Create called for area: " + nm, LogLevel.NORMAL);
     IA_Area area = new IA_Area(nm, t, org, rad);
     IA_Game.s_allAreas.Insert(area); // <-- Keeps strong ref
     return area;

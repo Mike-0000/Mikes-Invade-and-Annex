@@ -11,33 +11,33 @@ enum IA_AiOrder
 
 ResourceName IA_AiOrderResource(IA_AiOrder order)
 {
-    Print("[DEBUG] IA_AiOrderResource called with order: " + order, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_AiOrderResource called with order: " + order, LogLevel.NORMAL);
     if (order == IA_AiOrder.Defend)
     {
-        Print("[DEBUG] Returning resource for Defend", LogLevel.NORMAL);
+        //Print("[DEBUG] Returning resource for Defend", LogLevel.NORMAL);
         return "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
     }
     else if (order == IA_AiOrder.Patrol)
     {
-        Print("[DEBUG] Returning resource for Patrol", LogLevel.NORMAL);
+        //Print("[DEBUG] Returning resource for Patrol", LogLevel.NORMAL);
         return "{C0A9A9B589802A5B}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Patrol.et";
     }
     else if (order == IA_AiOrder.SearchAndDestroy)
     {
-        Print("[DEBUG] Returning resource for SearchAndDestroy", LogLevel.NORMAL);
+        //Print("[DEBUG] Returning resource for SearchAndDestroy", LogLevel.NORMAL);
         return "{EE9A99488B40628B}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_SearchAndDestroy.et";
     }
     else if (order == IA_AiOrder.GetInVehicle)
     {
-        Print("[DEBUG] Returning resource for GetInVehicle", LogLevel.NORMAL);
+        //Print("[DEBUG] Returning resource for GetInVehicle", LogLevel.NORMAL);
         return "{0A2A37B4A56D74DF}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_GetInNearest.et";
     }
     else if (order == IA_AiOrder.GetOutOfVehicle)
     {
-        Print("[DEBUG] Returning resource for GetOutOfVehicle", LogLevel.NORMAL);
+        //Print("[DEBUG] Returning resource for GetOutOfVehicle", LogLevel.NORMAL);
         return "{2602CAB8AB74FBBF}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_GetOut.et";
     }
-    Print("[DEBUG] Returning default resource for Move", LogLevel.NORMAL);
+    //Print("[DEBUG] Returning default resource for Move", LogLevel.NORMAL);
     return "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";
 }
 
@@ -76,7 +76,7 @@ enum IA_ReinforcementState
 ///////////////////////////////////////////////////////////////////////
 string IA_SquadResourceName_US(IA_SquadType st)
 {
-    Print("[DEBUG] IA_SquadResourceName_US called with squad type: " + st, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_SquadResourceName_US called with squad type: " + st, LogLevel.NORMAL);
     if (st == IA_SquadType.Riflemen)
         return "{DDF3799FA1387848}Prefabs/Groups/BLUFOR/Group_US_RifleSquad.et";
     else if (st == IA_SquadType.Firesquad)
@@ -90,7 +90,7 @@ string IA_SquadResourceName_US(IA_SquadType st)
 
 string IA_SquadResourceName_USSR(IA_SquadType st)
 {
-    Print("[DEBUG] IA_SquadResourceName_USSR called with squad type: " + st, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_SquadResourceName_USSR called with squad type: " + st, LogLevel.NORMAL);
     if (st == IA_SquadType.Riflemen)
         return "{E552DABF3636C2AD}Prefabs/Groups/OPFOR/Group_USSR_RifleSquad.et";
     else if (st == IA_SquadType.Firesquad)
@@ -129,13 +129,13 @@ static ref array<string> s_IA_CivList = {
 string IA_RandomCivilianResourceName()
 {
     int idx = IA_Game.rng.RandInt(0, s_IA_CivList.Count());
-    Print("[DEBUG] IA_RandomCivilianResourceName chosen index: " + idx, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_RandomCivilianResourceName chosen index: " + idx, LogLevel.NORMAL);
     return s_IA_CivList[idx];
 }
 
 string IA_SquadResourceName(IA_SquadType st, IA_Faction fac)
 {
-    Print("[DEBUG] IA_SquadResourceName called with squad type: " + st + ", faction: " + fac, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_SquadResourceName called with squad type: " + st + ", faction: " + fac, LogLevel.NORMAL);
     if (fac == IA_Faction.US)
         return IA_SquadResourceName_US(st);
     else if (fac == IA_Faction.USSR)
@@ -145,7 +145,7 @@ string IA_SquadResourceName(IA_SquadType st, IA_Faction fac)
 
 int IA_SquadCount(IA_SquadType st, IA_Faction fac)
 {
-    Print("[DEBUG] IA_SquadCount called with squad type: " + st + ", faction: " + fac, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_SquadCount called with squad type: " + st + ", faction: " + fac, LogLevel.NORMAL);
     if (fac == IA_Faction.US)
     {
         if (st == IA_SquadType.Riflemen)
@@ -176,7 +176,7 @@ int IA_SquadCount(IA_SquadType st, IA_Faction fac)
 IA_SquadType IA_GetRandomSquadType()
 {
     int r = IA_Game.rng.RandInt(0, 4);
-    Print("[DEBUG] IA_GetRandomSquadType generated random number: " + r, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_GetRandomSquadType generated random number: " + r, LogLevel.NORMAL);
     if (r == 0)
         return IA_SquadType.Riflemen;
     else if (r == 1)
@@ -190,7 +190,7 @@ IA_SquadType IA_GetRandomSquadType()
 
 int IA_FactionToInt(IA_Faction f)
 {
-    Print("[DEBUG] IA_FactionToInt called with faction: " + f, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_FactionToInt called with faction: " + f, LogLevel.NORMAL);
     if (f == IA_Faction.US)
         return 1;
     else if (f == IA_Faction.USSR)
@@ -202,7 +202,7 @@ int IA_FactionToInt(IA_Faction f)
 
 IA_Faction IA_FactionFromInt(int i)
 {
-    Print("[DEBUG] IA_FactionFromInt called with int: " + i, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_FactionFromInt called with int: " + i, LogLevel.NORMAL);
     if (i == 1)
         return IA_Faction.US;
     else if (i == 2)
@@ -217,7 +217,7 @@ IA_Faction IA_FactionFromInt(int i)
 ///////////////////////////////////////////////////////////////////////
 EntitySpawnParams IA_CreateSimpleSpawnParams(vector origin)
 {
-    Print("[DEBUG] IA_CreateSimpleSpawnParams called with origin: " + origin, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_CreateSimpleSpawnParams called with origin: " + origin, LogLevel.NORMAL);
     EntitySpawnParams p = new EntitySpawnParams();
     p.TransformMode = ETransformMode.WORLD;
     p.Transform[3]  = origin;
@@ -226,7 +226,7 @@ EntitySpawnParams IA_CreateSimpleSpawnParams(vector origin)
 
 EntitySpawnParams IA_CreateSurfaceAdjustedSpawnParams(vector origin)
 {
-    Print("[DEBUG] IA_CreateSurfaceAdjustedSpawnParams called with origin: " + origin, LogLevel.NORMAL);
+    //Print("[DEBUG] IA_CreateSurfaceAdjustedSpawnParams called with origin: " + origin, LogLevel.NORMAL);
     float y = GetGame().GetWorld().GetSurfaceY(origin[0], origin[2]);
     origin[1] = y;
     EntitySpawnParams p = new EntitySpawnParams();
