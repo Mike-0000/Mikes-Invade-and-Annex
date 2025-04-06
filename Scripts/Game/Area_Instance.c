@@ -6,7 +6,6 @@ class IA_AreaInstance
     IA_Area m_area;
     IA_Faction m_faction;
     int m_strength;
-
     private ref array<ref IA_AiGroup> m_military  = {};
     private ref array<ref IA_AiGroup> m_civilians = {};
     private ref array<IA_Faction>     m_attackingFactions = {};
@@ -291,7 +290,7 @@ class IA_AreaInstance
 	                g.RemoveAllOrders();
 	            if (!g.HasActiveWaypoint())
 	            {
-	                vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius(), m_area.GetOrigin());
+	                vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius()*0.6, m_area.GetOrigin());
 	                g.AddOrder(pos, order);
 	            }
 	        }

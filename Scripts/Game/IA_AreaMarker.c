@@ -9,7 +9,7 @@ class IA_AreaMarkerClass : ScriptedGameTriggerEntityClass
 class IA_AreaMarker : ScriptedGameTriggerEntity
 {
 	
-	
+	int USFactionScore;
 	// -- Instead of 'ref map<string,int>', we store: faction->count
     protected ref IA_DictStringInt   m_FactionCounts;
 
@@ -25,6 +25,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	protected float m_fTimeAccumulator = 0.0;
 	
     // -- Sphere radius
+	[Attribute(defvalue: "10.0", UIWidgets.Auto, "Area Group Key", category: "Number")]
+    int m_areaGroup;
     [Attribute(defvalue: "10.0", UIWidgets.EditBox, "Radius of sphere query", category: "Zone", params: "0.1 99999")]
     protected float m_fZoneRadius;
 
@@ -168,11 +170,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	
 	   // Print("[DEBUG] Zone center=" + center + " Radius=" + m_fZoneRadius, LogLevel.NORMAL);
 	
-	    world.QueryEntitiesBySphere(center, m_fZoneRadius*6.66, cb.OnEntityFound, FilterPlayerAndAI);
+	    world.QueryEntitiesBySphere(center, m_fZoneRadius*6.66, cb.OnEntityFound, FilterPlayerAndAI, EQueryEntitiesFlags.DYNAMIC);
 	
 	    if (!entitiesFound)
 	    {
-	        //Print("[WARNING] No entities found in sphere query", LogLevel.WARNING);
+	        Print("[WARNING] No entities found in sphere query", LogLevel.WARNING);
 	        return;
 	    }
 	
@@ -182,7 +184,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    {
 	        if (!ent)
 	        {
-	            //Print("[WARNING] NULL entity encountered in entitiesFound", LogLevel.WARNING);
+	            Print("[WARNING] NULL entity encountered in entitiesFound", LogLevel.WARNING);
 	            continue;
 	        }
 	
@@ -243,7 +245,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	
 	    //Print("[DEBUG] Leading faction=" + leadFactionKey + " LeadCount=" + leadCount + " SecondCount=" + secondCount, LogLevel.NORMAL);
 	
-	    if (leadFactionKey == "" || leadCount == secondCount)
+	    if (leadFactionKey == "" || leadCount == secondCount || leadFactionKey != "US")
 	    {
 	        Print("[DEBUG] No clear leading faction or tie encountered", LogLevel.NORMAL);
 	        return;
@@ -258,6 +260,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    // Use the full elapsed time rather than just the last frame's timeSlice.
 	    float newScore = oldScore + ((gap * elapsedTime)*score_limiter_ratio);
 	    m_FactionScores.Set(leadFactionKey, newScore);
+		USFactionScore = newScore;
 	
 	    Print("[INFO] Score updated for faction=" + leadFactionKey + " OldScore=" + oldScore + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
 	}
@@ -278,7 +281,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		}
 		else
 		{
-			//Print("[WARNING] IA_AreaMarker duplicate or null skipped: " + m_areaName, LogLevel.WARNING);
+			Print("[WARNING] IA_AreaMarker duplicate or null skipped: " + m_areaName, LogLevel.WARNING);
 		}
 	}
 
@@ -384,7 +387,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         array<IA_AreaMarker> markers = {};
         if (!s_areaMarkers)
         {
-//            Print("[IA_AreaMarker.GetAreaMarkersForArea] s_areaMarkers is NULL - areaName = " + areaName, LogLevel.ERROR);
+            Print("[IA_AreaMarker.GetAreaMarkersForArea] s_areaMarkers is NULL - areaName = " + areaName, LogLevel.ERROR);
             return markers;
         }
         for (int i = 0; i < s_areaMarkers.Count(); ++i)
@@ -412,10 +415,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 			return false;
 		
 		SCR_ChimeraCharacter char = SCR_ChimeraCharacter.Cast(entity);
-		Print("Character found with "+char.GetDamageManager().GetHealth()+" damage!",LogLevel.NORMAL);
+		//Print("Character found with "+char.GetDamageManager().GetHealth()+" damage!",LogLevel.NORMAL);
 		if(char.GetDamageManager().GetHealth() < 0.01 || char.GetDamageManager().IsDestroyed())
 			return false;
-		Print("Character is Alive!",LogLevel.NORMAL);
+		//Print("Character is Alive!",LogLevel.NORMAL);
 		return true;
 	}
 };
@@ -467,7 +470,7 @@ class ZoneChecker
 
 			if (IsPlayerInZone(playerEntity))
 			{
-				Print("Player " + playerId + " is inside the zone.");
+				//Print("Player " + playerId + " is inside the zone.");
 				numberOfPlayersInZone++;
 			}
 		}

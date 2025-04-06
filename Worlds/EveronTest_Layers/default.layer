@@ -69,10 +69,15 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
    }
   }
   coords 9371.941 46.661 1807.185
+  m_areaGroup 0
+  m_fZoneRadius 500
   m_areaName "CaptureZoneb"
+  m_areaType "Town"
  }
  {
   coords 9701.003 12.531 1548.52
+  m_areaGroup 0
+  m_fZoneRadius 150
   m_areaName "CaptureZonea"
   m_radius 150
  }
@@ -83,9 +88,24 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
    }
   }
   coords 9645.044 48.296 1836.715
+  m_areaGroup 1
+  m_fZoneRadius 100
   m_areaName "CaptureZoneb1"
   m_areaType "Property"
   m_radius 100
+ }
+ {
+  components {
+   RplComponent "{64F935A10B000D5C}" {
+    "Rpl State Override" Runtime
+   }
+  }
+  coords 9069.709 80.199 2313.369
+  m_areaGroup 1
+  m_fZoneRadius 47.6
+  m_areaName "CaptureZoneb11"
+  m_areaType "Property"
+  m_radius 47.6
  }
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
