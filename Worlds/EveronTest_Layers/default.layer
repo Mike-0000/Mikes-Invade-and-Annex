@@ -63,11 +63,6 @@ SCR_TriggerTask : "{33DA4D098C409421}Prefabs/Tasks/CTF_TriggerTask_Capture.et" {
 }
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  {
-  components {
-   RplComponent "{64F935A10B000D5C}" {
-    "Rpl State Override" Runtime
-   }
-  }
   coords 9371.941 46.661 1807.185
   m_areaGroup 0
   m_fZoneRadius 500
@@ -82,11 +77,6 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_radius 150
  }
  {
-  components {
-   RplComponent "{64F935A10B000D5C}" {
-    "Rpl State Override" Runtime
-   }
-  }
   coords 9645.044 48.296 1836.715
   m_areaGroup 1
   m_fZoneRadius 100
@@ -95,11 +85,6 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_radius 100
  }
  {
-  components {
-   RplComponent "{64F935A10B000D5C}" {
-    "Rpl State Override" Runtime
-   }
-  }
   coords 9069.709 80.199 2313.369
   m_areaGroup 1
   m_fZoneRadius 47.6

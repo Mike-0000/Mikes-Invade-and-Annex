@@ -108,49 +108,96 @@ class IA_MissionInitializer : GenericEntity
     ProceedToNextZone();
 }
 
-
-	
-	
 	void CheckCurrentZoneComplete()
 	{
-		//Print("Running CheckCurrentZoneComplete", LogLevel.NORMAL);
-	    if (!m_currentAreaInstances)
+		Print("Running CheckCurrentZoneComplete",LogLevel.NORMAL);
+		if (!m_currentAreaInstances)
 	        return;
-	
-//	    if (!m_currentAreaInstance.GetCurrentTaskEntity())
-//	        return;
-		//Print("CheckCurrentZoneComplete DEBUG 1", LogLevel.NORMAL);
-//		IA_AreaMarker marker = m_shuffledMarkers[m_currentIndex];
-		
+		Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
 		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
-		bool switcher = true;
-		int index1 = 0;
-		foreach(IA_AreaMarker marker : markers){
-			
-			if(!marker || marker.m_areaGroup != groupsArray[m_currentIndex]){
+		array<bool> zoneCompletionStatus = {}; // Track completion for each zone in current group
+		
+		// First, find all markers for current group and their initial completion status
+		foreach(IA_AreaMarker marker : markers) {
+			if(!marker || marker.m_areaGroup != groupsArray[m_currentIndex])
 				continue;
-			}
-			int factionScore = marker.USFactionScore;
-			Print("The current score from CheckZoneComplete is "+factionScore, LogLevel.NORMAL);
-			if(factionScore < 5){
-				switcher = false;
-				index1++;
-				continue;
-			}
-			if(m_currentAreaInstances[index1])
-				m_currentAreaInstances[index1].GetCurrentTaskEntity().Finish();
-			index1++;
+				
+			// Add this zone to our tracking array
+			zoneCompletionStatus.Insert(false);
 		}
-		if(switcher == true){
-				
-				Print("[INFO] Zone complete. Proceeding to next.", LogLevel.NORMAL);
-	       	 	m_currentIndex++;
-	       		m_currentAreaInstances.Clear();
-	        	GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Clean up the loop
-	       		ProceedToNextZone();
-				
+		Print("Running CheckCurrentZoneComplete 2",LogLevel.NORMAL);
+		// If no markers found for this group, something is wrong
+		if(zoneCompletionStatus.Count() == 0) {
+			Print("[ERROR] No markers found for group " + groupsArray[m_currentIndex], LogLevel.ERROR);
+			return;
+		}
+		Print("Running CheckCurrentZoneComplete 3",LogLevel.NORMAL);
+		// Now check each marker in the current group
+		int currentZoneIndex = 0;
+		int amountOfZones = 0;
+		int currentScore = 0;
+		foreach(IA_AreaMarker marker : markers) {
+			if(!marker || marker.m_areaGroup != groupsArray[m_currentIndex])
+				continue;
+			amountOfZones++
+		}
+		foreach(IA_AreaMarker marker : markers) {
+			if(!marker || marker.m_areaGroup != groupsArray[m_currentIndex])
+				continue;
+				Print("Running CheckCurrentZoneComplete 3.5",LogLevel.NORMAL);
+			// Find corresponding area instance
+			if(currentZoneIndex >= m_currentAreaInstances.Count()) {
+				Print("[ERROR] More markers than area instances for group " + groupsArray[m_currentIndex], LogLevel.ERROR);
+				return;
 			}
-	
+			Print("Running CheckCurrentZoneComplete 3.75",LogLevel.NORMAL);
+			// Skip if no task entity
+			if(!m_currentAreaInstances[currentZoneIndex].GetCurrentTaskEntity()){
+				currentScore++;
+				continue;
+			}
+				
+			int factionScore = marker.USFactionScore;
+			Print("Zone " + currentZoneIndex + " score is " + factionScore, LogLevel.NORMAL);
+			Print("Running CheckCurrentZoneComplete 3.8",LogLevel.NORMAL);
+			// Mark this zone as complete if score threshold met
+			if(factionScore >= 5) {
+				zoneCompletionStatus[currentZoneIndex] = true;
+				m_currentAreaInstances[currentZoneIndex].GetCurrentTaskEntity().Finish();
+				currentScore++;
+			}
+			
+			currentZoneIndex++;
+		}
+		
+		
+		
+		
+		
+
+		
+
+/*
+		Print("Running CheckCurrentZoneComplete 4",LogLevel.NORMAL);
+		// Check if ALL zones in the group are complete
+		bool allComplete = true;
+		for(int i = 0; i < zoneCompletionStatus.Count(); i++) {
+			Print("Running CheckCurrentZoneComplete 4.5",LogLevel.NORMAL);
+			if(!zoneCompletionStatus[i]) {
+				allComplete = false;
+				break;
+			}
+		}
+		Print("Running CheckCurrentZoneComplete 5 " + allComplete, LogLevel.NORMAL);
+		// If all zones complete, move to next group
+		*/
+		if(currentScore >= amountOfZones){
+			Print("[INFO] All zones in group " + groupsArray[m_currentIndex] + " complete. Proceeding to next.", LogLevel.NORMAL);
+			m_currentIndex++;
+			m_currentAreaInstances.Clear();
+			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+			ProceedToNextZone();
+		}
 	}
 
 	void InitDelayed(IEntity owner){
