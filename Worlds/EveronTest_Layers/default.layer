@@ -47,22 +47,8 @@ SCR_GameModeEditor GameMode_Editor_Full : "{DA3986AF1B5032B7}Prefabs/MP/Modes/Ed
  m_bAdvanceTimeRequiresPlayers 0
  m_bUseSpawnPreload 0
 }
-IA_VehicleManager {
- coords 9378.64 47.441 1927.081
-}
 IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
  coords 4829.486 28.5 11737.061
-}
-SCR_TriggerTask : "{33DA4D098C409421}Prefabs/Tasks/CTF_TriggerTask_Capture.et" {
- coords 9276.132 165.181 2535.149
- m_bNotifyAssignment 1
- m_bNotifyUnassign 1
- {
-  SCR_BaseFactionTriggerEntity {
-   ID "64F81B9BA1646515"
-   m_sOwnerFactionKey "US"
-  }
- }
 }
 IA_AreaMarker StPierreNorthernDistrict : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  coords 9834.856 7.788 1604.257

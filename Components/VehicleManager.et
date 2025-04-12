@@ -1,0 +1,8 @@
+IA_VehicleManager {
+ ID "6519017C9DA193C9"
+ components {
+  RplComponent "{6519017C900DC5D7}" {
+  }
+ }
+ coords 9378.64 47.441 1927.081
+}

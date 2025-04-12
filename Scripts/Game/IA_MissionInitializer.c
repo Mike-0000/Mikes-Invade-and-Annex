@@ -36,6 +36,10 @@ class IA_MissionInitializer : GenericEntity
 		// Update the active group in the vehicle manager
 		IA_VehicleManager.SetActiveGroup(groupsArray[m_currentIndex]);
 		
+		// Spawn vehicles at all spawn points for this group
+		IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR);
+		Print("[INFO] Spawned vehicles for zone group " + groupsArray[m_currentIndex], LogLevel.NORMAL);
+		
 		m_currentAreaInstances.Clear();
 		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
 		
@@ -99,7 +103,7 @@ class IA_MissionInitializer : GenericEntity
     }
     
     // Initialize the vehicle manager
-    Resource vehicleManagerRes = Resource.Load("{CC24102F5975C5E0}Prefabs/GameMode/IA_VehicleManager.et");
+    Resource vehicleManagerRes = Resource.Load("{07F25000A2274994}Components/VehicleManager.et");
     if (vehicleManagerRes)
     {
         EntitySpawnParams params = EntitySpawnParams();

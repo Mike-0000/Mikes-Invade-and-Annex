@@ -46,7 +46,8 @@ enum IA_Faction
     NONE = 0,
     US,
     USSR,
-    CIV
+    CIV,
+	FIA
 };
 
 enum IA_SquadType

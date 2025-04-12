@@ -268,20 +268,22 @@ class IA_AreaInstance
     private void MilitaryOrderTask()
     {
         if (!this)
-        {
-            //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: this is null!", LogLevel.ERROR); // Never seems to happen
             return;
-        }		
+            
         if (!m_area)
-        {
-            //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR); // Always seems to happen
             return;
-        } 
+            
         if (!m_canSpawn || m_military.IsEmpty())
             return;
+            
         IA_AiOrder order = IA_AiOrder.Defend;
         if (IsUnderAttack())
             order = IA_AiOrder.SearchAndDestroy;
+            
+        // Count how many vehicles we're using to limit vehicle usage
+        int vehiclesInUse = 0;
+        int maxVehiclesAllowed = 2; // Maximum number of vehicles to use at once
+        
         foreach (IA_AiGroup g : m_military)
         {
             if (g.GetAliveCount() == 0)
@@ -291,6 +293,7 @@ class IA_AreaInstance
             if (g.IsDriving())
             {
                 g.UpdateVehicleOrders();
+                vehiclesInUse++;
                 continue;
             }
                 
@@ -301,8 +304,9 @@ class IA_AreaInstance
             {
                 vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius()*0.6, m_area.GetOrigin());
                 
-                // 0.1% chance to use a vehicle if available
-                if (IA_Game.rng.RandInt(0, 1000) < 1)
+                // 0.1% chance to use a vehicle if available and we haven't hit our limit
+                // Reduced to 0.01% since we're already spawning vehicles at initialization
+                if (IA_Game.rng.RandInt(0, 10000) < 1 && vehiclesInUse < maxVehiclesAllowed)
                 {
                     // Get the current area group from the mission initializer
                     int currentGroup = -1;
@@ -315,48 +319,53 @@ class IA_AreaInstance
                     // Only spawn vehicles for the current active group
                     if (currentGroup >= 0)
                     {
-                        // First try to find nearby vehicles that are already spawned
-                        Vehicle nearbyVehicle = IA_VehicleManager.GetClosestVehicleInGroup(g.GetOrigin(), currentGroup, 100);
+                        // First try to find nearby unreserved vehicles that are already spawned
+                        Vehicle nearbyVehicle = IA_VehicleManager.GetClosestUnreservedVehicleInGroup(g.GetOrigin(), currentGroup, 100);
                         if (nearbyVehicle && !IA_VehicleManager.IsVehicleOccupied(nearbyVehicle))
                         {
                             g.AssignVehicle(nearbyVehicle, pos);
+                            vehiclesInUse++;
                             continue;
                         }
                         
-                        // If no existing vehicle is available, try to spawn a new one
-                        // Either at a spawn point or randomly within the group area
-                        
-                        // Check for available spawn points first
-                        bool vehicleSpawned = false;
-                        array<IA_VehicleSpawnPoint> spawnPoints = IA_VehicleSpawnPoint.GetSpawnPointsByGroup(currentGroup);
-                        foreach (IA_VehicleSpawnPoint point : spawnPoints)
+                        // If no existing unreserved vehicle is available, try to spawn a new one
+                        // (only if we're still under our vehicle limit)
+                        if (vehiclesInUse < maxVehiclesAllowed)
                         {
-                            if (point.CanSpawnVehicle())
+                            // Check for available spawn points first
+                            bool vehicleSpawned = false;
+                            array<IA_VehicleSpawnPoint> spawnPoints = IA_VehicleSpawnPoint.GetSpawnPointsByGroup(currentGroup);
+                            foreach (IA_VehicleSpawnPoint point : spawnPoints)
                             {
-                                Vehicle vehicle = point.SpawnRandomVehicle(m_faction);
+                                if (point.CanSpawnVehicle())
+                                {
+                                    Vehicle vehicle = point.SpawnRandomVehicle(m_faction);
+                                    if (vehicle)
+                                    {
+                                        g.AssignVehicle(vehicle, pos);
+                                        vehiclesInUse++;
+                                        vehicleSpawned = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            // If no spawn point was available and we haven't hit our limit, try spawning directly in the area
+                            if (!vehicleSpawned && vehiclesInUse < maxVehiclesAllowed && IA_Game.rng.RandInt(0, 100) < 50)
+                            {
+                                Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicleInAreaGroup(
+                                    m_faction, 
+                                    true,  // Allow civilian 
+                                    true,  // Allow military
+                                    currentGroup
+                                );
+                                
                                 if (vehicle)
                                 {
                                     g.AssignVehicle(vehicle, pos);
-                                    vehicleSpawned = true;
-                                    break;
+                                    vehiclesInUse++;
+                                    continue;
                                 }
-                            }
-                        }
-                        
-                        // If no spawn point was available, try spawning directly in the area
-                        if (!vehicleSpawned && IA_Game.rng.RandInt(0, 100) < 50)
-                        {
-                            Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicleInAreaGroup(
-                                m_faction, 
-                                true,  // Allow civilian 
-                                true,  // Allow military
-                                currentGroup
-                            );
-                            
-                            if (vehicle)
-                            {
-                                g.AssignVehicle(vehicle, pos);
-                                continue;
                             }
                         }
                     }

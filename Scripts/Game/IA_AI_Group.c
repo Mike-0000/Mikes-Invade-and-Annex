@@ -121,6 +121,18 @@ class IA_AiGroup
         return chars;
     }
 
+    // Add a pre-existing waypoint to the group
+    void AddWaypoint(SCR_AIWaypoint waypoint)
+    {
+        if (!m_group || !waypoint)
+        {
+            //Print("[IA_AiGroup.AddWaypoint] Group or waypoint is null.", LogLevel.WARNING);
+            return;
+        }
+        m_group.AddWaypoint(waypoint);
+        //Print("[DEBUG] IA_AiGroup.AddWaypoint: Waypoint added to internal SCR_AIGroup.", LogLevel.NORMAL);
+    }
+
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
         //Print("[DEBUG] AddOrder called with origin: " + origin + ", order: " + order + ", topPriority: " + topPriority, LogLevel.NORMAL);
@@ -508,6 +520,10 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         if (!vehicle || !IsSpawned())
             return;
             
+        // Try to reserve the vehicle - if we can't, don't proceed
+        if (!IA_VehicleManager.ReserveVehicle(vehicle, this))
+            return;
+            
         m_referencedEntity = vehicle;
         m_isDriving = true;
         m_drivingTarget = destination;
@@ -528,6 +544,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         {
             m_isDriving = false;
             m_referencedEntity = null;
+            IA_VehicleManager.ReleaseVehicleReservation(vehicle);
             return;
         }
         
@@ -553,6 +570,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetOutOfVehicle);
                 m_isDriving = false;
                 m_referencedEntity = null;
+                IA_VehicleManager.ReleaseVehicleReservation(vehicle);
             }
         }
         else

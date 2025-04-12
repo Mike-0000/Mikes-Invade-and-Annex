@@ -67,6 +67,7 @@ class IA_VehicleConfig
     // Get the complete list of vehicle prefabs by type and faction
     static array<string> GetVehiclePrefabList(IA_VehicleType type, IA_Faction faction)
     {
+
         if (faction == IA_Faction.US)
         {
             if (type == IA_VehicleType.CivilianCar)

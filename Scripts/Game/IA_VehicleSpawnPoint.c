@@ -6,10 +6,10 @@ class IA_VehicleSpawnPoint: GenericEntity
     protected int m_areaGroup;
     
     [Attribute(defvalue: "1", desc: "Allow civilian vehicles")]
-    protected bool m_allowCivilian;
+    bool m_allowCivilian;
     
     [Attribute(defvalue: "1", desc: "Allow military vehicles")]
-    protected bool m_allowMilitary;
+    bool m_allowMilitary;
     
     private Vehicle m_spawnedVehicle;
     private bool m_isOccupied;
@@ -70,14 +70,28 @@ class IA_VehicleSpawnPoint: GenericEntity
     // Spawn a random vehicle according to the spawn point's settings
     Vehicle SpawnRandomVehicle(IA_Faction faction)
     {
+        Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle called for faction " + faction, LogLevel.NORMAL);
+        
         if (!CanSpawnVehicle())
+        {
+            Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle: Cannot spawn vehicle at this point", LogLevel.WARNING);
             return null;
+        }
             
         // If neither type is allowed, we can't spawn anything
         if (!m_allowCivilian && !m_allowMilitary)
+        {
+            Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle: No vehicle types allowed", LogLevel.WARNING);
             return null;
+        }
             
         m_spawnedVehicle = IA_VehicleManager.SpawnRandomVehicle(faction, m_allowCivilian, m_allowMilitary, GetOrigin());
+        
+        if (m_spawnedVehicle)
+            Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle: Successfully spawned vehicle", LogLevel.NORMAL);
+        else
+            Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle: Failed to spawn vehicle", LogLevel.WARNING);
+            
         return m_spawnedVehicle;
     }
     
