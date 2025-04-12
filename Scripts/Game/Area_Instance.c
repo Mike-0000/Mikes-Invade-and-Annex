@@ -279,14 +279,14 @@ class IA_AreaInstance
 	    } 
 	        if (!m_canSpawn || m_military.IsEmpty())
 	            return;
-	        IA_AiOrder order = IA_AiOrder.Patrol;
+	        IA_AiOrder order = IA_AiOrder.Defend;
 	        if (IsUnderAttack())
 	            order = IA_AiOrder.SearchAndDestroy;
 	        foreach (IA_AiGroup g : m_military)
 	        {
 	            if (g.GetAliveCount() == 0)
 	                continue;
-	            if (g.TimeSinceLastOrder() >= 60)
+	            if (g.TimeSinceLastOrder() >= 45)
 	                g.RemoveAllOrders();
 	            if (!g.HasActiveWaypoint())
 	            {
@@ -309,7 +309,7 @@ class IA_AreaInstance
         {
             if (!g.IsSpawned() || g.GetAliveCount() == 0)
                 continue;
-            if (g.TimeSinceLastOrder() >= 60)
+            if (g.TimeSinceLastOrder() >= 45)
             {
                 g.RemoveAllOrders();
             }

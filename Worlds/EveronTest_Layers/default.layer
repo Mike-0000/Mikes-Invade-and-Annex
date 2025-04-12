@@ -65,9 +65,10 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  {
   coords 9371.941 46.661 1807.185
   m_areaGroup 0
-  m_fZoneRadius 500
+  m_fZoneRadius 100
   m_areaName "CaptureZoneb"
   m_areaType "Town"
+  m_radius 100
  }
  {
   coords 9701.003 12.531 1548.52
@@ -79,10 +80,10 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  {
   coords 9645.044 48.296 1836.715
   m_areaGroup 1
-  m_fZoneRadius 100
+  m_fZoneRadius 50
   m_areaName "CaptureZoneb1"
   m_areaType "Property"
-  m_radius 100
+  m_radius 50
  }
  {
   coords 9069.709 80.199 2313.369

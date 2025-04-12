@@ -110,10 +110,10 @@ class IA_MissionInitializer : GenericEntity
 
 	void CheckCurrentZoneComplete()
 	{
-		Print("Running CheckCurrentZoneComplete",LogLevel.NORMAL);
+		//Print("Running CheckCurrentZoneComplete",LogLevel.NORMAL);
 		if (!m_currentAreaInstances)
 	        return;
-		Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
+		//Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
 		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
 		array<bool> zoneCompletionStatus = {}; // Track completion for each zone in current group
 		
@@ -125,13 +125,13 @@ class IA_MissionInitializer : GenericEntity
 			// Add this zone to our tracking array
 			zoneCompletionStatus.Insert(false);
 		}
-		Print("Running CheckCurrentZoneComplete 2",LogLevel.NORMAL);
+		//Print("Running CheckCurrentZoneComplete 2",LogLevel.NORMAL);
 		// If no markers found for this group, something is wrong
 		if(zoneCompletionStatus.Count() == 0) {
 			Print("[ERROR] No markers found for group " + groupsArray[m_currentIndex], LogLevel.ERROR);
 			return;
 		}
-		Print("Running CheckCurrentZoneComplete 3",LogLevel.NORMAL);
+		//Print("Running CheckCurrentZoneComplete 3",LogLevel.NORMAL);
 		// Now check each marker in the current group
 		int currentZoneIndex = 0;
 		int amountOfZones = 0;
@@ -144,22 +144,23 @@ class IA_MissionInitializer : GenericEntity
 		foreach(IA_AreaMarker marker : markers) {
 			if(!marker || marker.m_areaGroup != groupsArray[m_currentIndex])
 				continue;
-				Print("Running CheckCurrentZoneComplete 3.5",LogLevel.NORMAL);
+				//Print("Running CheckCurrentZoneComplete 3.5",LogLevel.NORMAL);
 			// Find corresponding area instance
 			if(currentZoneIndex >= m_currentAreaInstances.Count()) {
 				Print("[ERROR] More markers than area instances for group " + groupsArray[m_currentIndex], LogLevel.ERROR);
 				return;
 			}
-			Print("Running CheckCurrentZoneComplete 3.75",LogLevel.NORMAL);
+			//Print("Running CheckCurrentZoneComplete 3.75",LogLevel.NORMAL);
 			// Skip if no task entity
 			if(!m_currentAreaInstances[currentZoneIndex].GetCurrentTaskEntity()){
 				currentScore++;
+				currentZoneIndex++;
 				continue;
 			}
 				
 			int factionScore = marker.USFactionScore;
 			Print("Zone " + currentZoneIndex + " score is " + factionScore, LogLevel.NORMAL);
-			Print("Running CheckCurrentZoneComplete 3.8",LogLevel.NORMAL);
+			//Print("Running CheckCurrentZoneComplete 3.8",LogLevel.NORMAL);
 			// Mark this zone as complete if score threshold met
 			if(factionScore >= 5) {
 				zoneCompletionStatus[currentZoneIndex] = true;
@@ -170,13 +171,6 @@ class IA_MissionInitializer : GenericEntity
 			currentZoneIndex++;
 		}
 		
-		
-		
-		
-		
-
-		
-
 /*
 		Print("Running CheckCurrentZoneComplete 4",LogLevel.NORMAL);
 		// Check if ALL zones in the group are complete
@@ -191,6 +185,7 @@ class IA_MissionInitializer : GenericEntity
 		Print("Running CheckCurrentZoneComplete 5 " + allComplete, LogLevel.NORMAL);
 		// If all zones complete, move to next group
 		*/
+		Print("Current Score " + currentScore + " amountOfZones " + amountOfZones);
 		if(currentScore >= amountOfZones){
 			Print("[INFO] All zones in group " + groupsArray[m_currentIndex] + " complete. Proceeding to next.", LogLevel.NORMAL);
 			m_currentIndex++;
@@ -210,6 +205,8 @@ class IA_MissionInitializer : GenericEntity
         if (m_bInitialized) return;
 	    m_bInitialized = true;
 
+        // Set this instance as the reference for IA_AreaMarker
+        IA_AreaMarker.SetMissionInitializer(this);
 
         // 1) Check that IA_ReplicationWorkaround is present.
         if (!IA_ReplicationWorkaround.Instance())

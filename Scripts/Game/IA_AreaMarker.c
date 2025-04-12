@@ -34,6 +34,15 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected const int SCORE_UPDATE_INTERVAL = 1; // Update score every second
     protected int m_LastFrameCount = 0; // Track the last frame we updated on
     
+    // Static reference to the mission initializer
+    static IA_MissionInitializer s_missionInitializer = null;
+    
+    // Static method to set the mission initializer reference
+    static void SetMissionInitializer(IA_MissionInitializer initializer)
+    {
+        s_missionInitializer = initializer;
+    }
+
     //----------------------------------------------------------------------------------------------
     protected vector GetZoneCenter()
     {
@@ -215,13 +224,18 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        
 	    // New score is a weighted average of old and new
 	    float newScore = oldScore + (gap * 0.1);
-		USFactionScore = newScore;
-	    m_FactionScores.Set(leadFactionKey, newScore);
 	    
-	    if (leadFactionKey == "US")
-	        USFactionScore = newScore;
-	        
-	    Print("[INFO] Score updated for faction=" + leadFactionKey + " OldScore=" + oldScore + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
+	    // Only update USFactionScore if this marker belongs to the current active group
+	    if (s_missionInitializer)
+	    {
+	        if (m_areaGroup == s_missionInitializer.GetCurrentIndex())
+	        {
+	            USFactionScore = newScore;
+	            Print("[INFO] Score updated for faction=" + leadFactionKey + " OldScore=" + oldScore + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
+	        }
+	    }
+	    
+	    m_FactionScores.Set(leadFactionKey, newScore);
 	}
 		
 		
