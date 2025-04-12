@@ -72,6 +72,130 @@ class IA_AiGroup
         //Print("[DEBUG] CreateCivilianGroup called with pos: " + initialPos, LogLevel.NORMAL);
         IA_AiGroup grp = new IA_AiGroup(initialPos, IA_SquadType.Riflemen, IA_Faction.CIV);
         grp.m_isCivilian = true;
+        // Civilian groups are simpler, let PerformSpawn handle their single unit spawn
+        return grp;
+    }
+
+    // New factory method for spawning a specific number of units for a vehicle crew
+    static IA_AiGroup CreateGroupForVehicle(Vehicle vehicle, IA_Faction faction, int unitCount)
+    {
+        if (!vehicle || unitCount <= 0)
+            return null;
+
+        vector spawnPos = vehicle.GetOrigin() + vector.Up; // Spawn slightly above vehicle origin
+
+        // Create the IA_AiGroup wrapper first
+        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, faction);
+        grp.m_isCivilian = false;
+
+        // Create an empty SCR_AIGroup
+        Resource groupRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
+        if (!groupRes) {
+            Print("[IA_AiGroup.CreateGroupForVehicle] Could not load base group resource!", LogLevel.ERROR);
+            return null;
+        }
+        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
+        grp.m_group = SCR_AIGroup.Cast(groupEnt);
+
+        if (!grp.m_group) {
+            Print("[IA_AiGroup.CreateGroupForVehicle] Could not cast spawned entity to SCR_AIGroup!", LogLevel.ERROR);
+            delete groupEnt;
+            return null;
+        }
+        
+        // Adjust group position
+        vector groundPos = spawnPos;
+        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
+        groundPos[1] = groundY;
+        grp.m_group.SetOrigin(groundPos);
+
+        Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Spawning " + unitCount + " individual units for faction " + faction, LogLevel.NORMAL);
+
+        // Get the entity catalog
+        SCR_EntityCatalog catalog = SCR_EntityCatalog.GetInstance();
+        if (!catalog) {
+            Print("[IA_AiGroup.CreateGroupForVehicle] Failed to get entity catalog!", LogLevel.ERROR);
+            return null;
+        }
+
+        // Get faction manager to help with catalog queries
+        SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+        if (!factionManager) {
+            Print("[IA_AiGroup.CreateGroupForVehicle] Failed to get faction manager!", LogLevel.ERROR);
+            return null;
+        }
+
+        // Get the actual faction for catalog query
+        Faction actualFaction;
+        if (faction == IA_Faction.US)
+            actualFaction = factionManager.GetFactionByKey("US");
+        else if (faction == IA_Faction.USSR)
+            actualFaction = factionManager.GetFactionByKey("USSR");
+        else {
+            Print("[IA_AiGroup.CreateGroupForVehicle] Unsupported faction for vehicle crew: " + faction, LogLevel.ERROR);
+            return null;
+        }
+
+        // Query the catalog for character prefabs of this faction
+        array<SCR_EntityCatalogEntry> characterEntries = {};
+        catalog.GetEntries(characterEntries, "", actualFaction, EEntityCatalogType.CHARACTER);
+
+        if (characterEntries.IsEmpty()) {
+            Print("[IA_AiGroup.CreateGroupForVehicle] No character entries found for faction!", LogLevel.ERROR);
+            return null;
+        }
+
+        // Find a suitable rifleman/basic soldier entry
+        SCR_EntityCatalogEntry soldierEntry;
+        foreach (SCR_EntityCatalogEntry entry : characterEntries) {
+            string prefabPath = entry.GetPrefab();
+            if (prefabPath.Contains("rifleman") || prefabPath.Contains("Rifleman")) {
+                soldierEntry = entry;
+                break;
+            }
+        }
+
+        // Fallback to first entry if no specific rifleman found
+        if (!soldierEntry)
+            soldierEntry = characterEntries[0];
+
+        string charPrefabPath = soldierEntry.GetPrefab();
+        Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Using character prefab: " + charPrefabPath, LogLevel.NORMAL);
+
+        // Spawn individual units and add them to group
+        for (int i = 0; i < unitCount; i++)
+        {
+            // Spawn the character slightly offset from group position
+            vector unitSpawnPos = groundPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+            Resource charRes = Resource.Load(charPrefabPath);
+            if (!charRes) {
+                Print("[IA_AiGroup.CreateGroupForVehicle] Failed to load character resource!", LogLevel.ERROR);
+                continue;
+            }
+
+            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitSpawnPos));
+            if (!charEntity) {
+                Print("[IA_AiGroup.CreateGroupForVehicle] Failed to spawn character entity!", LogLevel.ERROR);
+                continue;
+            }
+
+            // Add character to the SCR_AIGroup
+            if (!grp.m_group.AddAIEntityToGroup(charEntity)) {
+                Print("[IA_AiGroup.CreateGroupForVehicle] Failed to add character " + i + " to group.", LogLevel.ERROR);
+                IA_Game.AddEntityToGc(charEntity);
+            } else {
+                Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Added unit " + i + " to group.", LogLevel.NORMAL);
+                grp.SetupDeathListenerForUnit(charEntity);
+            }
+        }
+
+        // Mark the group as spawned since we manually added units
+        grp.m_isSpawned = true;
+
+        // Perform water check for the group's final position
+        grp.WaterCheck();
+
+        Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Finished creating group with " + grp.GetAliveCount() + " units.", LogLevel.NORMAL);
         return grp;
     }
 
@@ -420,6 +544,12 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         return m_faction;
     }
 
+    // Public accessor for the internal SCR_AIGroup
+    SCR_AIGroup GetAIGroup()
+    {
+        return m_group;
+    }
+
     private void SetupDeathListener()
     {
         //Print("[DEBUG] SetupDeathListener called.", LogLevel.NORMAL);
@@ -455,6 +585,20 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             //Print("[DEBUG] Inserting death callback for agent.", LogLevel.NORMAL);
             ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
         }
+    }
+
+    // Helper to set up death listener for a single unit (used by CreateGroupForVehicle)
+    private void SetupDeathListenerForUnit(IEntity unitEntity)
+    {
+         SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(unitEntity);
+         if (!ch) return;
+
+         SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
+         if (!ccc) {
+             Print("[IA_AiGroup.SetupDeathListenerForUnit] Missing SCR_CharacterControllerComponent in AI", LogLevel.WARNING);
+             return;
+         }
+         ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
     }
 
     private void OnMemberDeath(notnull SCR_CharacterControllerComponent memberCtrl, IEntity killerEntity, Instigator killer)

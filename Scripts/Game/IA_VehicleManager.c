@@ -652,45 +652,85 @@ class IA_VehicleManager: GenericEntity
         }
         
         Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: Found " + compartments.Count() + " compartments", LogLevel.NORMAL);
-        
-        // Find the driver compartment first
-        BaseCompartmentSlot driverCompartment = null;
+
+        // Calculate the number of usable seats (Pilot + Cargo/Turret)
+        int seatCount = 0;
         foreach (BaseCompartmentSlot compartment : compartments)
         {
-            if (compartment.GetType() == ECompartmentType.PILOT)
+            ECompartmentType type = compartment.GetType();
+            if (type == ECompartmentType.PILOT || type == ECompartmentType.CARGO || type == ECompartmentType.TURRET)
             {
-                driverCompartment = compartment;
+                seatCount++;
+            }
+        }
+
+        if (seatCount == 0)
+        {
+             Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: No usable seats found in vehicle.", LogLevel.WARNING);
+             return;
+        }
+        
+        Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: Vehicle has " + seatCount + " usable seats.", LogLevel.NORMAL);
+        
+        // Get catalog entries matching the faction
+        array<SCR_EntityCatalogEntry> entries = {};
+        SCR_EntityCatalog catalog = SCR_EntityCatalog.GetInstance();
+        if (!catalog) {
+            Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: Failed to get entity catalog", LogLevel.ERROR);
+            return;
+        }
+
+        // Get faction manager to help with catalog queries
+        SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+        if (!factionManager) {
+            Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: Failed to get faction manager", LogLevel.ERROR);
+            return;
+        }
+
+        // Get the actual faction for catalog query
+        Faction actualFaction;
+        if (faction == IA_Faction.US)
+            actualFaction = factionManager.GetFactionByKey("US");
+        else if (faction == IA_Faction.USSR)
+            actualFaction = factionManager.GetFactionByKey("USSR");
+        else {
+            Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: Unsupported faction for vehicle crew: " + faction, LogLevel.ERROR);
+            return;
+        }
+
+        // Query the catalog for character prefabs of this faction
+        array<SCR_EntityCatalogEntry> characterEntries = {};
+        catalog.GetEntries(characterEntries, "", actualFaction, EEntityCatalogType.CHARACTER);
+        if (characterEntries.IsEmpty()) {
+            Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: No character entries found for faction", LogLevel.ERROR);
+            return;
+        }
+
+        // Find a suitable rifleman/basic soldier entry
+        SCR_EntityCatalogEntry soldierEntry;
+        foreach (SCR_EntityCatalogEntry entry : characterEntries) {
+            string prefabPath = entry.GetPrefab();
+            if (prefabPath.Contains("rifleman") || prefabPath.Contains("Rifleman")) {
+                soldierEntry = entry;
                 break;
             }
         }
+
+        // Fallback to first entry if no specific rifleman found
+        if (!soldierEntry)
+            soldierEntry = characterEntries[0];
+
+        string charPrefabPath = soldierEntry.GetPrefab();
+        Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: Will use character prefab: " + charPrefabPath, LogLevel.NORMAL);
         
-        if (!driverCompartment)
-        {
-            Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: No driver compartment found", LogLevel.WARNING);
-            return;
-        }
-        
-        // Create a new squad to place in the vehicle
-        IA_SquadType squadType = IA_GetRandomSquadType();
-        string squadResource = IA_SquadResourceName(squadType, faction);
-        
-        // Load the squad resource
-        Resource squadRes = Resource.Load(squadResource);
-        if (!squadRes)
-        {
-            Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: Failed to load squad resource: " + squadResource, LogLevel.ERROR);
-            return;
-        }
-        
-        // Create a dummy AI group to track the squad
-        IA_AiGroup aiGroup = IA_AiGroup.CreateMilitaryGroup(vehicle.GetOrigin(), squadType, faction);
-        if (!aiGroup)
-        {
+        // Instead of creating the group directly, use the factory method from IA_AiGroup
+        IA_AiGroup aiGroup = IA_AiGroup.CreateMilitaryGroup(vehicle.GetOrigin(), IA_SquadType.Riflemen, faction);
+        if (!aiGroup) {
             Print("[DEBUG] IA_VehicleManager.PlaceUnitsInVehicle: Failed to create AI group", LogLevel.ERROR);
             return;
         }
         
-        // Spawn the squad
+        // Spawn the group to initialize it properly
         aiGroup.Spawn();
         
         // Defer placement logic to allow units to fully spawn
