@@ -185,12 +185,16 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    string leadFactionKey = "";
 	    int leadCount = 0;
 	    int secondCount = 0;
-	
+
 	    for (int i = 0; i < factionCounts.GetCount(); i++)
 	    {
 	        string factionKey;
 	        int count;
 	        factionCounts.GetPair(i, factionKey, count);
+	        
+	        // Skip CIV faction when determining the second-highest count
+	        if (factionKey == "CIV")
+	            continue;
 	        
 	        if (count > leadCount)
 	        {
@@ -422,6 +426,21 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		//Print("Character is Alive!",LogLevel.NORMAL);
 		return true;
 	}
+
+    // Check if the zone is under attack by checking if the US faction is gaining points
+    bool IsZoneUnderAttack()
+    {
+        // If the zone is not active, it's not under attack
+        if (!m_IsActive)
+            return false;
+            
+        // If the US faction score is increasing, the zone is under attack
+        float usScore = m_FactionScores.Get("US");
+        if (usScore > 0)
+            return true;
+            
+        return false;
+    }
 };
 
 class MIKE_QueryCallback
