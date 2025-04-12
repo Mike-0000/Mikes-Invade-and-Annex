@@ -47,6 +47,9 @@ SCR_GameModeEditor GameMode_Editor_Full : "{DA3986AF1B5032B7}Prefabs/MP/Modes/Ed
  m_bAdvanceTimeRequiresPlayers 0
  m_bUseSpawnPreload 0
 }
+IA_VehicleManager {
+ coords 9378.64 47.441 1927.081
+}
 IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
  coords 4829.486 28.5 11737.061
 }
@@ -61,38 +64,13 @@ SCR_TriggerTask : "{33DA4D098C409421}Prefabs/Tasks/CTF_TriggerTask_Capture.et" {
   }
  }
 }
-$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
- {
-  coords 9371.941 46.661 1807.185
-  m_areaGroup 0
-  m_fZoneRadius 100
-  m_areaName "CaptureZoneb"
-  m_areaType "Town"
-  m_radius 100
- }
- {
-  coords 9701.003 12.531 1548.52
-  m_areaGroup 0
-  m_fZoneRadius 150
-  m_areaName "CaptureZonea"
-  m_radius 150
- }
- {
-  coords 9645.044 48.296 1836.715
-  m_areaGroup 1
-  m_fZoneRadius 50
-  m_areaName "CaptureZoneb1"
-  m_areaType "Property"
-  m_radius 50
- }
- {
-  coords 9069.709 80.199 2313.369
-  m_areaGroup 1
-  m_fZoneRadius 47.6
-  m_areaName "CaptureZoneb11"
-  m_areaType "Property"
-  m_radius 47.6
- }
+IA_AreaMarker StPierreNorthernDistrict : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ coords 9834.856 7.788 1604.257
+ m_areaGroup 0
+ m_fZoneRadius 100
+ m_areaName "St Pierre - Northern District"
+ m_areaType "Town"
+ m_radius 100
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
  coords 4828.903 28.5 11735.593

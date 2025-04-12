@@ -1,4 +1,3 @@
-
 enum IA_AiOrder
 {
     Move,
@@ -532,6 +531,29 @@ class IA_DictStringFloat
 		key   = m_Keys[index];
 		value = m_Values[index];
 	}
+}
+
+///////////////////////////////////////////////////////////////////////
+// 13) VEHICLE-RELATED UTILITY FUNCTIONS
+///////////////////////////////////////////////////////////////////////
+Vehicle IA_GetVehicleForChimeraCharacter(SCR_ChimeraCharacter character)
+{
+    if (!character || !character.IsInVehicle())
+        return null;
+    
+    CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+    if (!access)
+        return null;
+    
+    return Vehicle.Cast(access.GetCompartment().GetOwner());
+}
+
+SCR_ChimeraCharacter IA_GetPilotForVehicle(Vehicle vehicle)
+{
+    if (!vehicle)
+        return null;
+    
+    return SCR_ChimeraCharacter.Cast(vehicle.GetPilot());
 }
 
 

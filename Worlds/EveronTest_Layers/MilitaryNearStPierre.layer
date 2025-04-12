@@ -1,0 +1,32 @@
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ {
+  coords 7503.615 165.749 4281.886
+  m_areaGroup 0
+  m_fZoneRadius 150
+  m_areaName "Military by St Pierre"
+  m_areaType "Military"
+  m_radius 150
+ }
+ {
+  coords 7567.205 166.157 4252.829
+  m_areaGroup 0
+  m_fZoneRadius 50
+  m_areaName "Military by St Pierre - East"
+  m_areaType "Military"
+  m_radius 50
+ }
+ {
+  coords 7459.192 164.563 4322.653
+  m_areaGroup 1
+  m_fZoneRadius 50
+  m_areaName "Military by St Pierre - West"
+  m_areaType "Military"
+  m_radius 50
+ }
+}
+IA_VehicleSpawnPoint HarborVehicle2 : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
+ coords 7571.544 166.157 4249.87
+ angleY -163.492
+ m_areaGroup 1
+ m_allowCivilian 0
+}

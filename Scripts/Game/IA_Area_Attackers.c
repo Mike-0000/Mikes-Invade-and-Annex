@@ -63,83 +63,44 @@ class IA_AreaAttackers
             }
         }
         
+        // If the zone is under attack, switch to Search and Destroy mode
         if (zoneUnderAttack)
         {
-            // If the zone is under attack, switch to Search and Destroy mode
             m_currentOrder = IA_AiOrder.SearchAndDestroy;
         }
         
-        // If we're in Search and Destroy mode, use the existing logic
-        if (m_currentOrder == IA_AiOrder.SearchAndDestroy)
+        // Process the next group based on the current order
+        if (m_groupToProcess >= m_groups.Count())
         {
-            // Use the existing Search and Destroy logic
-            if (m_groupToProcess >= m_groups.Count())
-            {
-                m_groupToProcess = 0;
-                //Print("[DEBUG] Resetting m_groupToProcess to 0.", LogLevel.NORMAL);
-            }
-            if (m_groups.IsEmpty())
-                return;
-
-            IA_AiGroup g = m_groups[m_groupToProcess];
-            if (g.GetAliveCount() == 0)
-            {
-                //Print("REMOVING NULL GROUP",LogLevel.NORMAL);
-                m_groups.Remove(m_groupToProcess);
-                m_groupToProcess++; // stay on same index
-
-                return;
-            }
-            if (g.TimeSinceLastOrder() >= ORDER_FREQ_SECS)
-                g.RemoveAllOrders();
-            if (!g.HasOrders())
-            {
-                vector pos;
-                if (m_initialOrderGiven)
-                    pos = m_area.GetOrigin();
-                else
-                {
-                    // Use the IA_Game's random generator to generate a point within the safe area.
-                    pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius(), m_area.GetOrigin());
-                    m_initialOrderGiven = true;
-                }
-                g.AddOrder(pos, IA_AiOrder.SearchAndDestroy);
-            }
-            m_groupToProcess = m_groupToProcess + 1;
+            m_groupToProcess = 0;
         }
-        else
+        if (m_groups.IsEmpty())
+            return;
+
+        IA_AiGroup g = m_groups[m_groupToProcess];
+        if (g.GetAliveCount() == 0)
         {
-            // Use the existing Attack mode logic
-            if (m_groupToProcess >= m_groups.Count())
-            {
-                m_groupToProcess = 0;
-            }
-            if (m_groups.IsEmpty())
-                return;
-
-            IA_AiGroup g = m_groups[m_groupToProcess];
-            if (g.GetAliveCount() == 0)
-            {
-                m_groups.Remove(m_groupToProcess);
-                m_groupToProcess++; // stay on same index
-                return;
-            }
-            if (g.TimeSinceLastOrder() >= ORDER_FREQ_SECS)
-                g.RemoveAllOrders();
-            if (!g.HasOrders())
-            {
-                vector pos;
-                if (m_initialOrderGiven)
-                    pos = m_area.GetOrigin();
-                else
-                {
-                    pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius(), m_area.GetOrigin());
-                    m_initialOrderGiven = true;
-                }
-                g.AddOrder(pos, IA_AiOrder.Patrol);
-            }
-            m_groupToProcess = m_groupToProcess + 1;
+            m_groups.Remove(m_groupToProcess);
+            m_groupToProcess++; // stay on same index
+            return;
         }
+        if (g.TimeSinceLastOrder() >= ORDER_FREQ_SECS)
+            g.RemoveAllOrders();
+        if (!g.HasOrders())
+        {
+            vector pos;
+            if (m_initialOrderGiven)
+                pos = m_area.GetOrigin();
+            else
+            {
+                pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius(), m_area.GetOrigin());
+                m_initialOrderGiven = true;
+            }
+            
+            // Use the appropriate order based on whether the zone is under attack
+            g.AddOrder(pos, m_currentOrder);
+        }
+        m_groupToProcess = m_groupToProcess + 1;
     }
 
     bool IsAllGroupsDead()

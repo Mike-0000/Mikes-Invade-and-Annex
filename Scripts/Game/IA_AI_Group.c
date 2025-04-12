@@ -451,7 +451,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_PLAYER)
         {
             //Print("[DEBUG] Member killed by player.", LogLevel.NORMAL);
-            // If a player kills one of our guys and we’re not yet “engaged,” 
+            // If a player kills one of our guys and we're not yet "engaged," 
             // set some placeholder for engaged faction (CIV is used as a placeholder).
             if (!IsEngagedWithEnemy() && !m_isCivilian && m_faction != IA_Faction.CIV)
             {
@@ -501,5 +501,63 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     {
         //Print("[DEBUG] WaterCheck called (placeholder).", LogLevel.NORMAL);
         // No extra water check here because safe areas are pre-defined.
+    }
+
+    void AssignVehicle(Vehicle vehicle, vector destination)
+    {
+        if (!vehicle || !IsSpawned())
+            return;
+            
+        m_referencedEntity = vehicle;
+        m_isDriving = true;
+        m_drivingTarget = destination;
+        m_lastOrderPosition = destination;
+        m_lastOrderTime = System.GetUnixTime();
+        
+        // First order - get to the vehicle
+        AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle);
+    }
+    
+    void UpdateVehicleOrders()
+    {
+        if (!m_isDriving || !m_referencedEntity)
+            return;
+            
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (!vehicle)
+        {
+            m_isDriving = false;
+            m_referencedEntity = null;
+            return;
+        }
+        
+        array<SCR_ChimeraCharacter> chars = GetGroupCharacters();
+        if (chars.IsEmpty())
+            return;
+            
+        SCR_ChimeraCharacter driver = chars[0];
+        Vehicle currentVehicle = IA_VehicleManager.GetCharacterVehicle(driver);
+        
+        if (currentVehicle)
+        {
+            if (currentVehicle != vehicle) // Wrong vehicle
+            {
+                AddOrder(m_drivingTarget, IA_AiOrder.Move);
+            }
+            else if (vector.Distance(vehicle.GetOrigin(), m_drivingTarget) > 5)
+            {
+                AddOrder(m_drivingTarget, IA_AiOrder.Move);
+            }
+            else
+            {
+                AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetOutOfVehicle);
+                m_isDriving = false;
+                m_referencedEntity = null;
+            }
+        }
+        else
+        {
+            AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle);
+        }
     }
 };

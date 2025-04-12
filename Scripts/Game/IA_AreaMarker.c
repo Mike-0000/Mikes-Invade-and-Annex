@@ -441,6 +441,98 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             
         return false;
     }
+
+    // Get all markers for a specific group
+    static array<IA_AreaMarker> GetAreaMarkersByGroup(int groupNumber)
+    {
+        array<IA_AreaMarker> groupMarkers = {};
+        
+        foreach (IA_AreaMarker marker : s_areaMarkers)
+        {
+            if (!marker)
+                continue;
+                
+            if (marker.m_areaGroup == groupNumber)
+                groupMarkers.Insert(marker);
+        }
+        
+        return groupMarkers;
+    }
+    
+    // Get all zone origins for a specific group
+    static array<vector> GetZoneOriginsByGroup(int groupNumber)
+    {
+        array<vector> origins = {};
+        array<IA_AreaMarker> markers = GetAreaMarkersByGroup(groupNumber);
+        
+        foreach (IA_AreaMarker marker : markers)
+        {
+            origins.Insert(marker.GetOrigin());
+        }
+        
+        return origins;
+    }
+    
+    // Calculate a central point (average) for all zones in a group
+    static vector CalculateGroupCenterPoint(int groupNumber)
+    {
+        array<vector> origins = GetZoneOriginsByGroup(groupNumber);
+        if (origins.IsEmpty())
+            return vector.Zero;
+            
+        vector sumPoint = vector.Zero;
+        foreach (vector origin : origins)
+        {
+            sumPoint += origin;
+        }
+        
+        // Calculate average center
+        return sumPoint / origins.Count();
+    }
+    
+    // Calculate the radius needed to encompass all zones in a group
+    static float CalculateGroupRadius(int groupNumber)
+    {
+        vector centerPoint = CalculateGroupCenterPoint(groupNumber);
+        if (centerPoint == vector.Zero)
+            return 0;
+            
+        array<vector> origins = GetZoneOriginsByGroup(groupNumber);
+        float maxRadius = 0;
+        
+        foreach (vector origin : origins)
+        {
+            IA_AreaMarker marker = GetMarkerAtPosition(origin);
+            if (!marker)
+                continue;
+                
+            // Calculate distance from center to this zone + the zone's own radius
+            float zoneRadius = marker.GetRadius();
+            float distToCenter = vector.Distance(centerPoint, origin);
+            float totalRadius = distToCenter + zoneRadius;
+            
+            // Update max radius if this is larger
+            if (totalRadius > maxRadius)
+                maxRadius = totalRadius;
+        }
+        
+        return maxRadius;
+    }
+    
+    // Helper to find a marker at a specific position
+    static IA_AreaMarker GetMarkerAtPosition(vector position)
+    {
+        foreach (IA_AreaMarker marker : s_areaMarkers)
+        {
+            if (!marker)
+                continue;
+                
+            if (marker.GetOrigin() == position)
+                return marker;
+        }
+        
+        return null;
+    }
 };
 
 class MIKE_QueryCallback

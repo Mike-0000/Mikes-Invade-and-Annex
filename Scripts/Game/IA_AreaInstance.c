@@ -1,4 +1,3 @@
-
 ///////////////////////////////////////////////////////////////////////
 // 8) IA_AreaInstance - dynamic mission/task handling (integrates area)
 ///////////////////////////////////////////////////////////////////////
@@ -268,33 +267,104 @@ class IA_AreaInstance
 
     private void MilitaryOrderTask()
     {
-	if (!this)
-    {
-        //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: this is null!", LogLevel.ERROR); // Never seems to happen
-        return;
-    }		
-		if (!m_area)
-	    {
-	        //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR); // Always seems to happen
-	        return;
-	    } 
-	        if (!m_canSpawn || m_military.IsEmpty())
-	            return;
-	        IA_AiOrder order = IA_AiOrder.Defend;
-	        if (IsUnderAttack())
-	            order = IA_AiOrder.SearchAndDestroy;
-	        foreach (IA_AiGroup g : m_military)
-	        {
-	            if (g.GetAliveCount() == 0)
-	                continue;
-	            if (g.TimeSinceLastOrder() >= 45)
-	                g.RemoveAllOrders();
-	            if (!g.HasActiveWaypoint())
-	            {
-	                vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius()*0.6, m_area.GetOrigin());
-	                g.AddOrder(pos, order);
-	            }
-	        }
+        if (!this)
+        {
+            //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: this is null!", LogLevel.ERROR); // Never seems to happen
+            return;
+        }		
+        if (!m_area)
+        {
+            //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR); // Always seems to happen
+            return;
+        } 
+        if (!m_canSpawn || m_military.IsEmpty())
+            return;
+        IA_AiOrder order = IA_AiOrder.Defend;
+        if (IsUnderAttack())
+            order = IA_AiOrder.SearchAndDestroy;
+        foreach (IA_AiGroup g : m_military)
+        {
+            if (g.GetAliveCount() == 0)
+                continue;
+                
+            // Check if the group is already using a vehicle
+            if (g.IsDriving())
+            {
+                g.UpdateVehicleOrders();
+                continue;
+            }
+                
+            if (g.TimeSinceLastOrder() >= 45)
+                g.RemoveAllOrders();
+                
+            if (!g.HasActiveWaypoint())
+            {
+                vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius()*0.6, m_area.GetOrigin());
+                
+                // 0.1% chance to use a vehicle if available
+                if (IA_Game.rng.RandInt(0, 1000) < 1)
+                {
+                    // Get the current area group from the mission initializer
+                    int currentGroup = -1;
+                    IA_MissionInitializer missionInit = IA_AreaMarker.s_missionInitializer;
+                    if (missionInit)
+                    {
+                        currentGroup = missionInit.GetCurrentIndex();
+                    }
+                    
+                    // Only spawn vehicles for the current active group
+                    if (currentGroup >= 0)
+                    {
+                        // First try to find nearby vehicles that are already spawned
+                        Vehicle nearbyVehicle = IA_VehicleManager.GetClosestVehicleInGroup(g.GetOrigin(), currentGroup, 100);
+                        if (nearbyVehicle && !IA_VehicleManager.IsVehicleOccupied(nearbyVehicle))
+                        {
+                            g.AssignVehicle(nearbyVehicle, pos);
+                            continue;
+                        }
+                        
+                        // If no existing vehicle is available, try to spawn a new one
+                        // Either at a spawn point or randomly within the group area
+                        
+                        // Check for available spawn points first
+                        bool vehicleSpawned = false;
+                        array<IA_VehicleSpawnPoint> spawnPoints = IA_VehicleSpawnPoint.GetSpawnPointsByGroup(currentGroup);
+                        foreach (IA_VehicleSpawnPoint point : spawnPoints)
+                        {
+                            if (point.CanSpawnVehicle())
+                            {
+                                Vehicle vehicle = point.SpawnRandomVehicle(m_faction);
+                                if (vehicle)
+                                {
+                                    g.AssignVehicle(vehicle, pos);
+                                    vehicleSpawned = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // If no spawn point was available, try spawning directly in the area
+                        if (!vehicleSpawned && IA_Game.rng.RandInt(0, 100) < 50)
+                        {
+                            Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicleInAreaGroup(
+                                m_faction, 
+                                true,  // Allow civilian 
+                                true,  // Allow military
+                                currentGroup
+                            );
+                            
+                            if (vehicle)
+                            {
+                                g.AssignVehicle(vehicle, pos);
+                                continue;
+                            }
+                        }
+                    }
+                }
+                
+                g.AddOrder(pos, order);
+            }
+        }
     }
 
     private void CivilianOrderTask()

@@ -33,6 +33,9 @@ class IA_MissionInitializer : GenericEntity
 	        return;
 		}
 		
+		// Update the active group in the vehicle manager
+		IA_VehicleManager.SetActiveGroup(groupsArray[m_currentIndex]);
+		
 		m_currentAreaInstances.Clear();
 		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
 		
@@ -93,6 +96,19 @@ class IA_MissionInitializer : GenericEntity
     {
         Print("[WARNING] No IA_AreaMarkers found!", LogLevel.WARNING);
         return;
+    }
+    
+    // Initialize the vehicle manager
+    Resource vehicleManagerRes = Resource.Load("{CC24102F5975C5E0}Prefabs/GameMode/IA_VehicleManager.et");
+    if (vehicleManagerRes)
+    {
+        EntitySpawnParams params = EntitySpawnParams();
+        GetGame().SpawnEntityPrefab(vehicleManagerRes, null, params);
+        Print("[DEBUG] IA_VehicleManager spawned.", LogLevel.NORMAL);
+    }
+    else
+    {
+        Print("[WARNING] Failed to load IA_VehicleManager resource!", LogLevel.WARNING);
     }
 		
 /*

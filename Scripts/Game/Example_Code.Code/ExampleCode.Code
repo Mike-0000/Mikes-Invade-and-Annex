@@ -1,0 +1,5584 @@
+// ============================================================================
+// File: TAB_CTFAiGroup.c
+// ============================================================================
+
+enum TAB_CTFAiOrder
+{
+	Move,
+	Defend,
+	Patrol,
+	SearchAndDestroy,
+	GetInVehicle,
+	GetOutOfVehicle
+};
+
+ResourceName TAB_CTFAiOrderResource(TAB_CTFAiOrder waypoint)
+{
+	switch (waypoint)
+	{
+		case TAB_CTFAiOrder.Defend:
+			return "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
+		case TAB_CTFAiOrder.Patrol:
+			return "{C0A9A9B589802A5B}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Patrol.et";
+		case TAB_CTFAiOrder.SearchAndDestroy:
+			return "{EE9A99488B40628B}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_SearchAndDestroy.et";
+		case TAB_CTFAiOrder.GetInVehicle:
+			return "{0A2A37B4A56D74DF}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_GetInNearest.et";
+		case TAB_CTFAiOrder.GetOutOfVehicle:
+			return "{2602CAB8AB74FBBF}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_GetOut.et";
+	}
+
+	return "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";
+}
+
+class TAB_CTFAiGroup
+{
+	private SCR_AIGroup m_group = null;
+	private bool m_isSpawned = false;
+	private vector m_initialPosition;
+	
+	/* These are only used if m_isCivilian == false. */
+	private TAB_SquadType m_squadType;
+	private TAB_CTFFaction m_faction;
+	
+	private bool m_isCivilian;
+	
+	private vector m_lastOrderPosition;
+	private int m_lastOrderTime;
+	private bool m_isDriving = false;
+	private vector m_drivingTarget = vector.Zero;
+	private IEntity m_referencedEntity;
+	private TAB_CTFFaction m_engagedEnemyFaction = TAB_CTFFaction.None;
+	
+	private void TAB_CTFAiGroup(vector initialPosition, TAB_SquadType squadType, TAB_CTFFaction faction)
+	{
+		m_lastOrderPosition = initialPosition;
+		m_initialPosition = initialPosition;
+		m_lastOrderTime = 0;
+		m_squadType = squadType;
+		m_faction = faction;
+	}
+	
+	static TAB_CTFAiGroup CreateMilitaryGroup(vector initialPosition, TAB_SquadType squadType, TAB_CTFFaction faction)
+	{
+		TAB_CTFAiGroup group = new TAB_CTFAiGroup(initialPosition, squadType, faction);
+		group.m_isCivilian = false;
+		return group;
+	}
+	
+	static TAB_CTFAiGroup CreateCivilianGroup(vector initialPosition)
+	{
+		TAB_CTFAiGroup group = new TAB_CTFAiGroup(initialPosition, TAB_SquadType.Riflemen /* whatever */, TAB_CTFFaction.FIA /* whatever */);
+		group.m_isCivilian = true;
+		return group;
+	}
+
+	TAB_CTFFaction GetEngagedEnemyFaction()
+	{
+		return m_engagedEnemyFaction;
+	}
+	
+	bool IsEngagedWithEnemy()
+	{
+		return m_engagedEnemyFaction != TAB_CTFFaction.None;
+	}
+	
+	void MarkAsUnengaged()
+	{
+		m_engagedEnemyFaction = TAB_CTFFaction.None;
+	}
+	
+	array<SCR_ChimeraCharacter> GetGroupCharacters()
+	{
+		array<SCR_ChimeraCharacter> characters = {};
+		
+		if (!m_group || !m_isSpawned)
+			return characters;
+		
+		array<AIAgent> agents = {};
+		m_group.GetAgents(agents);
+		
+		foreach (AIAgent agent : agents)
+		{
+			SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
+			if (!character)
+			{
+				Print("[TAB_CTFAiGroup.GetGroupCharacters] Failed to cast to SCR_ChimeraCharacter while getting group characters!", LogLevel.WARNING);
+				continue;
+			}
+			characters.Insert(character);
+		}
+		
+		return characters;
+	}
+
+	void AddOrder(vector origin, TAB_CTFAiOrder order, bool topPriority = false)
+	{
+		if (!m_isSpawned)
+		{
+			Print("[TAB_CTFAiGroup.AddWaypoint] Couldn't add waypoint to this AI group, it's not spawned", LogLevel.WARNING);
+		}
+
+		if (!m_group)
+		{
+			// Group is dead in this case (isSpawned but no ai group entity)
+			return;
+		}
+		
+		float y = GetGame().GetWorld().GetSurfaceY(origin[0], origin[2]);
+		origin[1] = y + 0.5;
+		
+		ResourceName waypointResource = TAB_CTFAiOrderResource(order);
+		Resource resource = Resource.Load(waypointResource);
+		if (!resource)
+		{
+			Print("[TAB_CTFAiGroup.AddWaypoint] Resource not found: " + waypointResource, LogLevel.ERROR);
+			return;
+		}
+
+		SCR_AIWaypoint waypoint = SCR_AIWaypoint.Cast(GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSimpleEntitySpawnParams(origin)));
+		
+		if (!waypoint)
+		{
+			Print("[TAB_CTFAiGroup.AddWaypoint] Couldn't cast to AIWaypoint from resource " + waypointResource, LogLevel.ERROR);
+			return;
+		}
+		
+		if (m_isDriving || topPriority)
+		{
+			waypoint.SetPriorityLevel(2000);
+		}
+		
+		m_group.AddWaypoint(waypoint);
+		m_lastOrderPosition = origin;
+		m_lastOrderTime = System.GetUnixTime();
+	}
+	
+	void SetInitialPosition(vector position)
+	{
+		m_initialPosition = position;
+	}
+	
+	int TimeSinceLastOrder()
+	{
+		return System.GetUnixTime() - m_lastOrderTime;
+	}
+	
+	bool HasOrders()
+	{
+		if (!m_group)
+			return false;
+		
+		if (!m_isDriving && vector.DistanceXZ(m_lastOrderPosition, m_group.GetOrigin()) < 10)
+		{
+			RemoveAllOrders();
+			return false;
+		}
+
+		array<AIWaypoint> waypoints = {};
+		m_group.GetWaypoints(waypoints);
+		return !waypoints.IsEmpty();
+	}
+	
+	bool IsDriving()
+	{
+		return m_isDriving;
+	}
+
+	void RemoveAllOrders(bool resetLastOrderTime = false)
+	{
+		if (!m_group)
+			return;
+		array<AIWaypoint> waypoints = {};
+		int count = m_group.GetWaypoints(waypoints);
+		foreach (AIWaypoint waypoint : waypoints)
+		{
+			m_group.RemoveWaypoint(waypoint);
+		}
+		
+		m_isDriving = false;
+		
+		if (resetLastOrderTime)
+			m_lastOrderTime = 0;
+	}
+
+	int GetAliveCount()
+	{
+		if (!m_isSpawned)
+		{
+			if (m_isCivilian)
+				return 1;
+			else
+				return TAB_SquadCount(m_squadType, m_faction);
+		}
+
+		if (!m_group)
+			return 0;
+
+		return m_group.GetPlayerAndAgentCount();
+	}
+	
+	vector GetOrigin()
+	{
+		if (!m_group)
+			return vector.Zero;
+		return m_group.GetOrigin();
+	}
+	
+	vector GetDrivingTarget()
+	{
+		return m_drivingTarget;
+	}
+	
+	void SetDrivingTarget(vector target)
+	{
+		m_drivingTarget = target;
+	}
+	
+	IEntity GetReferencedEntity()
+	{
+		return m_referencedEntity;
+	}
+	
+	bool IsSpawned()
+	{
+		return m_isSpawned;
+	}
+	
+	void Spawn(TAB_CTFAiOrder initialOrder = TAB_CTFAiOrder.Patrol, vector initialOrderPosition = vector.Zero)
+	{
+		if (!PerformSpawn())
+			return;
+		
+		vector orderPosition = m_initialPosition;
+		if (initialOrderPosition != vector.Zero)
+			orderPosition = initialOrderPosition;
+		AddOrder(orderPosition, initialOrder);
+	}
+	
+	void SpawnWithVehicleNeed(vector destination, IEntity vehicle)
+	{
+		if (!PerformSpawn())
+			return;
+		
+		m_referencedEntity = vehicle;
+		m_isDriving = true;
+		m_drivingTarget = destination;
+		m_lastOrderPosition = destination;
+		m_lastOrderTime = System.GetUnixTime();
+	}
+	
+	void Despawn()
+	{
+		if (!IsSpawned())
+			return;
+
+		m_isSpawned = false;
+		m_isDriving = false;
+		
+		/* Dead groups may be cleaned by the game itself, rendering m_group into a null. */
+		if (m_group)
+			m_group.DeactivateAllMembers();
+		
+		RemoveAllOrders();
+		//delete m_group;
+		TAB_CTFGame.AddEntityToGc(m_group);
+		m_group = null;
+	}
+	
+	TAB_CTFFaction GetFaction()
+	{
+		return m_faction;
+	}
+		
+	private bool PerformSpawn()
+	{
+		if (IsSpawned())
+			return false;
+		
+		m_isSpawned = true;
+		
+		string resourceName;
+		if (m_isCivilian)
+			resourceName = TAB_RandomCivilianResourceName();
+		else
+			resourceName = TAB_SquadResourceName(m_squadType, m_faction);
+
+		Resource resource = Resource.Load(resourceName);
+		if (!resource)
+		{
+			Print("[TAB_CTFAiGroup.PerformSpawn] No such resource: " + resourceName, LogLevel.ERROR);
+			return false;
+		}
+
+		IEntity entity = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSurfaceAdjustedSpawnParams(m_initialPosition));
+		
+		if (m_isCivilian)
+		{
+			Resource aiGroupResource = Resource.Load("{2D4A93612FA7C24D}Prefabs/Groups/TAB_Group_CIV.et");
+			m_group = SCR_AIGroup.Cast(GetGame().SpawnEntityPrefab(aiGroupResource, null, TAB_CreateSimpleEntitySpawnParams(m_initialPosition)));
+			if (!m_group.AddAIEntityToGroup(entity))
+			{
+				Print("[TAB_CTFAiGroup.PerformSpawn] Failed to add civilian AI entity to group using resource " + resourceName, LogLevel.ERROR);
+			}
+		}
+		else
+		{
+			m_group = SCR_AIGroup.Cast(entity);
+		}
+		
+		if (!m_group)
+		{
+			Print("[TAB_CTFAiGroup.PerformSpawn] SpawnEntityPrefab failed", LogLevel.ERROR);
+			return false;
+		}
+
+		SetupDeathListener();
+
+		WaterCheck();
+		
+		return true;
+	}
+	
+	private void SetupDeathListener()
+	{
+		
+		array<AIAgent> agents = {};
+		m_group.GetAgents(agents);
+		
+		/*
+		 * This is needed since the characters might not yet be spawned.
+		*/
+		if (agents.IsEmpty())
+		{
+			GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
+			return;
+		}
+		
+		foreach (AIAgent agent : agents)
+		{
+			SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
+			SCR_CharacterControllerComponent controller = SCR_CharacterControllerComponent.Cast(character.FindComponent(SCR_CharacterControllerComponent));
+			if (!controller)
+			{
+				Print("[TAB_CTFAiGroup.PerformSpawn] Couldn't find component SCR_CharacterControllerComponent attached to AI, member death checking will fail", LogLevel.WARNING);
+				continue;
+			}
+			controller.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
+		}
+	}
+	
+	private void OnMemberDeath(notnull SCR_CharacterControllerComponent memberController, IEntity killerEntity, Instigator killer)
+	{
+		if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_PLAYER)
+		{
+			if (!IsEngagedWithEnemy() && !m_isCivilian && m_faction != TAB_CTFFaction.FIA)
+			{
+				Print("[TAB_CTFAiGroup.OnMemberDeath] Player killed an enemy, group is now considered engaged");
+				m_engagedEnemyFaction = TAB_CTFFaction.FIA; // Players are always FIA.
+			}
+			
+			if (m_isCivilian)
+			{
+				TAB_CTFScoreManager.AddScore(killer.GetInstigatorPlayerID(), -1);
+			}
+			else if (m_faction == TAB_CTFFaction.FIA)
+			{
+				TAB_CTFScoreManager.AddScore(killer.GetInstigatorPlayerID(), -2);
+			}
+			else
+			{
+				TAB_CTFScoreManager.AddScore(killer.GetInstigatorPlayerID(), 1);
+			}
+		}
+		else if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_AI)
+		{
+			SCR_ChimeraCharacter c = SCR_ChimeraCharacter.Cast(killerEntity);
+			if (!c)
+			{
+				Print("[TAB_CTFAiGroup.OnMemberDeath] Cast of killerEntity to SCR_ChimeraCharacter failed, group wont be considered engaged!", LogLevel.ERROR);
+			}
+			else
+			{
+				string factionKey = c.GetFaction().GetFactionKey();
+				if (factionKey == "US")
+				{
+					Print("[TAB_CTFAiGroup.OnMemberDeath] AI from US killed other AI member, group is now considered engaged");
+					m_engagedEnemyFaction = TAB_CTFFaction.US;
+				}
+				else if (factionKey == "USSR")
+				{
+					Print("[TAB_CTFAiGroup.OnMemberDeath] AI from USSR killed other AI member, group is now considered engaged");
+					m_engagedEnemyFaction = TAB_CTFFaction.USSR;
+				}
+				else if (factionKey == "FIA")
+				{
+					Print("[TAB_CTFAiGroup.OnMemberDeath] AI from FIA killed other AI member, group is now considered engaged");
+					m_engagedEnemyFaction = TAB_CTFFaction.FIA;
+				}
+				else
+				{
+					Print("[TAB_CTFAiGroup.OnMemberDeath] Unknown factionKey '" + factionKey + "' group engagement wont change!", LogLevel.WARNING);
+				}
+				
+				if (m_engagedEnemyFaction == m_faction)
+				{
+					/*
+					 * NOTE: This introduces a bug where if the group was actually engaged with an enemy faction, this will be reset.
+					 * However, as the battle goes on, this will be "corrected" on its own; unless, of course, it was the last team member. Not sure if I should care about this corner case.
+					*/
+					Print("[TAB_CTFAiGroup.OnMemberDeath] AI did a friendly kill, resetting engagement status");
+					m_engagedEnemyFaction = TAB_CTFFaction.None;
+				}
+			}
+		}
+	}
+	
+	private void WaterCheck()
+	{
+		/*
+		 * TODO
+		 * Check if AI is taking a bath. If so, forcibly move them out since this is not the time to get clean.
+		 * Move by changing their origin, not by giving order.
+		*/
+	}
+}
+
+// ============================================================================
+// File: TAB_CTFArea.c
+// ============================================================================
+
+enum TAB_CTFAreaType
+{
+	Town,
+	City,
+	Property,
+	Airport,
+	Docks,
+	Military
+};
+/*
+MG on sandbags, US
+{26FA6D68CE614540}PrefabsEditable/Auto/Compositions/Misc/SubCompositions/E_Sandbag_MG_US_02_M60.et
+
+MG on sandbags, USSR
+{0DE37DEC29C2DF3C}PrefabsEditable/Auto/Compositions/Misc/SubCompositions/E_Sandbag_MG_USSR_02.et
+
+Hedgehog
+{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et
+*/
+
+class TAB_CTFArea
+{
+	static const float SpawnAiAreaRadius = 500;
+	
+	private string m_name;
+	private TAB_CTFAreaType m_type;
+	private vector m_origin;
+	private vector m_playerSpawnPoint;
+	private float m_playerSpawnAngle;
+	private float m_radius;
+	private bool m_useCoordinates;
+	private bool m_instantiated = false;
+	
+	private void TAB_CTFArea(string name, TAB_CTFAreaType areaType, vector origin, vector playerSpawnPoint, float playerSpawnAngle, float radius, bool useCoordinates)
+	{
+		m_name = name;
+		m_type = areaType;
+		m_origin = origin;
+		m_playerSpawnPoint = playerSpawnPoint;
+		m_playerSpawnAngle = playerSpawnAngle;
+		m_radius = radius;
+		m_useCoordinates = useCoordinates;
+	}
+	
+	static ref TAB_CTFArea ConstructNamed(string name, TAB_CTFAreaType areaType, vector playerSpawnPoint, float playerSpawnAngle, float radius)
+	{
+		TAB_CTFArea area = new TAB_CTFArea(name, areaType, "0 0 0", playerSpawnPoint, playerSpawnAngle, radius, false);
+		
+		IEntity mapEntity = GetGame().FindEntity(name);
+		if (!mapEntity)
+		{
+			Print("[TAB_CTFArea.ConstructPositioned] No pre-defined map entity found named " + name, LogLevel.ERROR);
+			return area;
+		}
+		
+		area.m_origin = mapEntity.GetOrigin();
+
+		return area;
+	}
+	
+	static ref TAB_CTFArea ConstructPositioned(string name, TAB_CTFAreaType areaType, vector origin, vector playerSpawnPoint, float playerSpawnAngle, float radius)
+	{
+		 return new TAB_CTFArea(name, areaType, origin, playerSpawnPoint, playerSpawnAngle, radius, true);
+	}
+
+	int GetMilitaryAiGroupCount()
+	{
+		switch (GetAreaType())
+		{
+			case TAB_CTFAreaType.Town:
+				return 4;
+				
+			case TAB_CTFAreaType.City:
+				return 8;
+				
+			case TAB_CTFAreaType.Docks:
+				return 2;
+				
+			case TAB_CTFAreaType.Airport:
+				return 6;
+			
+			case TAB_CTFAreaType.Military:
+				return 3;
+				
+			case TAB_CTFAreaType.Property:
+				return 1;
+		}
+		
+		Print("[TAB_CTFArea.GetMilitaryAiGroupCount] Returning zero for military AI count for area " + GetName());
+		return 0;
+	}
+	
+	int GetCivilianCount()
+	{
+		switch (GetAreaType())
+		{
+			case TAB_CTFAreaType.Town:
+				return 6;
+			
+			case TAB_CTFAreaType.City:
+				return 12;
+			
+			case TAB_CTFAreaType.Docks:
+				return 3;
+			
+			case TAB_CTFAreaType.Property:
+				return 2;
+		}
+		
+		return 0;
+	}
+
+	string GetName()
+	{
+		return m_name;
+	}
+
+	TAB_CTFAreaType GetAreaType()
+	{
+		return m_type;
+	}
+	
+	vector GetOrigin()
+	{
+		return m_origin;
+	}
+	
+	float GetRadius()
+	{
+		return m_radius;
+	}
+	
+	bool UseCoordinates()
+	{
+		return m_useCoordinates;
+	}
+	
+	vector GetPlayerSpawnOrigin()
+	{
+		return m_playerSpawnPoint;
+	}
+	
+	float GetPlayerSpawnAngle()
+	{
+		return m_playerSpawnAngle;
+	}
+	
+	void SetInstantiated(bool value = true)
+	{
+		m_instantiated = value;
+	}
+	
+	bool IsInstanatiated()
+	{
+		return m_instantiated;
+	}
+};
+
+// ============================================================================
+// File: TAB_CTFAreaAttackers.c
+// ============================================================================
+
+class TAB_CTFAreaAttackers
+{
+	private static const int m_militaryOrderFrequencySecs = 60;
+	private bool m_initialOrderGiven = false;
+	private TAB_CTFFaction m_faction;
+	private ref TAB_CTFArea m_area;
+	private ref array<ref TAB_CTFAiGroup> m_groups = {};
+	private bool m_initializing = true;
+	private int m_groupCount;
+	private int m_groupToProcess = 0;
+
+	void TAB_CTFAreaAttackers(TAB_CTFFaction faction, TAB_CTFArea area)
+	{
+		m_faction = faction;
+		m_area = area;
+		m_groupCount = m_area.GetMilitaryAiGroupCount();
+	}
+	
+	TAB_CTFFaction GetFaction()
+	{
+		return m_faction;
+	}
+	
+	bool IsInitializing()
+	{
+		return m_initializing;
+	}
+	
+	void SpawnNextGroup(vector origin)
+	{
+		if (m_groups.Count() == m_groupCount)
+			return;
+		
+		TAB_SquadType squadType = TAB_GetRandomSquadType(TAB_CTFGame.rng);
+		int idx = m_groups.Insert(TAB_CTFAiGroup.CreateMilitaryGroup(origin, squadType, m_faction));
+		m_groups[idx].Spawn();
+		
+		if (m_groups.Count() == m_groupCount)
+			m_initializing = false;
+	}
+	
+	void ProcessNextGroup()
+	{
+		if (m_groupToProcess >= m_groups.Count())
+		{
+			m_groupToProcess = 0;
+		}
+		
+		if (m_groups.Count() == 0)
+		{
+			return;
+		}
+		
+		TAB_CTFAiGroup group = m_groups[m_groupToProcess];
+		if (group.GetAliveCount() == 0)
+		{
+			m_groups.Remove(m_groupToProcess);
+			// Keeping the counter as is, it'll fall on the next group.
+			return;
+		}
+		
+		if (group.TimeSinceLastOrder() >= m_militaryOrderFrequencySecs)
+		{
+			group.RemoveAllOrders();
+		}
+		
+		if (!group.HasOrders())
+		{
+			vector position;
+			
+			if (m_initialOrderGiven)
+			{
+				position = m_area.GetOrigin();
+			}
+			else
+			{
+				position = TAB_CTFGame.rng.GenerateRandomPointInRadius(1, m_area.GetRadius(), m_area.GetOrigin());
+				m_initialOrderGiven = true;
+			}
+			
+			group.AddOrder(position, TAB_CTFAiOrder.SearchAndDestroy);
+		}
+
+		++m_groupToProcess;
+	}
+	
+	bool IsAllGroupsDead()
+	{
+		return !m_initializing && m_groups.Count() == 0;
+	}
+	
+	bool IsAnyEngaged()
+	{
+		foreach (TAB_CTFAiGroup group : m_groups)
+		{
+			if (group.IsEngagedWithEnemy())
+				return true;
+		}
+		
+		return false;
+	}
+	
+	void DespawnAll()
+	{
+		foreach (TAB_CTFAiGroup group : m_groups)
+		{
+			group.Despawn();
+		}
+	}
+	
+	array<ref TAB_CTFAiGroup> GetGroups()
+	{
+		return m_groups;
+	}
+};
+
+// ============================================================================
+// File: TAB_CTFAreaInstance.c
+// ============================================================================
+
+enum TAB_CTFAreaReinforcements
+{
+	/*
+	 * Once strength drops (because a player killed an unit) the countdown begins.
+	 * Applies only to Town, Military and Airport.
+	*/
+	NotDone,
+	Countdown,
+	Done
+};
+
+enum TAB_CTFAreaTaskState
+{
+	First,
+	
+	SpawnOrDespawnAi,
+	Reinforcements,
+	DespawnFriendlyReinforcements,
+	StrengthUpdate,
+	Military,
+	Civilian,
+	Order,
+	GenerateEnemyReinforcements,
+	AiAttackers,
+	
+	Last
+};
+
+int TAB_CTFReinforcementCount(TAB_CTFAreaType areaType)
+{
+	switch (areaType)
+	{
+		case TAB_CTFAreaType.Town:
+			return 3;
+		
+		case TAB_CTFAreaType.City:
+			return 6;
+		
+		case TAB_CTFAreaType.Airport:
+			return 4;
+		
+		case TAB_CTFAreaType.Military:
+			return 2;
+	}
+
+	return 0;
+}
+
+/*
+ * This class has waaaaaayyyy toooo maaaaany responsibiliites.
+ * It must be divided up to smaller chunks...at some point.
+ * At least all functionalities in this class is relevant for dealing with an instantiated area.
+*/
+class TAB_CTFAreaInstance
+{
+	private static const int m_reinforcementsTimeSecs = 600;
+	private static const int m_militaryOrderFrequencySecs = 60;
+
+	private ref TAB_CTFArea m_area;
+	private string m_areaName;
+	private TAB_CTFFaction m_faction;
+	private int m_strength;
+	private ref array<ref TAB_CTFAiGroup> m_military = {};
+	private ref array<ref TAB_CTFAiGroup> m_civilians = {};
+	private IEntity m_mapEntity;
+	private SCR_MapDescriptorComponent m_mapComponent;
+	private TAB_CTFAreaReinforcements m_reinforcements = TAB_CTFAreaReinforcements.NotDone;
+	private ref array<TAB_CTFEnemyReinforcementsVehicleStartEntity> m_vehicleReinforcementsStartPoints = {};
+	private ref array<TAB_CTFEnemyReinforcementsParkingSpotEntity> m_vehicleReinforcementsParkingSpots = {};
+	private int m_reinforcementsTimeCounter = 0;
+	private int m_reinforcementsCounter = 0;
+	private SCR_TriggerTask m_task;
+	private bool m_canSpawn = false;
+	private int m_lastSpawnTime;
+	private int m_spawnMilitaryCounter = 0;
+	private int m_spawnCivilianCounter = 0;
+	private ref array<TAB_CTFFaction> m_attackingFactions = {};
+	private ref TAB_CTFAiGroup m_friendlyReinforcement;
+	private TAB_CTFAreaTaskState m_currentAreaTask = TAB_CTFAreaTaskState.First;
+	private ref TAB_CTFAreaAttackers m_aiAttackers = null;
+	private SCR_SpawnPoint m_spawnPoint = null;
+
+	void SendAiAttackers()
+	{
+		TAB_CTFFaction faction = TAB_CTFFaction.US;
+		
+		if (m_faction == TAB_CTFFaction.FIA)
+		{
+			faction = TAB_CTFFaction.US;
+			if (TAB_CTFGame.rng.RandInt(0, 2) == 0)
+				faction = TAB_CTFFaction.USSR;
+		}
+		else
+		{
+			if (m_faction == TAB_CTFFaction.US)
+			{
+				faction = TAB_CTFFaction.USSR;
+			}
+		}
+		
+		m_aiAttackers = new TAB_CTFAreaAttackers(faction, m_area);
+		Print("[TAB_CTFAreaInstance.SendAiAttackers] Sending AI attackers (" + TAB_CTFFactionToString(faction) + ") towards " + GetNameOnMap());
+	}
+	
+	bool HasAiAttackers()
+	{
+		return m_aiAttackers != null;
+	}
+	
+	void TAB_CTFAreaInstance(TAB_CTFArea area, TAB_CTFFaction controlledBy, int strength = 0)
+	{
+		m_area = area;
+		m_faction = controlledBy;
+		m_strength = strength;
+		
+		SetupMapIcon();
+
+		if (TAB_CTFGame.IsGameAuthority())
+		{
+			GenerateRandomAiGroups(m_area.GetMilitaryAiGroupCount(), true /*spawnInsideArea*/);
+			GenerateCivilians(m_area.GetCivilianCount());
+			UpdateAreaTask();
+		}
+		
+		if (TAB_CTFReinforcementCount(GetAreaType()) == 0)
+		{
+			// This should help simplify some logic.
+			m_reinforcements = TAB_CTFAreaReinforcements.Done;
+		}
+
+		m_area.SetInstantiated();
+		RefreshMapIcon();
+		
+		m_vehicleReinforcementsStartPoints = TAB_CTFEnemyReinforcementsVehicleManager.GetStartPointsForArea(m_area.GetName());
+		m_vehicleReinforcementsParkingSpots = TAB_CTFEnemyReinforcementsVehicleManager.GetParkingSpotsForArea(m_area.GetName());
+	}
+
+	void ~TAB_CTFAreaInstance()
+	{
+		if (m_mapEntity)
+		{
+			GetGame().GetWorldEntity().RemoveChild(m_mapEntity);
+		}
+	}
+
+	private void RefreshMapIcon()
+	{
+		if (!m_mapComponent)
+		{
+			Print("[TAB_CTFAreaInstance.RefreshMapIcon] Map component is NULL!! Cannot update marker for " + GetName(), LogLevel.ERROR);
+			return;
+		}
+		
+		int shownStrength = Math.Floor(m_strength * 2.4 / 10) + 1;
+		
+		string attackString;
+		if (IsUnderAttack())
+		{
+			attackString = "\n     Under attack by " + TAB_CTFFactionToString(m_attackingFactions[0]);
+			if (m_attackingFactions.Count() > 1)
+			{
+				attackString += " and " + TAB_CTFFactionToString(m_attackingFactions[1]);
+			}
+		}
+
+		if (m_faction == TAB_CTFFaction.None)
+			m_mapComponent.Item().SetDisplayName("• " + GetNameOnMap() + " | CONTESTED" + attackString);
+		
+		else if (m_faction != TAB_CTFFaction.FIA) // Relevant for comment from StrengthUpdateTask
+			m_mapComponent.Item().SetDisplayName("• " + GetNameOnMap() + " | " + TAB_CTFFactionToString(m_faction) + " | " + shownStrength + attackString);
+		
+		else
+			m_mapComponent.Item().SetDisplayName("• " + GetNameOnMap() + " | FIA | " + shownStrength + attackString);
+	}
+
+	private void SetupMapIcon()
+	{
+		string MapMarkerAssetPath = "{6E90927B4C483526}Prefabs/World/Locations/Common/LocationBaseCTF.et";
+		
+		IEntity desc;
+		
+		if (m_area.UseCoordinates())
+		{
+			Resource resource = Resource.Load(MapMarkerAssetPath);
+			desc = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSimpleEntitySpawnParams(GetOrigin()));
+		}
+		else
+		{
+			desc = GetGame().FindEntity(m_area.GetName());
+			if (!desc)
+			{
+				Print("[TAB_CTFAreaInstance.SetupMapIcon] No such pre-defined area with name " + m_area.GetName(), LogLevel.ERROR);
+				return;
+			}
+		}
+		
+		Managed managedComponent = desc.FindComponent(SCR_MapDescriptorComponent);
+		if (!managedComponent)
+		{
+			Print("[TAB_CTFAreaInstance.SetupMapIcon] No SCR_MapDescriptorComponent from asset " + MapMarkerAssetPath, LogLevel.ERROR);
+			return;
+		}
+	
+		SCR_MapDescriptorComponent mapComponent = SCR_MapDescriptorComponent.Cast(managedComponent);
+		if (!mapComponent)
+		{
+			Print("[TAB_CTFAreaInstance.SetupMapIcon] Couldn't cast SCR_MapDescriptorComponent from Managed component by asset " + MapMarkerAssetPath, LogLevel.ERROR);
+			return;
+		}
+
+		m_mapEntity = desc;
+		m_mapComponent = mapComponent;
+		
+		if (m_area.GetName().Substring(0, 2) == "C_")
+			m_areaName = m_mapComponent.Item().GetDisplayName();
+	}
+	
+	private void UpdateAreaTask()
+	{
+		if (GetFaction() == TAB_CTFFaction.FIA)
+			return;
+
+		string taskTitle = "Capture " + GetNameOnMap();
+		string taskDescription;
+		
+		if (m_faction == TAB_CTFFaction.None)
+		{
+			taskTitle +=  " (Contested!)";
+			taskDescription = "Currently there is nobody controlling " + GetNameOnMap() + ". Eliminate all enemy forces in order to regain control!";
+		}
+		else
+		{
+			taskDescription = "Eliminate all " + TAB_CTFFactionToString(m_faction) + " forces from " + GetNameOnMap();
+		}
+
+		if (!m_task)
+		{
+			Resource resource = Resource.Load("{33DA4D098C409420}Prefabs/Tasks/CTF_TriggerTask_Capture.et");
+			IEntity taskPrefab = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSimpleEntitySpawnParams(m_area.GetPlayerSpawnOrigin()));
+			m_task = SCR_TriggerTask.Cast(taskPrefab);
+		}
+		
+		m_task.SetTitle(taskTitle);
+		m_task.SetDescription(taskDescription);
+		m_task.Create(false);
+	}
+	
+	private void StrengthUpdateTask()
+	{
+		int strengthCounter = 0;
+		
+		/*
+		 * Note: The below (A) and (B) is mutually exclusive since it checks if m_attackingFactions doesn't contains the attacker.
+		*/
+		
+		/* (A) Check if any of the AreaInstance's group is engaged */
+		foreach (TAB_CTFAiGroup group : m_military)
+		{
+			strengthCounter += group.GetAliveCount();
+			TAB_CTFFaction engagedFaction = group.GetEngagedEnemyFaction();
+			if (engagedFaction != m_faction
+				&& group.IsEngagedWithEnemy()
+				&& !m_attackingFactions.Contains(engagedFaction))
+			{
+				m_attackingFactions.Insert(engagedFaction);
+				OnAttacked(group.GetEngagedEnemyFaction());
+			}
+		}
+		
+		/* (B) Check if there's any Ai attackers and if they are engaged */
+		if (m_aiAttackers)
+		{
+			TAB_CTFFaction attackingFaction = m_aiAttackers.GetFaction();
+			if (!m_attackingFactions.Contains(m_aiAttackers.GetFaction())
+				&& m_aiAttackers.IsAnyEngaged())
+			{
+				m_attackingFactions.Insert(attackingFaction);
+				OnAttacked(attackingFaction);
+			}
+		}
+
+		if (strengthCounter != m_strength)
+		{
+			OnStrengthChange(strengthCounter);
+			TAB_CTFReplicationWorkaround.Instance().SetStrength(GetName(), strengthCounter);
+		}
+		
+		m_strength = strengthCounter;
+		
+		if (m_faction == TAB_CTFFaction.FIA && TAB_CTFAnyPlayerWithinArea(m_area.GetOrigin(), m_area.GetRadius()))
+		{
+			/*
+			 * Don't do any faction change if area is FIA controlled and players are still in the area, despite that all FIA AI is dead.
+			*/
+		}
+		else if (m_strength == 0)
+		{
+			m_military.Clear();
+			if (m_attackingFactions.Count() == 1)
+			{
+				if (m_aiAttackers)
+				{
+					if (TAB_CTFAnyPlayerWithinArea(m_area.GetOrigin(), m_area.GetRadius()))
+					{
+						strengthCounter = 0;
+						foreach (TAB_CTFAiGroup group : m_aiAttackers.GetGroups())
+						{
+							group.MarkAsUnengaged();
+							m_military.Insert(group);
+							strengthCounter += group.GetAliveCount();
+						}
+						OnStrengthChange(strengthCounter);
+						TAB_CTFReplicationWorkaround.Instance().SetStrength(GetName(), strengthCounter);
+					}
+					else
+					{
+						m_aiAttackers.DespawnAll();
+					}
+				}
+				
+				OnFactionChange(m_attackingFactions[0]);
+			}
+			
+			else if (m_attackingFactions.Count() == 2 && m_faction != TAB_CTFFaction.None)
+			{
+				if (m_spawnPoint)
+				{
+					delete m_spawnPoint;
+					m_spawnPoint = null;
+					UpdateAreaTask();
+				}
+
+				Print("[TAB_CTFAreaInstance.StrengthUpdateTask] " + GetName() + " is now considered as contested");
+				TAB_CTFGame.ShowFeedback(TAB_CTFFactionToString(m_faction) + " lost control of " + GetNameOnMap() + "!");
+				m_faction = TAB_CTFFaction.None;
+			}
+		}
+	}
+	
+	private void DespawnFriendlyReinforcementsTask()
+	{
+		if (m_faction != TAB_CTFFaction.FIA || !m_friendlyReinforcement || m_canSpawn)
+			return;
+		
+		if (m_friendlyReinforcement)
+		{
+			m_friendlyReinforcement.Despawn();
+			delete m_friendlyReinforcement;
+		}
+	}
+
+	private void ReinforcementsTask()
+	{
+		if (m_reinforcements != TAB_CTFAreaReinforcements.Countdown)
+			return;
+		
+		++m_reinforcementsTimeCounter;
+		
+		if (m_reinforcementsTimeCounter > m_reinforcementsTimeSecs - TAB_CTFReinforcementCount(m_area.GetAreaType())) // one sec per reinforcment spawn
+		{
+			m_reinforcements = TAB_CTFAreaReinforcements.Done;
+			if (m_faction == TAB_CTFFaction.FIA)
+			{
+				return;
+			}
+
+			Print("[TAB_CTFAreaInstance.ReinforcementsTask] Issuing reinforcements towards area " + GetNameOnMap());
+			GenerateEnemyReinforcements(TAB_CTFReinforcementCount(GetAreaType()));
+		}
+	}
+	
+	private void SpawnMilitaryTask()
+	{
+		if (!m_aiAttackers && (!m_canSpawn || m_military.IsEmpty()))
+			return;
+		
+		if (m_spawnMilitaryCounter >= m_military.Count())
+			m_spawnMilitaryCounter = 0;
+		
+		m_military[m_spawnMilitaryCounter].Spawn();
+		
+		++m_spawnMilitaryCounter;
+	}
+	
+	private void DespawnMilitaryTask()
+	{
+		if (m_canSpawn || IsUnderAttack() || m_aiAttackers || m_military.IsEmpty())
+			return;
+		
+		if (m_spawnMilitaryCounter >= m_military.Count())
+			m_spawnMilitaryCounter = 0;
+		
+		m_military[m_spawnMilitaryCounter].Despawn();
+		
+		++m_spawnMilitaryCounter;
+	}
+	
+	private void SpawnCivilianTask()
+	{
+		if (!m_canSpawn || m_civilians.IsEmpty())
+			return;
+		
+		if (m_spawnCivilianCounter >= m_civilians.Count())
+			m_spawnCivilianCounter = 0;
+		
+		TAB_CTFAiGroup group = m_civilians[m_spawnCivilianCounter];
+		if (!group.IsSpawned())
+		{
+			group.Spawn();
+			group.RemoveAllOrders(true);
+		}
+		
+		++m_spawnCivilianCounter;
+	}
+	
+	private void DespawnCivilianTask()
+	{
+		if (m_canSpawn || m_civilians.IsEmpty())
+			return;
+		
+		if (m_spawnCivilianCounter >= m_civilians.Count())
+			m_spawnCivilianCounter = 0;
+		
+		m_civilians[m_spawnCivilianCounter].Despawn();
+		
+		++m_spawnCivilianCounter;
+	}
+	
+	private void AiVehicleOrderTask(TAB_CTFAiGroup group)
+	{
+		if (group.HasOrders())
+		{
+			return;
+		}
+
+		/* AI group is inside this AreaInstance */
+		if (vector.DistanceXZ(group.GetOrigin(), m_area.GetOrigin()) < m_area.GetRadius())
+		{
+			group.RemoveAllOrders(); // Group will get new orders at a later iteration of MilitaryOrderTask.
+		}
+		
+		/* AI group is outside of this AreaInstance */
+		else
+		{
+			Vehicle vehicle = Vehicle.Cast(group.GetReferencedEntity());
+			if (vehicle.IsOccupied())
+			{
+				group.AddOrder(group.GetDrivingTarget(), TAB_CTFAiOrder.GetOutOfVehicle);
+			}
+			else
+			{
+				group.AddOrder(vehicle.GetOrigin(), TAB_CTFAiOrder.GetInVehicle);
+			}
+		}
+	}
+	
+	private void MilitaryOrderTask()
+	{
+		if (!m_canSpawn || m_military.IsEmpty())
+			return;
+		
+		TAB_CTFAiOrder orderType = TAB_CTFAiOrder.Patrol;
+		if (IsUnderAttack())
+			orderType = TAB_CTFAiOrder.SearchAndDestroy;
+
+		foreach (TAB_CTFAiGroup group : m_military)
+		{
+			if (!group.IsSpawned())
+				return; // no need to do anything more - no group is spawned at all (or in the middle of being spawned) - we will try again at a later iteration anyway.
+			
+			if (group.GetAliveCount() == 0)
+				continue; // Group is empty (rest in peace.)
+
+			if (!group.IsDriving())
+			{
+				if (group.TimeSinceLastOrder() >= m_militaryOrderFrequencySecs)
+				{
+					group.RemoveAllOrders();
+				}
+				
+				if (!group.HasOrders() && vector.DistanceXZ(group.GetOrigin(), m_area.GetOrigin()) > m_area.GetRadius())
+				{
+					Print("[TAB_CTFAreaInstance.MilitaryOrderTask] A group for " + m_area.GetName() + " is too far away, sending back to origin");
+					group.RemoveAllOrders();
+					group.AddOrder(m_area.GetOrigin(), orderType);
+					continue;
+				}
+			}
+			else
+			{
+				AiVehicleOrderTask(group);
+				continue;
+			}
+			
+			if (group.HasOrders())
+			{
+				continue;
+			}
+			
+			group.RemoveAllOrders();
+			
+			vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(1, m_area.GetRadius(), m_area.GetOrigin());
+			group.AddOrder(position, orderType);
+		}
+	}
+	
+	private void CivilianOrderTask()
+	{
+		if (!m_canSpawn || m_civilians.IsEmpty())
+			return;
+		
+		TAB_CTFAiOrder orderType = TAB_CTFAiOrder.Patrol;
+		
+		foreach (TAB_CTFAiGroup group : m_civilians)
+		{
+			if (!group.IsSpawned())
+				return; // no need to do anything more - no group is spawned at all (or in the middle of being spawned) - we will try again at a later iteration anyway.
+			
+			if (group.GetAliveCount() == 0)
+				continue; // Group is empty (rest in peace.)
+			
+			if (group.TimeSinceLastOrder() >= 60)
+			{
+				group.RemoveAllOrders();
+				vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(1, m_area.GetRadius(), m_area.GetOrigin());
+				group.AddOrder(position, orderType);
+			}
+		}
+	}
+	
+	private void SpawnOrDespawnAiTask()
+	{
+		array<int> playerIds = new array<int>();
+		GetGame().GetPlayerManager().GetPlayers(playerIds);
+		
+		bool playerIsWithin = false;
+		foreach (int playerId : playerIds)
+		{
+			IEntity playerEntity = GetGame().GetPlayerManager().GetPlayerControlledEntity(playerId);
+			if (!playerEntity)
+				continue; // Game masters without character falls into this I guess
+			
+			if (vector.DistanceXZ(GetOrigin(), playerEntity.GetOrigin()) < TAB_CTFArea.SpawnAiAreaRadius)
+			{
+				playerIsWithin = true;
+				break;
+			}
+		}
+		
+		if (playerIsWithin)
+			SpawnAiGroups();
+		else
+			DespawnAiGroups();
+	}
+	
+	private void GenerateEnemyReinforcementsTask()
+	{
+		if (m_reinforcementsCounter == 0)
+			return;
+		
+		--m_reinforcementsCounter;
+		
+		int byFootOrVehicle = TAB_CTFGame.rng.RandInt(0, 2);
+		TAB_SquadType squadType = TAB_GetRandomSquadType(TAB_CTFGame.rng);
+		
+		if (!m_vehicleReinforcementsStartPoints)
+			byFootOrVehicle = 0; // This is the actual effect of that logged NULL check above (outside) the loop.
+
+		if (byFootOrVehicle == 0)
+			CreateEnemyReinforcementsByFoot(squadType);
+		else
+			CreateEnemyReinforcementsByVehicle(squadType);
+		
+		if (m_reinforcementsCounter == 0)
+		{
+			TAB_CTFGame.ShowFeedback("Reinforcements from " + TAB_CTFFactionToString(m_faction) + " is arriving " + GetNameOnMap());
+			Print("[TAB_CTFAreaInstance.GenerateEnemyReinforcementsTask] Completed spawning of reinforcements towards area " + GetNameOnMap());
+		}
+	}
+	
+	private void AiAttackersTask()
+	{
+		if (!m_aiAttackers)
+			return;
+		
+		if (m_aiAttackers.IsInitializing())
+		{
+			vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 1.2 , m_area.GetRadius() * 1.3, m_area.GetOrigin());
+			m_aiAttackers.SpawnNextGroup(position);
+			
+			return;
+		}
+		
+		if (m_aiAttackers.IsAllGroupsDead())
+		{
+			TAB_CTFFaction faction = m_aiAttackers.GetFaction();
+			m_attackingFactions.RemoveItem(faction);
+			delete m_aiAttackers;
+			m_aiAttackers = null;
+			m_spawnMilitaryCounter = 0;
+			m_reinforcements = TAB_CTFAreaReinforcements.NotDone;
+			m_reinforcementsCounter = 0;
+			m_reinforcementsTimeCounter = 0;
+			
+			foreach (TAB_CTFAiGroup group : m_military) {
+				group.MarkAsUnengaged();
+			}
+			
+			if (m_faction == TAB_CTFFaction.None && m_attackingFactions.Count() == 1)
+			{
+				m_faction = m_attackingFactions[0];
+				m_attackingFactions.Clear();
+				//TAB_CTFGame.ShowFeedback(TAB_CTFFactionToString(m_faction) + " gained control of " + GetNameOnMap());
+				OnFactionChange(m_faction);
+			}
+			else
+			{
+				TAB_CTFGame.ShowFeedback(TAB_CTFFactionToString(faction) + " was defeated in " + GetNameOnMap());
+				RefreshMapIcon();
+			}
+			
+			return;
+		}
+		
+		m_aiAttackers.ProcessNextGroup();
+	}
+
+	array<TAB_CTFFaction> GettAttackingFactions()
+	{
+		return m_attackingFactions;
+	}
+	
+	bool IsUnderAttack()
+	{
+		return !m_attackingFactions.IsEmpty();
+	}
+	
+	void OnFactionChange(TAB_CTFFaction faction)
+	{
+		m_faction = faction;
+		m_attackingFactions.Clear();
+		m_strength = 0; // Just being paranoid. Call to GenerateRandomAiGroups will update this anyway.
+		TAB_CTFReplicationWorkaround.Instance().SetFaction(GetName(), m_faction);
+		m_spawnMilitaryCounter = 0;
+		m_reinforcements = TAB_CTFAreaReinforcements.NotDone;
+		m_reinforcementsCounter = 0;
+		m_reinforcementsTimeCounter = 0;
+		
+		Print("[TAB_CTFAreaInstance.OnFactionChange] " + TAB_CTFFactionToString(m_faction) + " now controls " + GetNameOnMap());
+		
+		if (m_aiAttackers && faction != TAB_CTFFaction.FIA)
+		{
+			delete m_aiAttackers;
+			m_aiAttackers = null;
+		}
+		
+		if (m_faction == TAB_CTFFaction.FIA)
+		{
+			Print("[TAB_CTFAreaInstance.OnFactionChange] Marking task as Finished");
+			TAB_CTFReplicationWorkaround.Instance().BroadcastTaskCompletion(SCR_ECampaignPopupPriority.TASK_DONE,
+																			SCR_SoundEvent.TASK_SUCCEED,
+																			"COMPLETED - " + m_task.GetTitle());
+			m_task.Finish();
+
+			CreateSpawnpoint();
+		}
+		else
+		{
+			if (TAB_CTFGame.IsGameAuthority())
+			{
+				m_task = null;
+				delete m_spawnPoint;
+				UpdateAreaTask();
+			}
+		}
+
+		if (TAB_CTFGame.IsGameAuthority())
+			GenerateRandomAiGroups(m_area.GetMilitaryAiGroupCount(), true);
+
+		RefreshMapIcon();
+		TAB_CTFGame.Instance().OnCapturedArea(m_faction, GetNameOnMap());
+	}
+		
+	void OnStrengthChange(int strength)
+	{
+		Print("[TAB_CTFAreaInstance.OnStrengthChange] Change in strength for area " + GetName() + ": " + strength);
+		m_strength = strength;
+		RefreshMapIcon();
+	}
+	
+	void OnAttacked(TAB_CTFFaction faction)
+	{
+		if (m_faction == faction)
+		{
+			Print("[TAB_CTFAreaInstance.OnAttacked] Ignoring attack event in " + GetName() + ", issued by the controlling faction");
+			return;
+		}
+		
+		string attackFeedback = GetNameOnMap() + " (" + TAB_CTFFactionToString(GetFaction()) + ") is now under attack by " + TAB_CTFFactionToString(faction);
+		TAB_CTFGame.ShowFeedback(attackFeedback);
+	
+		if (m_reinforcements == TAB_CTFAreaReinforcements.NotDone)
+		{
+			Print("[TAB_CTFAreaInstance.OnAttacked] Under attack by " + TAB_CTFFactionToString(faction) + ": " + GetName() + " - Counting down for reinforcements");
+			m_reinforcements = TAB_CTFAreaReinforcements.Countdown;
+		}
+		else
+		{
+			Print("[TAB_CTFAreaInstance.OnAttacked] Under attack by " + TAB_CTFFactionToString(faction) + ": " + GetName() + " - No reinforcements");
+		}
+		
+		if (TAB_CTFGame.Instance().HasFriendlyReinforcements())
+		{
+			GenerateFriendlyReinforcements();
+		}
+		
+		ChangeAiOrder(TAB_CTFAiOrder.SearchAndDestroy);
+	}
+
+	void RunNextAreaTask()
+	{
+		++m_currentAreaTask;
+
+		switch (m_currentAreaTask)
+		{
+			case TAB_CTFAreaTaskState.SpawnOrDespawnAi:
+				SpawnOrDespawnAiTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.Reinforcements:
+				ReinforcementsTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.DespawnFriendlyReinforcements:
+				DespawnFriendlyReinforcementsTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.StrengthUpdate:
+				StrengthUpdateTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.Military:
+				DespawnMilitaryTask();
+				SpawnMilitaryTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.Civilian:
+				DespawnCivilianTask();
+				SpawnCivilianTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.Order:
+				MilitaryOrderTask();
+				CivilianOrderTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.GenerateEnemyReinforcements:
+				GenerateEnemyReinforcementsTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.AiAttackers:
+				AiAttackersTask();
+				break;
+			
+			case TAB_CTFAreaTaskState.Last:
+				m_currentAreaTask = TAB_CTFAreaTaskState.First;
+				break;
+		}
+	}
+	
+	void CreateSpawnpoint()
+	{
+		Resource resource = Resource.Load("{2B1758F237E4820E}Prefabs/MP/Spawning/SpawnPoint_FIA.et");
+		IEntity spawnPrefab = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSimpleEntitySpawnParams(m_area.GetPlayerSpawnOrigin()));
+		spawnPrefab.SetAngles(Vector(0, m_area.GetPlayerSpawnAngle(), 0));
+
+		m_spawnPoint = SCR_SpawnPoint.Cast(spawnPrefab);
+		m_spawnPoint.SetSpawnPointName(GetName());
+
+		Print("[TAB_CTFAreaInstance.CreateSpawnpoint] Created FIA spawn point for " + GetName() + " (" + m_area.GetName() + ") at " + GetOrigin());
+	}
+
+	int GetStrength()
+	{
+		return m_strength;
+	}
+
+	string GetName()
+	{
+		return m_area.GetName();
+	}
+	
+	string GetNameOnMap()
+	{
+		if (m_areaName.IsEmpty())
+			return m_area.GetName();	
+		return m_areaName;
+	}
+	
+	TAB_CTFAreaType GetAreaType()
+	{
+		return m_area.GetAreaType();
+	}
+	
+	TAB_CTFFaction GetFaction()
+	{
+		return m_faction;
+	}
+	
+	vector GetOrigin()
+	{
+		return m_area.GetOrigin();
+	}
+	
+	void SpawnAiGroups()
+	{
+		if (m_canSpawn)
+			return;
+		
+		m_canSpawn = true;
+		m_lastSpawnTime = System.GetUnixTime();
+	}
+	
+	void DespawnAiGroups()
+	{
+		if (!m_canSpawn)
+			return;
+		
+		m_canSpawn = false;
+
+		/*
+		 * This logic is here so that AiGroup positions can reset close to area upon next spawn.
+		*/
+		foreach (TAB_CTFAiGroup group : m_military)
+		{
+			group.SetInitialPosition( TAB_CTFGame.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() / 3, m_area.GetOrigin()) );
+		}
+	}
+
+	notnull array<ref TAB_CTFAiGroup> GetAiGroups()
+	{
+		return m_military;
+	}
+	
+	// Giving position a zero vector means the order is the area's origin.
+	void ChangeAiOrder(TAB_CTFAiOrder order, vector position = vector.Zero)
+	{
+		if (position == vector.Zero)
+			position = GetOrigin();
+		
+		foreach (TAB_CTFAiGroup group: m_military)
+		{
+			group.RemoveAllOrders();
+			group.AddOrder(position, order);
+		}
+	}
+
+	void GenerateRandomAiGroups(int number, bool spawnInsideArea)
+	{
+		int strengthCounter = m_strength;
+
+		for (int i = 0; i < number; ++i)
+		{
+			TAB_SquadType squadType = TAB_GetRandomSquadType(TAB_CTFGame.rng);
+			vector position;
+			
+			if (spawnInsideArea)
+				position = TAB_CTFGame.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() / 3, m_area.GetOrigin());
+			else
+				position = TAB_CTFGame.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.05, m_area.GetOrigin());
+			
+			TAB_CTFAiGroup group = TAB_CTFAiGroup.CreateMilitaryGroup(position, squadType, m_faction);
+			strengthCounter += group.GetAliveCount();
+			m_military.Insert(group);
+		}
+		
+		OnStrengthChange(strengthCounter);
+		TAB_CTFReplicationWorkaround.Instance().SetStrength(GetName(), strengthCounter);
+	}
+	
+	void GenerateCivilians(int number)
+	{
+		m_civilians.Clear();
+		for (int i = 0; i < number; ++i)
+		{
+			vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() / 3, m_area.GetOrigin());
+			position[1] = GetGame().GetWorld().GetSurfaceY(position[0], position[2]); // for some reason this is needed for civilian but not "military" groups.
+			
+			TAB_CTFAiGroup civilian = TAB_CTFAiGroup.CreateCivilianGroup(position);
+			m_civilians.Insert(civilian);
+		}
+	}
+	
+	private void CreateEnemyReinforcementsByFoot(TAB_SquadType squadType)
+	{
+		vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(m_area.GetRadius() / 1.3, m_area.GetRadius() * 1.3, m_area.GetOrigin());
+		TAB_CTFAiGroup group = TAB_CTFAiGroup.CreateMilitaryGroup(position, squadType, m_faction);
+		int strengthCounter = group.GetAliveCount();
+		m_military.Insert(group);
+		group.Spawn(TAB_CTFAiOrder.SearchAndDestroy, m_area.GetOrigin());
+		
+		OnStrengthChange(strengthCounter + m_strength);
+		TAB_CTFReplicationWorkaround.Instance().SetStrength(GetName(), strengthCounter + m_strength);
+	}
+	
+	private void CreateEnemyReinforcementsByVehicle(TAB_SquadType squadType)
+	{
+		if (m_vehicleReinforcementsStartPoints.IsEmpty())
+		{
+			Print("[TAB_CTFAreaInstance.CreateEnemyReinforcementsByVehicle] m_vehicleReinforcementsStartPoints is empty! Creating reinforcements by foot instead for area " + GetNameOnMap(), LogLevel.WARNING);
+			CreateEnemyReinforcementsByFoot(squadType);
+			return;
+		}
+		
+		int startPointIdx = m_vehicleReinforcementsStartPoints.GetRandomIndex();
+		TAB_CTFEnemyReinforcementsVehicleStartEntity vehicleStart = m_vehicleReinforcementsStartPoints[startPointIdx];
+		m_vehicleReinforcementsStartPoints.Remove(startPointIdx); // We want to "consume" these points so that we don't spawn multiple vehicles on the same place.
+		
+		/* Find destination first, if not found it's an error and we will spawn by foot instead. This could probably be its own function. */
+		vector destination = vector.Zero;
+		for (int i = 0; i < m_vehicleReinforcementsParkingSpots.Count(); ++i)
+		{
+			TAB_CTFEnemyReinforcementsParkingSpotEntity parkingSpot = m_vehicleReinforcementsParkingSpots[i];
+			if (!parkingSpot)
+			{
+				// Let's do some cleanup if needed...
+				m_vehicleReinforcementsParkingSpots.Remove(i);
+				--i;
+				continue;
+			}
+			
+			if (parkingSpot.GetUniqueId() == vehicleStart.GetUniqueId())
+			{
+				destination = parkingSpot.GetOrigin();
+				break;
+			}
+		}
+		
+		if (destination == vector.Zero)
+		{
+			Print("[TAB_CTFAreaInstance.CreateEnemyReinforcementsByVehicle] Couldn't find the destination for start point " + vehicleStart.GetUniqueId() + " in area " + GetNameOnMap() + "! Creating reinforcements by foot instead.", LogLevel.WARNING);
+			CreateEnemyReinforcementsByFoot(squadType);
+			return;
+		}
+		
+		string vehicleResourceName = TAB_SquadVehicleResourceName(squadType, m_faction);
+		EntitySpawnParams spawnParams = TAB_CreateSurfaceAdjustedSpawnParams(vehicleStart.GetOrigin());
+		IEntity vehicle = GetGame().SpawnEntityPrefab(Resource.Load(vehicleResourceName), null, spawnParams);
+
+		vector groupSpawnPoint = TAB_CTFGame.rng.GenerateRandomPointInRadius(20, 21, vehicleStart.GetOrigin());
+		TAB_CTFAiGroup group = TAB_CTFAiGroup.CreateMilitaryGroup(groupSpawnPoint, squadType, m_faction);
+		int strengthCounter = group.GetAliveCount();
+		m_military.Insert(group);
+		group.SpawnWithVehicleNeed(destination, vehicle);
+		
+		OnStrengthChange(strengthCounter + m_strength);
+		TAB_CTFReplicationWorkaround.Instance().SetStrength(GetName(), strengthCounter + m_strength);
+	}
+	
+	void GenerateEnemyReinforcements(int number)
+	{
+		m_reinforcementsCounter = number;
+		
+		if (!m_vehicleReinforcementsStartPoints)
+		{
+			Print("[TAB_CTFAreaInstance.GenerateEnemyReinforcements] m_vehicleReinforcementsStartPoints is NULL! All reinforcements will arrive by foot! Area is: " + GetNameOnMap(), LogLevel.ERROR);
+		}
+	}
+	
+	string CalculateCardinals(vector origin, vector point)
+	{
+		const float RadToDeg = 57.296;
+		vector relative = point - origin;
+		float degs = Math.Atan2(relative[0], relative[2]) * RadToDeg;
+		
+		if (degs < 0)
+		{
+			degs = 360 + degs;
+		}
+
+		if (degs >= 22.5 && degs < 67.5)
+			return "north east";
+		
+		if (degs >= 67.5 && degs < 112.5)
+			return "east";
+		
+		if (degs >= 112.5 && degs < 157.5)
+			return "south east";
+		
+		if (degs >= 157.5 && degs < 202.5)
+			return "south";
+		
+		if (degs >= 202.5 && degs < 247.5)
+			return "south west";
+		
+		if (degs >= 247.5 && degs < 292.5)
+			return "west";
+		
+		if (degs >= 292.5 && degs < 337.5)
+			return "north west";
+
+		return "north";	
+	}
+	
+	void GenerateFriendlyReinforcements()
+	{
+		TAB_CTFGame.Instance().UseFriendlyReinforcements();
+
+		vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.05, m_area.GetOrigin());
+		m_friendlyReinforcement = TAB_CTFAiGroup.CreateMilitaryGroup(position, TAB_SquadType.Riflemen, TAB_CTFFaction.FIA);
+		m_friendlyReinforcement.Spawn(TAB_CTFAiOrder.SearchAndDestroy, m_area.GetOrigin());
+		TAB_CTFGame.ShowFeedback("Friendly reinforcements from " + CalculateCardinals(m_area.GetOrigin(), position) + " of " + GetNameOnMap());
+	}
+};
+
+// ============================================================================
+// File: TAB_CTFAreaList.c
+// ============================================================================
+
+class TAB_CTFAreaList
+{
+	private ref array<ref TAB_CTFArea> m_areas = {};
+
+	protected void AddArea(string name, TAB_CTFAreaType areaType, vector origin, vector playerSpawnpoint, float playerSpawnAngle, float radius)
+	{
+		m_areas.Insert(TAB_CTFArea.ConstructPositioned(name, areaType, origin, playerSpawnpoint, playerSpawnAngle, radius));
+	}
+	
+	protected void AddArea(string name, TAB_CTFAreaType areaType, vector playerSpawnpoint, float playerSpawnAngle, float radius)
+	{
+		m_areas.Insert(TAB_CTFArea.ConstructNamed(name, areaType, playerSpawnpoint, playerSpawnAngle, radius));
+	}
+	
+	int Count()
+	{
+		return m_areas.Count();
+	}
+	
+	void ResetAllAreas()
+	{
+		foreach (TAB_CTFArea area : m_areas)
+		{
+			area.SetInstantiated(false);
+		}
+	}
+	
+	TAB_CTFArea At(int idx)
+	{
+		return m_areas[idx];
+	}
+	
+	TAB_CTFArea Find(TAB_CTFAreaType areaType)
+	{
+		foreach (TAB_CTFArea area : m_areas)
+		{
+			if (area.GetAreaType() == areaType)
+			{
+				return area;
+			}
+		}
+		
+		return null;
+	}
+	
+	TAB_CTFArea Find(string areaName)
+	{
+		foreach (TAB_CTFArea area : m_areas)
+		{
+			if (area.GetName() == areaName)
+			{
+				return area;
+			}
+		}
+		
+		return null;
+	}
+	
+	array<ref TAB_CTFArea> GetAll()
+	{
+		array<ref TAB_CTFArea> areas = {};
+		
+		foreach (TAB_CTFArea area : m_areas)
+		{
+			areas.Insert(area);
+		}
+		
+		return areas;
+	}
+	
+	array<ref TAB_CTFArea> FindAll(TAB_CTFAreaType areaType)
+	{
+		array<ref TAB_CTFArea> areas = {};
+		
+		foreach (TAB_CTFArea area : m_areas)
+		{
+			if (area.GetAreaType() == areaType && !area.IsInstanatiated())
+			{
+				areas.Insert(area);
+			}
+		}
+		
+		return areas;
+	}
+	
+	array<ref TAB_CTFArea> FindAllNot(TAB_CTFAreaType areaType)
+	{
+		array<ref TAB_CTFArea> areas = {};
+		
+		foreach (TAB_CTFArea area : m_areas)
+		{
+			if (area.GetAreaType() != areaType && !area.IsInstanatiated())
+			{
+				areas.Insert(area);
+			}
+		}
+		
+		return areas;
+	}
+};
+
+// ============================================================================
+// File: TAB_CTFAreaListEveron.c
+// ============================================================================
+
+class TAB_CTFAreaListEveron: TAB_CTFAreaList
+{
+	static private ref TAB_CTFAreaListEveron m_instance;
+	
+	static TAB_CTFAreaListEveron Instance()
+	{
+		if (!m_instance)
+		{
+			m_instance = new TAB_CTFAreaListEveron();
+		}
+		return m_instance;
+	}
+	
+	private void TAB_CTFAreaListEveron()
+	{
+		/*                                                                                                  Player                                Player    Area
+		 *      Area                      Area                        Area                                  spawn                                 spawn     size
+		 *      name                      type                        position *)                           position                              angle     (AI spawns within here) */
+		AddArea("Gorey",                  TAB_CTFAreaType.Property,   Vector(4856.249, 112.943, 8102.479),  Vector(4841.937, 114.174, 8118.889),   139.413,  70);
+		AddArea("Green Valley Cottage",   TAB_CTFAreaType.Property,   Vector(8483.667, 154.008, 3643.827),  Vector(8491.522, 153.821, 3637.642),  -149.198,  40);
+		AddArea("Moonstone Pond",         TAB_CTFAreaType.Property,   Vector(4560.759, 52.5,    5441.447),  Vector(4565.543, 54.011,  5437.072),  -75.556,   40);
+		AddArea("Tillers Find",           TAB_CTFAreaType.Property,   Vector(3884.889, 69.325,  6927.79),   Vector(3879.522, 69.938,  6911.347),   32.326,   40);
+		AddArea("Peters Pass",            TAB_CTFAreaType.Property,   Vector(8235.656, 221.409, 4374.552),  Vector(8244.181, 220.8,   4382.789),  -70.079,   40);
+		AddArea("Benac",                  TAB_CTFAreaType.Property,   Vector(6589.622, 152.21,  7121.347),  Vector(6578.002, 154.076, 7130.51),   -165.37,   40);
+		AddArea("Black Lake",             TAB_CTFAreaType.Property,   Vector(9537.26,  235.896, 2799.532),  Vector(9540.032, 235.85,  2803.043),  -74.107,   40);
+		
+		AddArea("Monfort Castle",         TAB_CTFAreaType.Military,   Vector(9358.805, 204.677, 1162.21),   Vector(9337.771, 197.029, 1171.224),   176.835,  85);
+		AddArea("Military Hospital",      TAB_CTFAreaType.Military,   Vector(3887.259, 15.226,  8452.676),  Vector(3898.791, 15.306,  8488.333),   87.483,   90);
+		AddArea("Levie Military Base",    TAB_CTFAreaType.Military,   Vector(7506.883, 165.749, 4287.396),  Vector(7500.069, 166.228, 4334.012),   125.594,  140);
+		AddArea("Power Plant",            TAB_CTFAreaType.Military,   Vector(5819.441, 4.562,   9743.185),  Vector(5864.596, 4.611,   9732.277),   18.129,   100);
+		AddArea("Military docks",         TAB_CTFAreaType.Military,   Vector(7439.86,  7.875,   6736.582),  Vector(7457.732, 7.993,   6758.915),  -152.792,  120);
+		
+		AddArea("St. Phillipe Airport",   TAB_CTFAreaType.Airport,    Vector(4907.16,  28.594,  11755.936), Vector(4938.322, 29.891,  11833.042),  89.676,   110);
+		
+		AddArea("C_LocationTyrone",       TAB_CTFAreaType.Town,                                             Vector(4940.81,  41.794,  8999.415),  -155.912,  150);
+		AddArea("C_LocationStPhilippe",   TAB_CTFAreaType.City,                                             Vector(4481.01,  9.729,   10809.558),  169.198,  300);
+		AddArea("C_LocationGravette",     TAB_CTFAreaType.Town,                                             Vector(4138.362, 39.442,  7735.416),  -50.695,   100);
+		AddArea("C_LocationMontignac",    TAB_CTFAreaType.Town,                                             Vector(4770.146, 166.181, 7037.05),   -21.05,    250);
+		AddArea("C_LocationProvins",      TAB_CTFAreaType.Town,                                             Vector(5583.941, 97.247,  6088.23),   -128.415,  120);
+		AddArea("C_LocationChotain",      TAB_CTFAreaType.Town,                                             Vector(7131.873, 114.625, 5953.739),   77.009,   160);
+		AddArea("C_LocationVilleneuve",   TAB_CTFAreaType.Town,                                             Vector(2836.576, 85.523,  6377.712),   77.009,   120);
+		AddArea("C_LocationLeMoule",      TAB_CTFAreaType.Town,                                             Vector(2619.461, 89.552,  5320.852),   4.831,    100);
+		AddArea("C_LocationLamentin",     TAB_CTFAreaType.Town,                                             Vector(1234.472, 36.178,  5972.006),  -24.629,   180);
+		AddArea("C_LocationMorton",       TAB_CTFAreaType.Town,                                             Vector(5069.56,  14.724,  3991.74),   -110.351,  150);
+		AddArea("C_LocationDurras",       TAB_CTFAreaType.Town,                                             Vector(8799.901, 95.354,  2720.352),   101.644,  130);
+		AddArea("C_LocationRegina",       TAB_CTFAreaType.Town,                                             Vector(7149.512, 139.005, 2329.945),   70.963,   150);
+		AddArea("C_Location_St_Pierre",   TAB_CTFAreaType.Town,                                             Vector(9853.284, 4.381,   1538.464),  -61.675,   120);
+
+		/*
+		 *) If area is a Town/City, position is taken from the map marker with the same exact (object) name in the world.
+		*/
+
+		Print("[TAB_CTFAreaListEveron] Registered " + Count() + " areas");
+	}
+};
+
+// ============================================================================
+// File: TAB_CTFCivilianAiDriverManager.c
+// ============================================================================
+
+class TAB_CTFCivilianAiVehicle
+{
+	void TAB_CTFCivilianAiVehicle(TAB_CTFRandomVehicleEntity vehicle_, TAB_CTFAiGroup driver_)
+	{
+		vehicle = vehicle_;
+		driver = driver_;
+		originalOrigin = vehicle.GetOrigin();
+	}
+	
+	void Reset()
+	{
+		if (driver)
+			driver.Despawn();
+		
+		if (vehicle)
+			vehicle.Reset();
+		
+		driver = null;
+		vehicle = null;
+	}
+	
+	TAB_CTFRandomVehicleEntity vehicle;
+	ref TAB_CTFAiGroup driver;
+	vector originalOrigin;
+};
+
+class TAB_CTFCivilianAiDriverManagerClass: GenericEntityClass
+{
+};
+
+class TAB_CTFCivilianAiDriverManager: GenericEntity
+{
+	static private ref array<ref TAB_CTFCivilianAiVehicle> m_ais = {};
+	static private int m_aisIdx = 0;
+	static private const int m_drivingTargetRadius = 50; // Radius of target which AI drives towards, used to check for driving completion.
+	static private const int m_despawnDistance = 1100; // Distance at which Ai despawns from nearest player.
+	
+	static void AddVehicle(TAB_CTFRandomVehicleEntity vehicle, vector destination)
+	{
+		if (vehicle.IsCivilianAiOnlySpawn())
+		{
+			vehicle.Spawn();
+		}
+		
+		vector groupPosition = TAB_CTFGame.rng.GenerateRandomPointInRadius(20, 21, vehicle.GetVehicleOrigin());
+		TAB_CTFAiGroup group = TAB_CTFAiGroup.CreateCivilianGroup(groupPosition);
+		TAB_CTFCivilianAiVehicle ai = new TAB_CTFCivilianAiVehicle(vehicle, group);
+		m_ais.Insert(ai);
+		group.SpawnWithVehicleNeed(destination, vehicle.GetVehicleEntity());
+	}
+	
+	static void RunTask()
+	{
+		if (m_aisIdx >= m_ais.Count())
+			m_aisIdx = 0;
+		
+		if (m_ais.IsEmpty())
+			return;
+		
+		TAB_CTFCivilianAiVehicle ai = m_ais[m_aisIdx];
+		
+		/* Verify validity of m_aisIdx */
+		if (!ai || !ai.driver)
+		{
+			m_ais.Remove(m_aisIdx);
+			return;
+		}
+		
+		// Avoid using m_aisIdx from this point on, its validity is not verified until next iteration.
+		++m_aisIdx;
+		
+		array<SCR_ChimeraCharacter> characters = ai.driver.GetGroupCharacters();
+		
+		/* Ai is dead */
+		if (characters.IsEmpty())
+		{
+			ai.driver = null;
+			return;
+		}
+		
+		SCR_ChimeraCharacter driverCharacter = characters[0];
+		if (ai.vehicle)
+		{
+			SCR_ChimeraCharacter actualDriver = TAB_GetPilotForVehicle(ai.vehicle.GetVehicleEntity());
+			
+			/* Vehicle was captured by someone else. */
+			if (driverCharacter && actualDriver && driverCharacter != actualDriver)
+			{
+				ai.vehicle.PreserveVehicle();
+				ai.vehicle = null;
+			}
+		}
+		
+		/* No players nearby the AI, despawn */
+		if (ai.driver && !TAB_CTFAnyPlayerWithinArea(ai.driver.GetOrigin(), m_despawnDistance))
+		{
+			ai.Reset();
+			return;
+		}
+				
+		/* Vehicle was caputred by someone else or AI is dead or despawned. Will be cleaned up later. */
+		if (!ai.vehicle || !ai.driver || !ai.driver.IsSpawned())
+		{
+			return;
+		}
+		
+		/* AI has reached the target */
+		if (vector.DistanceXZ(ai.driver.GetOrigin(), ai.driver.GetDrivingTarget()) < m_drivingTargetRadius)
+		{
+			ai.driver.RemoveAllOrders();
+			ai.driver.AddOrder(ai.originalOrigin, TAB_CTFAiOrder.Move);
+			vector newOriginalOrigin = ai.driver.GetDrivingTarget();
+			ai.driver.SetDrivingTarget(ai.originalOrigin);
+			ai.originalOrigin = newOriginalOrigin;
+			return;
+		}
+		
+		/* AI needs order to either enter vehicle or drive towards target */
+		if (!ai.driver.HasOrders())
+		{
+			Vehicle actualVehicle = TAB_GetVehicleForChimeraCharacter(driverCharacter);
+			
+			if ((actualVehicle != null && actualVehicle != ai.vehicle) // AI got into the wrong vehicle... oh well.
+				|| ai.vehicle.IsOccupied())	 // AI got into the correct vehicle
+			{
+				ai.driver.AddOrder(ai.driver.GetDrivingTarget(), TAB_CTFAiOrder.Move);
+			}
+			else
+			{
+				ai.driver.AddOrder(ai.vehicle.GetVehicleOrigin(), TAB_CTFAiOrder.GetInVehicle);
+			}
+		}
+	}
+};
+
+// ============================================================================
+// File: TAB_CTFCivilianOnlyArea.c
+// ============================================================================
+
+class TAB_CTFCivilianOnlyAreaMeshComponentClass: SCR_BaseAreaMeshComponentClass
+{
+};
+
+class TAB_CTFCivilianOnlyAreaMeshComponent: SCR_BaseAreaMeshComponent
+{
+	override float GetRadius()
+	{
+		TAB_CTFCivilianOnlyArea owner = TAB_CTFCivilianOnlyArea.Cast(GetOwner());
+		if (!owner)
+			return 0;
+		return owner.GetRadius();
+	}
+};
+
+class TAB_CTFCivilianOnlyAreaClass: GenericEntityClass
+{
+};
+
+class TAB_CTFCivilianOnlyArea: GenericEntity
+{
+	[Attribute(defvalue: "1000", desc: "Distance from center of this and player where civilians should spawn.")]
+	protected float m_spawnDistance;
+	
+	[Attribute(defvalue: "100", desc: "Radius size of this area.")]
+	protected float m_radius;
+	
+	[Attribute(defvalue: "4", desc: "Amount of civilians to spawn in this area.")]
+	protected int m_civilianCount;
+	
+	private ref array<ref TAB_CTFAiGroup> m_groups = {};
+	
+	private int m_idx = -1;
+	
+	private bool m_canSpawn = false;
+	
+	void TAB_CTFCivilianOnlyArea(IEntitySource src, IEntity parent)
+	{
+		if (!TAB_CTFGame.IsGameAuthority())
+			return;
+		
+		TAB_CTFCivilianOnlyAreaManager.AddArea(this);
+	}
+	
+	void SetSpawnDistance(float distance)
+	{
+		m_spawnDistance = distance;
+	}
+	
+	float GetSpawnDistance()
+	{
+		return m_spawnDistance;
+	}
+	
+	void SetRadius(float radius)
+	{
+		m_radius = radius;
+	}
+	
+	float GetRadius()
+	{
+		return m_radius;
+	}
+	
+	void SetCivilianCount(int count)
+	{
+		m_civilianCount = count;
+	}
+	
+	int GetCivilianCount()
+	{
+		return m_civilianCount;
+	}
+
+	void Spawn()
+	{
+		m_canSpawn = true;
+	}
+	
+	void Despawn()
+	{
+		m_canSpawn = false;
+	}
+	
+	void Tick()
+	{
+		if (!TAB_CTFGame.IsGameAuthority() || !TAB_CTFGame.HasInstance())
+		{
+			return;
+		}
+
+		/* Spawn */
+		if (m_canSpawn && m_groups.Count() != m_civilianCount)
+		{
+			vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(1, GetRadius(), GetOrigin());
+			position[1] = GetGame().GetWorld().GetSurfaceY(position[0], position[2]); // for some reason this is needed for civilians.
+			
+			TAB_CTFAiGroup group = TAB_CTFAiGroup.CreateCivilianGroup(position);
+			group.Spawn();
+			group.RemoveAllOrders(true);
+			
+			m_groups.Insert(group);
+			return;
+		}
+		
+		/* Despawn */
+		else if (!m_canSpawn && !m_groups.IsEmpty())
+		{
+			m_groups[0].Despawn();
+			m_groups.Remove(0);
+			return;
+		}
+		
+		/* Get current civilian group (or return if none) */
+		++m_idx;
+		if (m_idx >= m_groups.Count())
+		{
+			m_idx = 0;
+		}
+		
+		if (m_groups.IsEmpty())
+		{
+			return;
+		}
+		
+		TAB_CTFAiGroup group = m_groups[m_idx];
+		
+		if (group == null)
+		{
+			m_groups.Remove(m_idx);
+			return;
+		}
+		
+		/* Order handling of current civilian group */
+		if (group.TimeSinceLastOrder() >= 60)
+		{
+			group.RemoveAllOrders();
+			vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(1, GetRadius(), GetOrigin());
+			group.AddOrder(position, TAB_CTFAiOrder.Patrol);
+		}
+	}
+	
+	vector GetOrigin()
+	{
+		return GetOwner().GetOrigin();
+	}
+};
+
+// ============================================================================
+// File: TAB_CTFCivilianOnlyAreaManager.c
+// ============================================================================
+
+class TAB_CTFCivilianOnlyAreaManagerClass: GenericEntityClass
+{
+};
+
+class TAB_CTFCivilianOnlyAreaManager: GenericEntity
+{
+	static private ref array<TAB_CTFCivilianOnlyArea> m_areas = {};
+	private int m_idx = -1;
+	
+	void TAB_CTFCivilianOnlyAreaManager(IEntitySource src, IEntity parent)
+	{
+		if (!TAB_CTFGame.IsGameAuthority())
+			return;
+		
+		SetEventMask(EntityEvent.FRAME);
+	}
+	
+	static void AddArea(TAB_CTFCivilianOnlyArea area)
+	{
+		m_areas.Insert(area);
+	}
+
+	override protected void EOnFrame(IEntity owner, float timeSlice)
+	{
+		if (!m_areas || m_areas.IsEmpty())
+		{
+			m_idx = 0;
+			return;
+		}
+		
+		++m_idx;
+		
+		if (m_idx >= m_areas.Count())
+		{
+			m_idx = 0;
+		}
+		
+		if (!m_areas.IsEmpty() && m_idx < m_areas.Count() && m_areas[m_idx] == null)
+		{
+			m_areas.Remove(m_idx);
+			return;
+		}
+
+		TAB_CTFCivilianOnlyArea area = m_areas[m_idx];
+		
+		if (TAB_CTFAnyPlayerWithinArea(area.GetOrigin(), area.GetSpawnDistance()))
+		{
+			area.Spawn();
+		}
+		else
+		{
+			area.Despawn();
+		}
+		
+		area.Tick();
+	}
+}
+class TAB_CTFEnemyReinforcementsParkingSpotMeshComponentClass: SCR_BaseAreaMeshComponentClass
+{
+};
+
+class TAB_CTFEnemyReinforcementsParkingSpotMeshComponent: SCR_BaseAreaMeshComponent
+{
+	override float GetRadius()
+	{
+		return 2;
+	}
+};
+
+class TAB_CTFEnemyReinforcementsParkingSpotEntityClass: GenericEntityClass
+{
+};
+
+class TAB_CTFEnemyReinforcementsParkingSpotEntity: GenericEntity
+{
+	[Attribute(defvalue: "", desc: "Area name for which this parking spot belongs to.")]
+	protected string m_areaName;
+	
+	[Attribute(defvalue: "0", desc: "Unique ID (per area) for binding this parking spot to a starting point.")]
+	protected int m_id;
+	
+	void TAB_CTFEnemyReinforcementsParkingSpotEntity(IEntitySource src, IEntity parent)
+	{
+		if (!TAB_CTFGame.IsGameAuthority())
+			return;
+		
+		TAB_CTFEnemyReinforcementsVehicleManager.addParkingSpot(this);
+	}
+	
+	string GetAreaName()
+	{
+		return m_areaName;
+	}
+	
+	int GetUniqueId()
+	{
+		return m_id;
+	}
+};
+class TAB_CTFEnemyReinforcementsVehicleManager
+{
+	static private ref array<TAB_CTFEnemyReinforcementsVehicleStartEntity> m_startPoints;
+	static private ref array<TAB_CTFEnemyReinforcementsParkingSpotEntity> m_parkingSpots;
+	
+	static void addStartPoint(TAB_CTFEnemyReinforcementsVehicleStartEntity startPoint)
+	{
+		if (!m_startPoints)
+			m_startPoints = new array<TAB_CTFEnemyReinforcementsVehicleStartEntity>();
+		
+		m_startPoints.Insert(startPoint);
+	}
+	
+	static void addParkingSpot(TAB_CTFEnemyReinforcementsParkingSpotEntity parkingSpot)
+	{
+		if (!m_parkingSpots)
+			m_parkingSpots = new array<TAB_CTFEnemyReinforcementsParkingSpotEntity>();
+		
+		m_parkingSpots.Insert(parkingSpot);
+	}
+
+	static array<TAB_CTFEnemyReinforcementsVehicleStartEntity> GetStartPointsForArea(string areaName)
+	{
+		array<TAB_CTFEnemyReinforcementsVehicleStartEntity> startPoints = {};
+		if (!m_startPoints)
+		{
+			Print("[TAB_CTFEnemyReinforcementsVehicleManager.GetStartPointsForArea] m_startPoints is NULL - areaName = " + areaName, LogLevel.ERROR);
+			return startPoints;
+		}
+		
+		for (int i = 0; i < m_startPoints.Count(); ++i)
+		{
+			TAB_CTFEnemyReinforcementsVehicleStartEntity point = m_startPoints[i];
+			if (!point)
+			{
+				m_startPoints.Remove(i);
+				--i;
+				continue;
+			}
+			
+			if (point.GetAreaName() == areaName)
+				startPoints.Insert(point);
+		}
+
+		return startPoints;
+	}
+	
+	static array<TAB_CTFEnemyReinforcementsParkingSpotEntity> GetParkingSpotsForArea(string areaName)
+	{
+		array<TAB_CTFEnemyReinforcementsParkingSpotEntity> parkingSpots = {};
+		
+		if (!m_parkingSpots)
+		{
+			Print("[TAB_CTFEnemyReinforcementsVehicleManager.GetParkingSpotsForArea] m_parkingSpots is NULL - areaName = " + areaName, LogLevel.ERROR);
+			return parkingSpots;
+		}
+		
+		for (int i = 0; i < m_parkingSpots.Count(); ++i)
+		{
+			TAB_CTFEnemyReinforcementsParkingSpotEntity spot = m_parkingSpots[i];
+			if (!spot)
+			{
+				m_parkingSpots.Remove(i);
+				--i;
+				continue;
+			}
+			
+			if (spot.GetAreaName() == areaName)
+				parkingSpots.Insert(spot);
+		}
+		
+		return parkingSpots;
+	}
+};
+class TAB_CTFEnemyReinforcementsVehicleStartMeshComponentClass: SCR_BaseAreaMeshComponentClass
+{
+};
+
+class TAB_CTFEnemyReinforcementsVehicleStartMeshComponent: SCR_BaseAreaMeshComponent
+{
+	override float GetRadius()
+	{
+		return 2;
+	}
+};
+
+class TAB_CTFEnemyReinforcementsVehicleStartEntityClass: GenericEntityClass
+{
+};
+
+class TAB_CTFEnemyReinforcementsVehicleStartEntity: GenericEntity
+{
+	[Attribute(defvalue: "", desc: "Area name for which this vehicle spot belongs to.")]
+	protected string m_areaName;
+	
+	[Attribute(defvalue: "0", desc: "Unique ID (per area) for binding this starting point with a parking spot.")]
+	protected int m_id;
+	
+	void TAB_CTFEnemyReinforcementsVehicleStartEntity(IEntitySource src, IEntity parent)
+	{
+		if (!TAB_CTFGame.IsGameAuthority())
+			return;
+		
+		TAB_CTFEnemyReinforcementsVehicleManager.addStartPoint(this);
+	}
+	
+	string GetAreaName()
+	{
+		return m_areaName;
+	}
+	
+	int GetUniqueId()
+	{
+		return m_id;
+	}
+};
+enum TAB_CTFFaction
+{
+	None, // Makes it possible for nullable "faction" variables.
+	
+	US,
+	USSR,
+	FIA
+};
+
+string TAB_CTFFactionToString(TAB_CTFFaction faction)
+{
+	/*
+	 * I wish the compiler was a bit more smart about switch-case.
+	 * If all cases are fulfilled or a default statement is provided, and all cases return something,
+	 * then there shouldn't be a compile error about "No return statement".
+	*/
+
+	switch (faction)
+	{
+		case TAB_CTFFaction.US:
+			return "US";
+		case TAB_CTFFaction.USSR:
+			return "USSR";
+	}
+	return "FIA"; // Default
+}
+
+int TAB_CTFFactionToInt(TAB_CTFFaction faction)
+{
+	/*
+	 * Done this way so that the conversion is well formed.
+	*/
+
+	switch (faction)
+	{
+		case TAB_CTFFaction.US:
+			return 0;
+		case TAB_CTFFaction.USSR:
+			return 1;
+	}
+	return 2; // Default
+}
+
+TAB_CTFFaction TAB_CTFFactionFromInt(int faction)
+{
+	/*
+	 * Done this way so that the conversion is well formed.
+	*/
+
+	switch (faction)
+	{
+		case 0:
+			return TAB_CTFFaction.US;
+		case 1:
+			return TAB_CTFFaction.USSR;
+	}
+	return TAB_CTFFaction.FIA; // Default
+}
+
+TAB_CTFFaction TAB_CTFRandomEnemyFaction(notnull RandomGenerator rng)
+{
+	int n = rng.RandInt(0, 2);
+	if (n == 0)
+		return TAB_CTFFaction.US;
+	return TAB_CTFFaction.USSR;
+}
+class TAB_CTFGame
+{
+	static private ref TAB_CTFGame m_instance = null;
+	
+	static private int aiAttackersTimeLow = 600;
+	static private int aiAttackersTimeHigh = 1800;
+	
+	static private int m_periodicalGameTaskTimeDelta = 120; // milliseconds.
+	static private int m_entityGcTaskTime = 250; // milliseconds.
+	static private int m_maxFeedbackWidgetLifetime = 50; // this X m_periodicalGameTaskTimeDelta
+	
+	private ref TAB_CTFAreaList m_areaList;
+	private ref array<ref TAB_CTFAreaInstance> m_areas = {};
+	private bool m_periodicalTaskActive = false;
+	private int m_minMissionCount;
+	private int m_maxMissionCount
+	private int m_friendlyReinforcementCount = 0;
+	private bool m_canSendAiAttackers = false;
+	private bool m_aiAttackersQueued = false;
+	
+	static ref RandomGenerator rng = new RandomGenerator();
+	static private int m_feedbackWidgetLifetime = 0;
+	static private ref Widget m_feedbackWidget;
+	
+	static private ref array<TAB_CTFSideMissionAreaEntity> m_missionAreas;
+	static private ref array<TAB_CTFLootPoint> m_lootPoints;
+	
+	static private ref array<IEntity> m_entityGc = {}; // Used to delay deletion of entities, aiding in lowering lag spikes (hopefully.)
+	
+	private void TAB_CTFGame(int minMissionCount, int maxMissionCount)
+	{
+		m_minMissionCount = minMissionCount;
+		m_maxMissionCount = maxMissionCount;
+
+		ActivatePeriodicalTask();
+		
+		if (IsGameAuthority())
+		{
+			GetGame().GetCallqueue().CallLater(SpawnSideMissions, 1500, true);
+			GetGame().GetCallqueue().CallLater(SpawnRandomLoot, 2000, true);
+			Print("[TAB_CTFGame] ChaosToFreedom game core initialized as authority!");
+		}
+		else
+		{
+			Print("[TAB_CTFGame] ChaosToFreedom game core initialized as proxy!");
+		}
+	}
+	
+	void ~TAB_CTFGame()
+	{
+		m_areas.Clear();
+		m_entityGc.Clear();
+	}
+
+	static void AddEntityToGc(IEntity entity)
+	{
+		m_entityGc.Insert(entity);
+	}
+	
+	static TAB_CTFGame Instantiate(int minMissionCount, int maxMissionCount)
+	{
+		if (m_instance)
+		{
+			Print("[TAB_CTFGame] Deleting previous game");
+			delete m_instance;	
+		}
+		
+		Print("[TAB_CTFGame] Instantiating singleton");	
+		m_instance = new TAB_CTFGame(minMissionCount, maxMissionCount);
+		return m_instance;
+	}
+	
+	static TAB_CTFGame Instance()
+	{
+		if (!m_instance)
+		{
+			Print("[TAB_CTFGame] Singleton has not been instantiated!", LogLevel.ERROR);	
+		}
+		return m_instance;
+	}
+	
+	static bool HasInstance()
+	{
+		return m_instance != null;
+	}
+	
+	static void AddMissionArea(TAB_CTFSideMissionAreaEntity area)
+	{
+		if (!m_missionAreas)
+			m_missionAreas = new array<TAB_CTFSideMissionAreaEntity>();
+		m_missionAreas.Insert(area);
+	}
+	
+	static void AddLootPoint(TAB_CTFLootPoint point)
+	{
+		if (!m_lootPoints)
+			m_lootPoints = new array<TAB_CTFLootPoint>();
+		
+		if (!point)
+		{
+			return;
+		}
+
+		m_lootPoints.Insert(point);
+	}
+	
+	static bool IsGameAuthority()
+	{
+		switch (RplSession.Mode())
+		{
+			case RplMode.None:
+			case RplMode.Listen:
+			case RplMode.Dedicated:
+				return true;
+		}
+		return false;
+	}
+	
+	static void ShowFeedback(string feedback)
+	{
+		ResourceName layoutResourceName = "{34F668D5594F548B}UI/layouts/HUD/CampaignMP/CaptureMessage.layout";	
+		bool appendToExisting = false;
+		if (m_feedbackWidget)
+		{
+			m_feedbackWidgetLifetime = 0;
+			appendToExisting = true;
+		}
+		else
+		{
+			m_feedbackWidget = GetGame().GetWorkspace().CreateWidgets(layoutResourceName);
+			if (!m_feedbackWidget)
+			{
+				Print("[TAB_CTFGame.ShowFeedback] Couldn't load layout resource: " + layoutResourceName, LogLevel.ERROR);
+				return;
+			}
+		}
+
+		Widget textWidget = m_feedbackWidget.FindWidget("Message");
+		TextWidget text = TextWidget.Cast(textWidget);
+		if (!text)
+		{
+			Print("[TAB_CTFGame.ShowFeedback] This layout doesn't have the approperiate text widget: " + layoutResourceName, LogLevel.ERROR);
+			return;
+		}
+
+		if (appendToExisting)
+		{
+			feedback = text.GetText() + "\n" + feedback;
+		}
+
+		text.SetText(feedback);
+		
+		if (IsGameAuthority())
+		{
+			TAB_CTFReplicationWorkaround.Instance().BroadcastFeedback(feedback);
+		}
+	}
+	
+	static private void EntityGcTask()
+	{
+		if (m_entityGc.IsEmpty())
+			return;
+		
+		delete m_entityGc[0];
+		m_entityGc.Remove(0);
+	}
+	
+	private void TryFillAreasFromReplicationWorkaround()
+	{
+		array<ref TAB_CTFReplicatedAreaInstance> replicatedAreaInstances = TAB_CTFReplicationWorkaround.GetReplicatedAreaInstances();
+
+		foreach (TAB_CTFReplicatedAreaInstance instance : replicatedAreaInstances)
+		{
+			TAB_CTFArea area = m_areaList.Find(instance.name);
+			if (!area)
+			{
+				Print("[TAB_CTFGame.TryFillAreasFromReplicationWorkaround] Couldn't find area " + instance.name);
+				continue;
+			}
+			AddArea(area, instance.faction, instance.strength);
+		}
+	}
+	
+	private void VictoryCheckTask()
+	{
+		if (!m_areas)
+		{
+			Print("[TAB_CTFGame.VictoryCheckTask] List of areas is null", LogLevel.ERROR);
+			return;
+		}
+		
+		if (m_areas.IsEmpty())
+		{
+			return; // Not received any areas yet.
+		}
+		
+		bool areasLeft = false;
+		int fiaAreaCount = 0;
+		
+		foreach (TAB_CTFAreaInstance area : m_areas)
+		{
+			if (!area)
+			{
+				Print("[TAB_CTFGame.VictoryCheckTask] An area in list of areas is null", LogLevel.ERROR);
+				return;
+			}
+			
+			if (area.GetFaction() == TAB_CTFFaction.FIA)
+				++fiaAreaCount;
+			else
+				areasLeft = true;
+		}
+		
+		if (fiaAreaCount == 0)
+		{
+			/* ********** *
+			 *   Defeat
+			 * ********** */
+			
+			Print("[TAB_CTFGame.VictoryCheckTask] Defeated!");
+			GetGame().GetCallqueue().Remove(PeriodicalGameTask);
+			TAB_CTFReplicationWorkaround.Reset();
+		
+			if (IsGameAuthority())
+			{
+				SCR_BaseGameMode gm = SCR_BaseGameMode.Cast(GetGame().GetGameMode());
+				gm.EndGameMode( SCR_GameModeEndData.CreateSimple(EGameOverTypes.FACTION_DEFEAT_SCORE, -1, 1) );
+			}
+		}
+		
+		/* ************************** *
+		 *   Game (may) still be on
+		 * ************************** */
+		
+		if (areasLeft)
+		{
+			return;
+		}
+		
+		/* *********** *
+		 *   Victory
+		 * *********** */
+		
+		if (m_feedbackWidget)
+			delete m_feedbackWidget;
+		
+		Print("[TAB_CTFGame.VictoryCheckTask] Victory!");
+		GetGame().GetCallqueue().Remove(PeriodicalGameTask);
+		TAB_CTFReplicationWorkaround.Reset();
+
+		if (IsGameAuthority())
+		{
+			SCR_BaseGameMode gm = SCR_BaseGameMode.Cast(GetGame().GetGameMode());
+			gm.EndGameMode( SCR_GameModeEndData.CreateSimple(EGameOverTypes.FACTION_VICTORY_SCORE, -1, 1) );
+		}
+	}
+	
+	private void AttackersTesting()
+	{
+		// aiAttackers mot FIA i starten
+		/*
+		foreach (TAB_CTFAreaInstance area : m_areas)
+		{
+			if (area.GetFaction() == TAB_CTFFaction.FIA)
+				area.SendAiAttackers();
+		}
+		*/
+		
+		
+		
+		/*
+		// aiAttackers mot AI kontrollert område
+		while (true)
+		{
+			TAB_CTFAreaInstance area = m_areas.GetRandomElement();
+			if (area.GetFaction() != TAB_CTFFaction.FIA)
+			{
+				area.SendAiAttackers();
+				break;
+			}
+		}
+		
+		
+		GetGame().GetCallqueue().Remove(AttackersTesting);
+		*/
+		
+		// aiAttackers mot FIA etter første takeover
+		/*
+		int fiaCount = 0;
+		foreach (TAB_CTFAreaInstance area : m_areas)
+		{
+			if (area.GetFaction() == TAB_CTFFaction.FIA)
+			{
+				++fiaCount;
+			}
+		}
+		
+		if (fiaCount > 1)
+		{
+			foreach (TAB_CTFAreaInstance area : m_areas)
+			{
+				if (area.GetFaction() == TAB_CTFFaction.FIA)
+				{
+					area.SendAiAttackers();
+					break;
+				}
+			}
+			
+			GetGame().GetCallqueue().Remove(AttackersTesting);
+		}
+		*/
+	}
+	
+	private void AttackersTask()
+	{
+		m_aiAttackersQueued = false;
+		TAB_CTFAreaInstance area = m_areas.GetRandomElement();
+		area.SendAiAttackers();
+	}
+
+	private void SpawnSideMissions()
+	{
+		if (!TAB_CTFGame.IsGameAuthority() || !m_missionAreas || m_missionAreas.IsEmpty())
+			return;
+		
+		// For testing only:
+		//GetGame().GetCallqueue().CallLater(AttackersTask, 3000, true);
+		
+		GetGame().GetCallqueue().Remove(SpawnSideMissions);
+		
+		int i = 0;
+		while (i < m_missionAreas.Count())
+		{
+			if (m_missionAreas[i] == null)
+			{
+				m_missionAreas.Remove(i);
+				continue;
+			}
+			++i;
+		}
+
+		int count = rng.RandInt(m_minMissionCount, m_maxMissionCount + 1);
+		
+		Print("[TAB_CTFGame.SpawnSideMissions] Placing " + count + " random side missions");
+		
+		for (i = 0; i < count; ++i)
+		{
+			int n = rng.RandInt(0, m_missionAreas.Count());
+			m_missionAreas[n].GenerateRandomMission();
+			m_missionAreas.Remove(n);
+		}
+		
+		m_missionAreas.Clear();
+	}
+	
+	private void SpawnRandomLoot()
+	{
+		if (!m_lootPoints || m_lootPoints.IsEmpty())
+			return;
+		
+		GetGame().GetCallqueue().Remove(SpawnRandomLoot);
+		
+		Print("[TAB_CTFGame.SpawnRandomLoot] Loading " + m_lootPoints.Count() + " loot locations...");
+		
+		int lootAreaCount = 0;
+		int totalLootCount = 0;
+		int cleanCount = 0;
+		int i = 0;
+		while (i < m_lootPoints.Count())
+		{
+			TAB_CTFLootPoint point = m_lootPoints[i];
+			if (!point)
+			{
+				m_lootPoints.Remove(i);
+				++cleanCount;
+				continue;
+			}
+			
+			int lootCount = point.DetermineAndSpawn();
+			if (lootCount > 0)
+				++lootAreaCount;
+			
+			totalLootCount += lootCount;
+			
+			++i;
+		}
+		
+		Print("[TAB_CTFGame.SpawnRandomLoot] Spawned " + totalLootCount + " loot items in " + lootAreaCount + " different locations, cleaned " + cleanCount + " expired loot locations");
+
+		m_lootPoints.Clear();
+	}
+
+	void OnCapturedArea(TAB_CTFFaction faction, string areaNameOnMap)
+	{
+		if (IsGameAuthority())
+			ShowFeedback(TAB_CTFFactionToString(faction) + " captured " + areaNameOnMap); // For proxies this arrives via ReplicationWorkaround.
+	}
+
+	void PeriodicalGameTask()
+	{
+		if (m_areas.IsEmpty() && !IsGameAuthority())
+		{
+			TryFillAreasFromReplicationWorkaround();
+			return;
+		}
+		
+		if (IsGameAuthority())
+		{
+			foreach (TAB_CTFAreaInstance area : m_areas)
+			{
+				area.RunNextAreaTask();
+			}
+
+			TAB_CTFCivilianAiDriverManager.RunTask();
+		}
+		
+		int fiaAreaCount = 0;
+		bool aiAttackersExist = false;
+		foreach (TAB_CTFAreaInstance area : m_areas)
+		{
+			if (!area)
+			{
+				Print("[TAB_CTFGame.PeriodicalGameTask] An area in list of areas is null", LogLevel.ERROR);
+				break;
+			}
+			
+			if (area.GetFaction() == TAB_CTFFaction.FIA)
+				++fiaAreaCount;
+			
+			if (area.HasAiAttackers())
+				aiAttackersExist = true;
+		}
+		
+		if (fiaAreaCount > 1)
+		{
+			m_canSendAiAttackers = true;
+		}
+		
+		if (m_canSendAiAttackers && !m_aiAttackersQueued && !aiAttackersExist)
+		{
+			m_aiAttackersQueued = true;
+			int timeToAttack = rng.RandInt(aiAttackersTimeLow, aiAttackersTimeHigh);
+			Print("[TAB_CTFGame.PeriodicalGameTask] Sending AI attackers somewhere in " + timeToAttack + " seconds");
+			GetGame().GetCallqueue().CallLater(AttackersTask, timeToAttack * 1000, false);
+		}
+		
+		// TODO the above calculation can be used in VictoryCheckTask()
+		
+		VictoryCheckTask();
+
+		if (m_feedbackWidget && m_feedbackWidgetLifetime > m_maxFeedbackWidgetLifetime)
+		{
+			m_feedbackWidgetLifetime = 0;
+			delete m_feedbackWidget;
+		}
+		else if (m_feedbackWidget)
+		{
+			++m_feedbackWidgetLifetime;
+		}
+	}
+	
+	void SetAreaList(TAB_CTFAreaList areaList)
+	{
+		m_areaList = areaList;
+	}
+	
+	TAB_CTFAreaList GetAreaList()
+	{
+		return m_areaList;
+	}
+
+	notnull TAB_CTFAreaInstance AddArea(TAB_CTFArea area, TAB_CTFFaction controlledBy, int strength = 0)
+	{
+		TAB_CTFAreaInstance areaInstance = new TAB_CTFAreaInstance(area, controlledBy, strength);
+		m_areas.Insert(areaInstance);
+		if (IsGameAuthority())
+			TAB_CTFReplicationWorkaround.Instance().AddArea(areaInstance);
+		return areaInstance;
+	}
+	
+	TAB_CTFAreaInstance FindAreaInstance(string areaName)
+	{
+		foreach (TAB_CTFAreaInstance instance : m_areas)
+		{
+			if (instance.GetName() == areaName)
+				return instance;
+		}
+		return null;
+	}
+	
+	bool IsPeriodicalTaskActive()
+	{
+		return m_periodicalTaskActive;
+	}
+	
+	void ActivatePeriodicalTask()
+	{
+		if (m_periodicalTaskActive)
+		{
+			return;
+		}
+		
+		m_periodicalTaskActive = true;
+		GetGame().GetCallqueue().CallLater(PeriodicalGameTask, m_periodicalGameTaskTimeDelta, true);
+		GetGame().GetCallqueue().CallLater(EntityGcTask, m_entityGcTaskTime, true);
+		Print("[TAB_CTFGame.ActivatePeriodicalTask] Activated periodical task");
+	}
+	
+	bool HasAreaInstance(string areaName)
+	{
+		if (areaName.IsEmpty())
+			return false;
+		
+		foreach (TAB_CTFAreaInstance area : m_areas)
+		{
+			if (area.GetName() == areaName)
+				return true;
+		}
+		
+		return false;
+	}
+	
+	TAB_CTFAreaInstance GetAreaInstance(string areaName)
+	{
+		if (areaName.IsEmpty())
+			return null;
+
+		foreach (TAB_CTFAreaInstance area : m_areas)
+		{
+			if (area.GetName() == areaName)
+				return area;
+		}
+		
+		return null;
+	}
+	
+	array<TAB_CTFAreaInstance> GetAreaInstancesByFaction(TAB_CTFFaction faction)
+	{
+		array<TAB_CTFAreaInstance> areaList = {};
+		foreach (TAB_CTFAreaInstance area : m_areas)
+		{
+			if (area.GetFaction() == faction)
+				areaList.Insert(area);
+		}
+		return areaList;
+	}
+	
+	void SetRngSeed()
+	{
+		int seed = System.GetUnixTime();
+		Print("[TAB_CTFGame.SetRngSeed] Using RNG seed: " + seed);
+		rng.SetSeed(seed);
+	}
+	
+	void AddFriendlyReinforcements()
+	{
+		++m_friendlyReinforcementCount;
+	}
+	
+	void UseFriendlyReinforcements()
+	{
+		--m_friendlyReinforcementCount;
+		if (m_friendlyReinforcementCount < 0)
+			m_friendlyReinforcementCount = 0;
+	}
+	
+	bool HasFriendlyReinforcements()
+	{
+		return m_friendlyReinforcementCount > 0;
+	}
+};
+// Never meant to be instantiated.
+// Common "on game start" code for all maps.
+
+class TAB_CTFGameStartup
+{
+	// These Civilian-only areas are for unused areas-of-interest as specified in AreaListArland/AreaListEveron.
+	static ref array<TAB_CTFCivilianOnlyArea> m_civilianOnlyAreas = {};
+	
+	static void Initialize(TAB_CTFAreaList areaList, int minAreaCount, int maxAreaCount, int minMissionCount, int maxMissionCount)
+	{
+		Print("[TAB_CTFGameStartup.Initialize] Chaos To Freedom is being initialized!");
+
+		/* Framework initialization. */
+		TAB_CTFGame game = TAB_CTFGame.Instantiate(minMissionCount, maxMissionCount);
+		game.SetRngSeed();
+		
+		/* In case game is being reset during runtime. */
+		areaList.ResetAllAreas();
+		m_civilianOnlyAreas.Clear();
+		TAB_CTFScoreManager.Reset();
+		TAB_CTFScoreManager.ShowUi();
+		
+		game.SetAreaList(areaList);
+
+		if (TAB_CTFGame.IsGameAuthority())
+		{
+			AuthoritySetup(game, areaList, minAreaCount, maxAreaCount);
+		}
+	}
+
+	static private void AuthoritySetup(TAB_CTFGame game, TAB_CTFAreaList areaList, int minAreaCount, int maxAreaCount)
+	{
+		/* Add an instance of initial FIA spawn. */
+		// apparently I have to "throw the dice" once like this, otherwise the next call to "randomize" fiaStartRng always have the
+		// same outcome, based on 10 game starts in a row...?? Well, yeah, random cannot be measured though, but come on...
+		// todo: this must be tested again, it might very well have been a random outcome... :)
+		TAB_CTFGame.rng.RandInt(0,100);
+		
+		array<ref TAB_CTFArea> propertyAreas = areaList.FindAll(TAB_CTFAreaType.Property);
+		int fiaStartRng = TAB_CTFGame.rng.RandInt(0, propertyAreas.Count());
+		Print("[TAB_CTFGameStartup.AuthoritySetup] " + propertyAreas.Count() + " potential starting locations for FIA. RNG is " + fiaStartRng);
+		TAB_CTFAreaInstance opbaseFiaArea = game.AddArea(propertyAreas[fiaStartRng], TAB_CTFFaction.FIA);
+		opbaseFiaArea.CreateSpawnpoint();
+
+		/* for development, to set up only a single area: */
+		//game.AddArea(areaList.Find("C_Location_St_Pierre"), TAB_CTFFaction.USSR);
+		//return;
+		/* *** */
+
+		/* Populate areas and assign them random factions (US, USSR) */
+		const int areaCount = TAB_CTFGame.rng.RandInt(minAreaCount, maxAreaCount + 1);
+		
+		array<ref TAB_CTFArea> allAreas = areaList.GetAll();
+		
+		/* After this, the remainder of 'allAreas' will only spawn civilians. */
+		array<ref TAB_CTFArea> areas = ExtractRandomAreas( allAreas, areaCount );
+		if (areas.IsEmpty())
+		{
+			Print("[TAB_CTFGameStartup.AuthoritySetup] Hmmm... no area instances after randomization?? Making a default list with all entries.", LogLevel.WARNING);
+			areaList.ResetAllAreas();
+		}
+		
+		foreach (TAB_CTFArea area: areas)
+		{
+			if (area.IsInstanatiated())
+				continue;
+			
+			int rngFaction = TAB_CTFGame.rng.RandInt(0, 2);
+				
+			/* Ternary anyone? */
+			TAB_CTFFaction faction = TAB_CTFFaction.US;
+			if (rngFaction == 0)
+				faction = TAB_CTFFaction.USSR;
+	
+			game.AddArea(area, faction);
+		}
+		
+		Resource civilianAreaResource = Resource.Load("{7CAF28C42EDBFE60}Prefabs/TAB_CTFCivilianOnlyArea.et");
+		foreach (TAB_CTFArea area: allAreas)
+		{
+			int civilianCount = area.GetCivilianCount();
+			if (civilianCount == 0 || area.IsInstanatiated())
+				continue;
+			
+			Print("[TAB_CTFGameStartup.AuthoritySetup] Registering " + civilianCount + " slots for civilian-only area " + area.GetName());
+			
+			EntitySpawnParams spawnParams = TAB_CreateSurfaceAdjustedSpawnParams(area.GetOrigin());
+			TAB_CTFCivilianOnlyArea civilianArea = TAB_CTFCivilianOnlyArea.Cast( GetGame().SpawnEntityPrefab(civilianAreaResource, null, spawnParams) );
+			civilianArea.SetRadius(area.GetRadius() / 3);
+			civilianArea.SetSpawnDistance(TAB_CTFArea.SpawnAiAreaRadius);
+			civilianArea.SetCivilianCount(civilianCount * 2); // Doubling the amount in non-occupied areas, for the immersion.
+			
+			m_civilianOnlyAreas.Insert(civilianArea);
+		}
+	}
+	
+	/* This will mutate 'areas' so that the returned array is not present in 'areas'. */
+	static private array<ref TAB_CTFArea> ExtractRandomAreas(array<ref TAB_CTFArea> areas, int maxOutputEntries)
+	{
+		array<ref TAB_CTFArea> ret = {};
+		for (int e = 0; e < maxOutputEntries && !areas.IsEmpty(); ++e)
+		{
+			int idx = TAB_CTFGame.rng.RandInt(0, areas.Count());
+			ret.Insert(areas[idx]);
+			areas.Remove(idx);
+		}
+		return ret;
+	}
+}
+class TAB_CTFLootPointMeshComponentClass: SCR_BaseAreaMeshComponentClass
+{
+};
+
+class TAB_CTFLootPointMeshComponent: SCR_BaseAreaMeshComponent
+{
+	override float GetRadius()
+	{
+		return 0.5;
+	}
+};
+
+enum TAB_CTFLootType
+{
+	RespawnTent,
+	Ammo,
+	Weapon,
+	WeaponAttachments,
+	Medical,
+	Wearables,
+}
+
+string TAB_CTFLootPrefabRandom(TAB_CTFLootType type)
+{
+	static array<string> ammo = {
+		"{179F6AEF5ACF53DE}Prefabs/WeaponLoot/Ammo/Box_127x108_NSV_50rnd_6boxes.et",
+		"{76EBDED68008DDB3}Prefabs/WeaponLoot/Ammo/Box_762x54_UK59_50rnd_8boxes.et",
+		"{39019E1F957430BE}Prefabs/WeaponLoot/Ammo/Box_762x51_M60_100rnd_6boxes.et",
+		"{898E05BB8CCA0C80}Prefabs/WeaponLoot/Ammo/Box_762x54_PK_100rnd_6boxes.et",
+		"{2F37922AFA9E5EB4}Prefabs/WeaponLoot/Ammo/Magazine_545x39_AK_30rnd_4mags.et",
+		"{AF3B00FB11DA9C4C}Prefabs/WeaponLoot/Ammo/Magazine_545x39_RPK_45rnd_4mags.et",
+		"{DE6278AD756DAEE2}Prefabs/WeaponLoot/Ammo/Magazine_556x45_STANAG_30rnd_4mags.et",
+		"{A841082E98A78376}Prefabs/WeaponLoot/Ammo/Magazine_762x39_Vz58_30rnd_4mags.et",
+		"{24B56B4FF9DB53B3}Prefabs/WeaponLoot/Ammo/Magazine_762x51_M14_20rnd_6mags.et",
+		"{8716D37BFC745001}Prefabs/WeaponLoot/Ammo/Magazine_762x54_SVD_10rnd_8mags.et",
+		"{C244B60F856C62AA}Prefabs/WeaponLoot/Ammo/Magazine_9x18_PM_8rnd_10mags.et",
+		"{8E983A3741A9A6D9}Prefabs/WeaponLoot/Ammo/Magazine_9x19_M9_15rnd_8mags.et",
+		"{EB0618A6D397FD1D}Prefabs/WeaponLoot/Ammo/Ammo_Rocket_PG7VM_2pcs.et",
+		"{06DDF09183564A38}Prefabs/WeaponLoot/Ammo/Ammo_Grenade_HE_M406_4pcs.et"
+		
+	};
+
+	static array<string> weapon = {	
+		"{ADA6D1577D3A8F19}Prefabs/WeaponLoot/Handgun_M9_WithAmmo.et",
+		"{7D18DBBCE7A1396A}Prefabs/WeaponLoot/Handgun_PM_WithAmmo.et",
+		"{902D98173F4E2DF4}Prefabs/WeaponLoot/Launcher_M72A3_Multiple.et",
+		"{A7D9DA88AFB41199}Prefabs/WeaponLoot/Launcher_RPG7_PG07_WithAmmo.et",
+		"{2CDF8051B95F3F62}Prefabs/WeaponLoot/Launcher_RPG7_WithAmmo.et",
+		"{1401371F64DA7BDF}Prefabs/WeaponLoot/MG_M249_WithAmmo.et",
+		"{4AFCD92F37FF9528}Prefabs/WeaponLoot/MG_UK59_WithAmmo.et",
+		"{D69319337D06EA97}Prefabs/WeaponLoot/MG_M60_WithAmmo.et",
+		"{C5F3E9E62546D48D}Prefabs/WeaponLoot/MG_PKM_WithAmmo.et",
+		"{7B837685C2131362}Prefabs/WeaponLoot/MG_RPK74N_WithAmmo.et",
+		"{59663A68C450C211}Prefabs/WeaponLoot/Rifle_AK74_WithAmmo.et",
+		"{FF4670C742664736}Prefabs/WeaponLoot/Rifle_AK74N_1P29_WithAmmo.et",
+		"{2C8EDFBA7B2BE4C5}Prefabs/WeaponLoot/Rifle_AK74N_WithAmmo.et",
+		"{17E1CD90330864B9}Prefabs/WeaponLoot/Rifle_M16A2_carbine_4x20_WithAmmo.et",
+		"{B2A065BBD1B2ADF8}Prefabs/WeaponLoot/Rifle_M16A2_carbine_AP2k_WithAmmo.et",
+		"{207C271F1BED3ACB}Prefabs/WeaponLoot/Rifle_M16A2_carbine_M203_WithAmmo.et",
+		"{4F76BBBE77612598}Prefabs/WeaponLoot/Rifle_M16A2_carbine_WithAmmo.et",
+		"{18E6FEEEAA65C5EC}Prefabs/WeaponLoot/Rifle_M21_ARTII_WithAmmo.et",
+		"{DB67B6C40C48C46D}Prefabs/WeaponLoot/Rifle_M21_WithAmmo.et",
+		"{D53247D650F2D5DA}Prefabs/WeaponLoot/Rifle_SVD_PSO_WithAmmo.et",
+		"{D75CFE103CE6CE31}Prefabs/WeaponLoot/Rifle_SVD_WithAmmo.et",
+		"{5B28162A3ABCCCCC}Prefabs/WeaponLoot/Rifle_VZ58P_WithAmmo.et",
+		"{DA6B73664E972AC2}Prefabs/WeaponLoot/Rifle_VZ58V_WithAmmo.et",
+		"{864F4C66FF8F7045}Prefabs/WeaponLoot/Rifle_AK74_GP25_WithAmmo.et"
+	};
+
+	static array<string> weaponAttachments = {
+		"{CB7054E168A9DEE3}Prefabs/WeaponLoot/Attachments/Optics/Collim_AP2k.et",
+		"{B2380CF56249E98F}Prefabs/WeaponLoot/Attachments/Optics/Optic_1P29.et",
+		"{C4EBEBD2BD5A9295}Prefabs/WeaponLoot/Attachments/Optics/Optic_4x20.et",
+		"{D0501BA6A2C989BB}Prefabs/WeaponLoot/Attachments/Optics/Optic_ARTII.et",
+		"{319D65D11EEAD6E3}Prefabs/WeaponLoot/Attachments/Optics/Optic_PGO7V3.et",
+		"{756896EA68B786EB}Prefabs/WeaponLoot/Attachments/Optics/Optic_PSO1.et",
+		"{9CF8B12A5A2359FC}Prefabs/WeaponLoot/Attachments/Underbarrel/UGL_GP25.et",
+		
+		// Appears to be unlootable
+		//"{67DD7BB0588A04B6}Prefabs/WeaponLoot/Attachments/Underbarrel/M203_long.et",
+		//"{4A0FBE6C5CD5079E}Prefabs/WeaponLoot/Attachments/Underbarrel/M203_short.et"
+	};
+
+	static array<string> medical = {
+		"{AC9A2B63FD9301DB}Prefabs/MedicalLoot/FieldDressing_US_2pcs.et",
+		"{6B56BBFE08C542D7}Prefabs/MedicalLoot/FieldDressing_US_3pcs.et",
+		"{B9D08BF891B2E6D5}Prefabs/MedicalLoot/FieldDressing_US_4pcs.et",
+		"{22052958519F35C3}Prefabs/MedicalLoot/MorphineInjection_3pcs.et",
+		"{374F89C33DBED2CD}Prefabs/MedicalLoot/MorphineInjection_5pcs.et"
+	};
+
+	static array<string> wearable = {
+		/* Adding backpacks twice to increase chance of those spawning. */
+		"{93D197B33EE08BBD}Prefabs/WearableLoot/Backpack_ALICE_Medium.et",
+		"{3CE6AB83093EF381}Prefabs/WearableLoot/Backpack_Kolobok.et",
+		"{93D197B33EE08BBD}Prefabs/WearableLoot/Backpack_ALICE_Medium.et",
+		"{3CE6AB83093EF381}Prefabs/WearableLoot/Backpack_Kolobok.et",
+		"{AA70F7FCA763AA62}Prefabs/WearableLoot/Hat_Patrol_US_01.et",
+		"{8A1E77F49C110033}Prefabs/WearableLoot/Helmet_M1_01.et",
+		"{E7D173D81421A632}Prefabs/WearableLoot/Helmet_M1_01_Cover_Woodland.et",
+		"{C784C75DD3D12C6E}Prefabs/WearableLoot/Helmet_PASGT_01_cover.et",
+		"{89C9742D7E71D887}Prefabs/WearableLoot/Vest_6B2.et",
+		"{5D2C56D666E75302}Prefabs/WearableLoot/Vest_M69_M81woodland.et"
+	};
+
+	int idx;
+	switch (type)
+	{
+		case TAB_CTFLootType.RespawnTent:
+			return "{50614BC6ECB80C6D}Prefabs/OtherLoot/Tent_Deployable_FIA.et";
+		
+		case TAB_CTFLootType.Ammo:
+			idx = TAB_CTFGame.rng.RandInt(0, ammo.Count());
+			return ammo[idx];
+		
+		case TAB_CTFLootType.Weapon:
+			idx = TAB_CTFGame.rng.RandInt(0, weapon.Count());
+			return weapon[idx];
+		
+		case TAB_CTFLootType.WeaponAttachments:
+			idx = TAB_CTFGame.rng.RandInt(0, weaponAttachments.Count());
+			return weaponAttachments[idx];
+		
+		case TAB_CTFLootType.Medical:
+			idx = TAB_CTFGame.rng.RandInt(0, medical.Count());
+			return medical[idx];
+				
+		case TAB_CTFLootType.Wearables:
+			idx = TAB_CTFGame.rng.RandInt(0, wearable.Count());
+			return wearable[idx];
+	}
+
+	// Default to some medical items...
+	Print("[TAB_CTFLootPrefabRandom] Spawning medicals by default!", LogLevel.WARNING);
+	idx = TAB_CTFGame.rng.RandInt(0, medical.Count());
+	return medical[idx];
+}
+
+class TAB_CTFLootPointClass: GenericEntityClass
+{
+};
+
+class TAB_CTFLootPoint: GenericEntity
+{
+	[Attribute(defvalue: "1", desc: "Whether or not respawn tents can spawn here")]
+	protected bool m_allowRespawnTent;
+	
+	[Attribute(defvalue: "1", desc: "Whether or not random ammo can spawn here")]
+	protected bool m_allowAmmo;
+	
+	[Attribute(defvalue: "1", desc: "Whether or not random weapons can spawn here")]
+	protected bool m_allowWeapon;
+	
+	[Attribute(defvalue: "1", desc: "Whether or not random weapon attachments can spawn here")]
+	protected bool m_allowWeaponAttachment;
+	
+	[Attribute(defvalue: "1", desc: "Whether or not random medical items can spawn here")]
+	protected bool m_allowMedical;
+		
+	[Attribute(defvalue: "1", desc: "Whether or not random wearable items can spawn here")]
+	protected bool m_allowWearables;
+	
+	[Attribute(defvalue: "50", desc: "In precents how unlikely it is for anything to spawn here. 0: Always, 100: Never")]
+	protected int m_rarity;
+	
+	[Attribute(defvalue: "", desc: "Name of area which \"owns\" this loot")]
+	protected string m_areaOwner;
+
+	private IEntity m_entity;
+	
+	void TAB_CTFLootPoint(IEntitySource src, IEntity parent)
+	{
+		if (TAB_CTFGame.IsGameAuthority())
+			TAB_CTFGame.AddLootPoint(this);
+	}
+
+	int DetermineAndSpawn()
+	{
+		if (!TAB_CTFGame.IsGameAuthority() || !TAB_CTFGame.HasInstance() || m_areaOwner.IsEmpty() || m_rarity >= 100)
+			return 0;
+
+		int randomNumber = TAB_CTFGame.rng.RandInt(1, 100);
+		if (randomNumber < m_rarity)
+			return 0;
+		
+		// This check is a significant slowdown. But it's needed to avoid spawning items in unused areas.
+		if (!TAB_CTFGame.Instance().HasAreaInstance(m_areaOwner))
+			return 0;
+		
+		array<TAB_CTFLootType> allowedLootTypes = new array<TAB_CTFLootType>();
+
+		if (m_allowRespawnTent)
+			allowedLootTypes.Insert(TAB_CTFLootType.RespawnTent);
+		
+		if (m_allowAmmo)
+			allowedLootTypes.Insert(TAB_CTFLootType.Ammo);
+		
+		if (m_allowWeapon)
+			allowedLootTypes.Insert(TAB_CTFLootType.Weapon);
+		
+		if (m_allowWeaponAttachment)
+			allowedLootTypes.Insert(TAB_CTFLootType.WeaponAttachments);
+		
+		if (m_allowWearables)
+			allowedLootTypes.Insert(TAB_CTFLootType.Wearables);
+		
+		if (m_allowMedical)
+			allowedLootTypes.Insert(TAB_CTFLootType.Medical);
+		
+		if (allowedLootTypes.IsEmpty())
+			return 0;
+
+		TAB_CTFLootType lootType = allowedLootTypes[TAB_CTFGame.rng.RandInt(0, allowedLootTypes.Count())];
+
+		string tempPrefabName = TAB_CTFLootPrefabRandom(lootType);
+		Resource tempResource = Resource.Load(tempPrefabName);
+		
+		/*
+		 * Instead of spawning the actual prefab (which is a composite of for example a weapon and 4 magazines),
+		 * we will look into the prefab and extract the children and spawn those directly into the world.
+		 * If not done like this, Arma think that the actual items are custom items and doesn't properly stack
+		 * and the inventory images becomes bugged, etc etc.
+		*/
+		
+		IEntitySource source = tempResource.GetResource().ToEntitySource();
+
+		const int count = source.GetNumChildren();
+		for (int i = 0; i < count; ++i)
+		{
+			vector coords = Vector(0,0,0);
+			float angleX = 0;
+			float angleY = 0;
+			float angleZ = 0;
+			
+			BaseContainer child = source.GetChild(i);
+			ResourceName originalResourceName = child.GetAncestor().GetResourceName();
+
+			if (!child.Get("coords", coords))
+				coords = Vector(0,0,0);
+			else
+				coords = CoordToParent(coords);
+		
+			if (!child.Get("angleX", angleX))
+				angleX = 0;
+			
+			if (!child.Get("angleY", angleY))
+				angleY = 0;
+			
+			if (!child.Get("angleZ", angleZ))
+				angleZ = 0;
+
+			Resource resource = Resource.Load(originalResourceName);
+			IEntity entity = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSimpleEntitySpawnParams(coords));
+			entity.SetAngles(Vector(angleX, angleY + GetAngles()[1], angleZ));
+		}
+		
+		return count;
+	}
+};
+bool TAB_CTFAnyPlayerWithinArea(vector origin, float radius)
+{
+	array<int> playerIds = new array<int>();
+	GetGame().GetPlayerManager().GetPlayers(playerIds);
+	
+	foreach (int playerId : playerIds)
+	{
+		IEntity playerEntity = GetGame().GetPlayerManager().GetPlayerControlledEntity(playerId);
+		if (!playerEntity)
+			continue;
+		
+		SCR_ChimeraCharacter player = SCR_ChimeraCharacter.Cast(playerEntity);
+		if (!player || player.GetDamageManager().GetHealth() < 0.01)
+			continue;
+		
+		if (vector.DistanceXZ(origin, playerEntity.GetOrigin()) < radius)
+			return true;
+	}
+	
+	return false;
+}
+
+bool TAB_CTFAnyPlayerWithinRing(vector origin, float radiusMin, float radiusMax)
+{
+	array<int> playerIds = new array<int>();
+	GetGame().GetPlayerManager().GetPlayers(playerIds);
+	
+	foreach (int playerId : playerIds)
+	{
+		IEntity playerEntity = GetGame().GetPlayerManager().GetPlayerControlledEntity(playerId);
+		if (!playerEntity)
+			continue;
+		
+		if (vector.DistanceXZ(origin, playerEntity.GetOrigin()) > radiusMin
+			&& vector.DistanceXZ(origin, playerEntity.GetOrigin()) < radiusMax)
+		{
+			return true;
+		}
+	}
+	
+	return false;
+}
+class TAB_CTFRandomVehicleEntityMeshComponentClass: SCR_BaseAreaMeshComponentClass
+{
+};
+
+class TAB_CTFRandomVehicleEntityMeshComponent: SCR_BaseAreaMeshComponent
+{
+	override float GetRadius()
+	{
+		return 5;
+	}
+};
+
+class TAB_CTFRandomVehicleEntityClass: GenericEntityClass
+{
+};
+
+enum TAB_CTFVehicleType
+{
+	None,
+	CivilianSmall,
+	CivilianTransport,
+	CivilianFuel,
+	Ambulance,
+	MilitarySmall,
+	MilitarySmallMg,
+	MilitaryTransport,
+	MilitaryRepair,
+	MilitaryFuel
+}
+
+string TAB_CTFVehiclePrefabRandom(TAB_CTFVehicleType type)
+{
+	static array<string> civSmall = {
+		"{54C3CC22DEBD57BE}Prefabs/Vehicles/Wheeled/S105/S105_beige.et",
+		"{9C3269FB43F989A3}Prefabs/Vehicles/Wheeled/S105/S105_darkblue.et",
+		"{A1CD41DFE0C93CAD}Prefabs/Vehicles/Wheeled/S105/S105_darkbrown.et",
+		"{8000A0F649FB4B0D}Prefabs/Vehicles/Wheeled/S105/S105_darkred.et",
+		"{AD80FB47D868C775}Prefabs/Vehicles/Wheeled/S105/S105_green.et",
+		"{8EB38BBD860DA06E}Prefabs/Vehicles/Wheeled/S105/S105_lightblue.et",
+		"{321016E0F9361A22}Prefabs/Vehicles/Wheeled/S105/S105_lightgreen.et",
+		"{5555DCAFADB8CE2A}Prefabs/Vehicles/Wheeled/S105/S105_rally.et",
+		"{85F0BD6AF0F42D6D}Prefabs/Vehicles/Wheeled/S105/S105_red.et",
+		"{63880E311299A016}Prefabs/Vehicles/Wheeled/S105/S105_white.et",
+		"{A6B0D2923262E755}Prefabs/Vehicles/Wheeled/S105/S105_yellow.et",
+		"{543799AC5C52989C}Prefabs/Vehicles/Wheeled/S1203/S1203_transport_beige.et",
+		"{F77C41245A580FD1}Prefabs/Vehicles/Wheeled/S1203/S1203_transport_blue.et",
+		"{ACED839A6C5BE657}Prefabs/Vehicles/Wheeled/S1203/S1203_transport_brown.et",
+		"{11A28C90DB40318D}Prefabs/Vehicles/Wheeled/S1203/S1203_transport_red.et",
+		"{4C79EB5FADB89B7A}Prefabs/Vehicles/Wheeled/S1203/S1203_transport_yellow.et",
+		"{C8B16ABCA57679A2}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_covered_CIV_blue.et",
+		"{D7C51A961BF675B2}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_covered_CIV_brown.et",
+		"{B6D330E7E40FE7DD}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_covered_CIV_forest.et",
+		"{5070B3749C7782D8}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_covered_CIV_JZD.et",
+		"{BDFB2377B6B4ABBB}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_covered_CIV_PTS.et",
+		"{A4D16A62B432451A}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_covered_CIV_red.et",
+		"{870EB660433857D3}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_covered_CIV_teal.et",
+		"{B2CC137FE424B129}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_covered_CIV_VAK.et",
+		"{9B3A89DD33FF0483}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_uncovered_CIV_blue.et",
+		"{270F23D61238ABC7}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_uncovered_CIV_brown.et",
+		"{599DFCA424399DBF}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_uncovered_CIV_red.et",
+		"{D4855501D5B12AF2}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_uncovered_CIV_teal.et"
+	};
+	
+	static array<string> civTransport = {
+		"{1449105FD658EDFB}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_transport_CIV_forest.et",
+		"{D9B91FAB817A6033}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_transport_covered.et",
+		"{F66EAD0D2016B6BA}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_transport_covered_CIV_blue.et",
+		"{FB219B49A448A8EA}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_transport_covered_CIV_JZD.et",
+		"{66241E0CEDFCEDFF}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_transport_covered_CIV_orange.et"
+	};
+	
+	static array<string> civFuel = {
+		"{4C81D7ED8F8C0D87}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_tanker.et",
+		"{4A59DAEFE645E8A0}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_tanker_CIV_orange.et",
+		"{B3C8EC88E7782C78}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_tanker_CIV_pohona.et"
+	};
+	
+	static array<string> ambulance = {
+		"{43C4AF1EEBD001CE}Prefabs/Vehicles/Wheeled/UAZ452/UAZ452_ambulance.et",
+		"{00C9BBE426F7D459}Prefabs/Vehicles/Wheeled/M998/M997_maxi_ambulance.et"
+	};
+	
+	static array<string> milSmall = {
+		"{F649585ABB3706C4}Prefabs/Vehicles/Wheeled/M151A2/M151A2.et",
+		"{86D830868F026D54}Prefabs/Vehicles/Wheeled/M151A2/M151A2_MERDC.et",
+		"{94DE32169691AC34}Prefabs/Vehicles/Wheeled/M151A2/M151A2_transport_MERDC.et",
+		"{259EE7B78C51B624}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469.et",
+		"{F7E9AA0C813EABDA}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_FIA.et",
+		"{751AFEEA19DDFB04}Prefabs/Vehicles/Wheeled/M998/M998_covered_long_MERDC.et"
+	};
+	
+	static array<string> milSmallMg = {
+		"{0B4DEA8078B78A9B}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_PKM.et",
+		"{22B327C6752EC4D4}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_PKM_FIA.et",
+		"{E72D78E7F45532EC}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469_UK59_FIA.et",
+		"{3EA6F47D95867114}Prefabs/Vehicles/Wheeled/M998/M1025_armed_M2HB.et",
+		"{DD774A8FD0989A78}Prefabs/Vehicles/Wheeled/M998/M1025_armed_M2HB_MERDC.et",
+		"{F6B23D17D5067C11}Prefabs/Vehicles/Wheeled/M151A2/M151A2_M2HB.et",
+		"{5168FEA3054D6D15}Prefabs/Vehicles/Wheeled/M151A2/M151A2_M2HB_MERDC.et",
+		""
+	};
+	
+	static array<string> milTransport = {
+		"{16E32C3ABEAFC2C6}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_FIA_transport.et",
+		"{B70E6D12A8EC2410}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_FIA_transport_covered.et",
+		"{04BDACC0BB83284E}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_covered_MERDC.et",
+		"{3F2AA823B6C65E1E}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_MERDC.et"
+	};
+	
+	static array<string> milRepair = {
+		"{34178E3A92776DA6}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_repair_FIA.et",
+		"{C8656AECF5DF41D9}Prefabs/Vehicles/Wheeled/M923A1/M923A1_repair_MERDC.et"
+	};
+	
+	static array<string> milFuel = {
+		"{26013123314183EA}Prefabs/Vehicles/Wheeled/M923A1/M923A1_tanker_MERDC.et",
+		"{DC1C2350CF665F9E}Prefabs/Vehicles/Wheeled/Ural4320/Ural4320_FIA_tanker.et"
+	};
+	
+	int idx;
+	
+	switch (type)
+	{
+		case TAB_CTFVehicleType.CivilianSmall:
+			idx = TAB_CTFGame.rng.RandInt(0, civSmall.Count());
+			return civSmall[idx];
+		
+		case TAB_CTFVehicleType.CivilianTransport:
+			idx = TAB_CTFGame.rng.RandInt(0, civTransport.Count());
+			return civTransport[idx];
+
+		case TAB_CTFVehicleType.CivilianFuel:
+			idx = TAB_CTFGame.rng.RandInt(0, civFuel.Count());
+			return civFuel[idx];
+
+		case TAB_CTFVehicleType.Ambulance:
+			idx = TAB_CTFGame.rng.RandInt(0, ambulance.Count());
+			return ambulance[idx];
+		
+		case TAB_CTFVehicleType.MilitarySmall:
+			idx = TAB_CTFGame.rng.RandInt(0, milSmall.Count());
+			return milSmall[idx];
+		
+		case TAB_CTFVehicleType.MilitarySmallMg:
+			idx = TAB_CTFGame.rng.RandInt(0, milSmallMg.Count());
+			return milSmallMg[idx];
+		
+		case TAB_CTFVehicleType.MilitaryTransport:
+			idx = TAB_CTFGame.rng.RandInt(0, milTransport.Count());
+			return milTransport[idx];
+		
+		case TAB_CTFVehicleType.MilitaryRepair:
+			idx = TAB_CTFGame.rng.RandInt(0, milRepair.Count());
+			return milRepair[idx];
+		
+		case TAB_CTFVehicleType.MilitaryFuel:
+			idx = TAB_CTFGame.rng.RandInt(0, milFuel.Count());
+			return milFuel[idx];
+	}
+	
+	// Default to a small car.
+	Print("[TAB_CTFVehiclePrefabRandom] Spawning small car by default!", LogLevel.WARNING);
+	idx = TAB_CTFGame.rng.RandInt(0, civSmall.Count());
+	return civSmall[idx];
+}
+
+class TAB_CTFRandomVehicleEntity: GenericEntity
+{
+	[Attribute(defvalue: "0", desc: "Allow small civilian vehicles")]
+	protected bool m_allowCivSmall;
+	
+	[Attribute(defvalue: "0", desc: "Allow civilian transport trucks")]
+	protected bool m_allowCivTransport;
+	
+	[Attribute(defvalue: "0", desc: "Allow civilian fuel trucks")]
+	protected bool m_allowCivFuel;
+	
+	[Attribute(defvalue: "0", desc: "Allow ambulance")]
+	protected bool m_allowAmbulance;
+	
+	[Attribute(defvalue: "0", desc: "Allow small military vehicles")]
+	protected bool m_allowMilSmall;
+	
+	[Attribute(defvalue: "0", desc: "Allow small military vehicles (with MG)")]
+	protected bool m_allowMilSmallMg;
+
+	[Attribute(defvalue: "0", desc: "Allow military transport trucks")]
+	protected bool m_allowMilTransport;
+	
+	[Attribute(defvalue: "0", desc: "Allow military repair trucks")]
+	protected bool m_allowMilRepair;
+	
+	[Attribute(defvalue: "0", desc: "Allow military fuel trucks")]
+	protected bool m_allowMilFuel;
+	
+	[Attribute(defvalue: "1", desc: "Preserve vehicle if it has previously been occupied")]
+	protected bool m_allowPreserve;
+	
+	[Attribute(defvalue: "300", desc: "Distance any player has to be from a vehicle for an Ai to be allowed to take control of it")]
+	protected int m_playerDistanceFromAiVehicle;
+	
+	[Attribute(defvalue: "0", desc: "Only spawn this vehicle if a civilian AI got selected to drive it")]
+	protected bool m_civilianAiOnlySpawn;
+	
+	private Vehicle m_vehicle;
+	
+	private vector m_originalOrigin;
+	
+	private vector m_lastKnownPosition;
+	
+	private string m_vehiclePrefab; // Once spawned it should be the same "vehicle model" / prefab.
+	// Known issue: If vehicle has damage it will obviously appear to "reset" when you move away and come back to it.
+	
+	private bool m_preserve = false; // True if we want to signal to the Manager to preserve this vehicle (ie. no deletion due to no players nearby / GC)
+	
+	private bool m_canSpawnCivilianAi = true;
+	
+	private bool m_spawnWasQueried = false;
+	
+	TAB_CTFVehicleType m_vehicleType = TAB_CTFVehicleType.None;
+	
+	private bool FindEntityRoadCallback(IEntity e)
+	{
+		return true;
+	}
+	
+	void TAB_CTFRandomVehicleEntity(IEntitySource src, IEntity parent)
+	{
+		if (!TAB_CTFGame.IsGameAuthority())
+			return;
+		
+		TAB_CTFRandomVehicleManager.AddVehiclePoint(this);
+		m_lastKnownPosition = GetOrigin();
+		m_originalOrigin = GetOrigin();
+	}
+	
+	void Reset()
+	{
+		m_preserve = false;
+		Despawn();
+		m_lastKnownPosition = m_originalOrigin;
+		SetOrigin(m_originalOrigin);
+	}
+
+	vector GetVehicleOrigin()
+	{
+		if (m_vehicle)
+			m_lastKnownPosition = m_vehicle.GetOrigin();
+		return m_lastKnownPosition;
+	}
+	
+	bool IsCivilianAiOnlySpawn()
+	{
+		return m_civilianAiOnlySpawn;
+	}
+	
+	bool IsSpawned()
+	{
+		return m_vehicle != null;
+	}
+		
+	bool IsOccupied()
+	{
+		if (!IsSpawned())
+			return false;
+		return m_vehicle.IsOccupied();
+	}
+	
+	bool IsPreserved()
+	{
+		return m_preserve;
+	}
+	
+	void PreserveVehicle(bool overridePreserveSetting = false)
+	{
+		if (overridePreserveSetting || m_allowPreserve)
+			m_preserve = true;
+	}
+
+	bool Spawn()
+	{
+		if (!TAB_CTFGame.IsGameAuthority() || !TAB_CTFGame.HasInstance() || m_vehicle)
+			return false;
+		
+		m_spawnWasQueried = true;
+		
+		if (m_vehiclePrefab.IsEmpty())
+		{
+			array<TAB_CTFVehicleType> allowedVehicleTypes = new array<TAB_CTFVehicleType>();
+			
+			if (m_allowCivSmall)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.CivilianSmall);
+		
+			if (m_allowCivTransport)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.CivilianTransport);
+			
+			if (m_allowCivFuel)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.CivilianFuel);
+			
+			if (m_allowAmbulance)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.Ambulance);
+			
+			if (m_allowMilSmall)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.MilitarySmall);
+			
+			if (m_allowMilSmallMg)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.MilitarySmallMg);
+		
+			if (m_allowMilTransport)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.MilitaryTransport);
+			
+			if (m_allowMilRepair)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.MilitaryRepair);
+			
+			if (m_allowMilFuel)
+				allowedVehicleTypes.Insert(TAB_CTFVehicleType.MilitaryFuel);
+			
+			if (allowedVehicleTypes.IsEmpty())
+				return false;
+			
+			TAB_CTFVehicleType vehicleType = allowedVehicleTypes[TAB_CTFGame.rng.RandInt(0, allowedVehicleTypes.Count())];
+			m_vehiclePrefab = TAB_CTFVehiclePrefabRandom(vehicleType);
+			
+			m_vehicleType = vehicleType;
+		}
+		
+		Resource resource = Resource.Load(m_vehiclePrefab);
+		EntitySpawnParams spawnParams = EntitySpawnParams();
+		spawnParams.Parent = this;
+		m_vehicle = Vehicle.Cast( GetGame().SpawnEntityPrefab(resource, null, spawnParams) );
+		
+		m_canSpawnCivilianAi = !m_civilianAiOnlySpawn;
+
+		return true;
+	}
+	
+	bool Despawn()
+	{
+		m_vehicleType = TAB_CTFVehicleType.None;
+		m_vehiclePrefab = "";
+		m_canSpawnCivilianAi = true;
+		m_spawnWasQueried = false;
+		
+		if (!TAB_CTFGame.IsGameAuthority() || !TAB_CTFGame.HasInstance() || !m_vehicle)
+			return false;
+		
+		//delete m_vehicle;
+		TAB_CTFGame.AddEntityToGc(m_vehicle);
+		m_vehicle = null;
+		return true;
+	}
+	
+	bool IsCivilian()
+	{
+		return m_vehicleType == TAB_CTFVehicleType.CivilianSmall
+				|| m_vehicleType == TAB_CTFVehicleType.CivilianFuel
+				|| m_vehicleType == TAB_CTFVehicleType.CivilianTransport;
+	}
+	
+	bool CanSpawnCivilianAi()
+	{
+		if (m_canSpawnCivilianAi
+			&& (m_civilianAiOnlySpawn || (IsSpawned() && IsCivilian()))
+			&& !IsOccupied()
+			&& !IsPreserved()
+			&& TAB_CTFGame.rng.RandInt(0,100) < 66
+			&& !TAB_CTFAnyPlayerWithinArea(GetVehicleOrigin(), m_playerDistanceFromAiVehicle))
+		{	
+			m_canSpawnCivilianAi = false;
+			return true;
+		}
+		
+		m_canSpawnCivilianAi = false;
+		return false;
+	}
+	
+	void MarkSpawnWasQueried()
+	{
+		m_spawnWasQueried = true;
+	}
+	
+	bool SpawnWasPreviouslyQueried()
+	{
+		return m_spawnWasQueried;
+	}
+	
+	Vehicle GetVehicleEntity()
+	{
+		if (!IsSpawned())
+			return null;
+		return m_vehicle;
+	}
+}
+class TAB_CTFRandomVehicleManagerClass: GenericEntityClass
+{
+};
+
+enum TAB_CTFRandomCivilianVehicleSpawnTaskState
+{
+	Collect,
+	Spawn
+}
+
+class TAB_CTFRandomVehicleManager: GenericEntity
+{
+	[Attribute(defvalue: "750", desc: "Distance from player when vehicle can spawn")]
+	private int m_spawnDistance;
+	
+	[Attribute(defvalue: "50", desc: "Chance of a vehicle spawning, 0 - 100, 0: never, 100: always")]
+	private int m_spawnChance;
+	
+	
+	static private ref array<TAB_CTFRandomVehicleEntity> m_vehiclePoints = {};
+	static private ref array<TAB_CTFRandomVehicleEntity> m_potentialCivilianVehiclePoints = {};
+	
+	private int m_idx = -1;
+	private int m_civIdx = -1;
+	
+	vector m_playerPositionToMatchRoadLookup = vector.Zero;
+	vector m_lookedupRoadPosition = vector.Zero;
+
+	TAB_CTFRandomCivilianVehicleSpawnTaskState civilianVehicleBuildState;
+
+	void TAB_CTFRandomVehicleManager(IEntitySource src, IEntity parent)
+	{
+		if (!TAB_CTFGame.IsGameAuthority())
+			return;
+	
+		SetEventMask(EntityEvent.FRAME);
+	}
+	
+	override protected void EOnFrame(IEntity owner, float timeSlice)
+	{
+		if (!m_vehiclePoints || m_vehiclePoints.IsEmpty())
+		{
+			m_idx = 0;
+			return;
+		}
+		
+		++m_idx;
+		
+		if (m_idx >= m_vehiclePoints.Count())
+		{
+			m_idx = 0;
+		}
+		
+		if (!m_vehiclePoints.IsEmpty() && m_idx < m_vehiclePoints.Count() && m_vehiclePoints[m_idx] == null)
+		{
+			m_vehiclePoints.Remove(m_idx);
+			return;
+		}
+
+		TAB_CTFRandomVehicleEntity vehiclePoint = m_vehiclePoints[m_idx];
+		
+		if (!vehiclePoint.IsSpawned())
+		{
+			// Don't chain these to a short-circuited logical AND due to the next else-if.
+			if (!vehiclePoint.IsCivilianAiOnlySpawn()
+				&& !vehiclePoint.SpawnWasPreviouslyQueried()
+				&& TAB_CTFAnyPlayerWithinArea(vehiclePoint.GetVehicleOrigin(), m_spawnDistance))
+			{
+				bool canSpawn = TAB_CTFGame.rng.RandInt(0, 100) < m_spawnChance;
+				
+				vehiclePoint.MarkSpawnWasQueried();
+				if (canSpawn)
+					vehiclePoint.Spawn();
+			}
+		}
+		else if (!vehiclePoint.IsPreserved())
+		{
+			if (vehiclePoint.IsOccupied() && !vehiclePoint.IsCivilianAiOnlySpawn())
+			{
+				vehiclePoint.PreserveVehicle();
+			}
+			else if (!TAB_CTFAnyPlayerWithinArea(vehiclePoint.GetVehicleOrigin(), m_spawnDistance))
+			{
+				vehiclePoint.Despawn();
+			}
+		}
+		
+		CivilianAiTask(vehiclePoint);
+	}
+		
+	static void AddVehiclePoint(TAB_CTFRandomVehicleEntity point)
+	{
+		if (!m_vehiclePoints)
+			m_vehiclePoints = new array<TAB_CTFRandomVehicleEntity>();
+		
+		m_vehiclePoints.Insert(point);
+	}
+	
+	private void CollectSpawnCivilian(TAB_CTFRandomVehicleEntity vehiclePoint)
+	{
+		if (m_idx < m_civIdx)
+		{
+			civilianVehicleBuildState = TAB_CTFRandomCivilianVehicleSpawnTaskState.Spawn;
+			m_civIdx = -1;
+		}
+		else
+		{
+			m_civIdx = m_idx;
+		}
+		
+		// TODO calling this twice is very ineffective, but should be fine for a handful of players anyway.
+		if (vehiclePoint.IsOccupied()
+			|| !TAB_CTFAnyPlayerWithinArea(vehiclePoint.GetVehicleOrigin(), m_spawnDistance))
+		{
+			return;
+		}
+
+		m_potentialCivilianVehiclePoints.Insert(vehiclePoint);
+	}
+	
+	private bool AddLookedupRoadCallback(IEntity e)
+	{
+		if (m_lookedupRoadPosition == vector.Zero)
+		{
+			m_lookedupRoadPosition = e.GetOrigin();
+			return true;
+		}
+		
+		float newDistance = vector.DistanceXZ(m_playerPositionToMatchRoadLookup, e.GetOrigin());
+		float currentDistance = vector.DistanceXZ(m_playerPositionToMatchRoadLookup, m_lookedupRoadPosition);
+		
+		if (newDistance < currentDistance)
+		{
+			m_lookedupRoadPosition = e.GetOrigin();
+		}
+		
+		return true;
+	}
+	
+	private bool FilterLookedupRoadCallback(IEntity e)
+	{
+		return e.GetOrigin() != vector.Zero
+			&& (e.ClassName() == "SCR_DestructibleBuildingEntity");
+	}
+	
+	private void TrySpawnCivilian()
+	{
+		++m_civIdx;
+
+		if (m_civIdx >= m_potentialCivilianVehiclePoints.Count() || m_potentialCivilianVehiclePoints.IsEmpty())
+		{
+			civilianVehicleBuildState = TAB_CTFRandomCivilianVehicleSpawnTaskState.Collect;
+			m_civIdx = -1;
+			m_potentialCivilianVehiclePoints.Clear();
+			return;
+		}
+		
+		if (m_potentialCivilianVehiclePoints[m_civIdx] == null)
+		{
+			m_potentialCivilianVehiclePoints.Remove(m_civIdx);
+			--m_civIdx;
+			return;
+		}
+		
+		TAB_CTFRandomVehicleEntity randomVehicle = m_potentialCivilianVehiclePoints[m_civIdx];
+		
+		if (!randomVehicle.CanSpawnCivilianAi())
+			return;
+		
+		array<int> playerIds = {};
+		GetGame().GetPlayerManager().GetAllPlayers(playerIds);
+		if (playerIds.IsEmpty())
+			return;
+
+		m_playerPositionToMatchRoadLookup = GetGame().GetPlayerManager().GetPlayerControlledEntity(playerIds.GetRandomElement()).GetOrigin();
+		
+		GetGame().GetWorld().QueryEntitiesBySphere(m_playerPositionToMatchRoadLookup, 500, AddLookedupRoadCallback, FilterLookedupRoadCallback, EQueryEntitiesFlags.STATIC);
+		
+		if (m_lookedupRoadPosition != vector.Zero)
+		{
+			TAB_CTFCivilianAiDriverManager.AddVehicle(randomVehicle, m_lookedupRoadPosition);
+		}
+
+		m_lookedupRoadPosition = vector.Zero;
+	}
+
+	private void CivilianAiTask(TAB_CTFRandomVehicleEntity vehiclePoint)
+	{
+		if (!vehiclePoint.IsCivilian() && !vehiclePoint.IsCivilianAiOnlySpawn())
+		{
+			return;
+		}
+		
+		if (civilianVehicleBuildState == TAB_CTFRandomCivilianVehicleSpawnTaskState.Collect)
+		{
+			CollectSpawnCivilian(vehiclePoint);
+		}
+		
+		else if (civilianVehicleBuildState == TAB_CTFRandomCivilianVehicleSpawnTaskState.Spawn)
+		{
+			TrySpawnCivilian();
+		}
+	}
+}
+/*
+ * This is a result of an "oof" during learning how to script Arma Reforger.
+ * Consider this script more of a penalty, it's naughty and must be punished.
+ * ... But I wanted to play this scenario with my friends anyway :)
+ *
+ * You should never do this in your projects by copying how I did it here.
+ * It's a bad workaround because it decouples responsibilities and ownerships (i.e. spaghetti.)
+*/
+
+class TAB_CTFReplicationWorkaroundClass: GenericEntityClass
+{
+};
+
+class TAB_CTFReplicatedAreaInstance
+{
+	void TAB_CTFReplicatedAreaInstance(string areaName, TAB_CTFFaction areaFaction, int areaStrength)
+	{
+		name = areaName;
+		faction = areaFaction;
+		strength = areaStrength;
+	}
+
+	string name;			
+	TAB_CTFFaction faction;
+	int strength;
+};
+
+class TAB_CTFReplicationWorkaround: GenericEntity
+{
+	// For authority
+	static private ref array<ref TAB_CTFAreaInstance> m_areaInstances = new array<ref TAB_CTFAreaInstance>();
+	
+	// For proxy
+	static private ref array<ref TAB_CTFReplicatedAreaInstance> m_areaList = new array<ref TAB_CTFReplicatedAreaInstance>();
+	
+	// Intention is to place the instance in the world and this should be filled, not the best solution.
+	static private TAB_CTFReplicationWorkaround m_instance;
+
+	void TAB_CTFReplicationWorkaround(IEntitySource src, IEntity parent)
+	{
+		m_instance = this;
+	}
+	
+	static void Reset()
+	{
+		m_areaList.Clear();
+		m_areaInstances.Clear();
+	}
+
+	static TAB_CTFReplicationWorkaround Instance()
+	{
+		return m_instance;
+	}
+
+	static array<ref TAB_CTFReplicatedAreaInstance> GetReplicatedAreaInstances()
+	{
+		return m_areaList;
+	}
+	
+	// RPC to proxy.
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	private void RpcTo_AddArea(string areaName, TAB_CTFFaction areaFaction, int areaStrength)
+	{
+		m_areaList.Insert(new TAB_CTFReplicatedAreaInstance(areaName, areaFaction, areaStrength));
+	}
+	
+	// RPC to proxy.
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	private void RpcDo_Broadcast_SetFaction(string areaName, int factionInt)
+	{
+		TAB_CTFAreaInstance instance = TAB_CTFGame.Instance().FindAreaInstance(areaName);
+		if (!instance)
+		{
+			Print("[TAB_CTFReplicationWorkaround.RpcDo_Broadcast_SetFaction] Could not find area " + areaName, LogLevel.ERROR);
+			return;
+		}
+		instance.OnFactionChange(TAB_CTFFactionFromInt(factionInt));
+	}
+	
+	// RPC to proxy.
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	private void RpcDo_Broadcast_SetStrength(string areaName, int strength)
+	{
+		TAB_CTFAreaInstance instance = TAB_CTFGame.Instance().FindAreaInstance(areaName);
+		if (!instance)
+		{
+			Print("[TAB_CTFReplicationWorkaround.RpcDo_Broadcast_SetStrength] Could not find area " + areaName, LogLevel.ERROR);
+			return;
+		}
+		instance.OnStrengthChange(strength);
+	}
+	
+	// RPC to proxy.
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	private void RpcDo_Broadcast_ShowFeedback(string text)
+	{
+		TAB_CTFGame.ShowFeedback(text);
+	}
+	
+	// RPC to proxy.
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	private void RpcDo_Broadcast_TaskCompletion(int prio, string soundEvent, string message)
+	{
+		SCR_PopUpNotification.GetInstance().PopupMsg(message, prio: prio, sound: soundEvent);
+	}
+	
+	// RPC to proxy.
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	private void RpcDo_Broadcast_AddPlayerToScoreboard(int playerid)
+	{
+		TAB_CTFScoreManager.AddPlayer(playerid);
+	}
+	
+	// RPC to proxy.
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	private void RpcDo_Broadcast_AddScore(int playerid, int score)
+	{
+		TAB_CTFScoreManager.AddScore(playerid, score);
+	}
+
+	// Called on the authority.
+	void AddArea(TAB_CTFAreaInstance area)
+	{
+		Print("[TAB_CTFReplicationWorkaround.AddArea] Authority added instance " + area.GetName() + " - " + TAB_CTFFactionToString(area.GetFaction()) + " - " + area.GetStrength());
+		m_areaInstances.Insert(area);
+		Rpc(RpcTo_AddArea, area.GetName(), area.GetFaction(), area.GetStrength());
+	}
+
+	// Called on the authority.
+	void SetFaction(string areaName, TAB_CTFFaction faction)
+	{
+		Rpc(RpcDo_Broadcast_SetFaction, areaName, TAB_CTFFactionToInt(faction));
+	}
+	
+	// Called on the authority.
+	void SetStrength(string areaName, int strength)
+	{
+		Rpc(RpcDo_Broadcast_SetStrength, areaName, strength);
+	}
+	
+	// Called on the authority.
+	void BroadcastFeedback(string text)
+	{
+		Rpc(RpcDo_Broadcast_ShowFeedback, text);
+	}
+	
+	// Called on the authority.
+	void BroadcastTaskCompletion(int prio, string sound, string text)
+	{
+		Rpc(RpcDo_Broadcast_TaskCompletion, prio, sound, text);
+	}
+	
+	// Called on the authority.
+	void BroadcastAddPlayerToScoreboard(int playerid)
+	{
+		Rpc(RpcDo_Broadcast_AddPlayerToScoreboard, playerid);
+	}
+	
+	// Called on the authority.
+	void BroadcastAddScore(int playerid, int score)
+	{
+		Rpc(RpcDo_Broadcast_AddScore, playerid, score);
+	}
+	
+	// Called on the authority when an entity gets streamed
+	override bool RplSave(ScriptBitWriter writer)
+	{
+		writer.Write(m_areaInstances.Count(), 16);
+		
+		foreach (TAB_CTFAreaInstance area : m_areaInstances)
+		{
+			writer.WriteString(area.GetName());
+			writer.Write(area.GetStrength(), 8);
+			writer.Write(TAB_CTFFactionToInt(area.GetFaction()), 8);
+		}
+		
+		map<int, int> scoreBoard = TAB_CTFScoreManager.GetScoreBoard();
+		
+		writer.Write(scoreBoard.Count(), 16);
+		foreach (int playerid, int score : scoreBoard)
+		{
+			writer.Write(playerid, 16);
+			writer.Write(score, 16);
+		}
+
+		return true;
+	}
+
+	// Called on the streamed proxy
+	override bool RplLoad(ScriptBitReader reader)
+	{
+		int areaCount;
+
+		if (!reader.Read(areaCount, 16))
+			return false;
+		
+		for (int i = 0; i < areaCount; ++i)
+		{
+			string name;			
+			if (!reader.ReadString(name))
+				return false;
+			
+			int strength;
+			if (!reader.Read(strength, 8))
+				return false;
+			
+			int factionInt;
+			if (!reader.Read(factionInt, 8))
+				return false;
+			
+			TAB_CTFFaction faction = TAB_CTFFactionFromInt(factionInt);
+			
+			m_areaList.Insert(new TAB_CTFReplicatedAreaInstance(name, faction, strength));
+			Print("[TAB_CTFReplicationWorkaround.RplLoad] Replicated instance " + name + " - " + TAB_CTFFactionToString(faction) + " - " + strength);
+		}
+		
+		int scoreboardCount;
+		if (!reader.Read(scoreboardCount, 16))
+			return false;
+		
+		for (int i = 0; i < scoreboardCount; ++i)
+		{
+			int playerid;
+			if (!reader.Read(playerid, 16))
+				return false;
+			
+			int score;
+			if (!reader.Read(score, 16))
+				return false;
+			
+			TAB_CTFScoreManager.AddPlayer(playerid);
+			TAB_CTFScoreManager.SetScore(playerid, score);
+		}
+		
+		return true;
+	}
+}
+class TAB_CTFScoreManager
+{
+	// playerid, score
+	static private ref map<int, int> m_score = new map<int, int>;
+	
+	static private ResourceName m_layoutResourceName = "{5A36E64EDC631406}UI/layouts/HUD/CampaignMP/ScoreLayout.layout";	
+	static private ref Widget m_ui;
+
+	static map<int, int> GetScoreBoard()
+	{
+		return m_score;
+	}
+	
+	static void Reset()
+	{
+		Print("[TAB_CTFScoreManager.Reset] Resetting score table");
+		
+		m_score.Clear();
+	}
+	
+	static void AddPlayer(int playerid)
+	{
+		Print("[TAB_CTFScoreManager.AddPlayer] Added player " + playerid);
+		
+		if (!m_score.Contains(playerid))
+			m_score.Insert(playerid, 0);
+		
+		if (TAB_CTFGame.IsGameAuthority())
+			TAB_CTFReplicationWorkaround.Instance().BroadcastAddPlayerToScoreboard(playerid);
+	}
+	
+	static void AddScore(int playerid, int score)
+	{
+		auto newScore = m_score[playerid] + score;
+		m_score[playerid] = newScore;
+		
+		UpdateUi();
+		
+		if (TAB_CTFGame.IsGameAuthority())
+			TAB_CTFReplicationWorkaround.Instance().BroadcastAddScore(playerid, score);
+	}
+	
+	static void SetScore(int playerid, int score)
+	{
+		m_score[playerid] = score;
+		
+		UpdateUi();
+	}
+	
+	static void ShowUi()
+	{
+		Print("[TAB_CTFScoreManager.ShowUi] Showing score UI");
+		
+		m_ui = GetGame().GetWorkspace().CreateWidgets(m_layoutResourceName);
+		if (!m_ui)
+		{
+			Print("[TAB_CTFScoreManager.ShowUi] Couldn't load layout resource: " + m_layoutResourceName, LogLevel.ERROR);
+			return;
+		}
+		
+		UpdateUi();
+	}
+
+	static void UpdateUi()
+	{
+		int playerId = SCR_PlayerController.GetLocalPlayerId();
+		int score = m_score[playerId];
+		
+		Print("[TAB_CTFScoreManager.UpdateUi] Updating score UI for player " + playerId + " with score " + score);
+		
+		Widget textWidget = m_ui.FindWidget("Message");
+		TextWidget text = TextWidget.Cast(textWidget);
+		if (!text)
+		{
+			Print("[TAB_CTFScoreManager.UpdateUi] This layout doesn't have the approperiate text widget: " + m_layoutResourceName, LogLevel.ERROR);
+			return;
+		}
+
+		text.SetText("Score: " + score);
+	}
+}
+class TAB_CTFSideMissionRewardEntityClass: GenericEntityClass
+{
+};
+
+class TAB_CTFSideMissionRewardEntity: GenericEntity
+{
+	[Attribute(defvalue: "50", desc: "Area in which mission reward can spawn within.")]
+	protected int m_radius;
+	
+	[Attribute(defvalue: "", desc: "Area name of which the reward appears at. Can only be of area type \"Property\".")]
+	protected string m_areaName;
+	
+	void TAB_CTFSideMissionRewardEntity(IEntitySource src, IEntity parent)
+	{	
+		TAB_CTFSideMission.AddRewardArea(this);
+	}
+	
+	int GetRadius()
+	{
+		return m_radius;
+	}
+	
+	string GetAreaName()
+	{
+		return m_areaName;
+	}
+}
+
+class TAB_CTFSideMissionRewardMeshComponentClass: SCR_BaseAreaMeshComponentClass
+{
+};
+
+class TAB_CTFSideMissionRewardMeshComponent: SCR_BaseAreaMeshComponent
+{
+	override float GetRadius()
+	{
+		TAB_CTFSideMissionRewardEntity owner = TAB_CTFSideMissionRewardEntity.Cast(GetOwner());
+		if (!owner)
+			return 0;
+		return owner.GetRadius();
+	}
+};
+
+class TAB_CTFSideMissionAreaEntityClass: GenericEntityClass
+{
+};
+
+class TAB_CTFSideMissionAreaEntity: GenericEntity
+{
+	[Attribute(defvalue: "100", desc: "Area in which mission objective can spawn within.")]
+	protected int m_radius;
+	
+	[Attribute(defvalue: "", desc: "Optional, use same faction for enemy forces as the given area. Can also be a non-existing area, for matching with trigger area names.")]
+	protected string m_areaName;
+	
+	ref TAB_CTFSideMission m_mission;
+
+	void TAB_CTFSideMissionAreaEntity(IEntitySource src, IEntity parent)
+	{
+		TAB_CTFGame.AddMissionArea(this);
+	}
+	
+	override protected void EOnFrame(IEntity owner, float timeSlice)
+	{
+		if (!m_mission) return;
+		
+		m_mission.ProgressMission();
+		
+		if (TAB_CTFGame.IsGameAuthority() && m_mission.IsCompleted())
+			ClearEventMask(EntityEvent.FRAME);
+	}
+
+	int GetRadius()
+	{
+		return m_radius;
+	}
+	
+	string GetAreaName()
+	{
+		return m_areaName;
+	}
+	
+	void GenerateRandomMission()
+	{
+		if (!TAB_CTFGame.IsGameAuthority() || m_mission) return;
+
+		int n = TAB_CTFGame.rng.RandInt(0, 2);
+		switch (n)
+		{
+			case 0:
+				m_mission = new TAB_CTFSideMission_StealTruck(this);
+				break;
+			case 1:
+				m_mission = new TAB_CTFSideMission_DestroyTruck(this);
+				break;
+		}
+		
+		SetEventMask(EntityEvent.FRAME);
+	}
+};
+
+
+enum TAB_CTFSideMissionStateResult
+{
+	// State result: Mission fails
+	Failed,
+	
+	// State result: No changes
+	None,
+	
+	// State result: Progress to next state (or mission success)
+	Progress
+}
+
+class TAB_CTFSideMissionState
+{
+	protected TAB_CTFSideMission m_mission;
+	
+	void TAB_CTFSideMissionState(TAB_CTFSideMission mission)
+	{
+		m_mission = mission;
+	}
+	
+	void ActivateState();
+	
+	void DeactivateState();
+	
+	TAB_CTFSideMissionStateResult HandleState();
+};
+
+class TAB_CTFSideMission
+{
+	private string m_title;
+	private string m_description;
+	
+	private static const int m_spawnRadius = 750;
+
+	private ref array<ref TAB_CTFSideMissionState> m_states;
+	private int m_state = -1;
+	private bool m_isCompleted = false; // mission failed or success: true, otherwise: false.
+	
+	protected vector m_origin;
+	protected float m_radius;
+	protected string m_areaName;
+	
+	static ref array<TAB_CTFSideMissionTriggerEntity> m_triggers = {};
+	static ref array<TAB_CTFSideMissionRewardEntity> m_rewardAreas = {};
+	
+	int m_enemySpawnCounter = 0;
+	ref array<ref TAB_CTFAiGroup> m_enemyGroup = {};
+	
+	string m_vehiclePrefab;
+	Vehicle m_vehicleObjective;
+	bool m_vehicleDespawnAllowed = true;
+	
+	void TAB_CTFSideMission(TAB_CTFSideMissionAreaEntity areaEntity)
+	{
+		m_origin = areaEntity.GetOrigin();
+		m_radius = areaEntity.GetRadius();
+		m_areaName = areaEntity.GetAreaName();
+		GetGame().GetCallqueue().CallLater(SpawnTask, 1000, true);
+	}
+	
+	static void AddTrigger(TAB_CTFSideMissionTriggerEntity trigger)
+	{
+		m_triggers.Insert(trigger);
+	}
+	
+	static void AddRewardArea(TAB_CTFSideMissionRewardEntity area)
+	{
+		m_rewardAreas.Insert(area);
+	}
+	
+	static vector GetRewardPosition(TAB_CTFAreaInstance area)
+	{
+		int i = 0;
+		while (i < m_rewardAreas.Count())
+		{
+			if (m_rewardAreas[i] == null)
+			{
+				m_rewardAreas.Remove(i);
+				continue;
+			}
+			
+			if (m_rewardAreas[i].GetAreaName() == area.GetName())
+			{
+				vector origin = m_rewardAreas[i].GetOrigin();
+				return TAB_CTFGame.rng.GenerateRandomPointInRadius(1, m_rewardAreas[i].GetRadius(), origin);
+			}
+			
+			++i;
+		}
+		
+		Print("[TAB_CTFSideMission.GetRewardPosition] Couldn't find '" + area.GetName() + "' as reward position! Missing Reward Area entity?");
+		return vector.Zero;
+	}
+	
+	static TAB_CTFSideMissionTriggerEntity GetRandomTrigger(int mask = 0, string exceptArea = "")
+	{
+		array<TAB_CTFSideMissionTriggerEntity> candidates = new array<TAB_CTFSideMissionTriggerEntity>();
+		
+		int i = 0;
+		while (i < m_triggers.Count())
+		{
+			if (m_triggers[i] == null)
+			{
+				m_triggers.Remove(i);
+				continue;
+			}
+			
+			if (mask == 0 || m_triggers[i].CheckMask(mask))
+				candidates.Insert(m_triggers[i]);
+			
+			if (!exceptArea.IsEmpty() && m_triggers[i].GetName() == exceptArea)
+				candidates.Remove(i);
+			
+			++i;
+		}
+		
+		if (candidates.IsEmpty())
+			return null;
+		
+		return candidates[TAB_CTFGame.rng.RandInt(0, candidates.Count())];
+	}
+
+	void CreateEnemyForces(int count)
+	{
+		m_enemySpawnCounter = 0;
+		TAB_CTFFaction faction;
+		TAB_CTFAreaInstance areaInstance = TAB_CTFGame.Instance().GetAreaInstance(m_areaName);
+
+		if (areaInstance)
+		{
+			faction = areaInstance.GetFaction();
+		}
+		else
+		{
+			faction = TAB_CTFRandomEnemyFaction(TAB_CTFGame.rng);
+		}
+
+		for (int i = 0; i < count; ++i)
+		{
+			vector spawnPosition = TAB_CTFGame.rng.GenerateRandomPointInRadius(0, GetRadius(), GetOrigin());
+			TAB_SquadType squadType = TAB_GetRandomSmallSquadType(TAB_CTFGame.rng);
+
+			m_enemyGroup.Insert(TAB_CTFAiGroup.CreateMilitaryGroup(spawnPosition, squadType, faction));
+		}
+	}
+	
+	void CreateVehicleObjective(string prefabName)
+	{
+		m_vehiclePrefab = prefabName;
+	}
+
+	vector GetOrigin()
+	{
+		return m_origin;
+	}
+	
+	float GetRadius()
+	{
+		return m_radius;
+	}
+	
+	string GetTitle()
+	{
+		return m_title;
+	}
+	
+	string GetDescription()
+	{
+		return m_description;
+	}
+	
+	bool IsCompleted()
+	{
+		return m_isCompleted;
+	}
+
+	void ProgressMission()
+	{
+		if (m_isCompleted) return;
+		
+		if (!m_states)
+		{
+			Print("[TAB_CTFSideMission.ProgressMission] This side mission has no states: " + m_title, LogLevel.SPAM);
+			return;
+		}
+		
+		if (m_state == -1)
+		{
+			/* Initial setup. */
+			++m_state;
+			m_states[m_state].ActivateState();
+			return;
+		}
+		
+		TAB_CTFSideMissionStateResult handleResult = m_states[m_state].HandleState();
+
+		if (handleResult == TAB_CTFSideMissionStateResult.Progress)
+		{
+			if (m_state == m_states.Count())
+			{
+				Print("[TAB_CTFSideMission.ProgressMission] This side mission has no more states: " + m_title, LogLevel.WARNING);
+				return;
+			}
+	
+			m_states[m_state].DeactivateState();
+			
+			++m_state;
+	
+			if (m_state == m_states.Count())
+			{
+				m_isCompleted = true;
+				MissionSuccess();
+				CreateReward();
+				return;
+			}
+			else
+			{
+				m_states[m_state].ActivateState();
+			}
+		}
+		else if (handleResult == TAB_CTFSideMissionStateResult.Failed)
+		{
+			m_isCompleted = true;
+			MissionFailed();
+			m_states[m_state].DeactivateState();
+		}
+	}
+		
+	bool IsVehicleGood()
+	{
+		if (!m_vehicleObjective)
+			return true;
+		float damageRatio = m_vehicleObjective.GetDamageManager().GetHealth() / m_vehicleObjective.GetDamageManager().GetMaxHealth();
+		return damageRatio > 0.1;
+	}
+	
+	bool IsVehicleOccupied()
+	{
+		if (!m_vehicleObjective)
+			return false;
+		return m_vehicleObjective.IsOccupied();
+	}
+	
+	vector GetVehiclePosition()
+	{
+		if (!m_vehicleObjective)
+			return vector.Zero;
+		return m_vehicleObjective.GetOrigin();
+	}
+	
+	void SetVehicleDespawnAllowed(bool isAllowed)
+	{
+		m_vehicleDespawnAllowed = isAllowed;
+	}
+
+	protected void Initialize(string title, string description, array<ref TAB_CTFSideMissionState> states)
+	{
+		m_title = title;
+		m_description = description;
+		m_states = states;
+		m_state = -1;
+		
+		ProgressMission(); // Mutates m_state on success
+		
+		if (m_state == -1)
+		{
+			Print("[TAB_CTFSideMission.Initialize] Failed to initialize side mission: " + m_title, LogLevel.ERROR);
+		}
+		else
+		{
+			Print("[TAB_CTFSideMission.Initialize] Initialized side mission: " + m_title);
+		}
+	}
+	
+	private void CreateReinforcementsReward()
+	{
+		TAB_CTFGame.ShowFeedback("Friendly reinforcements arrives on your next attack");
+		TAB_CTFGame.Instance().AddFriendlyReinforcements();
+	}
+	
+	private void CreateVehicleReward()
+	{
+		array<TAB_CTFAreaInstance> areaList = TAB_CTFGame.Instance().GetAreaInstancesByFaction(TAB_CTFFaction.FIA);
+		TAB_CTFAreaInstance area = areaList[TAB_CTFGame.rng.RandInt(0, areaList.Count())];
+		TAB_CTFGame.ShowFeedback("Your reward is available at " + area.GetNameOnMap());
+		
+		vector position = GetRewardPosition(area);
+		int rotation = TAB_CTFGame.rng.RandInt(0, 360);
+		
+		string prefabName = TAB_CTFVehiclePrefabRandom(TAB_CTFVehicleType.MilitarySmallMg);
+		Print("[TAB_CTFSideMission.CreateVehicleReward] Side-mission vehicle reward: " + prefabName);
+		
+		Resource resource = Resource.Load(prefabName);
+		IEntity vehicle = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSurfaceAdjustedSpawnParams(position));
+		if (vehicle)
+			vehicle.SetAngles(Vector(0, rotation, 0));
+		else
+			Print("[TAB_CTFSideMission.CreateVehicleReward] It appears we wasn't able to generate side-mission vehicle reward: " + prefabName);
+	}
+
+	private void CreateReward()
+	{
+		int rng = TAB_CTFGame.rng.RandInt(0, 2);
+		if (rng == 0)
+			CreateVehicleReward();
+		else
+			CreateReinforcementsReward();
+	}
+	
+	private void SpawnEnemyForces()
+	{
+		if (m_enemySpawnCounter < 0)
+			m_enemySpawnCounter = 0;
+		
+		if (m_enemySpawnCounter == m_enemyGroup.Count())
+			return;
+
+		TAB_CTFAreaInstance areaInstance = TAB_CTFGame.Instance().GetAreaInstance(m_areaName);
+		
+		/* Check if the tied-to area changed faction and fix it for the side mission as well */
+		if (areaInstance
+			&& m_enemyGroup.Count() > 0
+			&& m_enemySpawnCounter == m_enemyGroup.Count() - 1
+			&& m_enemyGroup[0].GetFaction() != areaInstance.GetFaction())
+		{
+			int groupCount = m_enemyGroup.Count();
+			m_enemyGroup.Clear();
+			CreateEnemyForces(groupCount);
+		}
+		
+		TAB_CTFAiGroup group = m_enemyGroup[m_enemySpawnCounter];
+		group.Spawn();
+		group.RemoveAllOrders();
+		group.AddOrder(m_origin, TAB_CTFAiOrder.Defend);
+
+		++m_enemySpawnCounter;
+	}
+	
+	private void DespawnEnemyForces()
+	{
+		if (m_enemySpawnCounter == m_enemyGroup.Count())
+			--m_enemySpawnCounter;
+	
+		if (m_enemySpawnCounter < 0)
+			return;
+		
+		m_enemyGroup[m_enemySpawnCounter].Despawn();
+		
+		--m_enemySpawnCounter;
+	}
+	
+	private void SpawnVehicleObjective()
+	{
+		vector position = TAB_CTFGame.rng.GenerateRandomPointInRadius(0, GetRadius(), GetOrigin());
+		float rotation = TAB_CTFGame.rng.RandInt(0, 360);
+		
+		Resource resource = Resource.Load(m_vehiclePrefab);
+		m_vehicleObjective = Vehicle.Cast( GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSurfaceAdjustedSpawnParams(position)) );
+		m_vehicleObjective.SetAngles(Vector(0, rotation, 0));
+	}
+	
+	private void SpawnTask()
+	{
+		array<int> playerIds = {};
+		GetGame().GetPlayerManager().GetPlayers(playerIds);
+		
+		if (m_isCompleted) // Clean up once players leave the area.
+		{
+			if (!TAB_CTFAnyPlayerWithinArea(GetOrigin(), m_spawnRadius))
+			{
+				foreach (TAB_CTFAiGroup aiGroup : m_enemyGroup)
+				{
+					aiGroup.Despawn();
+				}
+				
+				if (m_vehiclePrefab.IsEmpty())
+				{
+					GetGame().GetCallqueue().Remove(SpawnTask);
+				}
+				else if (m_vehicleObjective && !TAB_CTFAnyPlayerWithinArea(m_vehicleObjective.GetOrigin(), m_spawnRadius))
+				{
+					delete m_vehicleObjective;
+					GetGame().GetCallqueue().Remove(SpawnTask);
+				}
+			}
+
+			return;
+		}
+		
+		if (TAB_CTFAnyPlayerWithinArea(GetOrigin(), m_spawnRadius))
+		{
+			if (!m_vehicleObjective && !m_vehiclePrefab.IsEmpty())
+				SpawnVehicleObjective();
+			
+			SpawnEnemyForces();
+		}
+		else
+		{
+			if (m_vehicleDespawnAllowed && m_vehicleObjective)
+				delete m_vehicleObjective;
+			
+			DespawnEnemyForces();
+		}
+	}
+	
+	protected void MissionSuccess();
+
+	protected void MissionFailed();
+};
+
+class TAB_CTFSideMissionMeshComponentClass: SCR_BaseAreaMeshComponentClass
+{
+};
+
+class TAB_CTFSideMissionMeshComponent: SCR_BaseAreaMeshComponent
+{
+	override float GetRadius()
+	{
+		TAB_CTFSideMissionAreaEntity owner = TAB_CTFSideMissionAreaEntity.Cast(GetOwner());
+		if (!owner)
+			return 0;
+		return owner.GetRadius();
+	}
+};
+class TAB_CTFSideMissionState_DestroyTruck_Destroy: TAB_CTFSideMissionState
+{
+	private SCR_TriggerTask m_task;
+	
+	override void ActivateState()
+	{
+		m_mission.CreateVehicleObjective(TAB_RandomTransportTruck(TAB_CTFGame.rng));
+
+		CreateTask();
+		m_mission.CreateEnemyForces(3);
+	}
+	
+	override void DeactivateState()
+	{
+		m_task.Finish();
+	}
+
+	override TAB_CTFSideMissionStateResult HandleState()
+	{
+		if (m_mission.IsVehicleGood())
+		{
+			return TAB_CTFSideMissionStateResult.None;
+		}
+		
+		return TAB_CTFSideMissionStateResult.Progress;
+	}
+	
+	private void CreateTask()
+	{
+		Resource resource = Resource.Load("{3C2702C02E0E7168}Prefabs/Tasks/CTF_TriggerTask_Destroy.et");
+		IEntity taskPrefab = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSimpleEntitySpawnParams( m_mission.GetOrigin() ));
+		m_task = SCR_TriggerTask.Cast(taskPrefab);
+		m_task.SetTitle(m_mission.GetTitle());
+		m_task.SetDescription(m_mission.GetDescription());
+		m_task.Create(false);
+	}
+};
+
+class TAB_CTFSideMission_DestroyTruck: TAB_CTFSideMission
+{
+	private static ref array<string> m_randomDescriptions = {
+		"Make sure that this truck is permanently decomissioned.",
+		"Make this truck disappear - remember to bring explosives.",
+		"You need to \"take care\" of this truck. Give 'em hell!",
+		"This is an asset that has to be erased from the surface of the earth.",
+		"Bring your heaviest weapons, preferably a rocket launcher, and delete this truck!",
+		"Your task is, in fact, very simple: Destroy this truck. Optionally bring a cigar for after."
+	};
+	
+	void TAB_CTFSideMission_DestroyTruck(TAB_CTFSideMissionAreaEntity areaEntity)
+	{
+		Initialize("Destroy truck", m_randomDescriptions.GetRandomElement(), {
+			new TAB_CTFSideMissionState_DestroyTruck_Destroy(this)
+		});
+	}
+	
+	override private void MissionSuccess()
+	{
+		TAB_CTFReplicationWorkaround.Instance().BroadcastTaskCompletion(SCR_ECampaignPopupPriority.TASK_DONE,
+																		SCR_SoundEvent.TASK_SUCCEED,
+																		"COMPLETED - " + GetTitle());
+	}
+
+	override private void MissionFailed()
+	{}
+}
+class TAB_CTFSideMissionState_StealTruck_Locate: TAB_CTFSideMissionState
+{
+	private SCR_TriggerTask m_task;
+	private ref array<ref TAB_CTFAiGroup> m_aiGroup = new array<ref TAB_CTFAiGroup>();
+	
+	override void ActivateState()
+	{
+		m_mission.CreateVehicleObjective(TAB_RandomTransportTruck(TAB_CTFGame.rng));
+		
+		CreateTask();
+		m_mission.CreateEnemyForces(2);
+	}
+	
+	override void DeactivateState()
+	{
+		if (!m_mission.IsCompleted())
+		{
+			TAB_CTFGame.ShowFeedback("TASK UPDATED - " + m_mission.GetTitle());
+			m_mission.SetVehicleDespawnAllowed(false);
+			m_task.Finish(false);
+		}
+	}
+
+	override TAB_CTFSideMissionStateResult HandleState()
+	{
+		if (m_mission.IsVehicleOccupied())
+		{
+			return TAB_CTFSideMissionStateResult.Progress;
+		}
+
+		if (m_mission.IsVehicleGood())
+		{
+			return TAB_CTFSideMissionStateResult.None;
+		}
+		else
+		{
+			m_task.Fail();
+			return TAB_CTFSideMissionStateResult.Failed;
+		}
+	}
+
+	private void CreateTask()
+	{
+		Resource resource = Resource.Load("{2115119A385BA604}Prefabs/Tasks/CTF_TriggerTask_Search.et");
+		IEntity taskPrefab = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSimpleEntitySpawnParams( m_mission.GetOrigin() ));
+		m_task = SCR_TriggerTask.Cast(taskPrefab);
+		m_task.SetTitle(m_mission.GetTitle());
+		m_task.SetDescription(m_mission.GetDescription());
+		m_task.Create(false);
+	}
+};
+
+class TAB_CTFSideMissionState_StealTruck_Deliver: TAB_CTFSideMissionState
+{
+	private SCR_TriggerTask m_task;
+	bool m_success = false;
+	TAB_CTFSideMissionTriggerEntity m_target;
+
+	override void ActivateState()
+	{
+		CreateTask();
+	}
+	
+	override void DeactivateState()
+	{
+		if (m_success)
+			m_task.Finish();
+		else
+			m_task.Fail();
+	}
+	
+	override TAB_CTFSideMissionStateResult HandleState()
+	{
+		if (!m_mission.IsVehicleOccupied())
+		{
+			return TAB_CTFSideMissionStateResult.None;
+		}
+
+		if (m_target.IsPointWithinArea(m_mission.GetVehiclePosition()))
+		{
+			m_success = true;
+			return TAB_CTFSideMissionStateResult.Progress;
+		}
+		
+		if (!m_mission.IsVehicleGood())
+		{
+			m_task.Fail();
+			return TAB_CTFSideMissionStateResult.Failed;
+		}
+
+		return TAB_CTFSideMissionStateResult.None;
+	}
+	
+	private void CreateTask()
+	{
+		m_target = TAB_CTFSideMission.GetRandomTrigger(1);
+		
+		Resource resource = Resource.Load("{0748FF6A1AFD13FC}Prefabs/Tasks/CTF_TriggerTask_Transport.et");
+		IEntity taskPrefab = GetGame().SpawnEntityPrefab(resource, null, TAB_CreateSimpleEntitySpawnParams(m_target.GetOrigin()));
+		m_task = SCR_TriggerTask.Cast(taskPrefab);
+		m_task.SetTitle("Deliver stolen truck");
+		m_task.SetDescription("Deliver the stolen truck here");
+		m_task.Create(false);
+	}
+};
+
+class TAB_CTFSideMission_StealTruck: TAB_CTFSideMission
+{
+	private Vehicle m_truck;
+
+	private static ref array<string> m_randomDescriptions = {
+		"Find and steal this truck. Make sure it's not destroyed!",
+		"Find this truck and \"borrow\" it. Do not damage it too much!",
+		"Locate and capture this truck. Keep the damage to a minimum!",
+		"Locate this truck and seize it from the enemy. It must not be destroyed!",
+		"Track down this truck and claim it. It cannot be damaged too much!",
+		"This should be an easy task: Find this truck. Take it with force. But do not destroy it!"
+	};
+	
+	void TAB_CTFSideMission_StealTruck(TAB_CTFSideMissionAreaEntity areaEntity)
+	{
+		Initialize("Steal truck", m_randomDescriptions.GetRandomElement(), {
+			new TAB_CTFSideMissionState_StealTruck_Locate(this),
+			new TAB_CTFSideMissionState_StealTruck_Deliver(this)
+		});
+	}
+
+	override private void MissionSuccess()
+	{
+		TAB_CTFReplicationWorkaround.Instance().BroadcastTaskCompletion(SCR_ECampaignPopupPriority.TASK_DONE,
+																		SCR_SoundEvent.TASK_SUCCEED,
+																		"COMPLETED - " + GetTitle());
+	}
+
+	override private void MissionFailed()
+	{
+		TAB_CTFReplicationWorkaround.Instance().BroadcastTaskCompletion(SCR_ECampaignPopupPriority.TASK_DONE,
+																		SCR_SoundEvent.TASK_FAILED,
+																		"FAILED - " + GetTitle());
+	}
+}
+class TAB_CTFSideMissionTriggerMeshComponentClass: SCR_BaseAreaMeshComponentClass
+{
+};
+
+class TAB_CTFSideMissionTriggerMeshComponent: SCR_BaseAreaMeshComponent
+{
+	override float GetRadius()
+	{
+		TAB_CTFSideMissionTriggerEntity owner = TAB_CTFSideMissionTriggerEntity.Cast(GetOwner());
+		if (!owner)
+			return 0;
+		return owner.GetRadius();
+	}
+};
+
+class TAB_CTFSideMissionTriggerEntityClass: GenericEntityClass
+{
+};
+
+class TAB_CTFSideMissionTriggerEntity: GenericEntity
+{
+	[Attribute(defvalue: "5", desc: "Area in which mission trigger will activate when a player enters")]
+	protected int m_radius;
+	
+	[Attribute(defvalue: "0", desc: "Bitmask that represents for which missions this trigger can be used for")]
+	protected int m_triggerMask;
+	
+	[Attribute(defvalue: "", desc: "Optional, missions with same area name will not use this trigger.")]
+	protected string m_areaName;
+
+	private ref ScriptInvoker m_invoker = new ScriptInvoker();
+	
+	private bool m_inUse = true;
+	
+	void TAB_CTFSideMissionTriggerEntity(IEntitySource src, IEntity parent)
+	{	
+		TAB_CTFSideMission.AddTrigger(this);
+	}
+	
+	bool IsPointWithinArea(vector point)
+	{
+		return vector.DistanceXZ(GetOrigin(), point) < m_radius;
+	}
+	
+	int GetRadius()
+	{	
+		return m_radius;
+	}
+
+	bool CheckMask(int mask)
+	{
+		return (mask & m_triggerMask) != 0;
+	}
+	
+	ScriptInvoker GetInvoker()
+	{
+		return m_invoker;
+	}
+	
+	bool IsInUse()
+	{
+		return m_inUse;
+	}
+	
+	bool GetAreaName()
+	{
+		return m_areaName;
+	}
+};
+enum TAB_SquadType
+{
+	Riflemen,
+	Firesquad,
+	Medic,
+	Antitank
+}
+
+/* ***
+ * Squad data for: US
+ * ***
+*/
+string TAB_SquadResourceName_US(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return "{DDF3799FA1387848}Prefabs/Groups/BLUFOR/Group_US_RifleSquad.et";
+	
+		case TAB_SquadType.Firesquad:
+			return "{84E5BBAB25EA23E5}Prefabs/Groups/BLUFOR/Group_US_FireTeam.et";
+	
+		case TAB_SquadType.Medic:
+			return "{EF62027CC75A7459}Prefabs/Groups/BLUFOR/Group_US_MedicalSection.et";
+
+		case TAB_SquadType.Antitank:
+			return "{FAEA8B9E1252F56E}Prefabs/Groups/BLUFOR/Group_US_Team_LAT.et";
+	}
+	
+	// Default to Riflemen
+	return "{DDF3799FA1387848}Prefabs/Groups/BLUFOR/Group_US_RifleSquad.et";
+}
+
+string TAB_SquadVehicleResourceName_US(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return "{81FDAD5EB644CC3D}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_covered.et";
+	
+		case TAB_SquadType.Firesquad:
+			return "{3EA6F47D95867114}Prefabs/Vehicles/Wheeled/M998/M1025_armed_M2HB.et";
+	
+		case TAB_SquadType.Medic:
+			return "{3B1EB924602C7A07}Prefabs/Vehicles/Wheeled/M998/M997_maxi_ambulance_MERDC.et";
+
+		case TAB_SquadType.Antitank:
+			return "{259EE7B78C51B624}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469.et";
+	}
+	
+	// Default to Riflemen (heavy truck)
+	return "{81FDAD5EB644CC3D}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_covered.et";
+}
+
+int TAB_SquadCount_US(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return 9;
+	
+		case TAB_SquadType.Firesquad:
+			return 4;
+	
+		case TAB_SquadType.Medic:
+			return 2;
+
+		case TAB_SquadType.Antitank:
+			return 4;
+	}
+	
+	// Default to Riflemen
+	return 9;
+}
+
+/* ***
+ * Squad data for: USSR
+ * ***
+*/
+string TAB_SquadResourceName_USSR(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return "{E552DABF3636C2AD}Prefabs/Groups/OPFOR/Group_USSR_RifleSquad.et";
+	
+		case TAB_SquadType.Firesquad:
+			return "{657590C1EC9E27D3}Prefabs/Groups/OPFOR/Group_USSR_LightFireTeam.et";
+	
+		case TAB_SquadType.Medic:
+			return "{D815658156080328}Prefabs/Groups/OPFOR/Group_USSR_MedicalSection.et";
+	
+		case TAB_SquadType.Antitank:
+			return "{96BAB56E6558788E}Prefabs/Groups/OPFOR/Group_USSR_Team_AT.et";
+	}
+	
+	// Default to Riflemen
+	return "{E552DABF3636C2AD}Prefabs/Groups/OPFOR/Group_USSR_RifleSquad.et";
+}
+
+string TAB_SquadVehicleResourceName_USSR(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return "{81FDAD5EB644CC3D}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_covered.et";
+	
+		case TAB_SquadType.Firesquad:
+			return "{259EE7B78C51B624}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469.et";
+	
+		case TAB_SquadType.Medic:
+			return "{43C4AF1EEBD001CE}Prefabs/Vehicles/Wheeled/UAZ452/UAZ452_ambulance.et";
+
+		case TAB_SquadType.Antitank:
+			return "{259EE7B78C51B624}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469.et";
+	}
+	
+	// Default to Riflemen (heavy truck)
+	return "{81FDAD5EB644CC3D}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_covered.et";
+}
+
+int TAB_SquadCount_USSR(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return 6;
+	
+		case TAB_SquadType.Firesquad:
+			return 4;
+	
+		case TAB_SquadType.Medic:
+			return 2;
+	
+		case TAB_SquadType.Antitank:
+			return 4;
+	}
+	
+	// Default to Riflemen
+	return 6;
+}
+
+/* ***
+ * Squad data for: FIA
+ * ***
+*/
+string TAB_SquadResourceName_FIA(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return "{CE41AF625D05D0F0}Prefabs/Groups/INDFOR/Group_FIA_RifleSquad.et";
+	
+		case TAB_SquadType.Firesquad:
+			return "{5BEA04939D148B1D}Prefabs/Groups/INDFOR/Group_FIA_FireTeam.et";
+	
+		case TAB_SquadType.Medic:
+			return "{581106FA58919E89}Prefabs/Groups/INDFOR/Group_FIA_MedicalSection.et";
+
+		case TAB_SquadType.Antitank:
+			return "{2CC26054775FBA2C}Prefabs/Groups/INDFOR/Group_FIA_Team_AT.et";
+	}
+	
+	// Default to Riflemen
+	return "{CE41AF625D05D0F0}Prefabs/Groups/INDFOR/Group_FIA_RifleSquad.et";
+}
+
+string TAB_SquadVehicleResourceName_FIA(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return "{81FDAD5EB644CC3D}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_covered.et";
+	
+		case TAB_SquadType.Firesquad:
+			return "{259EE7B78C51B624}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469.et";
+	
+		case TAB_SquadType.Medic:
+			return "{43C4AF1EEBD001CE}Prefabs/Vehicles/Wheeled/UAZ452/UAZ452_ambulance.et";
+
+		case TAB_SquadType.Antitank:
+			return "{259EE7B78C51B624}Prefabs/Vehicles/Wheeled/UAZ469/UAZ469.et";
+	}
+	
+	// Default to Riflemen (heavy truck)
+	return "{81FDAD5EB644CC3D}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_covered.et";
+}
+
+int TAB_SquadCount_FIA(TAB_SquadType squadType)
+{
+	switch (squadType)
+	{
+		case TAB_SquadType.Riflemen:
+			return 7;
+	
+		case TAB_SquadType.Firesquad:
+			return 5;
+	
+		case TAB_SquadType.Medic:
+			return 2;
+
+		case TAB_SquadType.Antitank:
+			return 4;
+	}
+	
+	// Default to Riflemen
+	return 7;
+}
+
+/* ***
+ * Squad data for a given faction
+ * ***
+*/
+string TAB_SquadResourceName(TAB_SquadType squadType, TAB_CTFFaction faction)
+{
+	switch (faction)
+	{
+		case TAB_CTFFaction.USSR:
+			return TAB_SquadResourceName_USSR(squadType);
+
+		case TAB_CTFFaction.US:
+			return TAB_SquadResourceName_US(squadType);
+	}
+
+	// Making "FIA" as default.
+	return TAB_SquadResourceName_FIA(squadType);
+}
+
+string TAB_SquadVehicleResourceName(TAB_SquadType squadType, TAB_CTFFaction faction)
+{
+		switch (faction)
+	{
+		case TAB_CTFFaction.USSR:
+			return TAB_SquadVehicleResourceName_USSR(squadType);
+
+		case TAB_CTFFaction.US:
+			return TAB_SquadVehicleResourceName_US(squadType);
+	}
+
+	// Making "FIA" as default.
+	return TAB_SquadVehicleResourceName_FIA(squadType);
+}
+
+int TAB_SquadCount(TAB_SquadType squadType, TAB_CTFFaction faction)
+{
+	switch (faction)
+	{
+		case TAB_CTFFaction.USSR:
+			return TAB_SquadCount_USSR(squadType);
+
+		case TAB_CTFFaction.US:
+			return TAB_SquadCount_US(squadType);
+	}
+
+	// Making "FIA" as default.
+	return TAB_SquadCount_FIA(squadType);
+}
+
+/*
+ * Various civilians
+*/
+
+string TAB_RandomCivilianResourceName()
+{
+	static array<string> civilians = {
+		"{8C7093AF368F496A}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_CottonShirt_1.et",
+		"{DF7F8D5C05CC1AF6}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_CottonShirt_2.et",
+		"{408B8BD5E3F09FF3}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_CottonShirt_3.et",
+		"{035F8F1CEF3B187F}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_CottonShirt_4.et",
+		"{E6C3C3E5E3DE8F14}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_CottonShirt_5.et",
+		"{8A97F7055F1A003A}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_CottonShirt_6.et",
+		"{11EB9A0D2A5899EA}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_DenimJacket_1.et",
+		"{3AE3C1A509298D9D}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_DenimJacket_2.et",
+		"{C943F3CC53D187B6}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_Turtleneck_1.et",
+		"{1FFE2B88BEF51840}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_Turtleneck_2.et",
+		"{3A2FBAD5B929AC4B}Prefabs/Characters/Factions/CIV/GenericCivilians/Character_CIV_Turtleneck_3.et",
+		
+		"{6F5A71376479B353}Prefabs/Characters/Factions/CIV/ConstructionWorker/Character_CIV_ConstructionWorker_1.et",
+		"{C97B985FCFC3E4D6}Prefabs/Characters/Factions/CIV/ConstructionWorker/Character_CIV_ConstructionWorker_2.et",
+		"{2CE7D4A6C32673BD}Prefabs/Characters/Factions/CIV/ConstructionWorker/Character_CIV_ConstructionWorker_3.et",
+		"{11D3F19EB64AFA8A}Prefabs/Characters/Factions/CIV/ConstructionWorker/Character_CIV_ConstructionWorker_4.et",
+		"{F44FBD67BAAF6DE1}Prefabs/Characters/Factions/CIV/ConstructionWorker/Character_CIV_ConstructionWorker_5.et",
+		
+		"{E024A74F8A4BC644}Prefabs/Characters/Factions/CIV/Businessman/Character_CIV_Businessman_1.et",
+		"{A517C72CEF150898}Prefabs/Characters/Factions/CIV/Businessman/Character_CIV_Businessman_2.et",
+		"{626874113CAE4387}Prefabs/Characters/Factions/CIV/Businessman/Character_CIV_Businessman_3.et"
+	};
+	
+	int idx = TAB_CTFGame.rng.RandInt(0, civilians.Count());
+	return civilians[idx];
+}
+
+/*
+ * Varius squad utilities
+*/
+TAB_SquadType TAB_GetRandomSquadType(notnull RandomGenerator rng)
+{
+	int randomSquad = rng.RandInt(0, 4);
+
+	switch (randomSquad)
+	{
+		case 0:
+			return TAB_SquadType.Riflemen;
+		case 1:
+			return TAB_SquadType.Firesquad;
+		case 2:
+			return TAB_SquadType.Medic;
+		case 3:
+			return TAB_SquadType.Antitank;
+	}
+
+	Print("[TAB_GetRandomSquadType] Returning default 'random' squad type of Riflemen! randomSquad=" + randomSquad, LogLevel.WARNING);
+	return TAB_SquadType.Riflemen;
+}
+
+TAB_SquadType TAB_GetRandomSmallSquadType(notnull RandomGenerator rng)
+{
+	int randomSquad = rng.RandInt(0, 2);
+
+	switch (randomSquad)
+	{
+		case 0:
+			return TAB_SquadType.Firesquad;
+		case 1:
+			return TAB_SquadType.Medic;
+	}
+
+	Print("[TAB_GetRandomSmallSquadType] Returning default 'random' squad type of Firesquad! randomSquad=" + randomSquad, LogLevel.WARNING);
+	return TAB_SquadType.Firesquad;
+}
+
+/* ***
+ * Random transport truck, for missions.
+ * ***
+*/
+string TAB_RandomTransportTruck(notnull RandomGenerator rng)
+{
+	int n = rng.RandInt(0, 4);
+	string resourceName;
+	
+	switch (n)
+	{
+		case 0:
+			resourceName = "{92264FF932676C13}Prefabs/Vehicles/Wheeled/M923A1/M923A1_ammo.et";
+			break;
+		case 1:
+			resourceName = "{2D74C39A650A3030}Prefabs/Vehicles/Wheeled/M923A1/M923A1_engineer.et";
+			break;
+		case 2:
+			resourceName = "{2BE1F8B9299B67C1}Prefabs/Vehicles/Wheeled/M923A1/M923A1_tanker.et";
+			break;
+		default:
+			resourceName = "{81FDAD5EB644CC3D}Prefabs/Vehicles/Wheeled/M923A1/M923A1_transport_covered.et";
+			break;
+	}
+	
+	return resourceName;
+}
+
+notnull EntitySpawnParams TAB_CreateSimpleEntitySpawnParams(vector origin)
+{
+	EntitySpawnParams params = EntitySpawnParams();
+	params.TransformMode = ETransformMode.WORLD;
+	params.Transform[3] = origin;
+	return params;
+}
+
+notnull EntitySpawnParams TAB_CreateSurfaceAdjustedSpawnParams(vector origin)
+{
+	float y = GetGame().GetWorld().GetSurfaceY(origin[0], origin[2]);
+	origin[1] = y;
+	
+	EntitySpawnParams params = EntitySpawnParams();
+	params.TransformMode = ETransformMode.WORLD;
+	params.Transform[3] = origin;
+	return params;
+}
+
+Vehicle TAB_GetVehicleForChimeraCharacter(SCR_ChimeraCharacter character)
+{
+	if (!character || !character.IsInVehicle())
+		return null;
+	
+	CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+	if (!access)
+		return null;
+	
+	return Vehicle.Cast(access.GetCompartment().GetOwner());
+}
+
+SCR_ChimeraCharacter TAB_GetPilotForVehicle(Vehicle vehicle)
+{
+	if (!vehicle)
+		return null;
+	
+	return SCR_ChimeraCharacter.Cast(vehicle.GetPilot());
+}
