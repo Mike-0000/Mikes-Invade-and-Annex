@@ -1,0 +1,44 @@
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ StPierre {
+  coords 3165.069 11.577 2799.28
+  m_fZoneRadius 325
+  m_radius 325
+ }
+ StPierreHarbor {
+  coords 1194.773 2.23 3339.724
+  angleY -161.962
+  m_areaGroup 0
+  m_fZoneRadius 140
+  m_areaName "St Pierre Harbour"
+  m_areaType "Docks"
+  m_radius 140
+ }
+ TheRockwayInn {
+  coords 1264.478 12.345 1894.521
+  m_areaGroup 0
+  m_fZoneRadius 30
+  m_areaName "The Rockway Inn"
+  m_areaType "Property"
+  m_radius 30
+ }
+}
+$grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
+ HarborVehicle {
+  coords 940.821 39 2840.942
+  angleY -163.492
+  m_allowCivilian 0
+ }
+ HarborVehicle3 {
+  coords 1263.592 34.332 3003.569
+  angleY -163.492
+ }
+ StPierreVehicle4 {
+  coords 948.112 39 2650.293
+  angleY -163.492
+ }
+ StPierreVehicle2 {
+  coords 948.112 37.763 2410.378
+  angleY -163.492
+  m_allowMilitary 0
+ }
+}

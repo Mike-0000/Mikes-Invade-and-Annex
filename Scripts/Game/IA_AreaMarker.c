@@ -44,7 +44,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     }
 
     //----------------------------------------------------------------------------------------------
-    protected vector GetZoneCenter()
+    vector GetZoneCenter()
     {
         vector mat[4];
         GetTransform(mat);

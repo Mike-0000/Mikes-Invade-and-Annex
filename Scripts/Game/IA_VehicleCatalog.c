@@ -1,36 +1,104 @@
 class IA_VehicleCatalog
 {
-    // Map the internal vehicle types to appropriate entity labels
-    static array<EEditableEntityLabel> GetLabelsForVehicleType(IA_VehicleType type)
+    // Get random vehicle labels based on faction and random selection
+    static array<EEditableEntityLabel> GetRandomVehicleLabels(IA_Faction faction)
     {
         array<EEditableEntityLabel> labels = {};
         
-        switch (type)
+        // Add faction label
+        switch (faction)
         {
-            case IA_VehicleType.CivilianCar:
-                labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
-                labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
+            case IA_Faction.US:
+                labels.Insert(EEditableEntityLabel.FACTION_US);
                 break;
-                
-            case IA_VehicleType.CivilianTruck:
-                labels.Insert(EEditableEntityLabel.VEHICLE_TRUCK);
-                labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
+            case IA_Faction.USSR:
+                labels.Insert(EEditableEntityLabel.FACTION_USSR);
                 break;
-                
-            case IA_VehicleType.MilitaryTransport:
-                labels.Insert(EEditableEntityLabel.TRAIT_PASSENGERS_LARGE);
-                labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
+            case IA_Faction.CIV:
+                labels.Insert(EEditableEntityLabel.FACTION_CIV);
                 break;
-                
-            case IA_VehicleType.MilitaryPatrol:
-                labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
-                labels.Insert(EEditableEntityLabel.TRAIT_ARMED);
+            case IA_Faction.FIA:
+                labels.Insert(EEditableEntityLabel.FACTION_FIA);
                 break;
-                
-            case IA_VehicleType.MilitaryAPC:
-                labels.Insert(EEditableEntityLabel.VEHICLE_APC);
-                labels.Insert(EEditableEntityLabel.TRAIT_ARMED);
-                break;
+        }
+        
+        // Generate random vehicle type based on faction
+        int randInt = IA_Game.rng.RandInt(0, 3);
+        randInt = 0;
+        if (faction == IA_Faction.USSR)
+        {
+            switch (randInt)
+            {
+                case 0: // Unarmed Transport
+                	labels.Insert(EEditableEntityLabel.TRAIT_PASSENGERS_LARGE);
+					labels.Insert(EEditableEntityLabel.VEHICLE_TRUCK);
+                    break;
+                case 1:
+					labels.Insert(EEditableEntityLabel.TRAIT_ARMED);
+					labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
+					break;
+                case 2: // Armed Vic
+					labels.Insert(EEditableEntityLabel.TRAIT_ARMED);
+                    break;
+                case 3: // Armor Vic
+                    labels.Insert(EEditableEntityLabel.TRAIT_ARMOR);
+                    break;
+            }
+        }
+        else if (faction == IA_Faction.US)
+        {
+            switch (randInt)
+            {
+                case 0: // Unarmed Transport
+                    labels.Insert(EEditableEntityLabel.VEHICLE_TRUCK);
+                    labels.Insert(EEditableEntityLabel.TRAIT_PASSENGERS_LARGE);
+                    labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
+                    break;
+                case 1:
+                case 2:
+                case 3: // Armed Vic
+                    labels.Insert(EEditableEntityLabel.TRAIT_ARMED);
+                    break;
+                case 4: // Armor Vic
+                    labels.Insert(EEditableEntityLabel.TRAIT_ARMOR);
+                    break;
+            }
+        }
+        else if (faction == IA_Faction.CIV)
+        {
+            switch (randInt)
+            {
+                case 0:
+                case 1: // Civilian Car
+                    labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
+                    labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
+                    break;
+                case 2:
+                case 3:
+                case 4: // Civilian Truck
+                    labels.Insert(EEditableEntityLabel.VEHICLE_TRUCK);
+                    labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
+                    break;
+            }
+        }
+        else if (faction == IA_Faction.FIA)
+        {
+            switch (randInt)
+            {
+                case 0: // Unarmed Transport
+                    labels.Insert(EEditableEntityLabel.VEHICLE_TRUCK);
+                    labels.Insert(EEditableEntityLabel.TRAIT_PASSENGERS_LARGE);
+                    labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
+                    break;
+                case 1:
+                case 2:
+                case 3: // Armed Vic
+                    labels.Insert(EEditableEntityLabel.TRAIT_ARMED);
+                    break;
+                case 4: // Armor Vic
+                    labels.Insert(EEditableEntityLabel.TRAIT_ARMOR);
+                    break;
+            }
         }
         
         return labels;
@@ -54,10 +122,10 @@ class IA_VehicleCatalog
         return "US"; // Default fallback
     }
     
-    // Get catalog entries for a specific vehicle type and faction
-    static array<SCR_EntityCatalogEntry> GetVehicleEntries(IA_VehicleType type, IA_Faction faction)
+    // Get catalog entries for a specific faction with random vehicle type
+    static array<SCR_EntityCatalogEntry> GetVehicleEntries(IA_Faction faction)
     {
-        Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries called for type " + type + ", faction " + faction, LogLevel.NORMAL);
+        Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries called for faction " + faction, LogLevel.NORMAL);
         array<SCR_EntityCatalogEntry> result = {};
         
         // Get the faction manager
@@ -102,25 +170,16 @@ class IA_VehicleCatalog
         }
         
         // Setup the filter labels
-        array<EEditableEntityLabel> includedLabels = GetLabelsForVehicleType(type);
-        array<EEditableEntityLabel> excludedLabels = {};
+        array<EEditableEntityLabel> includedLabels = GetRandomVehicleLabels(faction);
+        array<EEditableEntityLabel> excludedLabels = {EEditableEntityLabel.VEHICLE_HELICOPTER};
         
         // For civilian vehicles, exclude military faction vehicles
-        if (type == IA_VehicleType.CivilianCar || type == IA_VehicleType.CivilianTruck)
+        if (faction == IA_Faction.CIV)
         {
-            if (faction != IA_Faction.CIV)
-            {
-                // If we're looking for civilian vehicles but from a military faction,
-                // exclude military-specific traits
-                excludedLabels.Insert(EEditableEntityLabel.TRAIT_ARMED);
-            }
-            else
-            {
-                // For actual CIV faction, just ensure we're not getting military vehicles
-                excludedLabels.Insert(EEditableEntityLabel.FACTION_US);
-                excludedLabels.Insert(EEditableEntityLabel.FACTION_USSR);
-                excludedLabels.Insert(EEditableEntityLabel.FACTION_FIA);
-            }
+            // For actual CIV faction, just ensure we're not getting military vehicles
+            excludedLabels.Insert(EEditableEntityLabel.FACTION_US);
+            excludedLabels.Insert(EEditableEntityLabel.FACTION_USSR);
+            excludedLabels.Insert(EEditableEntityLabel.FACTION_FIA);
         }
         
         // Get the filtered list of vehicles
@@ -130,11 +189,11 @@ class IA_VehicleCatalog
         return result;
     }
     
-    // Get a random catalog entry for a specific vehicle type and faction
-    static SCR_EntityCatalogEntry GetRandomVehicleEntry(IA_VehicleType type, IA_Faction faction)
+    // Get a random catalog entry for a specific faction
+    static SCR_EntityCatalogEntry GetRandomVehicleEntry(IA_Faction faction)
     {
-        Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry called for type " + type + ", faction " + faction, LogLevel.NORMAL);
-        array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(type, faction);
+        Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry called for faction " + faction, LogLevel.NORMAL);
+        array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
         if (entries.IsEmpty())
         {
             Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry: No entries found", LogLevel.WARNING);
@@ -147,10 +206,10 @@ class IA_VehicleCatalog
     }
     
     // Get a random vehicle prefab resource name as a string
-    static string GetRandomVehiclePrefab(IA_VehicleType type, IA_Faction faction)
+    static string GetRandomVehiclePrefab(IA_Faction faction)
     {
-        Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab called for type " + type + ", faction " + faction, LogLevel.NORMAL);
-        SCR_EntityCatalogEntry entry = GetRandomVehicleEntry(type, faction);
+        Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab called for faction " + faction, LogLevel.NORMAL);
+        SCR_EntityCatalogEntry entry = GetRandomVehicleEntry(faction);
         if (!entry)
         {
             Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab: No entry found", LogLevel.WARNING);
@@ -162,11 +221,11 @@ class IA_VehicleCatalog
         return prefab;
     }
     
-    // Get all vehicle prefab resource names for a specific type and faction
-    static array<string> GetVehiclePrefabList(IA_VehicleType type, IA_Faction faction)
+    // Get all vehicle prefab resource names for a specific faction
+    static array<string> GetVehiclePrefabList(IA_Faction faction)
     {
         array<string> result = {};
-        array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(type, faction);
+        array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
         
         foreach (SCR_EntityCatalogEntry entry : entries)
         {
@@ -181,31 +240,19 @@ class IA_VehicleCatalog
     {
         array<SCR_EntityCatalogEntry> result = {};
         
-        if (allowCivilian)
+        // For civilian vehicles
+        if (allowCivilian && faction == IA_Faction.CIV)
         {
-            array<SCR_EntityCatalogEntry> civilianCars = GetVehicleEntries(IA_VehicleType.CivilianCar, faction);
-            array<SCR_EntityCatalogEntry> civilianTrucks = GetVehicleEntries(IA_VehicleType.CivilianTruck, faction);
-            
-            foreach (SCR_EntityCatalogEntry entry : civilianCars)
-                result.Insert(entry);
-                
-            foreach (SCR_EntityCatalogEntry entry : civilianTrucks)
+            array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
+            foreach (SCR_EntityCatalogEntry entry : entries)
                 result.Insert(entry);
         }
         
-        if (allowMilitary)
+        // For military vehicles
+        if (allowMilitary && faction != IA_Faction.CIV)
         {
-            array<SCR_EntityCatalogEntry> militaryTransports = GetVehicleEntries(IA_VehicleType.MilitaryTransport, faction);
-            array<SCR_EntityCatalogEntry> militaryPatrols = GetVehicleEntries(IA_VehicleType.MilitaryPatrol, faction);
-            array<SCR_EntityCatalogEntry> militaryApcs = GetVehicleEntries(IA_VehicleType.MilitaryAPC, faction);
-            
-            foreach (SCR_EntityCatalogEntry entry : militaryTransports)
-                result.Insert(entry);
-                
-            foreach (SCR_EntityCatalogEntry entry : militaryPatrols)
-                result.Insert(entry);
-                
-            foreach (SCR_EntityCatalogEntry entry : militaryApcs)
+            array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
+            foreach (SCR_EntityCatalogEntry entry : entries)
                 result.Insert(entry);
         }
         

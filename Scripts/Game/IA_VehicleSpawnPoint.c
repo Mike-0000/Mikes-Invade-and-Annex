@@ -51,47 +51,22 @@ class IA_VehicleSpawnPoint: GenericEntity
         return !m_spawnedVehicle && !m_isOccupied;
     }
     
-    Vehicle SpawnVehicle(IA_VehicleType type, IA_Faction faction)
+    Vehicle SpawnVehicle(IA_Faction faction)
     {
         if (!CanSpawnVehicle())
             return null;
             
-        // Check if vehicle type is allowed
-        bool isCivilian = (type == IA_VehicleType.CivilianCar || type == IA_VehicleType.CivilianTruck);
-        if (isCivilian && !m_allowCivilian)
-            return null;
-        if (!isCivilian && !m_allowMilitary)
-            return null;
-            
-        m_spawnedVehicle = IA_VehicleManager.SpawnVehicle(type, faction, GetOrigin());
+        m_spawnedVehicle = IA_VehicleManager.SpawnVehicle(faction, GetOrigin());
         return m_spawnedVehicle;
     }
     
     // Spawn a random vehicle according to the spawn point's settings
     Vehicle SpawnRandomVehicle(IA_Faction faction)
     {
-        Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle called for faction " + faction, LogLevel.NORMAL);
-        
         if (!CanSpawnVehicle())
-        {
-            Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle: Cannot spawn vehicle at this point", LogLevel.WARNING);
             return null;
-        }
-            
-        // If neither type is allowed, we can't spawn anything
-        if (!m_allowCivilian && !m_allowMilitary)
-        {
-            Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle: No vehicle types allowed", LogLevel.WARNING);
-            return null;
-        }
-            
+
         m_spawnedVehicle = IA_VehicleManager.SpawnRandomVehicle(faction, m_allowCivilian, m_allowMilitary, GetOrigin());
-        
-        if (m_spawnedVehicle)
-            Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle: Successfully spawned vehicle", LogLevel.NORMAL);
-        else
-            Print("[DEBUG] IA_VehicleSpawnPoint.SpawnRandomVehicle: Failed to spawn vehicle", LogLevel.WARNING);
-            
         return m_spawnedVehicle;
     }
     

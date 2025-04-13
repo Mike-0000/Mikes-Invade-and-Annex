@@ -287,25 +287,15 @@ class IA_AreaInstance
         if (!m_canSpawn || m_military.IsEmpty())
             return;
             
-        IA_AiOrder order = IA_AiOrder.Defend;
+        IA_AiOrder infantryOrder = IA_AiOrder.Defend;
         if (IsUnderAttack())
-            order = IA_AiOrder.SearchAndDestroy;
+            infantryOrder = IA_AiOrder.SearchAndDestroy;
             
         // Count how many vehicles we're using to limit vehicle usage
         int vehiclesInUse = 0;
         int maxVehiclesAllowed = 2; // Maximum number of vehicles to use at once
         
-        // Throttle how often we log debug messages to avoid spam
-        static int debugCounter = 0;
-        debugCounter++;
-        
-        // Only print debug every 10 cycles to avoid log spam
-        bool shouldPrintDebug = (debugCounter % 10) == 0;
-        
-        if (shouldPrintDebug)
-        {
-            //Print("[DEBUG] MilitaryOrderTask processing " + m_military.Count() + " military groups", LogLevel.NORMAL);
-        }
+        Print("[DEBUG] MilitaryOrderTask processing " + m_military.Count() + " military groups", LogLevel.NORMAL);
         
         foreach (IA_AiGroup g : m_military)
         {
@@ -313,47 +303,94 @@ class IA_AreaInstance
                 continue;
             if (g.GetAliveCount() == 0)
                 continue;
-            //Print("" + g.GetStateDescription(),LogLevel.NORMAL);
+            
+            // VALIDATION: If a unit has a referenced entity but IsDriving is false, clear the reference
+            if (g.GetReferencedEntity() && !g.IsDriving())
+            {
+                Print("[DEBUG_VEHICLE_REPAIR] Found inconsistency: Group has referenced entity but IsDriving=false. Clearing reference.", LogLevel.WARNING);
+                g.ClearVehicleReference();
+            }
+            
+            Print("[DEBUG_VEHICLE_TRACKING] Group state: " + g.GetStateDescription() + ", IsDriving: " + g.IsDriving() + ", HasReferencedEntity: " + (g.GetReferencedEntity() != null), LogLevel.NORMAL);
 			
             // Check if the group is already using a vehicle
             if (g.IsDriving())
             {
+                Print("[DEBUG_VEHICLE_TRACKING] Group is marked as driving", LogLevel.NORMAL);
                 // Existing logic for already driving groups (handled by UpdateVehicleOrders)
                 Vehicle vehicle = Vehicle.Cast(g.GetReferencedEntity());
                 if (vehicle)
                 {
-                    if (shouldPrintDebug)
-                    {
-                        vector vehiclePos = vehicle.GetOrigin();
-                        vector drivingTarget = g.GetDrivingTarget();
-                        float distance = vector.Distance(vehiclePos, drivingTarget);
-                        
-                        Print("[DEBUG_VEHICLES] Vehicle at " + vehiclePos.ToString() + ", target: " + drivingTarget.ToString() + ", distance: " + distance, LogLevel.NORMAL);
-                    }
+                    Print("[DEBUG_VEHICLE_TRACKING] Successfully cast referenced entity to Vehicle", LogLevel.NORMAL);
+                    vector vehiclePos = vehicle.GetOrigin();
+                    vector drivingTarget = g.GetDrivingTarget();
+                    float distance = vector.Distance(vehiclePos, drivingTarget);
+                    
+                    Print("[DEBUG_VEHICLES] Vehicle at " + vehiclePos.ToString() + ", target: " + drivingTarget.ToString() + ", distance: " + distance, LogLevel.NORMAL);
                     
                     // Let UpdateVehicleOrders handle waypoints for driving groups
                     if (!g.HasActiveWaypoint())
                     {
-                        IA_VehicleManager.UpdateVehicleWaypoint(vehicle, g, g.GetDrivingTarget());
+                        // Get the center point and radius for this group
+                        int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
+                        vector groupCenter = IA_AreaMarker.CalculateGroupCenterPoint(currentActiveGroup);
+                        float groupRadius = IA_AreaMarker.CalculateGroupRadius(currentActiveGroup);
+                        
+                        // Use appropriate center point and radius
+                        vector centerPoint;
+                        if (groupCenter != vector.Zero)
+                            centerPoint = groupCenter;
+                        else
+                            centerPoint = m_area.GetOrigin();
+                        
+                        float radiusToUse;
+                        if (groupRadius > 0)
+                            radiusToUse = groupRadius * 0.8;
+                        else
+                            radiusToUse = m_area.GetRadius() * 0.8;
+                        
+                        // Always find a completely random road entity within the area
+                        Print("[DEBUG_VEHICLE_TRACKING] No active waypoint, finding random road in area", LogLevel.NORMAL);
+                        vector roadTarget = IA_VehicleManager.FindRandomRoadEntityInZone(centerPoint, radiusToUse, currentActiveGroup);
+                        
+                        if (roadTarget != vector.Zero)
+                        {
+                            Print("[DEBUG_VEHICLE_TRACKING] Found random road at: " + roadTarget, LogLevel.NORMAL);
+                            IA_VehicleManager.UpdateVehicleWaypoint(vehicle, g, roadTarget);
+                        }
+                        else
+                        {
+                            // Fallback to random position if no road found
+                            vector randomPos = IA_Game.rng.GenerateRandomPointInRadius(1, radiusToUse, centerPoint);
+                            Print("[DEBUG_VEHICLE_TRACKING] No road found, using random position: " + randomPos, LogLevel.WARNING);
+                            IA_VehicleManager.UpdateVehicleWaypoint(vehicle, g, randomPos);
+                        }
                     }
                     
                     g.UpdateVehicleOrders(); 
+                }
+                else
+                {
+                    // If we can't cast to Vehicle, clear the incorrect driving state
+                    Print("[DEBUG_VEHICLE_REPAIR] IsDriving=true but failed to cast referenced entity to Vehicle. Clearing driving state.", LogLevel.ERROR);
+                    g.ClearVehicleReference();
                 }
                 vehiclesInUse++;
                 continue; // Skip to next group if already driving
             }
                 
             // Logic for groups NOT currently driving
-            if (g.TimeSinceLastOrder() >= 45)
+            // Random order refresh time between 30-60 seconds instead of fixed 45
+            int randomOrderRefresh = 30 + IA_Game.rng.RandInt(0, 30);
+            if (g.TimeSinceLastOrder() >= randomOrderRefresh)
                 g.RemoveAllOrders();
                 
             if (!g.HasActiveWaypoint()) // Needs a new order
             {
-                // Generate a potential target position first
-                vector potentialTargetPos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius()*0.6, m_area.GetOrigin());
-                
-                // Decide if we try to assign a vehicle (small chance, limit check)
-                bool tryAssignVehicle = (IA_Game.rng.RandInt(0, 10000) < 1 && vehiclesInUse < maxVehiclesAllowed);
+                // Randomize vehicle assignment chance between 5-15% instead of fixed 10%
+                int vehicleAssignmentChance = 5 + IA_Game.rng.RandInt(0, 10);
+                bool tryAssignVehicle = (IA_Game.rng.RandInt(0, 100) < vehicleAssignmentChance && vehiclesInUse < maxVehiclesAllowed);
+                Print("[DEBUG_VEHICLE_TRACKING] Trying to assign vehicle: " + tryAssignVehicle + ", vehicles in use: " + vehiclesInUse + "/" + maxVehiclesAllowed, LogLevel.NORMAL);
                 
                 Vehicle vehicleToAssign = null;
                 if (tryAssignVehicle)
@@ -361,34 +398,56 @@ class IA_AreaInstance
                     int currentGroup = -1;
                     IA_MissionInitializer missionInit = IA_AreaMarker.s_missionInitializer;
                     if (missionInit) currentGroup = missionInit.GetCurrentIndex();
+                    Print("[DEBUG_VEHICLE_TRACKING] Current group index: " + currentGroup, LogLevel.NORMAL);
                     
                     if (currentGroup >= 0)
                     {
                         // Try finding an existing nearby unreserved vehicle
                         vehicleToAssign = IA_VehicleManager.GetClosestUnreservedVehicleInGroup(g.GetOrigin(), currentGroup, 100);
+                        Print("[DEBUG_VEHICLE_TRACKING] Found existing vehicle: " + vehicleToAssign, LogLevel.NORMAL);
+                        
                         if (vehicleToAssign && IA_VehicleManager.IsVehicleOccupied(vehicleToAssign))
+                        {
+                            Print("[DEBUG_VEHICLE_TRACKING] Vehicle is occupied, not using it", LogLevel.NORMAL);
                             vehicleToAssign = null; // Don't use occupied vehicles
+                        }
                         
                         // If no existing one, try spawning (check limit again)
                         if (!vehicleToAssign && vehiclesInUse < maxVehiclesAllowed)
                         {
                              // Try spawning at designated points
                              array<IA_VehicleSpawnPoint> spawnPoints = IA_VehicleSpawnPoint.GetSpawnPointsByGroup(currentGroup);
+                             Print("[DEBUG_VEHICLE_TRACKING] Found " + spawnPoints.Count() + " spawn points for group " + currentGroup, LogLevel.NORMAL);
+                             
                              foreach (IA_VehicleSpawnPoint point : spawnPoints)
                              {
                                  if (point.CanSpawnVehicle())
                                  {
+                                     Print("[DEBUG_VEHICLE_TRACKING] Attempting to spawn vehicle at point", LogLevel.NORMAL);
                                      vehicleToAssign = point.SpawnRandomVehicle(m_faction);
-                                     if (vehicleToAssign) break; // Found one
+                                     if (vehicleToAssign) 
+                                     {
+                                         Print("[DEBUG_VEHICLE_TRACKING] Successfully spawned vehicle: " + vehicleToAssign, LogLevel.NORMAL);
+                                         break; // Found one
+                                     }
                                  }
                              }
                             
-                             // If still no vehicle, try spawning randomly in area (last resort, lower chance)
-                             if (!vehicleToAssign && vehiclesInUse < maxVehiclesAllowed && IA_Game.rng.RandInt(0, 100) < 50)
+                             // If still no vehicle, try spawning randomly in area (last resort, randomized chance 30-70%)
+                             if (!vehicleToAssign && vehiclesInUse < maxVehiclesAllowed)
                              {
-                                vehicleToAssign = IA_VehicleManager.SpawnRandomVehicleInAreaGroup(
-                                    m_faction, true, true, currentGroup
-                                );
+                                int randomSpawnChance = 30 + IA_Game.rng.RandInt(0, 40);
+                                if (IA_Game.rng.RandInt(0, 100) < randomSpawnChance)
+                                {
+                                    Print("[DEBUG_VEHICLE_TRACKING] Attempting to spawn random vehicle in area", LogLevel.NORMAL);
+                                    vehicleToAssign = IA_VehicleManager.SpawnRandomVehicleInAreaGroup(
+                                        m_faction, true, true, currentGroup
+                                    );
+                                    if (vehicleToAssign)
+                                    {
+                                        Print("[DEBUG_VEHICLE_TRACKING] Successfully spawned random vehicle in area", LogLevel.NORMAL);
+                                    }
+                                }
                              }
                         }
                     }
@@ -397,23 +456,85 @@ class IA_AreaInstance
                 // --- Assign Order --- 
                 if (vehicleToAssign) // Assign vehicle order
                 {
-                    // Snap the potential target position to the nearest road
-                    vector roadTargetPos = IA_VehicleManager.FindNearestRoadPoint(potentialTargetPos);
-                    if (roadTargetPos == vector.Zero) // Fallback if no road found
-                        roadTargetPos = potentialTargetPos; 
-                        
-                    if (shouldPrintDebug)
-                        Print("[DEBUG_VEHICLES] Assigning vehicle to group. Target (road-snapped): " + roadTargetPos, LogLevel.NORMAL);
-                        
+                    Print("[DEBUG_VEHICLE_TRACKING] About to assign vehicle: " + vehicleToAssign, LogLevel.NORMAL);
+                    
+                    // Get the center point and radius for this group
+                    int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
+                    vector groupCenter = IA_AreaMarker.CalculateGroupCenterPoint(currentActiveGroup);
+                    float groupRadius = IA_AreaMarker.CalculateGroupRadius(currentActiveGroup);
+                    
+                    // Use appropriate center point and radius
+                    vector centerPoint;
+                    if (groupCenter != vector.Zero)
+                        centerPoint = groupCenter;
+                    else
+                        centerPoint = m_area.GetOrigin();
+                    
+                    float radiusToUse;
+                    if (groupRadius > 0)
+                        radiusToUse = groupRadius * 0.8;
+                    else
+                        radiusToUse = m_area.GetRadius() * 0.8;
+                    
+                    // Directly find a random road entity in the area
+                    vector roadTargetPos = IA_VehicleManager.FindRandomRoadEntityInZone(centerPoint, radiusToUse, currentActiveGroup);
+                    
+                    // Fallback if no road found
+                    if (roadTargetPos == vector.Zero)
+                    {
+                        roadTargetPos = IA_Game.rng.GenerateRandomPointInRadius(1, radiusToUse, centerPoint);
+                        Print("[DEBUG_VEHICLES] No road found, using random point: " + roadTargetPos, LogLevel.WARNING);
+                    }
+                    else
+                    {
+                        Print("[DEBUG_VEHICLES] Found random road target: " + roadTargetPos, LogLevel.NORMAL);
+                    }
+                    
+                    Print("[DEBUG_VEHICLES] Assigning vehicle to group. Target: " + roadTargetPos, LogLevel.NORMAL);
+                    
+                    // Call this method and check its result
                     g.AssignVehicle(vehicleToAssign, roadTargetPos);
+                    
+                    // Check if assignment was successful
+                    Print("[DEBUG_VEHICLE_TRACKING] After assignment - IsDriving: " + g.IsDriving() + ", ReferencedEntity: " + g.GetReferencedEntity(), LogLevel.NORMAL);
+                    
+                    // If assignment failed but we have a valid vehicle, try manually forcing the driving state as a test
+                    if (!g.IsDriving() && vehicleToAssign)
+                    {
+                        Print("[DEBUG_VEHICLE_TRACKING] Vehicle assignment didn't set driving state, trying manual state forcing", LogLevel.WARNING);
+                        g.ForceDrivingState(true);
+                        Print("[DEBUG_VEHICLE_TRACKING] After forcing - IsDriving: " + g.IsDriving(), LogLevel.NORMAL);
+                    }
+                    
                     vehiclesInUse++;
                 }
                 else // Assign regular infantry order
                 {    
-                    if (shouldPrintDebug)
-                        Print("[DEBUG] Assigning infantry order to group. Target: " + potentialTargetPos, LogLevel.NORMAL);
-                        
-                    g.AddOrder(potentialTargetPos, order); 
+                    // Generate a random position for infantry
+                    vector potentialTargetPos;
+                    int infantryGroupNumber = IA_VehicleManager.GetActiveGroup();
+                    vector infantryGroupCenter = IA_AreaMarker.CalculateGroupCenterPoint(infantryGroupNumber);
+                    float infantryGroupRadius = IA_AreaMarker.CalculateGroupRadius(infantryGroupNumber);
+                    
+                    // Use appropriate center point and radius
+                    vector infantryCenterPoint;
+                    if (infantryGroupCenter != vector.Zero)
+                        infantryCenterPoint = infantryGroupCenter;
+                    else
+                        infantryCenterPoint = m_area.GetOrigin();
+                    
+                    float infantryRadiusToUse;
+                    if (infantryGroupRadius > 0)
+                        infantryRadiusToUse = infantryGroupRadius * 0.6;
+                    else
+                        infantryRadiusToUse = m_area.GetRadius() * 0.6;
+                    
+                    // Generate the random position
+                    potentialTargetPos = IA_Game.rng.GenerateRandomPointInRadius(1, infantryRadiusToUse, infantryCenterPoint);
+                    
+                    Print("[DEBUG] Assigning infantry order to group. Target: " + potentialTargetPos + ", Order: " + infantryOrder, LogLevel.NORMAL);
+                    
+                    g.AddOrder(potentialTargetPos, infantryOrder); 
                 }
             }
         }
@@ -421,25 +542,44 @@ class IA_AreaInstance
 
     private void CivilianOrderTask()
     {
-		
 		    if (!m_area)
-    {
-        //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR);
-        return;
-    }
+        {
+            return;
+        }
         if (!m_canSpawn || m_civilians.IsEmpty())
             return;
         foreach (IA_AiGroup g : m_civilians)
         {
             if (!g.IsSpawned() || g.GetAliveCount() == 0)
                 continue;
-            if (g.TimeSinceLastOrder() >= 45)
+            
+            // Random order refresh time between 35-55 seconds instead of fixed 45
+            int randomOrderRefresh = 35 + IA_Game.rng.RandInt(0, 20);
+            if (g.TimeSinceLastOrder() >= randomOrderRefresh)
             {
                 g.RemoveAllOrders();
             }
 			if (!g.HasActiveWaypoint())
             {
-			    vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius(), m_area.GetOrigin());
+                // Instead of just using m_area's radius, consider the entire group
+                int civGroupForRadius = IA_VehicleManager.GetActiveGroup();
+                vector civGroupCenter = IA_AreaMarker.CalculateGroupCenterPoint(civGroupForRadius);
+                float civGroupRadius = IA_AreaMarker.CalculateGroupRadius(civGroupForRadius);
+                
+                // Use group center and radius if available, otherwise fall back to current area
+                vector civOriginPoint;
+                if (civGroupCenter != vector.Zero)
+                    civOriginPoint = civGroupCenter;
+                else
+                    civOriginPoint = m_area.GetOrigin();
+                
+                float civRadiusToUse;
+                if (civGroupRadius > 0)
+                    civRadiusToUse = civGroupRadius;
+                else
+                    civRadiusToUse = m_area.GetRadius();
+                
+			    vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, civRadiusToUse, civOriginPoint);
                 g.AddOrder(pos, IA_AiOrder.Patrol);
 			}
         }
@@ -448,16 +588,19 @@ class IA_AreaInstance
     private void AiAttackersTask()
     {
 		    if (!m_area)
-    {
-        //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR);
-        return;
-    }
+        {
+            return;
+        }
         if (!m_aiAttackers)
             return;
         if (m_aiAttackers.IsInitializing())
         {
-            vector pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 1.2, m_area.GetRadius() * 1.3, m_area.GetOrigin());
-            m_aiAttackers.SpawnNextGroup(pos);
+            // Add slight random delay to spread out spawning
+            if (IA_Game.rng.RandInt(0, 100) < 60) // 60% chance to process on any given cycle
+            {
+                vector pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 1.2, m_area.GetRadius() * 1.3, m_area.GetOrigin());
+                m_aiAttackers.SpawnNextGroup(pos);
+            }
             return;
         }
         if (m_aiAttackers.IsAllGroupsDead())
@@ -468,7 +611,12 @@ class IA_AreaInstance
             m_aiAttackers = null;
             return;
         }
-        m_aiAttackers.ProcessNextGroup();
+        
+        // Add randomness to attacker processing
+        if (IA_Game.rng.RandInt(0, 100) < 80) // 80% chance to process on any given cycle
+        {
+            m_aiAttackers.ProcessNextGroup();
+        }
     }
 
     void GenerateRandomAiGroups(int number, bool insideArea)
@@ -487,8 +635,29 @@ class IA_AreaInstance
                 pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() / 3, m_area.GetOrigin());
             else
                 pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.05, m_area.GetOrigin());
-            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroup(pos, st, m_faction);
-            grp.Spawn();
+            
+            // --- BEGIN NEW LOGIC ---
+            int unitCount = IA_SquadCount(st, m_faction); // Determine unit count based on squad type
+            if (unitCount <= 0) 
+            {
+                Print("[IA_AreaInstance.GenerateRandomAiGroups] Invalid unit count (" + unitCount + ") for squad type " + st + ", skipping group.", LogLevel.WARNING);
+                continue;
+            }
+            
+            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, m_faction, unitCount);
+            if (!grp)
+            {
+                Print("[IA_AreaInstance.GenerateRandomAiGroups] Failed to create military group from units.", LogLevel.WARNING);
+                continue;
+            }
+            // Note: CreateMilitaryGroupFromUnits already handles marking as spawned and water checks
+            // --- END NEW LOGIC ---
+
+            // --- OLD LOGIC (Commented out/Removed) ---
+            // IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroup(pos, st, m_faction);
+            // grp.Spawn();
+            // --- END OLD LOGIC ---
+
             strCounter = strCounter + grp.GetAliveCount();
             m_military.Insert(grp);
         }

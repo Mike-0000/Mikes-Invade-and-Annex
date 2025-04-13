@@ -86,8 +86,9 @@ class IA_Game
 	        return;
 	    m_periodicTaskActive = true;
 	    // Use a static wrapper so the instance's PeriodicalGameTask is called correctly.
-	    GetGame().GetCallqueue().CallLater(PeriodicalGameTaskWrapper, 200, true);
-	    GetGame().GetCallqueue().CallLater(EntityGcTask, 250, true);
+	    // Increase interval from 200ms to 1000ms (1 second) to reduce processing frequency
+	    GetGame().GetCallqueue().CallLater(PeriodicalGameTaskWrapper, 2000, true);
+	    GetGame().GetCallqueue().CallLater(EntityGcTask, 500, true);
 	}
 
 	// Static wrapper that retrieves the singleton instance and calls its PeriodicalGameTask.
