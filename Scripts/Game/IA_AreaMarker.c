@@ -5,7 +5,7 @@ class IA_AreaMarkerClass : ScriptedGameTriggerEntityClass
 class IA_AreaMarker : ScriptedGameTriggerEntity
 {
 	bool InitCalled = false;
-	int USFactionScore;
+	float USFactionScore;
 	// -- Instead of 'ref map<string,int>', we store: faction->count
     protected ref IA_DictStringInt   m_FactionCounts;
 
@@ -229,13 +229,18 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    // New score is a weighted average of old and new
 	    float newScore = oldScore + (gap * 0.1);
 	    
-	    // Only update USFactionScore if this marker belongs to the current active group
-	    if (s_missionInitializer)
+	    // Only update USFactionScore if this marker belongs to the current active area
+	    if (s_missionInitializer) // Ensure initializer is set
 	    {
-	        if (m_areaGroup == s_missionInitializer.GetCurrentIndex())
+	        IA_AreaInstance currentAreaInstance = IA_Game.CurrentAreaInstance; // Get current area instance
+	        if (currentAreaInstance)
 	        {
-	            USFactionScore = newScore;
-	            Print("[INFO] Score updated for faction=" + leadFactionKey + " OldScore=" + oldScore + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
+	            IA_Area currentArea = currentAreaInstance.m_area;
+	            if (currentArea && currentArea.GetName() == m_areaName)
+	            {
+	                USFactionScore = newScore;
+	                Print("[INFO] Score updated for active area=" + m_areaName + " Faction=" + leadFactionKey + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
+	            }
 	        }
 	    }
 	    

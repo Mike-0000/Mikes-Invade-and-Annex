@@ -1,0 +1,48 @@
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ DurrasTown {
+  coords 8814.142 95.293 2770.475
+  m_areaGroup 2
+  m_fZoneRadius 150
+  m_areaName "Durras"
+  m_radius 150
+ }
+ GreenValleyOrchards {
+  coords 8475.873 154.082 3651.965
+  m_areaGroup 2
+  m_fZoneRadius 40
+  m_areaName "Green Valley Orchard"
+  m_areaType "Property"
+  m_radius 40
+ }
+ GreenValleyFarms {
+  coords 8485.871 176.088 3816.362
+  m_areaGroup 2
+  m_fZoneRadius 45
+  m_areaName "Green Valley Farms"
+  m_areaType "Property"
+  m_radius 45
+ }
+ StPierreCheckpoint {
+  coords 8095.637 223.168 4164.908
+  angleY -59.487
+  m_areaGroup 2
+  m_fZoneRadius 35
+  m_areaName "Unknown Contact Near St Pierre"
+  m_areaType "Military"
+  m_radius 35
+ }
+ TheOldMill {
+  coords 9104.445 79.254 2318.672
+  m_areaGroup 2
+  m_fZoneRadius 40
+  m_areaName "The Old Mill - St Pierre"
+  m_areaType "Property"
+  m_radius 40
+ }
+}
+IA_VehicleSpawnPoint CheckpointVehicle : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
+ coords 8110.465 222.906 4147.776
+ angleY -128.592
+ m_areaGroup 2
+ m_allowCivilian 0
+}

@@ -36,10 +36,6 @@ class IA_MissionInitializer : GenericEntity
 		// Update the active group in the vehicle manager
 		IA_VehicleManager.SetActiveGroup(groupsArray[m_currentIndex]);
 		
-		// Spawn vehicles at all spawn points for this group
-		IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR);
-		Print("[INFO] Spawned vehicles for zone group " + groupsArray[m_currentIndex], LogLevel.NORMAL);
-		
 		m_currentAreaInstances.Clear();
 		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
 		
@@ -60,6 +56,9 @@ class IA_MissionInitializer : GenericEntity
 		    IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
 			IA_AreaInstance m_currentAreaInstance = IA_Game.Instantiate().AddArea(area, IA_Faction.USSR, 0);
 		    m_currentAreaInstances.Insert(m_currentAreaInstance);
+		    
+		    // Set the current area instance in IA_Game before spawning vehicles
+		    IA_Game.SetCurrentAreaInstance(m_currentAreaInstance);
 		
 		    string taskTitle = "Capture " + area.GetName();
 		    string taskDesc = "Eliminate enemy presence and secure " + area.GetName();
@@ -70,6 +69,16 @@ class IA_MissionInitializer : GenericEntity
 		    // Monitor completion
 		}
 		
+		// Ensure CurrentAreaInstance is valid before spawning vehicles (it should be the last one from the loop)
+		if (IA_Game.CurrentAreaInstance)
+		{
+		    IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR);
+		    Print("[INFO] Spawned vehicles for zone group " + groupsArray[m_currentIndex] + " (associated with last area instance)", LogLevel.NORMAL);
+		}
+		else
+		{
+		    Print("[WARNING] No current area instance set after processing markers for group " + groupsArray[m_currentIndex] + ". Cannot spawn vehicles.", LogLevel.WARNING);
+		}
 
 	    GetGame().GetCallqueue().CallLater(CheckCurrentZoneComplete, 5000, true);
 	}

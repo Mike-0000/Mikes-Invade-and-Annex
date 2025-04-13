@@ -20,6 +20,12 @@ class IA_AiGroup
 
     private IA_Faction m_engagedEnemyFaction = IA_Faction.NONE;
 
+    // Add a member variable to track last vehicle order update time
+    private int m_lastVehicleOrderTime = 0;
+    
+    // Set minimum time between vehicle order updates (in seconds)
+    private static const int VEHICLE_ORDER_UPDATE_INTERVAL = 5;
+
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac)
     {
         //Print("[DEBUG] IA_AiGroup constructor called with pos: " + initialPos + ", squad: " + squad + ", faction: " + fac, LogLevel.NORMAL);
@@ -46,24 +52,13 @@ class IA_AiGroup
 	
 	bool HasActiveWaypoint()
 	{
-		//Print("Checking if Active Waypoints",LogLevel.NORMAL);
-	    if (!m_group)
-	        return false;
-	
-	    array<AIWaypoint> wps = {};
-	    m_group.GetWaypoints(wps);
+		if (!m_group)
+			return false;
 		
-	    foreach (AIWaypoint wp : wps)
-	    {
-	        SCR_AIWaypoint scrWp = SCR_AIWaypoint.Cast(wp);
-	        if (!scrWp)
-	            continue;
-			
-	        if (!scrWp.IsDeleted()) // ✅ Only count non-finished ones
-	            return true;
-	    }
-	
-	    return false;
+		array<AIWaypoint> wps = {};
+		m_group.GetWaypoints(wps);
+		
+		return !wps.IsEmpty();
 	}
 
 	
@@ -111,13 +106,6 @@ class IA_AiGroup
 
         Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Spawning " + unitCount + " individual units for faction " + faction, LogLevel.NORMAL);
 
-        // Get the entity catalog
-        SCR_EntityCatalog catalog = SCR_EntityCatalog.GetInstance();
-        if (!catalog) {
-            Print("[IA_AiGroup.CreateGroupForVehicle] Failed to get entity catalog!", LogLevel.ERROR);
-            return null;
-        }
-
         // Get faction manager to help with catalog queries
         SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
         if (!factionManager) {
@@ -136,10 +124,24 @@ class IA_AiGroup
             return null;
         }
 
+        SCR_Faction scrFaction = SCR_Faction.Cast(actualFaction);
+        if (!scrFaction) {
+            Print("[IA_AiGroup.CreateGroupForVehicle] Failed to cast to SCR_Faction", LogLevel.ERROR);
+            return null;
+        }
+
+        // Get the entity catalog from the faction
+        SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
+        if (!entityCatalog) {
+            Print("[IA_AiGroup.CreateGroupForVehicle] Failed to get character catalog", LogLevel.ERROR);
+            return null;
+        }
+
         // Query the catalog for character prefabs of this faction
         array<SCR_EntityCatalogEntry> characterEntries = {};
-        catalog.GetEntries(characterEntries, "", actualFaction, EEntityCatalogType.CHARACTER);
-
+        array<EEditableEntityLabel> includedLabels = {};
+        array<EEditableEntityLabel> excludedLabels = {};
+        entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
         if (characterEntries.IsEmpty()) {
             Print("[IA_AiGroup.CreateGroupForVehicle] No character entries found for faction!", LogLevel.ERROR);
             return null;
@@ -550,6 +552,18 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         return m_group;
     }
 
+    // Return the referenced entity (usually a vehicle)
+    IEntity GetReferencedEntity()
+    {
+        return m_referencedEntity;
+    }
+    
+    // Return the current driving target position
+    vector GetDrivingTarget()
+    {
+        return m_drivingTarget;
+    }
+
     private void SetupDeathListener()
     {
         //Print("[DEBUG] SetupDeathListener called.", LogLevel.NORMAL);
@@ -671,55 +685,146 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         m_referencedEntity = vehicle;
         m_isDriving = true;
         m_drivingTarget = destination;
-        m_lastOrderPosition = destination;
+        
+        // Update the last order position to the vehicle's position so we can track when we've reached it
+        m_lastOrderPosition = vehicle.GetOrigin();
         m_lastOrderTime = System.GetUnixTime();
         
-        // First order - get to the vehicle
-        AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle);
+        // Clear any existing orders
+        RemoveAllOrders();
+        
+        // First order - get to the vehicle with high priority
+        AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+        
+        Print("[DEBUG] IA_AiGroup.AssignVehicle: Vehicle assigned with destination: " + destination.ToString(), LogLevel.NORMAL);
     }
     
     void UpdateVehicleOrders()
     {
+        // Only update vehicle orders at certain intervals
+        int currentTime = System.GetUnixTime();
+        int timeSinceLastVehicleUpdate = currentTime - m_lastVehicleOrderTime;
+        
+        // Skip frequent updates, only do this check every few seconds
+        if (timeSinceLastVehicleUpdate < VEHICLE_ORDER_UPDATE_INTERVAL)
+            return;
+        
+        m_lastVehicleOrderTime = currentTime;
+        
         if (!m_isDriving || !m_referencedEntity)
             return;
-            
+        
         Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
         if (!vehicle)
         {
+            // Invalid vehicle reference, reset state
             m_isDriving = false;
             m_referencedEntity = null;
-            IA_VehicleManager.ReleaseVehicleReservation(vehicle);
+            return;
+        }
+        
+        // Reset vehicle waypoints after 1 minute - this helps prevent AI getting stuck
+        int timeSinceLastOrder = TimeSinceLastOrder();
+        if (timeSinceLastOrder >= 60)
+        {
+            RemoveAllOrders(false);
+            // Find nearest road point for the destination before adding order
+            vector roadTarget = IA_VehicleManager.FindNearestRoadPoint(m_drivingTarget);
+            if (roadTarget == vector.Zero) // Fallback if no road found
+                roadTarget = m_drivingTarget; 
+            m_lastOrderPosition = roadTarget; 
+            AddOrder(roadTarget, IA_AiOrder.Move, true);
             return;
         }
         
         array<SCR_ChimeraCharacter> chars = GetGroupCharacters();
         if (chars.IsEmpty())
             return;
-            
+        
         SCR_ChimeraCharacter driver = chars[0];
         Vehicle currentVehicle = IA_VehicleManager.GetCharacterVehicle(driver);
         
-        if (currentVehicle)
+        // CASE 1: Driver is not in any vehicle yet
+        if (!currentVehicle)
         {
-            if (currentVehicle != vehicle) // Wrong vehicle
-            {
-                AddOrder(m_drivingTarget, IA_AiOrder.Move);
-            }
-            else if (vector.Distance(vehicle.GetOrigin(), m_drivingTarget) > 5)
-            {
-                AddOrder(m_drivingTarget, IA_AiOrder.Move);
-            }
-            else
-            {
-                AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetOutOfVehicle);
-                m_isDriving = false;
-                m_referencedEntity = null;
-                IA_VehicleManager.ReleaseVehicleReservation(vehicle);
-            }
+            // Clear any existing orders and set a GetInVehicle order
+            RemoveAllOrders();
+            AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+            return;
         }
-        else
+        
+        // CASE 2: Driver is in the wrong vehicle
+        if (currentVehicle != vehicle)
         {
-            AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle);
+            // Clear orders and try to move to the correct vehicle
+            RemoveAllOrders();
+            AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+            return;
         }
+        
+        // CASE 3: Driver is in the correct vehicle but not at destination
+        float distanceToDest = vector.Distance(vehicle.GetOrigin(), m_drivingTarget);
+        if (distanceToDest > 15)
+        {
+            // If no active waypoint, create one to the destination, snapped to road
+            if (!HasOrders())
+            {
+                RemoveAllOrders();
+                // Find nearest road point for the destination before adding order
+                vector roadTarget = IA_VehicleManager.FindNearestRoadPoint(m_drivingTarget);
+                if (roadTarget == vector.Zero) // Fallback if no road found
+                    roadTarget = m_drivingTarget;
+                m_lastOrderPosition = roadTarget; 
+                AddOrder(roadTarget, IA_AiOrder.Move, true);
+            }
+            return;
+        }
+        
+        // CASE 4: Reached destination, get out
+        RemoveAllOrders();
+        AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetOutOfVehicle);
+        m_isDriving = false;
+        m_referencedEntity = null;
+        IA_VehicleManager.ReleaseVehicleReservation(vehicle);
+    }
+    
+    // Manual check for completion based on vehicle position
+    bool IsVehicleNearWaypoint(Vehicle vehicle, vector waypointPos)
+    {
+        if (!vehicle)
+            return false;
+            
+        vector vehiclePos = vehicle.GetOrigin();
+        float distance = vector.Distance(vehiclePos, waypointPos);
+        
+        // Be generous with distance check 
+        return distance < 15;
+    }
+
+    string GetStateDescription()
+    {
+        if (!IsSpawned())
+            return "Despawned";
+            
+        if (IsDriving())
+        {
+            vector target = GetDrivingTarget();
+            // Format vector coordinates manually for printing
+            return "Driving Vehicle to <" + target[0] + ", " + target[1] + ", " + target[2] + ">"; 
+        }
+            
+        if (IsEngagedWithEnemy())
+            return "Engaged with Faction: " + typename.EnumToString(IA_Faction, GetEngagedEnemyFaction());
+            
+        if (HasOrders())
+            return "Executing Order";
+            
+        // Check for idleness only if not driving, engaged, or having active orders
+        // Consider a group idle if the last order was given more than 60 seconds ago
+        if (TimeSinceLastOrder() > 60) 
+            return "Idle";
+            
+        // Default state if spawned but not driving, engaged, ordered, or explicitly idle
+        return "Active"; 
     }
 };

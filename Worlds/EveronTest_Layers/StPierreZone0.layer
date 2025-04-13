@@ -2,71 +2,38 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  StPierreOutskirts {
   coords 9451.378 42.868 1636.229
   m_areaGroup 0
-  m_fZoneRadius 75
+  m_fZoneRadius 115
   m_areaName "St Pierre - Outskirts"
   m_areaType "Town"
-  m_radius 75
+  m_radius 115
  }
  StPierre {
   coords 9693.03 13.298 1548.72
-  m_radius 275
- }
- TheOldMill {
-  coords 9104.445 79.254 2318.672
-  m_areaGroup 0
-  m_fZoneRadius 40
-  m_areaName "The Old Mill - St Pierre"
-  m_areaType "Property"
-  m_radius 40
+  m_fZoneRadius 325
+  m_radius 325
  }
  StPierreHarbor {
   coords 10092.931 2.531 1568.851
   angleY -161.962
   m_areaGroup 0
-  m_fZoneRadius 100
+  m_fZoneRadius 140
   m_areaName "St Pierre Harbour"
   m_areaType "Docks"
-  m_radius 100
- }
- StPierreCheckpoint {
-  coords 8095.637 223.168 4164.908
-  angleY -59.487
-  m_areaGroup 0
-  m_fZoneRadius 35
-  m_areaName "Unknown Contact Near St Pierre"
-  m_areaType "Military"
-  m_radius 35
- }
- DurrasTown {
-  coords 8814.142 95.293 2770.475
-  m_areaGroup 0
-  m_fZoneRadius 150
-  m_areaName "Durras"
-  m_radius 150
- }
- GreenValleyOrchards {
-  coords 8475.873 154.082 3651.965
-  m_areaGroup 0
-  m_fZoneRadius 40
-  m_areaName "Green Valley Orchard"
-  m_areaType "Property"
-  m_radius 40
- }
- GreenValleyFarms {
-  coords 8485.871 176.088 3816.362
-  m_areaGroup 0
-  m_fZoneRadius 45
-  m_areaName "Green Valley Farms"
-  m_areaType "Property"
-  m_radius 45
+  m_radius 140
  }
  TheRockwayInn {
   coords 9236.913 85.895 1547.584
   m_areaGroup 0
-  m_fZoneRadius 27
+  m_fZoneRadius 30
   m_areaName "The Rockway Inn"
   m_areaType "Property"
-  m_radius 27
+  m_radius 30
+ }
+ StPierreSouthSide {
+  coords 9663.264 20.091 1458.694
+  m_fZoneRadius 175
+  m_areaType "Town"
+  m_radius 175
  }
 }
 $grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
@@ -75,17 +42,17 @@ $grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnP
   angleY -163.492
   m_allowCivilian 0
  }
- CheckpointVehicle {
-  coords 8110.465 222.906 4147.776
-  angleY -128.592
-  m_allowCivilian 0
- }
  HarborVehicle3 {
   coords 9848.026 7.517 1617.072
   angleY -163.492
  }
- HarborVehicle4 {
+ StPierreVehicle4 {
   coords 9701.017 12.594 1553.416
   angleY -163.492
+ }
+ StPierreVehicle2 {
+  coords 9729.94 25.451 1313.5
+  angleY -163.492
+  m_allowMilitary 0
  }
 }

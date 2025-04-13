@@ -1,4 +1,3 @@
-
 ///////////////////////////////////////////////////////////////////////
 // 9) IA_Game SINGLETON
 ///////////////////////////////////////////////////////////////////////
@@ -18,7 +17,17 @@ class IA_Game
 	static private bool beenInstantiated = false;
     static private ref array<IEntity> m_entityGc = {};
 
+    // Static reference to the currently active area instance
+    static IA_AreaInstance CurrentAreaInstance = null;
+
     private bool m_hasInit = false;
+
+    // Static method to set the current area instance
+    static void SetCurrentAreaInstance(IA_AreaInstance instance)
+    {
+        CurrentAreaInstance = instance;
+        // Potentially add debug log here
+    }
 
     void Init()
     {
@@ -76,7 +85,7 @@ class IA_Game
 	    if (m_periodicTaskActive)
 	        return;
 	    m_periodicTaskActive = true;
-	    // Use a static wrapper so the instance’s PeriodicalGameTask is called correctly.
+	    // Use a static wrapper so the instance's PeriodicalGameTask is called correctly.
 	    GetGame().GetCallqueue().CallLater(PeriodicalGameTaskWrapper, 200, true);
 	    GetGame().GetCallqueue().CallLater(EntityGcTask, 250, true);
 	}

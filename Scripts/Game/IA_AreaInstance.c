@@ -172,6 +172,17 @@ class IA_AreaInstance
         UpdateTask();
     }
 
+    // --- Add a group to the military list ---
+    void AddMilitaryGroup(IA_AiGroup group)
+    {
+        if (group && m_military.Find(group) == -1) // Avoid duplicates
+        {
+            m_military.Insert(group);
+            // Optionally update strength immediately?
+            // OnStrengthChange(m_strength + group.GetAliveCount());
+        }
+    }
+
     // --- Other methods remain similar ---
     bool IsUnderAttack()
     {
@@ -284,100 +295,133 @@ class IA_AreaInstance
         int vehiclesInUse = 0;
         int maxVehiclesAllowed = 2; // Maximum number of vehicles to use at once
         
+        // Throttle how often we log debug messages to avoid spam
+        static int debugCounter = 0;
+        debugCounter++;
+        
+        // Only print debug every 10 cycles to avoid log spam
+        bool shouldPrintDebug = (debugCounter % 10) == 0;
+        
+        if (shouldPrintDebug)
+        {
+            //Print("[DEBUG] MilitaryOrderTask processing " + m_military.Count() + " military groups", LogLevel.NORMAL);
+        }
+        
         foreach (IA_AiGroup g : m_military)
         {
+            if(!g)
+                continue;
             if (g.GetAliveCount() == 0)
                 continue;
-                
+            //Print("" + g.GetStateDescription(),LogLevel.NORMAL);
+			
             // Check if the group is already using a vehicle
             if (g.IsDriving())
             {
-                g.UpdateVehicleOrders();
+                // Existing logic for already driving groups (handled by UpdateVehicleOrders)
+                Vehicle vehicle = Vehicle.Cast(g.GetReferencedEntity());
+                if (vehicle)
+                {
+                    if (shouldPrintDebug)
+                    {
+                        vector vehiclePos = vehicle.GetOrigin();
+                        vector drivingTarget = g.GetDrivingTarget();
+                        float distance = vector.Distance(vehiclePos, drivingTarget);
+                        
+                        Print("[DEBUG_VEHICLES] Vehicle at " + vehiclePos.ToString() + ", target: " + drivingTarget.ToString() + ", distance: " + distance, LogLevel.NORMAL);
+                    }
+                    
+                    // Let UpdateVehicleOrders handle waypoints for driving groups
+                    if (!g.HasActiveWaypoint())
+                    {
+                        IA_VehicleManager.UpdateVehicleWaypoint(vehicle, g, g.GetDrivingTarget());
+                    }
+                    
+                    g.UpdateVehicleOrders(); 
+                }
                 vehiclesInUse++;
-                continue;
+                continue; // Skip to next group if already driving
             }
                 
+            // Logic for groups NOT currently driving
             if (g.TimeSinceLastOrder() >= 45)
                 g.RemoveAllOrders();
                 
-            if (!g.HasActiveWaypoint())
+            if (!g.HasActiveWaypoint()) // Needs a new order
             {
-                vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius()*0.6, m_area.GetOrigin());
+                // Generate a potential target position first
+                vector potentialTargetPos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius()*0.6, m_area.GetOrigin());
                 
-                // 0.1% chance to use a vehicle if available and we haven't hit our limit
-                // Reduced to 0.01% since we're already spawning vehicles at initialization
-                if (IA_Game.rng.RandInt(0, 10000) < 1 && vehiclesInUse < maxVehiclesAllowed)
+                // Decide if we try to assign a vehicle (small chance, limit check)
+                bool tryAssignVehicle = (IA_Game.rng.RandInt(0, 10000) < 1 && vehiclesInUse < maxVehiclesAllowed);
+                
+                Vehicle vehicleToAssign = null;
+                if (tryAssignVehicle)
                 {
-                    // Get the current area group from the mission initializer
                     int currentGroup = -1;
                     IA_MissionInitializer missionInit = IA_AreaMarker.s_missionInitializer;
-                    if (missionInit)
-                    {
-                        currentGroup = missionInit.GetCurrentIndex();
-                    }
+                    if (missionInit) currentGroup = missionInit.GetCurrentIndex();
                     
-                    // Only spawn vehicles for the current active group
                     if (currentGroup >= 0)
                     {
-                        // First try to find nearby unreserved vehicles that are already spawned
-                        Vehicle nearbyVehicle = IA_VehicleManager.GetClosestUnreservedVehicleInGroup(g.GetOrigin(), currentGroup, 100);
-                        if (nearbyVehicle && !IA_VehicleManager.IsVehicleOccupied(nearbyVehicle))
-                        {
-                            g.AssignVehicle(nearbyVehicle, pos);
-                            vehiclesInUse++;
-                            continue;
-                        }
+                        // Try finding an existing nearby unreserved vehicle
+                        vehicleToAssign = IA_VehicleManager.GetClosestUnreservedVehicleInGroup(g.GetOrigin(), currentGroup, 100);
+                        if (vehicleToAssign && IA_VehicleManager.IsVehicleOccupied(vehicleToAssign))
+                            vehicleToAssign = null; // Don't use occupied vehicles
                         
-                        // If no existing unreserved vehicle is available, try to spawn a new one
-                        // (only if we're still under our vehicle limit)
-                        if (vehiclesInUse < maxVehiclesAllowed)
+                        // If no existing one, try spawning (check limit again)
+                        if (!vehicleToAssign && vehiclesInUse < maxVehiclesAllowed)
                         {
-                            // Check for available spawn points first
-                            bool vehicleSpawned = false;
-                            array<IA_VehicleSpawnPoint> spawnPoints = IA_VehicleSpawnPoint.GetSpawnPointsByGroup(currentGroup);
-                            foreach (IA_VehicleSpawnPoint point : spawnPoints)
-                            {
-                                if (point.CanSpawnVehicle())
-                                {
-                                    Vehicle vehicle = point.SpawnRandomVehicle(m_faction);
-                                    if (vehicle)
-                                    {
-                                        g.AssignVehicle(vehicle, pos);
-                                        vehiclesInUse++;
-                                        vehicleSpawned = true;
-                                        break;
-                                    }
-                                }
-                            }
+                             // Try spawning at designated points
+                             array<IA_VehicleSpawnPoint> spawnPoints = IA_VehicleSpawnPoint.GetSpawnPointsByGroup(currentGroup);
+                             foreach (IA_VehicleSpawnPoint point : spawnPoints)
+                             {
+                                 if (point.CanSpawnVehicle())
+                                 {
+                                     vehicleToAssign = point.SpawnRandomVehicle(m_faction);
+                                     if (vehicleToAssign) break; // Found one
+                                 }
+                             }
                             
-                            // If no spawn point was available and we haven't hit our limit, try spawning directly in the area
-                            if (!vehicleSpawned && vehiclesInUse < maxVehiclesAllowed && IA_Game.rng.RandInt(0, 100) < 50)
-                            {
-                                Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicleInAreaGroup(
-                                    m_faction, 
-                                    true,  // Allow civilian 
-                                    true,  // Allow military
-                                    currentGroup
+                             // If still no vehicle, try spawning randomly in area (last resort, lower chance)
+                             if (!vehicleToAssign && vehiclesInUse < maxVehiclesAllowed && IA_Game.rng.RandInt(0, 100) < 50)
+                             {
+                                vehicleToAssign = IA_VehicleManager.SpawnRandomVehicleInAreaGroup(
+                                    m_faction, true, true, currentGroup
                                 );
-                                
-                                if (vehicle)
-                                {
-                                    g.AssignVehicle(vehicle, pos);
-                                    vehiclesInUse++;
-                                    continue;
-                                }
-                            }
+                             }
                         }
                     }
                 }
                 
-                g.AddOrder(pos, order);
+                // --- Assign Order --- 
+                if (vehicleToAssign) // Assign vehicle order
+                {
+                    // Snap the potential target position to the nearest road
+                    vector roadTargetPos = IA_VehicleManager.FindNearestRoadPoint(potentialTargetPos);
+                    if (roadTargetPos == vector.Zero) // Fallback if no road found
+                        roadTargetPos = potentialTargetPos; 
+                        
+                    if (shouldPrintDebug)
+                        Print("[DEBUG_VEHICLES] Assigning vehicle to group. Target (road-snapped): " + roadTargetPos, LogLevel.NORMAL);
+                        
+                    g.AssignVehicle(vehicleToAssign, roadTargetPos);
+                    vehiclesInUse++;
+                }
+                else // Assign regular infantry order
+                {    
+                    if (shouldPrintDebug)
+                        Print("[DEBUG] Assigning infantry order to group. Target: " + potentialTargetPos, LogLevel.NORMAL);
+                        
+                    g.AddOrder(potentialTargetPos, order); 
+                }
             }
         }
     }
 
     private void CivilianOrderTask()
     {
+		
 		    if (!m_area)
     {
         //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR);
