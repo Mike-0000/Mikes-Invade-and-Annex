@@ -730,26 +730,8 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         // For infantry (not driving), constrain to a specific zone rather than the entire group area
         if (!m_isDriving)
         {
-            // Try to find a marker close to the initial position
-            IA_AreaMarker closestMarker = IA_AreaMarker.GetMarkerAtPosition(m_initialPosition);
-            
-            if (closestMarker)
-            {
-                // Get the zone radius and center
-                float zoneRadius = closestMarker.GetRadius();
-                vector zoneOrigin = closestMarker.GetZoneCenter();
-                
-                // Generate a random point within this zone
-                posToUse = IA_Game.rng.GenerateRandomPointInRadius(1, zoneRadius * 0.8, zoneOrigin);
-                Print("[DEBUG_INFANTRY_SPAWN] Spawning infantry within zone: " + closestMarker.GetAreaName() + 
-                      ", radius: " + zoneRadius + ", position: " + posToUse, LogLevel.NORMAL);
-            }
-            else
-            {
-                // Fallback to original behavior if no marker found
                 posToUse = IA_Game.rng.GenerateRandomPointInRadius(5, 25, m_initialPosition);
-                Print("[DEBUG_INFANTRY_SPAWN] No marker found near initial position. Using fallback random point.", LogLevel.WARNING);
-            }
+            
         }
         else
         {
@@ -1121,7 +1103,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         Vehicle currentVehicle = IA_VehicleManager.GetCharacterVehicle(driver);
         
         Print("[DEBUG_VEHICLE_LOGIC] Driver current vehicle: " + currentVehicle + ", target vehicle: " + vehicle, LogLevel.NORMAL);
-        
+       /* 
         // CASE 1: Driver is not in any vehicle yet
         // For units that were teleported, this shouldn't happen during normal operations,
         // but it can happen if the driver gets out or is ejected
@@ -1145,7 +1127,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Driver in wrong vehicle, setting GetInVehicle recovery order", LogLevel.NORMAL);
             return;
         }
-        
+        */
         // CASE 3: Driver is in the correct vehicle but not at destination
         float distanceToDest = vector.Distance(vehicle.GetOrigin(), m_drivingTarget);
         Print("[DEBUG_VEHICLE_LOGIC] Driver in correct vehicle, distance to destination: " + distanceToDest, LogLevel.NORMAL);
@@ -1179,15 +1161,15 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         }
         
         // CASE 4: Reached destination, get out
-        Print("[DEBUG_VEHICLE_LOGIC] Vehicle reached destination, getting out", LogLevel.NORMAL);
+        Print("[DEBUG_VEHICLE_LOGIC] Vehicle reached CASE 4", LogLevel.ERROR);
         RemoveAllOrders();
-        AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetOutOfVehicle);
+        //AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetOutOfVehicle);
         
         // Use proper cleanup method instead of directly setting member variables
-        IA_VehicleManager.ReleaseVehicleReservation(vehicle);
-        ClearVehicleReference();
+        //IA_VehicleManager.ReleaseVehicleReservation(vehicle);
+        //ClearVehicleReference();
         
-        Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Vehicle reached destination, setting GetOutOfVehicle order", LogLevel.NORMAL);
+        //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Vehicle reached destination, setting GetOutOfVehicle order", LogLevel.NORMAL);
     }
     
     // Manual check for completion based on vehicle position

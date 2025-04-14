@@ -512,25 +512,12 @@ class IA_AreaInstance
                 {    
                     // Generate a random position for infantry
                     vector potentialTargetPos;
-                    int infantryGroupNumber = IA_VehicleManager.GetActiveGroup();
-                    vector infantryGroupCenter = IA_AreaMarker.CalculateGroupCenterPoint(infantryGroupNumber);
-                    float infantryGroupRadius = IA_AreaMarker.CalculateGroupRadius(infantryGroupNumber);
                     
-                    // Use appropriate center point and radius
-                    vector infantryCenterPoint;
-                    if (infantryGroupCenter != vector.Zero)
-                        infantryCenterPoint = infantryGroupCenter;
-                    else
-                        infantryCenterPoint = m_area.GetOrigin();
+
+                        
+                    // Use area's radius and origin as fallback
+                    potentialTargetPos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() * 0.6, m_area.GetOrigin());
                     
-                    float infantryRadiusToUse;
-                    if (infantryGroupRadius > 0)
-                        infantryRadiusToUse = infantryGroupRadius * 0.6;
-                    else
-                        infantryRadiusToUse = m_area.GetRadius() * 0.6;
-                    
-                    // Generate the random position
-                    potentialTargetPos = IA_Game.rng.GenerateRandomPointInRadius(1, infantryRadiusToUse, infantryCenterPoint);
                     
                     Print("[DEBUG] Assigning infantry order to group. Target: " + potentialTargetPos + ", Order: " + infantryOrder, LogLevel.NORMAL);
                     
@@ -561,27 +548,10 @@ class IA_AreaInstance
             }
 			if (!g.HasActiveWaypoint())
             {
-                // Instead of just using m_area's radius, consider the entire group
-                int civGroupForRadius = IA_VehicleManager.GetActiveGroup();
-                vector civGroupCenter = IA_AreaMarker.CalculateGroupCenterPoint(civGroupForRadius);
-                float civGroupRadius = IA_AreaMarker.CalculateGroupRadius(civGroupForRadius);
+                    vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() * 1.0, m_area.GetOrigin());
+                    g.AddOrder(pos, IA_AiOrder.Patrol);
                 
-                // Use group center and radius if available, otherwise fall back to current area
-                vector civOriginPoint;
-                if (civGroupCenter != vector.Zero)
-                    civOriginPoint = civGroupCenter;
-                else
-                    civOriginPoint = m_area.GetOrigin();
-                
-                float civRadiusToUse;
-                if (civGroupRadius > 0)
-                    civRadiusToUse = civGroupRadius;
-                else
-                    civRadiusToUse = m_area.GetRadius();
-                
-			    vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, civRadiusToUse, civOriginPoint);
-                g.AddOrder(pos, IA_AiOrder.Patrol);
-			}
+            }
         }
     }
 
