@@ -24,7 +24,6 @@ class IA_VehicleCatalog
         
         // Generate random vehicle type based on faction
         int randInt = IA_Game.rng.RandInt(0, 3);
-        randInt = 0;
         if (faction == IA_Faction.USSR)
         {
             switch (randInt)
@@ -47,6 +46,7 @@ class IA_VehicleCatalog
         }
         else if (faction == IA_Faction.US)
         {
+			randInt = IA_Game.rng.RandInt(0, 4);
             switch (randInt)
             {
                 case 0: // Unarmed Transport
@@ -70,14 +70,10 @@ class IA_VehicleCatalog
             {
                 case 0:
                 case 1: // Civilian Car
-                    labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
-                    labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
-                    break;
                 case 2:
                 case 3:
                 case 4: // Civilian Truck
-                    labels.Insert(EEditableEntityLabel.VEHICLE_TRUCK);
-                    labels.Insert(EEditableEntityLabel.TRAIT_UNARMED);
+                    labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
                     break;
             }
         }

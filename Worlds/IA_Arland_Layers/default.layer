@@ -28,5 +28,4 @@ IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
  coords 4828.903 28.5 11735.593
- m_numberOfGroups 1
 }

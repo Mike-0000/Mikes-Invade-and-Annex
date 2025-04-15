@@ -53,7 +53,7 @@ class IA_AiGroup
 
          SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
         if (!factionManager) {
-            Print("[IA_AiGroup.CreateGroupForVehicle] Failed to get faction manager!", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateGroupForVehicle] Failed to get faction manager!", LogLevel.ERROR);
             return "";
         }
 
@@ -64,20 +64,20 @@ class IA_AiGroup
         else if (faction == IA_Faction.USSR)
             actualFaction = factionManager.GetFactionByKey("USSR");
         else {
-            Print("[IA_AiGroup.CreateGroupForVehicle] Unsupported faction for vehicle crew: " + faction, LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateGroupForVehicle] Unsupported faction for vehicle crew: " + faction, LogLevel.ERROR);
             return "";
         }
 
         SCR_Faction scrFaction = SCR_Faction.Cast(actualFaction);
         if (!scrFaction) {
-            Print("[IA_AiGroup.CreateGroupForVehicle] Failed to cast to SCR_Faction", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateGroupForVehicle] Failed to cast to SCR_Faction", LogLevel.ERROR);
             return "";
         }
 
         // Get the entity catalog from the faction
         SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
         if (!entityCatalog) {
-            Print("[IA_AiGroup.CreateGroupForVehicle] Failed to get character catalog", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateGroupForVehicle] Failed to get character catalog", LogLevel.ERROR);
             return "";
         }
 
@@ -155,7 +155,7 @@ class IA_AiGroup
 		array<EEditableEntityLabel> excludedLabels = {};
         entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
         if (characterEntries.IsEmpty()) {
-            Print("[IA_AiGroup.CreateGroupForVehicle] No character entries found for faction!", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateGroupForVehicle] No character entries found for faction!", LogLevel.ERROR);
             return "";
         }
 
@@ -216,14 +216,14 @@ class IA_AiGroup
 				break;
 		}
         if (!groupRes) {
-            Print("[IA_AiGroup.CreateGroupForVehicle] Could not load base group resource!", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateGroupForVehicle] Could not load base group resource!", LogLevel.ERROR);
             return null;
         }
         IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
         grp.m_group = SCR_AIGroup.Cast(groupEnt);
 
         if (!grp.m_group) {
-            Print("[IA_AiGroup.CreateGroupForVehicle] Could not cast spawned entity to SCR_AIGroup!", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateGroupForVehicle] Could not cast spawned entity to SCR_AIGroup!", LogLevel.ERROR);
             delete groupEnt;
             return null;
         }
@@ -237,7 +237,7 @@ class IA_AiGroup
         // Get the actual compartments to check which ones are available
         BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
         if (!compartmentManager) {
-            Print("[IA_AiGroup.CreateGroupForVehicle] Vehicle has no compartment manager!", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateGroupForVehicle] Vehicle has no compartment manager!", LogLevel.ERROR);
             return null;
         }
         
@@ -288,22 +288,22 @@ class IA_AiGroup
             vector unitSpawnPos = groundPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
             Resource charRes = Resource.Load(charPrefabPath);
             if (!charRes) {
-                Print("[IA_AiGroup.CreateGroupForVehicle] Failed to load character resource!", LogLevel.ERROR);
+                //Print("[IA_AiGroup.CreateGroupForVehicle] Failed to load character resource!", LogLevel.ERROR);
                 continue;
             }
 
             IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitSpawnPos));
             if (!charEntity) {
-                Print("[IA_AiGroup.CreateGroupForVehicle] Failed to spawn character entity!", LogLevel.ERROR);
+                //Print("[IA_AiGroup.CreateGroupForVehicle] Failed to spawn character entity!", LogLevel.ERROR);
                 continue;
             }
 
             // Add character to the SCR_AIGroup
             if (!grp.m_group.AddAIEntityToGroup(charEntity)) {
-                Print("[IA_AiGroup.CreateGroupForVehicle] Failed to add character " + i + " to group.", LogLevel.ERROR);
+                //Print("[IA_AiGroup.CreateGroupForVehicle] Failed to add character " + i + " to group.", LogLevel.ERROR);
                 IA_Game.AddEntityToGc(charEntity);
             } else {
-                Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Added unit " + i + " to group.", LogLevel.NORMAL);
+                //Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Added unit " + i + " to group.", LogLevel.NORMAL);
                 grp.SetupDeathListenerForUnit(charEntity);
             }
         }
@@ -314,7 +314,7 @@ class IA_AiGroup
         // Perform water check for the group's final position
         grp.WaterCheck();
 
-        Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Finished creating group with " + grp.GetAliveCount() + " units.", LogLevel.NORMAL);
+        //Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Finished creating group with " + grp.GetAliveCount() + " units.", LogLevel.NORMAL);
         return grp;
     }
 
@@ -341,12 +341,12 @@ class IA_AiGroup
                 groupRes = Resource.Load("{242BC3C6BCE96EA5}Prefabs/Groups/INDFOR/Group_FIA_Base.et");
                 break;
             default: // Handle CIV or other cases if needed, though this is for military
-                Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Unsupported faction for military group: " + faction, LogLevel.ERROR);
+                //Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Unsupported faction for military group: " + faction, LogLevel.ERROR);
                 return null;
         }
 
         if (!groupRes) {
-            Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Could not load base group resource!", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Could not load base group resource!", LogLevel.ERROR);
             return null;
         }
 
@@ -358,7 +358,7 @@ class IA_AiGroup
         grp.m_group = SCR_AIGroup.Cast(groupEnt);
 
         if (!grp.m_group) {
-            Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Could not cast spawned entity to SCR_AIGroup!", LogLevel.ERROR);
+            //Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Could not cast spawned entity to SCR_AIGroup!", LogLevel.ERROR);
             delete groupEnt; // Clean up the spawned group entity
             return null;
         }
@@ -366,7 +366,7 @@ class IA_AiGroup
         // Set the origin again after casting just in case
         grp.m_group.SetOrigin(groundPos);
 
-        Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Spawning " + unitCount + " individual units for faction " + faction, LogLevel.NORMAL);
+        //Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Spawning " + unitCount + " individual units for faction " + faction, LogLevel.NORMAL);
 
         // Spawn individual units and add them to group
         for (int i = 0; i < unitCount; i++)
@@ -374,32 +374,32 @@ class IA_AiGroup
             string charPrefabPath = GetRandomUnitPrefab(faction);
             if (charPrefabPath.IsEmpty())
             {
-                 Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Failed to get random unit prefab for faction " + faction + ", skipping unit " + i, LogLevel.WARNING);
+                 //Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Failed to get random unit prefab for faction " + faction + ", skipping unit " + i, LogLevel.WARNING);
                  continue;
             }
 
-            Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Using character prefab: " + charPrefabPath, LogLevel.NORMAL);
+            //Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Using character prefab: " + charPrefabPath, LogLevel.NORMAL);
 
             // Spawn the character slightly offset from group position
             vector unitSpawnPos = groundPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
             Resource charRes = Resource.Load(charPrefabPath);
             if (!charRes) {
-                Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Failed to load character resource: " + charPrefabPath, LogLevel.ERROR);
+                //Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Failed to load character resource: " + charPrefabPath, LogLevel.ERROR);
                 continue;
             }
 
             IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitSpawnPos));
             if (!charEntity) {
-                Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Failed to spawn character entity!", LogLevel.ERROR);
+                //Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Failed to spawn character entity!", LogLevel.ERROR);
                 continue;
             }
 
             // Add character to the SCR_AIGroup
             if (!grp.m_group.AddAIEntityToGroup(charEntity)) {
-                Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Failed to add character " + i + " to group.", LogLevel.ERROR);
+                //Print("[IA_AiGroup.CreateMilitaryGroupFromUnits] Failed to add character " + i + " to group.", LogLevel.ERROR);
                 IA_Game.AddEntityToGc(charEntity); // Schedule for deletion if adding failed
             } else {
-                Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Added unit " + i + " to group.", LogLevel.NORMAL);
+                //Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Added unit " + i + " to group.", LogLevel.NORMAL);
                 grp.SetupDeathListenerForUnit(charEntity); // Setup death listener for the added unit
             }
         }
@@ -410,7 +410,7 @@ class IA_AiGroup
         // Perform water check for the group's final position
         grp.WaterCheck();
 
-        Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Finished creating group with " + grp.GetAliveCount() + " units.", LogLevel.NORMAL);
+        //Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Finished creating group with " + grp.GetAliveCount() + " units.", LogLevel.NORMAL);
         return grp;
     }
 
@@ -507,17 +507,17 @@ class IA_AiGroup
                 // If the requested waypoint is outside the zone, constrain it
                 if (distToZoneCenter > zoneRadius * 0.8) // Use 80% of radius to keep units within the zone's boundaries
                 {
-                    Print("[DEBUG_INFANTRY_WAYPOINT] Original waypoint at " + origin + " is outside zone radius (" + zoneRadius + ")", LogLevel.NORMAL);
+                    //Print("[DEBUG_INFANTRY_WAYPOINT] Original waypoint at " + origin + " is outside zone radius (" + zoneRadius + ")", LogLevel.NORMAL);
                     
                     // Generate a random point within the zone instead
                     origin = IA_Game.rng.GenerateRandomPointInRadius(1, zoneRadius * 0.8, zoneOrigin);
                     
-                    Print("[DEBUG_INFANTRY_WAYPOINT] Constrained waypoint to zone: " + origin, LogLevel.NORMAL);
+                    //Print("[DEBUG_INFANTRY_WAYPOINT] Constrained waypoint to zone: " + origin, LogLevel.NORMAL);
                 }
             }
             else
             {
-                Print("[DEBUG_INFANTRY_WAYPOINT] No marker found near group position " + m_group.GetOrigin() + ", using original waypoint", LogLevel.WARNING);
+                //Print("[DEBUG_INFANTRY_WAYPOINT] No marker found near group position " + m_group.GetOrigin() + ", using original waypoint", LogLevel.WARNING);
             }
         }
 
@@ -529,19 +529,19 @@ class IA_AiGroup
         // For vehicle orders, snap to nearest road - EXCEPT GetInVehicle orders which should go directly to the vehicle
         if (m_isDriving && order != IA_AiOrder.GetInVehicle)
         {
-            Print("[DEBUG_VEHICLE_WAYPOINT] Finding nearest road point for vehicle order at: " + origin, LogLevel.NORMAL);
+            //Print("[DEBUG_VEHICLE_WAYPOINT] Finding nearest road point for vehicle order at: " + origin, LogLevel.NORMAL);
             // Get the current active group from the IA_VehicleManager instead of using group ID
             int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
             vector roadOrigin = IA_VehicleManager.FindRandomRoadEntityInZone(origin, 300, currentActiveGroup);
             if (roadOrigin != vector.Zero)
             {
-                Print("[DEBUG_VEHICLE_WAYPOINT] Road point found at: " + roadOrigin + ", distance from original: " + vector.Distance(origin, roadOrigin), LogLevel.NORMAL);
+                //Print("[DEBUG_VEHICLE_WAYPOINT] Road point found at: " + roadOrigin + ", distance from original: " + vector.Distance(origin, roadOrigin), LogLevel.NORMAL);
                 origin = roadOrigin;
                 //Print("[DEBUG] Vehicle order snapped to road at: " + origin, LogLevel.NORMAL);
             }
             else
             {
-                Print("[DEBUG_VEHICLE_WAYPOINT] No road found near vehicle order, using original position", LogLevel.WARNING);
+                //Print("[DEBUG_VEHICLE_WAYPOINT] No road found near vehicle order, using original position", LogLevel.WARNING);
                 //Print("[DEBUG] No road found near vehicle order, using original position", LogLevel.WARNING);
             }
         }
@@ -568,7 +568,7 @@ class IA_AiGroup
         if (m_isDriving || topPriority)
         {
             w.SetPriorityLevel(2000);
-            Print("[DEBUG_VEHICLE_WAYPOINT] Set waypoint priority level to 2000 for vehicle order", LogLevel.NORMAL);
+            //Print("[DEBUG_VEHICLE_WAYPOINT] Set waypoint priority level to 2000 for vehicle order", LogLevel.NORMAL);
             //Print("[DEBUG] Set waypoint priority level to 2000.", LogLevel.NORMAL);
         }
 
@@ -607,7 +607,7 @@ class IA_AiGroup
 
     bool IsDriving()
     {
-        Print("[DEBUG_VEHICLE_LOGIC] IsDriving() called, returning: " + m_isDriving + ", referenced entity: " + m_referencedEntity, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] IsDriving() called, returning: " + m_isDriving + ", referenced entity: " + m_referencedEntity, LogLevel.NORMAL);
         return m_isDriving;
     }
 
@@ -616,7 +616,7 @@ class IA_AiGroup
         if (!m_group)
             return;
         
-        Print("[DEBUG_VEHICLE_TRACKING] RemoveAllOrders called, resetTime: " + resetLastOrderTime + ", isDriving: " + m_isDriving + ", entity: " + m_referencedEntity, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_TRACKING] RemoveAllOrders called, resetTime: " + resetLastOrderTime + ", isDriving: " + m_isDriving + ", entity: " + m_referencedEntity, LogLevel.NORMAL);
         
         array<AIWaypoint> wps = {};
         m_group.GetWaypoints(wps);
@@ -637,14 +637,14 @@ class IA_AiGroup
                 Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
                 if (vehicle)
                 {
-                    Print("[DEBUG_VEHICLE_TRACKING] Resetting driving state for vehicle group as requested", LogLevel.WARNING);
+                    //Print("[DEBUG_VEHICLE_TRACKING] Resetting driving state for vehicle group as requested", LogLevel.WARNING);
                     // This is a valid vehicle group and resetLastOrderTime was explicitly requested
                     // Use ClearVehicleReference to properly clean up
                     ClearVehicleReference();
                 }
                 else
                 {
-                    Print("[DEBUG_VEHICLE_TRACKING] Found inconsistency: IsDriving=true but invalid vehicle reference", LogLevel.ERROR);
+                    //Print("[DEBUG_VEHICLE_TRACKING] Found inconsistency: IsDriving=true but invalid vehicle reference", LogLevel.ERROR);
                     // If referenced entity is not a vehicle, clear the state
                     m_isDriving = false;
                     m_referencedEntity = null;
@@ -653,13 +653,13 @@ class IA_AiGroup
             else if (resetLastOrderTime)
             {
                 // Regular group, just clear order time
-                Print("[DEBUG_VEHICLE_TRACKING] Resetting order time for infantry group", LogLevel.NORMAL);
+                //Print("[DEBUG_VEHICLE_TRACKING] Resetting order time for infantry group", LogLevel.NORMAL);
             }
         }
         else
         {
             // Preserve driving state when just clearing waypoints for new orders
-            Print("[DEBUG_VEHICLE_TRACKING] Preserving driving state: " + m_isDriving, LogLevel.NORMAL);
+            //Print("[DEBUG_VEHICLE_TRACKING] Preserving driving state: " + m_isDriving, LogLevel.NORMAL);
         }
     }
 
@@ -839,7 +839,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         // If this was a vehicle group, properly clean up
         if (m_isDriving || m_referencedEntity)
         {
-            Print("[DEBUG_VEHICLE_TRACKING] Clearing vehicle state during despawn", LogLevel.NORMAL);
+            //Print("[DEBUG_VEHICLE_TRACKING] Clearing vehicle state during despawn", LogLevel.NORMAL);
             ClearVehicleReference();
         }
 
@@ -923,7 +923,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 
          SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
          if (!ccc) {
-             Print("[IA_AiGroup.SetupDeathListenerForUnit] Missing SCR_CharacterControllerComponent in AI", LogLevel.WARNING);
+             //Print("[IA_AiGroup.SetupDeathListenerForUnit] Missing SCR_CharacterControllerComponent in AI", LogLevel.WARNING);
              return;
          }
          ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
@@ -989,32 +989,32 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 
     void AssignVehicle(Vehicle vehicle, vector destination)
     {
-        Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle called for group, vehicle: " + vehicle + ", destination: " + destination, LogLevel.NORMAL);
-        Print("[DEBUG_VEHICLE_LOGIC] Initial state - m_isDriving: " + m_isDriving + ", m_referencedEntity: " + m_referencedEntity, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle called for group, vehicle: " + vehicle + ", destination: " + destination, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] Initial state - m_isDriving: " + m_isDriving + ", m_referencedEntity: " + m_referencedEntity, LogLevel.NORMAL);
         
         if (!vehicle || !IsSpawned())
         {
-            Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle early return: vehicle valid: " + (!!vehicle) + ", isSpawned: " + IsSpawned(), LogLevel.WARNING);
+            //Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle early return: vehicle valid: " + (!!vehicle) + ", isSpawned: " + IsSpawned(), LogLevel.WARNING);
             return;
         }
             
         // Try to reserve the vehicle - if we can't, don't proceed
-        Print("[DEBUG_VEHICLE_LOGIC] Attempting to reserve vehicle with IA_VehicleManager", LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] Attempting to reserve vehicle with IA_VehicleManager", LogLevel.NORMAL);
         bool reserved = IA_VehicleManager.ReserveVehicle(vehicle, this);
-        Print("[DEBUG_VEHICLE_LOGIC] Vehicle reservation result: " + reserved, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle reservation result: " + reserved, LogLevel.NORMAL);
         
         if (!reserved)
         {
-            Print("[DEBUG_VEHICLE_LOGIC] Failed to reserve vehicle, aborting assignment", LogLevel.WARNING);
+            //Print("[DEBUG_VEHICLE_LOGIC] Failed to reserve vehicle, aborting assignment", LogLevel.WARNING);
             return;
         }
             
-        Print("[DEBUG_VEHICLE_LOGIC] Setting vehicle state variables", LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] Setting vehicle state variables", LogLevel.NORMAL);
         m_referencedEntity = vehicle;
         m_isDriving = true;
         m_drivingTarget = destination;
         
-        Print("[DEBUG_VEHICLE_LOGIC] Vehicle state after assignment - m_isDriving: " + m_isDriving + ", m_referencedEntity: " + m_referencedEntity, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle state after assignment - m_isDriving: " + m_isDriving + ", m_referencedEntity: " + m_referencedEntity, LogLevel.NORMAL);
         
         // Update the last order position to the vehicle's position so we can track when we've reached it
         m_lastOrderPosition = vehicle.GetOrigin();
@@ -1026,7 +1026,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         // NOTE: No longer adding GetInVehicle order here since units are teleported directly into the vehicle
         // by the IA_VehicleManager._PlaceSpawnedUnitsInVehicle method
         
-        Print("[DEBUG] IA_AiGroup.AssignVehicle: Vehicle assigned with destination: " + destination.ToString(), LogLevel.NORMAL);
+        //Print("[DEBUG] IA_AiGroup.AssignVehicle: Vehicle assigned with destination: " + destination.ToString(), LogLevel.NORMAL);
     }
     
     void UpdateVehicleOrders()
@@ -1044,24 +1044,24 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         // VALIDATION: If we have IsDriving but no referenced entity, clear the state
         if (m_isDriving && !m_referencedEntity)
         {
-            Print("[DEBUG_VEHICLE_REPAIR] Found inconsistency: IsDriving=true but no referenced entity. Clearing driving state.", LogLevel.WARNING);
+            //Print("[DEBUG_VEHICLE_REPAIR] Found inconsistency: IsDriving=true but no referenced entity. Clearing driving state.", LogLevel.WARNING);
             m_isDriving = false;
             return;
         }
         
         if (!m_isDriving || !m_referencedEntity)
         {
-            Print("[DEBUG_VEHICLE_LOGIC] UpdateVehicleOrders early return: m_isDriving=" + m_isDriving + ", m_referencedEntity=" + m_referencedEntity, LogLevel.NORMAL);
+            //Print("[DEBUG_VEHICLE_LOGIC] UpdateVehicleOrders early return: m_isDriving=" + m_isDriving + ", m_referencedEntity=" + m_referencedEntity, LogLevel.NORMAL);
             return;
         }
         
-        Print("[DEBUG_VEHICLE_LOGIC] UpdateVehicleOrders processing vehicle orders", LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] UpdateVehicleOrders processing vehicle orders", LogLevel.NORMAL);
         
         Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
         if (!vehicle)
         {
             // Invalid vehicle reference, reset state
-            Print("[DEBUG_VEHICLE_LOGIC] Failed to cast m_referencedEntity to Vehicle, resetting driving state", LogLevel.ERROR);
+            //Print("[DEBUG_VEHICLE_LOGIC] Failed to cast m_referencedEntity to Vehicle, resetting driving state", LogLevel.ERROR);
             ClearVehicleReference(); // Use the proper method to clean up
             return;
         }
@@ -1070,39 +1070,39 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         int timeSinceLastOrder = TimeSinceLastOrder();
         if (timeSinceLastOrder >= 60)
         {
-            Print("[DEBUG_VEHICLE_LOGIC] Resetting vehicle waypoints after timeout", LogLevel.NORMAL);
+            //Print("[DEBUG_VEHICLE_LOGIC] Resetting vehicle waypoints after timeout", LogLevel.NORMAL);
             RemoveAllOrders(false);
             // Find nearest road point for the destination before adding order
-            Print("[DEBUG_VEHICLE_WAYPOINT] Resetting vehicle waypoint after timeout. Original target: " + m_drivingTarget, LogLevel.NORMAL);
+            //Print("[DEBUG_VEHICLE_WAYPOINT] Resetting vehicle waypoint after timeout. Original target: " + m_drivingTarget, LogLevel.NORMAL);
             // Get the current active group from the IA_VehicleManager instead of using group ID
             int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
             vector roadTarget = IA_VehicleManager.FindRandomRoadEntityInZone(m_drivingTarget, 300, currentActiveGroup);
             if (roadTarget == vector.Zero) // Fallback if no road found
             {
                 roadTarget = m_drivingTarget;
-                Print("[DEBUG_VEHICLE_WAYPOINT] No road found near target, using original position", LogLevel.WARNING);
+                //Print("[DEBUG_VEHICLE_WAYPOINT] No road found near target, using original position", LogLevel.WARNING);
             }
             else
             {
-                Print("[DEBUG_VEHICLE_WAYPOINT] Found road point at: " + roadTarget + ", distance from original: " + vector.Distance(m_drivingTarget, roadTarget), LogLevel.NORMAL);
+                //Print("[DEBUG_VEHICLE_WAYPOINT] Found road point at: " + roadTarget + ", distance from original: " + vector.Distance(m_drivingTarget, roadTarget), LogLevel.NORMAL);
             }
             m_lastOrderPosition = roadTarget; 
             AddOrder(roadTarget, IA_AiOrder.Move, true);
-            Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Resetting vehicle waypoint after timeout. New target: " + roadTarget, LogLevel.NORMAL);
+            //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Resetting vehicle waypoint after timeout. New target: " + roadTarget, LogLevel.NORMAL);
             return;
         }
         
         array<SCR_ChimeraCharacter> chars = GetGroupCharacters();
         if (chars.IsEmpty())
         {
-            Print("[DEBUG_VEHICLE_LOGIC] No characters in group, skipping vehicle orders", LogLevel.WARNING);
+            //Print("[DEBUG_VEHICLE_LOGIC] No characters in group, skipping vehicle orders", LogLevel.WARNING);
             return;
         }
         
         SCR_ChimeraCharacter driver = chars[0];
         Vehicle currentVehicle = IA_VehicleManager.GetCharacterVehicle(driver);
         
-        Print("[DEBUG_VEHICLE_LOGIC] Driver current vehicle: " + currentVehicle + ", target vehicle: " + vehicle, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] Driver current vehicle: " + currentVehicle + ", target vehicle: " + vehicle, LogLevel.NORMAL);
        /* 
         // CASE 1: Driver is not in any vehicle yet
         // For units that were teleported, this shouldn't happen during normal operations,
@@ -1110,10 +1110,10 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         if (!currentVehicle)
         {
             // We'll still add the GetInVehicle order in this case as a recovery mechanism
-            Print("[DEBUG_VEHICLE_LOGIC] Driver not in vehicle, setting GetInVehicle order (recovery mechanism)", LogLevel.NORMAL);
+            //Print("[DEBUG_VEHICLE_LOGIC] Driver not in vehicle, setting GetInVehicle order (recovery mechanism)", LogLevel.NORMAL);
             RemoveAllOrders();
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
-            Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Driver not in vehicle, setting GetInVehicle recovery order", LogLevel.NORMAL);
+            //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Driver not in vehicle, setting GetInVehicle recovery order", LogLevel.NORMAL);
             return;
         }
         
@@ -1121,47 +1121,47 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         if (currentVehicle != vehicle)
         {
             // This is unexpected since we teleport directly to the correct vehicle
-            Print("[DEBUG_VEHICLE_LOGIC] Driver in wrong vehicle, setting GetInVehicle order (recovery mechanism)", LogLevel.WARNING);
+            //Print("[DEBUG_VEHICLE_LOGIC] Driver in wrong vehicle, setting GetInVehicle order (recovery mechanism)", LogLevel.WARNING);
             RemoveAllOrders();
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
-            Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Driver in wrong vehicle, setting GetInVehicle recovery order", LogLevel.NORMAL);
+            //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Driver in wrong vehicle, setting GetInVehicle recovery order", LogLevel.NORMAL);
             return;
         }
         */
         // CASE 3: Driver is in the correct vehicle but not at destination
         float distanceToDest = vector.Distance(vehicle.GetOrigin(), m_drivingTarget);
-        Print("[DEBUG_VEHICLE_LOGIC] Driver in correct vehicle, distance to destination: " + distanceToDest, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] Driver in correct vehicle, distance to destination: " + distanceToDest, LogLevel.NORMAL);
         if (distanceToDest > 15)
         {
             // If no active waypoint, create one to the destination, snapped to road
             if (!HasOrders())
             {
-                Print("[DEBUG_VEHICLE_LOGIC] No active waypoint, creating new one", LogLevel.NORMAL);
+                //Print("[DEBUG_VEHICLE_LOGIC] No active waypoint, creating new one", LogLevel.NORMAL);
                 RemoveAllOrders();
                 // Always ensure target is on a road for vehicles
-                Print("[DEBUG_VEHICLE_WAYPOINT] Creating new waypoint for vehicle. Original target: " + m_drivingTarget, LogLevel.NORMAL);
+                //Print("[DEBUG_VEHICLE_WAYPOINT] Creating new waypoint for vehicle. Original target: " + m_drivingTarget, LogLevel.NORMAL);
                 // Get the current active group from the IA_VehicleManager instead of using group ID
                 int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
                 vector roadTarget = IA_VehicleManager.FindRandomRoadEntityInZone(m_drivingTarget, 300, currentActiveGroup);
                 if (roadTarget == vector.Zero) // Fallback if no road found
                 {
                     roadTarget = m_drivingTarget;
-                    Print("[DEBUG_VEHICLE_WAYPOINT] No road found near target, using original position", LogLevel.WARNING);
+                    //Print("[DEBUG_VEHICLE_WAYPOINT] No road found near target, using original position", LogLevel.WARNING);
                 }
                 else
                 {
-                    Print("[DEBUG_VEHICLE_WAYPOINT] Found road point at: " + roadTarget + ", distance from original: " + vector.Distance(m_drivingTarget, roadTarget), LogLevel.NORMAL);
+                    //Print("[DEBUG_VEHICLE_WAYPOINT] Found road point at: " + roadTarget + ", distance from original: " + vector.Distance(m_drivingTarget, roadTarget), LogLevel.NORMAL);
                 }
                 m_lastOrderPosition = roadTarget; 
                 // Explicitly use Move order for vehicles, never Defend
                 AddOrder(roadTarget, IA_AiOrder.Move, true);
-                Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Setting new Move order to road target: " + roadTarget, LogLevel.NORMAL);
+                //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Setting new Move order to road target: " + roadTarget, LogLevel.NORMAL);
             }
             return;
         }
         
         // CASE 4: Reached destination, get out
-        Print("[DEBUG_VEHICLE_LOGIC] Vehicle reached CASE 4", LogLevel.ERROR);
+        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle reached CASE 4", LogLevel.ERROR);
         RemoveAllOrders();
         //AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetOutOfVehicle);
         
@@ -1215,14 +1215,14 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     // Add a method to help debug the m_isDriving field
     void ForceDrivingState(bool state)
     {
-        Print("[DEBUG_VEHICLE_LOGIC] ForceDrivingState called, changing from " + m_isDriving + " to " + state, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] ForceDrivingState called, changing from " + m_isDriving + " to " + state, LogLevel.NORMAL);
         m_isDriving = state;
     }
 
     // Add a method to properly reset vehicle state
     void ClearVehicleReference()
     {
-        Print("[DEBUG_VEHICLE_LOGIC] ClearVehicleReference called. Previous state: isDriving=" + m_isDriving + ", entity=" + m_referencedEntity, LogLevel.WARNING);
+        //Print("[DEBUG_VEHICLE_LOGIC] ClearVehicleReference called. Previous state: isDriving=" + m_isDriving + ", entity=" + m_referencedEntity, LogLevel.WARNING);
         
         // If there was a vehicle reservation, release it
         if (m_referencedEntity)
@@ -1231,7 +1231,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             if (vehicle)
             {
                 IA_VehicleManager.ReleaseVehicleReservation(vehicle);
-                Print("[DEBUG_VEHICLE_LOGIC] Released vehicle reservation for " + vehicle, LogLevel.NORMAL);
+                //Print("[DEBUG_VEHICLE_LOGIC] Released vehicle reservation for " + vehicle, LogLevel.NORMAL);
             }
         }
         
@@ -1239,13 +1239,228 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         m_isDriving = false;
         m_referencedEntity = null;
         m_drivingTarget = vector.Zero;
-        Print("[DEBUG_VEHICLE_LOGIC] Vehicle state has been cleared", LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle state has been cleared", LogLevel.NORMAL);
     }
 
     // Add this method to handle waypoint reached callbacks
     void OnWaypointReached(AIWaypoint wp)
     {
-        Print("[DEBUG_VEHICLE_TRACKING] OnWaypointReached called for waypoint: " + wp, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_TRACKING] OnWaypointReached called for waypoint: " + wp, LogLevel.NORMAL);
         // Handle any special logic when a waypoint is reached
+    }
+
+    // New factory method for spawning civilian units for a vehicle crew
+    static IA_AiGroup CreateCivilianGroupForVehicle(Vehicle vehicle, int unitCount)
+    {
+        Print("[DEBUG_CIV_VEHICLE] CreateCivilianGroupForVehicle called with unitCount: " + unitCount, LogLevel.NORMAL);
+        
+        if (!vehicle || unitCount <= 0)
+            return null;
+
+        vector spawnPos = vehicle.GetOrigin() + vector.Up; // Spawn slightly above vehicle origin
+
+        // Create the IA_AiGroup wrapper for civilians
+        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, IA_Faction.CIV);
+        grp.m_isCivilian = true;
+
+        // Create an empty civilian AI group
+        Resource groupRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
+        if (!groupRes) {
+            Print("[DEBUG_CIV_VEHICLE] Could not load civilian group resource!", LogLevel.ERROR);
+            return null;
+        }
+        
+        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
+        grp.m_group = SCR_AIGroup.Cast(groupEnt);
+
+        if (!grp.m_group) {
+            Print("[DEBUG_CIV_VEHICLE] Could not cast spawned entity to SCR_AIGroup!", LogLevel.ERROR);
+            delete groupEnt;
+            return null;
+        }
+        
+        // Adjust group position
+        vector groundPos = spawnPos;
+        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
+        groundPos[1] = groundY;
+        grp.m_group.SetOrigin(groundPos);
+
+        // Get the civilian character prefabs from entity catalog
+        array<string> civilianPrefabs = GetCivilianCharacterPrefabs();
+        
+        if (civilianPrefabs.IsEmpty()) {
+            Print("[DEBUG_CIV_VEHICLE] No civilian character prefabs found!", LogLevel.ERROR);
+            return null;
+        }
+        
+        Print("[DEBUG_CIV_VEHICLE] Found " + civilianPrefabs.Count() + " civilian character prefabs", LogLevel.NORMAL);
+
+        // Get the actual compartments to check which ones are available
+        BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
+        if (!compartmentManager) {
+            Print("[DEBUG_CIV_VEHICLE] Vehicle has no compartment manager!", LogLevel.ERROR);
+            return null;
+        }
+        
+        array<BaseCompartmentSlot> compartments = {};
+        compartmentManager.GetCompartments(compartments);
+        
+        // Filter out compartments that are not suitable for AI occupation
+        array<BaseCompartmentSlot> usableCompartments = {};
+        
+        // Collect valid compartment types for AI
+        foreach (BaseCompartmentSlot compartment : compartments)
+        {
+            ECompartmentType type = compartment.GetType();
+            
+            // Skip turret and other special compartments for civilian vehicles
+            if (type == ECompartmentType.PILOT || 
+                type == ECompartmentType.CARGO)
+            {
+                usableCompartments.Insert(compartment);
+            }
+        }
+        
+        // Calculate how many units to actually spawn
+        int unitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
+        
+        if (unitsToSpawn == 0) {
+            Print("[DEBUG_CIV_VEHICLE] No usable compartments found in vehicle!", LogLevel.ERROR);
+            return null;
+        }
+        
+        Print("[DEBUG_CIV_VEHICLE] Spawning " + unitsToSpawn + " civilian units for vehicle", LogLevel.NORMAL);
+        
+        // Now spawn the civilian units
+        for (int i = 0; i < unitsToSpawn; i++)
+        {
+            // Choose a random civilian prefab
+            string characterPrefab = civilianPrefabs[Math.RandomInt(0, civilianPrefabs.Count())];
+            
+            // Spawn the character
+            Resource charRes = Resource.Load(characterPrefab);
+            if (!charRes) {
+                Print("[DEBUG_CIV_VEHICLE] Could not load civilian character resource: " + characterPrefab, LogLevel.ERROR);
+                continue;
+            }
+            
+            IEntity charEnt = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(spawnPos));
+            if (!charEnt) {
+                Print("[DEBUG_CIV_VEHICLE] Failed to spawn civilian character!", LogLevel.ERROR);
+                continue;
+            }
+            
+            // Add character to the group
+            ChimeraCharacter character = ChimeraCharacter.Cast(charEnt);
+            if (!character) {
+                Print("[DEBUG_CIV_VEHICLE] Could not cast to ChimeraCharacter!", LogLevel.ERROR);
+                delete charEnt;
+                continue;
+            }
+            
+            // Setup character AI controller
+            AIControlComponent aiControlComp = AIControlComponent.Cast(character.FindComponent(AIControlComponent));
+            if (aiControlComp) {
+                AIAgent agent = aiControlComp.GetControlAIAgent();
+                if (agent) {
+                    grp.m_group.AddAgent(agent);
+                }
+            }
+            
+            // Setup death listener for the character
+            grp.SetupDeathListenerForUnit(charEnt);
+        }
+        
+        // Mark the group as spawned and ready for driving
+        grp.m_isSpawned = true;
+        
+        // IMPORTANT: This is needed for civilians to move properly
+        // The military version doesn't need this because it's set by AssignVehicle,
+        // but we need to initialize it here to ensure it's set
+        grp.m_isDriving = true;
+        
+        Print("[DEBUG_CIV_VEHICLE] Successfully created civilian group for vehicle", LogLevel.NORMAL);
+        return grp;
+    }
+    
+    // Helper method to get civilian character prefabs from entity catalog
+    static array<string> GetCivilianCharacterPrefabs()
+    {
+        array<string> result = {};
+        
+        // Get faction manager
+        SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+        if (!factionManager) {
+            Print("[DEBUG_CIV_VEHICLE] Failed to get faction manager!", LogLevel.ERROR);
+            return result;
+        }
+        
+        // Try to get civilian faction
+        Faction civFaction = factionManager.GetFactionByKey("CIV");
+        
+        // If no civilian faction found, try to use alternate sources
+        if (!civFaction) {
+            Print("[DEBUG_CIV_VEHICLE] No CIV faction found, using fallback methods", LogLevel.WARNING);
+            
+            // Fallback to hardcoded civilian prefabs that are known to work
+            result.Insert("{7A9EE19AB67B298B}Prefabs/Characters/Factions/INDFOR/FIA/Character_FIA_Civilian.et");
+            result.Insert("{86B7F97BA774C2E9}Prefabs/Characters/Factions/INDFOR/FIA/Character_FIA_Civilian_2.et");
+            return result;
+        }
+        
+        SCR_Faction scrFaction = SCR_Faction.Cast(civFaction);
+        if (!scrFaction) {
+            Print("[DEBUG_CIV_VEHICLE] Failed to cast to SCR_Faction", LogLevel.ERROR);
+            return result;
+        }
+        
+        // Get the entity catalog for characters
+        SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
+        if (!entityCatalog) {
+            Print("[DEBUG_CIV_VEHICLE] Failed to get character catalog for civilians", LogLevel.ERROR);
+            return result;
+        }
+        
+        // Query the catalog for civilian character prefabs
+        array<SCR_EntityCatalogEntry> characterEntries = {};
+        array<EEditableEntityLabel> includedLabels = {};
+        array<EEditableEntityLabel> excludedLabels = {};
+        
+        // Include civilian type characters and exclude military roles
+        includedLabels.Insert(EEditableEntityLabel.FACTION_CIV);
+        // Don't use ROLE_SOLDIER as it's undefined - use existing valid labels
+        excludedLabels.Insert(EEditableEntityLabel.TRAIT_ARMED);
+        
+        entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
+        
+        if (characterEntries.IsEmpty()) {
+            Print("[DEBUG_CIV_VEHICLE] No civilian character entries found, trying broader search", LogLevel.WARNING);
+            
+            // Try a broader search without specific filters
+            includedLabels.Clear();
+            excludedLabels.Clear();
+            entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
+        }
+        
+        if (characterEntries.IsEmpty()) {
+            Print("[DEBUG_CIV_VEHICLE] Still no civilian character entries found!", LogLevel.ERROR);
+            
+            // Last resort fallback
+            result.Insert("{7A9EE19AB67B298B}Prefabs/Characters/Factions/INDFOR/FIA/Character_FIA_Civilian.et");
+            result.Insert("{86B7F97BA774C2E9}Prefabs/Characters/Factions/INDFOR/FIA/Character_FIA_Civilian_2.et");
+            return result;
+        }
+        
+        // Extract the prefab paths
+        foreach (SCR_EntityCatalogEntry entry : characterEntries) {
+            result.Insert(entry.GetPrefab());
+        }
+        
+        Print("[DEBUG_CIV_VEHICLE] Found " + result.Count() + " civilian character prefabs", LogLevel.NORMAL);
+        if (result.Count() > 0) {
+            Print("[DEBUG_CIV_VEHICLE] First civilian prefab: " + result[0], LogLevel.NORMAL);
+        }
+        
+        return result;
     }
 };

@@ -25,62 +25,98 @@ class IA_MissionInitializer : GenericEntity
 	int GetCurrentIndex(){
 		return m_currentIndex;
 	}
+	
+	array<int> GetGroupsArray()
+	{
+	    return groupsArray;
+	}
+	
+	int GetActiveGroup()
+	{
+	    if (!groupsArray || groupsArray.IsEmpty())
+	    {
+	        //Print("[ERROR] IA_MissionInitializer.GetActiveGroup: groupsArray is null or empty!", LogLevel.ERROR);
+	        return -1;
+	    }
+	        
+	    if (m_currentIndex < 0 || m_currentIndex >= groupsArray.Count())
+	    {
+	        //Print("[ERROR] IA_MissionInitializer.GetActiveGroup: Invalid m_currentIndex " + m_currentIndex + ", array size: " + groupsArray.Count(), LogLevel.ERROR);
+	        return -1;
+	    }
+	    
+	    return groupsArray[m_currentIndex];
+	}
+	
 	void ProceedToNextZone()
 	{
-	    if (m_currentIndex >= groupsArray.Count())
+	    if (!groupsArray || groupsArray.IsEmpty())
 	    {
-	        Print("GAME FINISHED!!!", LogLevel.WARNING);
+	        //Print("[ERROR] IA_MissionInitializer.ProceedToNextZone: groupsArray is null or empty!", LogLevel.ERROR);
 	        return;
-		}
-		
-		// Update the active group in the vehicle manager
-		IA_VehicleManager.SetActiveGroup(groupsArray[m_currentIndex]);
-		
-		m_currentAreaInstances.Clear();
-		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
-		
-		foreach(IA_AreaMarker marker : markers){
-	//		IA_AreaMarker marker = m_shuffledMarkers[m_currentIndex];
-		    if (!marker)
-		    {
-		        //m_currentIndex++;
-		        //ProceedToNextZone();
-		        continue;
-		    }
-			if(marker.m_areaGroup != groupsArray[m_currentIndex])
-				continue;
-		    vector pos = marker.GetOrigin();
-		    string name = marker.GetAreaName();
-		    float radius = marker.GetRadius();
-			
-		    IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
-			IA_AreaInstance m_currentAreaInstance = IA_Game.Instantiate().AddArea(area, IA_Faction.USSR, 0);
-		    m_currentAreaInstances.Insert(m_currentAreaInstance);
-		    
-		    // Set the current area instance in IA_Game before spawning vehicles
-		    IA_Game.SetCurrentAreaInstance(m_currentAreaInstance);
-		
-		    string taskTitle = "Capture " + area.GetName();
-		    string taskDesc = "Eliminate enemy presence and secure " + area.GetName();
-		    m_currentAreaInstance.QueueTask(taskTitle, taskDesc, pos);
-		
-		    //Print("[INFO] Initialized area: " + name, LogLevel.NORMAL);
-		
-		    // Monitor completion
-		}
-		
-		// Ensure CurrentAreaInstance is valid before spawning vehicles (it should be the last one from the loop)
-		if (IA_Game.CurrentAreaInstance)
-		{
-		    IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR);
-		    Print("[INFO] Spawned vehicles for zone group " + groupsArray[m_currentIndex] + " (associated with last area instance)", LogLevel.NORMAL);
-		}
-		else
-		{
-		    Print("[WARNING] No current area instance set after processing markers for group " + groupsArray[m_currentIndex] + ". Cannot spawn vehicles.", LogLevel.WARNING);
-		}
+	    }
+	    
+	    if (m_currentIndex < 0 || m_currentIndex >= groupsArray.Count())
+	    {
+	        //Print("[DEBUG_ZONE_GROUP] GAME FINISHED!!! All zone groups completed or invalid index.", LogLevel.WARNING);
+	        return;
+	    }
+	    
+	    int currentGroup = groupsArray[m_currentIndex];
+	    //Print("[DEBUG_ZONE_GROUP] Proceeding to zone group " + currentGroup + " (index " + m_currentIndex + " of " + groupsArray.Count() + ")", LogLevel.WARNING);
+	    
+	    // Update the active group in the vehicle manager
+	    IA_VehicleManager.SetActiveGroup(currentGroup);
+	    
+	    m_currentAreaInstances.Clear();
+	    array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+	    
+	    int zonesInGroup = 0;
+	    foreach(IA_AreaMarker marker : markers){
+	        if (!marker)
+	        {
+	            continue;
+	        }
+	        
+	        if(marker.m_areaGroup != currentGroup)
+	            continue;
+	            
+	        zonesInGroup++;
+	        vector pos = marker.GetOrigin();
+	        string name = marker.GetAreaName();
+	        float radius = marker.GetRadius();
+	        
+	        //Print("[DEBUG_ZONE_GROUP] Initializing zone: " + name + " in group " + currentGroup, LogLevel.NORMAL);
+	        
+	        IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
+	        IA_AreaInstance m_currentAreaInstance = IA_Game.Instantiate().AddArea(area, IA_Faction.USSR, 0);
+	        m_currentAreaInstances.Insert(m_currentAreaInstance);
+	        
+	        // Set the current area instance in IA_Game before spawning vehicles
+	        IA_Game.SetCurrentAreaInstance(m_currentAreaInstance);
+	    
+	        string taskTitle = "Capture " + area.GetName();
+	        string taskDesc = "Eliminate enemy presence and secure " + area.GetName();
+	        m_currentAreaInstance.QueueTask(taskTitle, taskDesc, pos);
+	    
+	        //Print("[DEBUG_ZONE_GROUP] Initialized area: " + name + " with task: " + taskTitle, LogLevel.NORMAL);
+	    }
+	    
+	    //Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " contains " + zonesInGroup + " zones to capture", LogLevel.WARNING);
+	    
+	    // Ensure CurrentAreaInstance is valid before spawning vehicles (it should be the last one from the loop)
+	    if (IA_Game.CurrentAreaInstance)
+	    {
+	        IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR);
+	        //Print("[DEBUG_ZONE_GROUP] Spawned vehicles for zone group " + currentGroup, LogLevel.NORMAL);
+	    }
+	    else
+	    {
+	        //Print("[WARNING] No current area instance set after processing markers for group " + currentGroup + ". Cannot spawn vehicles.", LogLevel.WARNING);
+	    }
 
 	    GetGame().GetCallqueue().CallLater(CheckCurrentZoneComplete, 5000, true);
+	    //Print("[DEBUG_ZONE_GROUP] Started monitoring completion for group " + currentGroup, LogLevel.NORMAL);
 	}
     void Shuffle(array<int> arr)
     {
@@ -96,7 +132,7 @@ class IA_MissionInitializer : GenericEntity
 	
 	void InitializeNow()
 {
-    Print("[DEBUG] IA_MissionInitializer: InitializeNow started.", LogLevel.NORMAL);
+    //Print("[DEBUG] IA_MissionInitializer: InitializeNow started.", LogLevel.NORMAL);
 	groupsArray = new array<int>;
 	m_currentAreaInstances = new array<IA_AreaInstance>;
 	for (int i = 0; i < m_numberOfGroups; i++)
@@ -107,8 +143,30 @@ class IA_MissionInitializer : GenericEntity
     array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
     if (markers.IsEmpty())
     {
-        Print("[WARNING] No IA_AreaMarkers found!", LogLevel.WARNING);
+        //Print("[WARNING] No IA_AreaMarkers found!", LogLevel.WARNING);
         return;
+    }
+    
+    // Check for duplicate marker names
+    //Print("[DEBUG_MARKER_NAMES] Checking for duplicate marker names...", LogLevel.WARNING);
+    ref map<string, int> nameCount = new map<string, int>();
+    foreach(IA_AreaMarker marker : markers) {
+        if (!marker) continue;
+        
+        string name = marker.GetAreaName();
+        if (nameCount.Contains(name)) {
+            nameCount[name] = nameCount[name] + 1;
+        } else {
+            nameCount[name] = 1;
+        }
+    }
+    
+    foreach(string name, int count : nameCount) {
+        if (count > 1) {
+            //Print("[DEBUG_MARKER_NAMES] WARNING: Found duplicate marker name: " + name + " (appears " + count + " times)", LogLevel.ERROR);
+        } else {
+            //Print("[DEBUG_MARKER_NAMES] Marker name: " + name + " (unique)", LogLevel.NORMAL);
+        }
     }
     
     // Initialize the vehicle manager
@@ -117,11 +175,11 @@ class IA_MissionInitializer : GenericEntity
     {
         EntitySpawnParams params = EntitySpawnParams();
         GetGame().SpawnEntityPrefab(vehicleManagerRes, null, params);
-        Print("[DEBUG] IA_VehicleManager spawned.", LogLevel.NORMAL);
+        //Print("[DEBUG] IA_VehicleManager spawned.", LogLevel.NORMAL);
     }
     else
     {
-        Print("[WARNING] Failed to load IA_VehicleManager resource!", LogLevel.WARNING);
+        //Print("[WARNING] Failed to load IA_VehicleManager resource!", LogLevel.WARNING);
     }
 		
 /*
@@ -139,88 +197,140 @@ class IA_MissionInitializer : GenericEntity
 
 	void CheckCurrentZoneComplete()
 	{
+		// Safety check for array access
+		if (!groupsArray || groupsArray.IsEmpty())
+		{
+			Print("[ERROR] IA_MissionInitializer.CheckCurrentZoneComplete: groupsArray is null or empty!", LogLevel.ERROR);
+			return;
+		}
+		
+		if (m_currentIndex < 0 || m_currentIndex >= groupsArray.Count())
+		{
+			Print("[ERROR] IA_MissionInitializer.CheckCurrentZoneComplete: Invalid m_currentIndex " + m_currentIndex + ", array size: " + groupsArray.Count(), LogLevel.ERROR);
+			return;
+		}
+		
 		//Print("Running CheckCurrentZoneComplete",LogLevel.NORMAL);
 		if (!m_currentAreaInstances)
-	        return;
+		{
+			Print("[ERROR] IA_MissionInitializer.CheckCurrentZoneComplete: m_currentAreaInstances is null!", LogLevel.ERROR);
+			return;
+		}
+		
 		//Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
 		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
 		array<bool> zoneCompletionStatus = {}; // Track completion for each zone in current group
 		
+		int currentGroup = groupsArray[m_currentIndex];
+		
+		// Debug info for area instances
+		Print("[DEBUG_ZONE_MATCH] Current area instances:", LogLevel.WARNING);
+		for (int i = 0; i < m_currentAreaInstances.Count(); i++) {
+			IA_AreaInstance instance = m_currentAreaInstances[i];
+			if (instance && instance.m_area) {
+				Print("[DEBUG_ZONE_MATCH] Instance " + i + ": Name=" + instance.m_area.GetName(), LogLevel.WARNING);
+			} else {
+				Print("[DEBUG_ZONE_MATCH] Instance " + i + ": Invalid or has no area", LogLevel.WARNING);
+			}
+		}
+		
+		// Debug info for markers in current group
+		Print("[DEBUG_ZONE_MATCH] Markers in current group " + currentGroup + ":", LogLevel.WARNING);
+		int markerCount = 0;
+		foreach(IA_AreaMarker marker : markers) {
+			if (!marker || marker.m_areaGroup != currentGroup)
+				continue;
+			
+			Print("[DEBUG_ZONE_MATCH] Group marker " + markerCount + ": Name=" + marker.GetAreaName() + ", USFactionScore=" + marker.USFactionScore, LogLevel.WARNING);
+			markerCount++;
+		}
+		
 		// First, find all markers for current group and their initial completion status
 		foreach(IA_AreaMarker marker : markers) {
-			if(!marker || marker.m_areaGroup != groupsArray[m_currentIndex])
+			if(!marker || marker.m_areaGroup != currentGroup)
 				continue;
 				
 			// Add this zone to our tracking array
 			zoneCompletionStatus.Insert(false);
 		}
+		
 		//Print("Running CheckCurrentZoneComplete 2",LogLevel.NORMAL);
 		// If no markers found for this group, something is wrong
 		if(zoneCompletionStatus.Count() == 0) {
-			Print("[ERROR] No markers found for group " + groupsArray[m_currentIndex], LogLevel.ERROR);
+			Print("[ERROR] No markers found for group " + currentGroup, LogLevel.ERROR);
 			return;
 		}
+		
 		//Print("Running CheckCurrentZoneComplete 3",LogLevel.NORMAL);
 		// Now check each marker in the current group
 		int currentZoneIndex = 0;
 		int amountOfZones = 0;
 		int currentScore = 0;
+		
 		foreach(IA_AreaMarker marker : markers) {
-			if(!marker || marker.m_areaGroup != groupsArray[m_currentIndex])
+			if(!marker || marker.m_areaGroup != currentGroup)
 				continue;
-			amountOfZones++
+			amountOfZones++;
 		}
+		
+		Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " has " + amountOfZones + " zones to complete", LogLevel.NORMAL);
+		
 		foreach(IA_AreaMarker marker : markers) {
-			if(!marker || marker.m_areaGroup != groupsArray[m_currentIndex])
+			if(!marker || marker.m_areaGroup != currentGroup)
 				continue;
-				//Print("Running CheckCurrentZoneComplete 3.5",LogLevel.NORMAL);
+			
+			//Print("Running CheckCurrentZoneComplete 3.5",LogLevel.NORMAL);
 			// Find corresponding area instance
 			if(currentZoneIndex >= m_currentAreaInstances.Count()) {
-				Print("[ERROR] More markers than area instances for group " + groupsArray[m_currentIndex], LogLevel.ERROR);
+				Print("[ERROR] More markers than area instances for group " + currentGroup, LogLevel.ERROR);
 				return;
 			}
+			
 			//Print("Running CheckCurrentZoneComplete 3.75",LogLevel.NORMAL);
 			// Skip if no task entity
-			if(!m_currentAreaInstances[currentZoneIndex].GetCurrentTaskEntity()){
+			IA_AreaInstance instance = m_currentAreaInstances[currentZoneIndex];
+			if(!instance || !instance.GetCurrentTaskEntity()){
+				Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " has no task entity, marking as complete", LogLevel.NORMAL);
 				currentScore++;
 				currentZoneIndex++;
 				continue;
 			}
 				
-			int factionScore = marker.USFactionScore;
-			Print("Zone " + currentZoneIndex + " score is " + factionScore, LogLevel.NORMAL);
+			// Replace USFactionScore with dictionary lookup
+			float factionScore = marker.GetFactionScore("US");
+			Print("[DEBUG_ZONE_SCORE_DEBUG] Marker name: " + marker.GetAreaName() + ", US faction score from dictionary: " + factionScore, LogLevel.WARNING);
+			
+			Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " score is " + factionScore + "/5.0", LogLevel.NORMAL);
 			//Print("Running CheckCurrentZoneComplete 3.8",LogLevel.NORMAL);
 			// Mark this zone as complete if score threshold met
 			if(factionScore >= 5) {
-				zoneCompletionStatus[currentZoneIndex] = true;
-				m_currentAreaInstances[currentZoneIndex].GetCurrentTaskEntity().Finish();
+				Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " has reached completion threshold!", LogLevel.WARNING);
+				if (currentZoneIndex < zoneCompletionStatus.Count())
+					zoneCompletionStatus[currentZoneIndex] = true;
+					
+				if (instance && instance.GetCurrentTaskEntity())
+					instance.GetCurrentTaskEntity().Finish();
+					
 				currentScore++;
+			}
+			else {
+				Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " still needs " + (5 - factionScore) + " more points to complete", LogLevel.NORMAL);
 			}
 			
 			currentZoneIndex++;
 		}
 		
-/*
-		Print("Running CheckCurrentZoneComplete 4",LogLevel.NORMAL);
-		// Check if ALL zones in the group are complete
-		bool allComplete = true;
-		for(int i = 0; i < zoneCompletionStatus.Count(); i++) {
-			Print("Running CheckCurrentZoneComplete 4.5",LogLevel.NORMAL);
-			if(!zoneCompletionStatus[i]) {
-				allComplete = false;
-				break;
-			}
-		}
-		Print("Running CheckCurrentZoneComplete 5 " + allComplete, LogLevel.NORMAL);
-		// If all zones complete, move to next group
-		*/
-		Print("Current Score " + currentScore + " amountOfZones " + amountOfZones);
+		Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " progress: " + currentScore + "/" + amountOfZones + " zones completed", LogLevel.WARNING);
+		
 		if(currentScore >= amountOfZones){
-			Print("[INFO] All zones in group " + groupsArray[m_currentIndex] + " complete. Proceeding to next.", LogLevel.NORMAL);
+			Print("[INFO] All zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
 			m_currentIndex++;
 			m_currentAreaInstances.Clear();
 			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
 			ProceedToNextZone();
+		}
+		else {
+			Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " still needs " + (amountOfZones - currentScore) + " more zones to complete", LogLevel.NORMAL);
 		}
 	}
 
@@ -240,7 +350,7 @@ class IA_MissionInitializer : GenericEntity
         // 1) Check that IA_ReplicationWorkaround is present.
         if (!IA_ReplicationWorkaround.Instance())
         {
-            Print("[IA_MissionInitializer] WARNING: No IA_ReplicationWorkaround entity found!", LogLevel.ERROR);
+            //Print("[IA_MissionInitializer] WARNING: No IA_ReplicationWorkaround entity found!", LogLevel.ERROR);
         }
 
         // 2) Initialize the IA_Game Singleton.
@@ -310,7 +420,7 @@ void RandomizeMarkerGroups(int groupCount)
         }
 
         // At this point, each marker has m_areaGroup 1..N
-        Print("[INFO] Randomized " + shuffledMarkers.Count() + " markers into " + groupCount + " groups.", LogLevel.NORMAL);
+        //Print("[INFO] Randomized " + shuffledMarkers.Count() + " markers into " + groupCount + " groups.", LogLevel.NORMAL);
     }
 	
 	

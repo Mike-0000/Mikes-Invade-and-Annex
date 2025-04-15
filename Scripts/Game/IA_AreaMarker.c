@@ -98,8 +98,33 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     // New static function to retrieve all markers.
     static array<IA_AreaMarker> GetAllMarkers()
     {
-        Print("[DEBUG] GetAllMarkers called - returning " + s_areaMarkers.Count() + " markers", LogLevel.NORMAL);
-        return s_areaMarkers;
+        // Create a clean copy of the markers array, removing any null entries
+        array<IA_AreaMarker> validMarkers = {};
+        
+        if (!s_areaMarkers)
+        {
+            Print("[IA_AreaMarker.GetAllMarkers] s_areaMarkers is NULL, initializing empty array", LogLevel.WARNING);
+            s_areaMarkers = new array<IA_AreaMarker>();
+            return validMarkers;
+        }
+        
+        // Clean up the static array while building the return array
+        for (int i = 0; i < s_areaMarkers.Count(); i++)
+        {
+            IA_AreaMarker marker = s_areaMarkers[i];
+            if (!marker)
+            {
+                Print("[IA_AreaMarker.GetAllMarkers] Found NULL marker at index " + i + ", removing it", LogLevel.WARNING);
+                s_areaMarkers.Remove(i);
+                i--;
+                continue;
+            }
+            
+            validMarkers.Insert(marker);
+        }
+        
+        Print("[DEBUG] GetAllMarkers returning " + validMarkers.Count() + " valid markers of " + s_areaMarkers.Count() + " total", LogLevel.NORMAL);
+        return validMarkers;
     }
 
     // Attributes to set in the editor
@@ -158,6 +183,21 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        return;
 	        
 	    m_LastScoreUpdate = currentTime;
+	    
+	    // Check if this marker belongs to the active group
+	    int activeGroup = -1;
+	    if (s_missionInitializer)
+	    {
+	        // Get the current active group from the mission initializer using the accessor method
+	        activeGroup = s_missionInitializer.GetActiveGroup();
+	    }
+	    
+	    // Skip score processing if this zone isn't in the active group
+	    if (activeGroup != m_areaGroup)
+	    {
+	        //Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " (group " + m_areaGroup + ") - Not in active group (" + activeGroup + "), skipping score update", LogLevel.NORMAL);
+	        return;
+	    }
 	
 	    // Get all entities within radius
 	    array<IEntity> entities = {};
@@ -207,11 +247,14 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	            secondCount = count;
 	        }
 	    }
+	    
+	    Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " (active group " + activeGroup + ") - Lead faction: " + leadFactionKey + " with " + leadCount + " units, Second: " + secondCount + " units", LogLevel.NORMAL);
 	
 	    // Only update score if there's a clear leading faction and is US
 	    if (leadCount == 0 || leadFactionKey != "US")
 	    {
 	        m_IsActive = false;
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - Not active (no US units or no clear leader)", LogLevel.NORMAL);
 	        return;
 	    }
 	
@@ -229,19 +272,20 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    // New score is a weighted average of old and new
 	    float newScore = oldScore + (gap * 0.1);
 	    
-	    // Only update USFactionScore if this marker belongs to the current active area
-	    if (s_missionInitializer) // Ensure initializer is set
+	    Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - Score update: Old=" + oldScore + ", New=" + newScore + ", Gap=" + gap, LogLevel.NORMAL);
+	    
+	    // Update USFactionScore because we're now confirmed to be in the active group
+	    USFactionScore = newScore;
+	    Print("[INFO] Score updated for active area=" + m_areaName + " Faction=" + leadFactionKey + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
+	    
+	    // Add threshold warning
+	    if (newScore >= 4.5 && newScore < 5.0)
 	    {
-	        IA_AreaInstance currentAreaInstance = IA_Game.CurrentAreaInstance; // Get current area instance
-	        if (currentAreaInstance)
-	        {
-	            IA_Area currentArea = currentAreaInstance.m_area;
-	            if (currentArea && currentArea.GetName() == m_areaName)
-	            {
-	                USFactionScore = newScore;
-	                Print("[INFO] Score updated for active area=" + m_areaName + " Faction=" + leadFactionKey + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
-	            }
-	        }
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - APPROACHING COMPLETION THRESHOLD! Current score: " + newScore + "/5.0", LogLevel.WARNING);
+	    }
+	    else if (newScore >= 5.0)
+	    {
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - COMPLETION THRESHOLD REACHED! Score: " + newScore + "/5.0", LogLevel.WARNING);
 	    }
 	    
 	    m_FactionScores.Set(leadFactionKey, newScore);
@@ -400,22 +444,35 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             Print("[IA_AreaMarker.GetAreaMarkersForArea] s_areaMarkers is NULL - areaName = " + areaName, LogLevel.ERROR);
             return markers;
         }
-        for (int i = 0; i < s_areaMarkers.Count(); ++i)
+        
+        for (int i = 0; i < s_areaMarkers.Count(); i++)
         {
             IA_AreaMarker marker = s_areaMarkers[i];
             if (!marker)
             {
+                // Remove invalid markers and adjust index
+                Print("[IA_AreaMarker.GetAreaMarkersForArea] Found NULL marker at index " + i + ", removing it", LogLevel.WARNING);
                 s_areaMarkers.Remove(i);
-                --i;
+                i--;
                 continue;
             }
-            if (marker.GetAreaName() == areaName)
+            
+            string markerAreaName = marker.GetAreaName();
+            if (!markerAreaName)
+            {
+                Print("[IA_AreaMarker.GetAreaMarkersForArea] Marker has NULL area name at index " + i, LogLevel.WARNING);
+                continue;
+            }
+            
+            if (markerAreaName == areaName)
             {
                 markers.Insert(marker);
+                Print("[IA_AreaMarker.GetAreaMarkersForArea] Found marker for area: " + areaName, LogLevel.NORMAL);
             }
         }
+        
         return markers;
-	}
+    }
 		protected bool FilterPlayerAndAI(IEntity entity) 
 	{	
 		if (!entity) // only humans

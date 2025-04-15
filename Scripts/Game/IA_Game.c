@@ -22,6 +22,21 @@ class IA_Game
 
     private bool m_hasInit = false;
 
+    // Player scaling system
+    private int m_lastPlayerCount = 0;
+    private int m_playerCheckTimer = 0;
+    
+    // Scaling factors for different player counts
+    private const float BASELINE_PLAYER_COUNT = 10;  // AI count reaches 1.0 at this player count
+    private const float MEDIUM_PLAYER_COUNT = 30;
+    private const float HIGH_PLAYER_COUNT = 50;
+    private const float MAX_PLAYER_COUNT = 100;
+    
+    // Scale caps
+    private const float MIN_SCALE_FACTOR = 0.4;      // Minimum scaling for solo players
+    private const float BASELINE_SCALE_FACTOR = 1.0; // Baseline scaling (at BASELINE_PLAYER_COUNT)
+    private const float MAX_SCALE_FACTOR = 1.6;      // Maximum scaling cap for high player counts
+
     // Static method to set the current area instance
     static void SetCurrentAreaInstance(IA_AreaInstance instance)
     {
@@ -101,6 +116,128 @@ class IA_Game
 	    }
 	}
 
+    // Get current US player count in the game
+    static int GetUSPlayerCount()
+    {
+        int playerCount = 0;
+        PlayerManager playerManager = GetGame().GetPlayerManager();
+        
+        if (!playerManager)
+            return 0;
+            
+        array<int> playerIds = {};
+        playerManager.GetAllPlayers(playerIds);
+        
+        foreach (int playerId : playerIds)
+        {
+            IEntity playerEntity = playerManager.GetPlayerControlledEntity(playerId);
+            if (!playerEntity)
+                continue;
+			playerCount++;
+			
+            /*    
+            Faction faction = character.GetFaction();
+            if (faction && faction.GetFactionKey() == "US")
+            {
+                playerCount++;
+            }*/
+        }
+        
+        return playerCount;
+    }
+    
+    // Calculate scale factor for AI spawning based on player count
+    static float GetAIScaleFactor()
+    {
+		return 1.6;
+        // Get current player count
+        int playerCount = GetUSPlayerCount();
+        
+        // Handle zero players explicitly
+        if (playerCount <= 0) return MIN_SCALE_FACTOR;
+        
+        // For 1 to BASELINE players: linear scaling from MIN to BASELINE
+        if (playerCount <= BASELINE_PLAYER_COUNT) {
+            if (playerCount <= 1) return MIN_SCALE_FACTOR;
+            return MIN_SCALE_FACTOR + ((BASELINE_SCALE_FACTOR - MIN_SCALE_FACTOR) * (playerCount - 1) / (BASELINE_PLAYER_COUNT - 1));
+        }
+        
+        // For BASELINE to MEDIUM players: slower growth
+        else if (playerCount <= MEDIUM_PLAYER_COUNT) {
+            float mediumScaleFactor = BASELINE_SCALE_FACTOR + 0.2; // +0.2 at MEDIUM_PLAYER_COUNT (1.2)
+            return BASELINE_SCALE_FACTOR + ((mediumScaleFactor - BASELINE_SCALE_FACTOR) * (playerCount - BASELINE_PLAYER_COUNT) / (MEDIUM_PLAYER_COUNT - BASELINE_PLAYER_COUNT));
+        }
+        
+        // For MEDIUM to HIGH players: continued growth
+        else if (playerCount <= HIGH_PLAYER_COUNT) {
+            float highScaleFactor = BASELINE_SCALE_FACTOR + 0.4; // +0.4 at HIGH_PLAYER_COUNT (1.4)
+            return (BASELINE_SCALE_FACTOR + 0.2) + ((highScaleFactor - (BASELINE_SCALE_FACTOR + 0.2)) * (playerCount - MEDIUM_PLAYER_COUNT) / (HIGH_PLAYER_COUNT - MEDIUM_PLAYER_COUNT));
+        }
+        
+        // For HIGH to MAX players: final increase to max cap
+        else if (playerCount <= MAX_PLAYER_COUNT) {
+            return (BASELINE_SCALE_FACTOR + 0.4) + ((MAX_SCALE_FACTOR - (BASELINE_SCALE_FACTOR + 0.4)) * (playerCount - HIGH_PLAYER_COUNT) / (MAX_PLAYER_COUNT - HIGH_PLAYER_COUNT));
+        }
+        
+        // Cap at MAX_SCALE_FACTOR for extremely high player counts
+        else {
+            return MAX_SCALE_FACTOR;
+        }
+    }
+    
+    // Calculate max vehicles based on player count (also using a more gentle scaling curve)
+    static int GetMaxVehiclesForPlayerCount(int baseMaxVehicles = 3)
+    {
+        int playerCount = GetUSPlayerCount();
+        
+        // Logarithmic-style scaling for vehicles
+        // Base 0-15 players: baseline vehicles
+        if (playerCount <= BASELINE_PLAYER_COUNT)
+            return baseMaxVehicles;
+        // 16-30 players: +1 vehicle
+        else if (playerCount <= MEDIUM_PLAYER_COUNT)
+            return baseMaxVehicles + 1;
+        // 31-50 players: +2 vehicles
+        else if (playerCount <= HIGH_PLAYER_COUNT)
+            return baseMaxVehicles + 2;
+        // 51-100 players: +3 vehicles
+        else if (playerCount <= MAX_PLAYER_COUNT)
+            return baseMaxVehicles + 3;
+        // 100+ players: +4 vehicles (absolute maximum)
+        else
+            return baseMaxVehicles + 4;
+    }
+    
+    // Update player count and log changes
+    void CheckPlayerCount()
+    {
+        m_playerCheckTimer++;
+        if (m_playerCheckTimer < 10) // Check every ~10 seconds
+            return;
+            
+        m_playerCheckTimer = 0;
+        int currentPlayerCount = GetUSPlayerCount();
+        
+        if (currentPlayerCount != m_lastPlayerCount)
+        {
+            m_lastPlayerCount = currentPlayerCount;
+            float aiScale = GetAIScaleFactor();
+            int maxVehicles = GetMaxVehiclesForPlayerCount();
+            
+            Print("[PLAYER_SCALING] Player count changed to " + currentPlayerCount + 
+                  ". AI Scale Factor: " + aiScale + 
+                  ", Max Vehicles: " + maxVehicles, LogLevel.NORMAL);
+                  
+            // Update all area instances with new scaling
+            foreach (IA_AreaInstance areaInst : m_areas)
+            {
+                if (!areaInst || !areaInst.m_area)
+                    continue;
+                    
+                areaInst.UpdatePlayerScaling(currentPlayerCount, aiScale, maxVehicles);
+            }
+        }
+    }
 
 	void PeriodicalGameTask()
 	{
@@ -111,6 +248,10 @@ class IA_Game
 	        //Print("IA_Game.PeriodicalGameTask: m_areas is empty. Waiting for initialization.", LogLevel.NORMAL);
 	        return;
 	    }
+	    
+	    // Check player count for scaling
+	    CheckPlayerCount();
+	    
 	    foreach (IA_AreaInstance areaInst : m_areas)
 	    {
 				if(!areaInst.m_area){
