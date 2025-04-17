@@ -1,8 +1,6 @@
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  StPierre {
   coords 3165.069 11.577 2799.28
-  m_fZoneRadius 325
-  m_radius 325
  }
  StPierreHarbor {
   coords 1194.773 2.23 3339.724
@@ -18,6 +16,14 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaGroup 2
   m_fZoneRadius 30
   m_areaName "The Rockway Inn"
+  m_areaType "Property"
+  m_radius 30
+ }
+ TheRockwayInn2 {
+  coords 1406.371 14 1814.929
+  m_areaGroup 2
+  m_fZoneRadius 30
+  m_areaName "The Rockway Inn1"
   m_areaType "Property"
   m_radius 30
  }

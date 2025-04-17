@@ -824,69 +824,52 @@ class IA_VehicleManager: GenericEntity
         
         // Get the AI scaling factor from the area instance
         float aiScaleFactor = 1.0; // Default value
-        if (areaInstance)
-        {
-            // Use global scaling since we can't directly access the private m_aiScaleFactor 
-            aiScaleFactor = IA_Game.GetAIScaleFactor();
-        }
-        else
-        {
-            // Default to global scaling
-            aiScaleFactor = IA_Game.GetAIScaleFactor();
-        }
-        
+
+        aiScaleFactor = IA_Game.GetAIScaleFactor();
         // Scale the number of units to spawn based on player count, but always ensure driver
         int scaledCompartmentCount;
         
-        // For civilians, only fill first half of compartments
-        if (faction == IA_Faction.CIV)
-        {
-            // For civilians, we only want to fill about half the compartments
-            scaledCompartmentCount = Math.Round((compartmentCount * 0.5) * aiScaleFactor);
-            if (scaledCompartmentCount < 1)
-                scaledCompartmentCount = 1;  // Always ensure at least a driver
-            
-            Print("[DEBUG_VEHICLE_UNITS] Civilian vehicle: Using half compartments (" + scaledCompartmentCount + 
-                  " of " + compartmentCount + ") with scale factor " + aiScaleFactor, LogLevel.NORMAL);
-        }
-        else
-        {
+        // For civilians, only use 1 unit (the driver)
+
+     
             // For military, use full compartment scaling
             scaledCompartmentCount = Math.Round(compartmentCount * aiScaleFactor);
             if (scaledCompartmentCount < 1)
                 scaledCompartmentCount = 1;  // Always ensure at least a driver
+       
+		 if (faction == IA_Faction.CIV)
+        {
+            scaledCompartmentCount = scaledCompartmentCount*0.6;
+            
         }
         
         // Ensure we never exceed actual compartment count
         if (scaledCompartmentCount > compartmentCount)
             scaledCompartmentCount = compartmentCount;
         
-        Print("[PLAYER_SCALING] PlaceUnitsInVehicle: Base compartments=" + compartmentCount + 
-              ", Scaled=" + scaledCompartmentCount + " (scale factor: " + aiScaleFactor + ")", LogLevel.NORMAL);
+
         
         // Create the AI group for the vehicle with the scaled number of units
         IA_AiGroup group;
         
         if (faction == IA_Faction.CIV)
         {
-            // For civilians, use specialized approach to create civilian units
-            Print("[DEBUG_VEHICLE_UNITS] Creating civilian group for vehicle", LogLevel.NORMAL);
-            group = IA_AiGroup.CreateCivilianGroupForVehicle(vehicle, scaledCompartmentCount);
+            // For civilians, use the same approach as walking civilians
+            vector spawnPos = vehicle.GetOrigin() + vector.Up; // Spawn slightly above vehicle origin
+            group = IA_AiGroup.CreateCivilianGroup(spawnPos);
         }
         else
         {
             // For military, use standard approach
-            Print("[DEBUG_VEHICLE_UNITS] Creating military group for vehicle", LogLevel.NORMAL);
             group = IA_AiGroup.CreateGroupForVehicle(vehicle, faction, scaledCompartmentCount);
         }
         
         if (!group)
         {
-            Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Failed to create group for vehicle", LogLevel.WARNING);
+            Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Failed to create group for vehicle", LogLevel.ERROR);
             return null;
         }
         
-        Print("[DEBUG_VEHICLE_UNITS] Created group " + group, LogLevel.NORMAL);
         
         // For civilian factions, don't add to military groups
         if (faction != IA_Faction.CIV)
@@ -1064,7 +1047,6 @@ class IA_VehicleManager: GenericEntity
             
         Print("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: Attempting to place units in vehicle", LogLevel.NORMAL);
         Print("[DEBUG_CIV_VEHICLE] Vehicle: " + vehicle + ", Destination: " + destination, LogLevel.NORMAL);
-//        Print("[DEBUG_CIV_VEHICLE] AI Group IsCivilian: " + aiGroup.m_isCivilian + ", IsDriving: " + aiGroup.m_isDriving, LogLevel.NORMAL);
 
         // Get the characters from the group
         array<SCR_ChimeraCharacter> characters = aiGroup.GetGroupCharacters();
@@ -1091,11 +1073,27 @@ class IA_VehicleManager: GenericEntity
              return;
         }
 
-        // Fill the seats with passengers
-        int passengerIndex = 0;
-        for (int i = 0; i < compartments.Count() && passengerIndex < characters.Count(); i++)
+        // Filter out compartments that are not suitable for AI occupation
+        array<BaseCompartmentSlot> usableCompartments = {};
+        
+        // Collect valid compartment types for AI
+        foreach (BaseCompartmentSlot compartment : compartments)
         {
-            BaseCompartmentSlot compartment = compartments[i];
+            ECompartmentType type = compartment.GetType();
+            
+            // Include only driver and cargo compartments
+            if (type == ECompartmentType.PILOT || 
+                type == ECompartmentType.CARGO)
+            {
+                usableCompartments.Insert(compartment);
+            }
+        }
+
+        // Fill the seats with passengers (only place up to the number of characters we have)
+        int passengerIndex = 0;
+        for (int i = 0; i < usableCompartments.Count() && passengerIndex < characters.Count(); i++)
+        {
+            BaseCompartmentSlot compartment = usableCompartments[i];
 
             if (!compartment.GetOccupant())
             {
@@ -1118,6 +1116,13 @@ class IA_VehicleManager: GenericEntity
                 }
                 passengerIndex++;
             }
+        }
+
+        // For civilians specifically, make sure driving state is properly set
+        if (aiGroup.GetFaction() == IA_Faction.CIV)
+        {
+            // Make sure the driving state is set so civilians start driving
+            aiGroup.ForceDrivingState(true);
         }
 
         // Create waypoint for the vehicle to drive to using the AI group we already created

@@ -75,13 +75,13 @@ class IA_Game
 	    return m_instance;
 	}
 	
-/*
+
     void ~IA_Game()
     {
         m_areas.Clear();
         m_entityGc.Clear();
     }
-*/
+
     static void AddEntityToGc(IEntity e)
     {
         m_entityGc.Insert(e);

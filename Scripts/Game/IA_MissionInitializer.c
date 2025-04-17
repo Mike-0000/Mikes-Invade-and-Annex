@@ -224,26 +224,8 @@ class IA_MissionInitializer : GenericEntity
 		int currentGroup = groupsArray[m_currentIndex];
 		
 		// Debug info for area instances
-		Print("[DEBUG_ZONE_MATCH] Current area instances:", LogLevel.WARNING);
-		for (int i = 0; i < m_currentAreaInstances.Count(); i++) {
-			IA_AreaInstance instance = m_currentAreaInstances[i];
-			if (instance && instance.m_area) {
-				Print("[DEBUG_ZONE_MATCH] Instance " + i + ": Name=" + instance.m_area.GetName(), LogLevel.WARNING);
-			} else {
-				Print("[DEBUG_ZONE_MATCH] Instance " + i + ": Invalid or has no area", LogLevel.WARNING);
-			}
-		}
 		
 		// Debug info for markers in current group
-		Print("[DEBUG_ZONE_MATCH] Markers in current group " + currentGroup + ":", LogLevel.WARNING);
-		int markerCount = 0;
-		foreach(IA_AreaMarker marker : markers) {
-			if (!marker || marker.m_areaGroup != currentGroup)
-				continue;
-			
-			Print("[DEBUG_ZONE_MATCH] Group marker " + markerCount + ": Name=" + marker.GetAreaName() + ", USFactionScore=" + marker.USFactionScore, LogLevel.WARNING);
-			markerCount++;
-		}
 		
 		// First, find all markers for current group and their initial completion status
 		foreach(IA_AreaMarker marker : markers) {
@@ -296,14 +278,14 @@ class IA_MissionInitializer : GenericEntity
 				continue;
 			}
 				
-			// Replace USFactionScore with dictionary lookup
+			// Get US faction score (now on 0-100 scale)
 			float factionScore = marker.GetFactionScore("US");
-			Print("[DEBUG_ZONE_SCORE_DEBUG] Marker name: " + marker.GetAreaName() + ", US faction score from dictionary: " + factionScore, LogLevel.WARNING);
+			Print("[DEBUG_ZONE_SCORE_DEBUG] Marker name: " + marker.GetAreaName() + ", US faction score: " + factionScore + "/100", LogLevel.WARNING);
 			
-			Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " score is " + factionScore + "/5.0", LogLevel.NORMAL);
-			//Print("Running CheckCurrentZoneComplete 3.8",LogLevel.NORMAL);
-			// Mark this zone as complete if score threshold met
-			if(factionScore >= 5) {
+			Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " score is " + factionScore + "/100", LogLevel.NORMAL);
+			
+			// Mark this zone as complete if score threshold met (now 100)
+			if(factionScore >= 100) {
 				Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " has reached completion threshold!", LogLevel.WARNING);
 				if (currentZoneIndex < zoneCompletionStatus.Count())
 					zoneCompletionStatus[currentZoneIndex] = true;
@@ -314,7 +296,7 @@ class IA_MissionInitializer : GenericEntity
 				currentScore++;
 			}
 			else {
-				Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " still needs " + (5 - factionScore) + " more points to complete", LogLevel.NORMAL);
+				Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " still needs " + (100 - factionScore) + " more points to complete", LogLevel.NORMAL);
 			}
 			
 			currentZoneIndex++;

@@ -221,74 +221,74 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        factionCounts.Set(factionKey, oldCount + 1);
 	    }
 	
-	    // Find leading faction
-	    string leadFactionKey = "";
-	    int leadCount = 0;
-	    int secondCount = 0;
-
-	    for (int i = 0; i < factionCounts.GetCount(); i++)
-	    {
-	        string factionKey;
-	        int count;
-	        factionCounts.GetPair(i, factionKey, count);
-	        
-	        // Skip CIV faction when determining the second-highest count
-	        if (factionKey == "CIV")
-	            continue;
-	        
-	        if (count > leadCount)
-	        {
-	            secondCount = leadCount;
-	            leadCount = count;
-	            leadFactionKey = factionKey;
-	        }
-	        else if (count > secondCount)
-	        {
-	            secondCount = count;
-	        }
-	    }
+	    // Get counts for US and USSR factions
+	    int usCount = factionCounts.Get("US");
+	    int ussrCount = factionCounts.Get("USSR");
 	    
-	    Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " (active group " + activeGroup + ") - Lead faction: " + leadFactionKey + " with " + leadCount + " units, Second: " + secondCount + " units", LogLevel.NORMAL);
-	
-	    // Only update score if there's a clear leading faction and is US
-	    if (leadCount == 0 || leadFactionKey != "US")
+	    // If no units of either faction, no score change
+	    if (usCount == 0 && ussrCount == 0)
 	    {
 	        m_IsActive = false;
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - Not active (no US units or no clear leader)", LogLevel.NORMAL);
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - No US or USSR units present, no score change", LogLevel.NORMAL);
 	        return;
 	    }
-	
+	    
 	    m_IsActive = true;
-	    int gap = leadCount - secondCount;
 	    
-	    // Calculate base score for this zone (0-1 range)
-	    //float zoneScore = 0;
-	    
-	    // Update faction score
-	    float oldScore = 0.0;
-	    if (m_FactionScores.Contains(leadFactionKey))
-	        oldScore = m_FactionScores.Get(leadFactionKey);
+	    // Get current US score
+	    float currentScore = 0.0;
+	    if (m_FactionScores.Contains("US"))
+	        currentScore = m_FactionScores.Get("US");
 	        
-	    // New score is a weighted average of old and new
-	    float newScore = oldScore + (gap * 0.1);
+	    // Determine which faction has the majority
+	    float scoreChange = 0.0;
 	    
-	    Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - Score update: Old=" + oldScore + ", New=" + newScore + ", Gap=" + gap, LogLevel.NORMAL);
+	    if (usCount > ussrCount) 
+	    {
+	        // US has majority - increase score
+	        int advantage = usCount - ussrCount;
+	        scoreChange = advantage * 2.0; // Adjust multiplier for desired rate of increase
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - US majority (+" + scoreChange + " points)", LogLevel.NORMAL);
+	    }
+	    else if (ussrCount > usCount)
+	    {
+	        // USSR has majority - decrease score
+	        int advantage = ussrCount - usCount;
+	        scoreChange = -advantage * 2.0; // Adjust multiplier for desired rate of decrease
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - USSR majority (" + scoreChange + " points)", LogLevel.NORMAL);
+	    }
+	    else if (usCount > 0 && usCount == ussrCount)
+	    {
+	        // Both factions have equal presence - small decrease
+	        scoreChange = -1.0;
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - Equal presence (slight USSR advantage, -1 point)", LogLevel.NORMAL);
+	    }
 	    
-	    // Update USFactionScore because we're now confirmed to be in the active group
+	    // Calculate new score
+	    float newScore = currentScore + scoreChange;
+	    
+	    // Clamp score between 0-100
+	    if (newScore < 0) newScore = 0;
+	    if (newScore > 100) newScore = 100;
+	    
+	    // Update USFactionScore for backward compatibility
 	    USFactionScore = newScore;
-	    Print("[INFO] Score updated for active area=" + m_areaName + " Faction=" + leadFactionKey + " NewScore=" + newScore + " (gap=" + gap + ")", LogLevel.NORMAL);
 	    
-	    // Add threshold warning
-	    if (newScore >= 4.5 && newScore < 5.0)
-	    {
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - APPROACHING COMPLETION THRESHOLD! Current score: " + newScore + "/5.0", LogLevel.WARNING);
-	    }
-	    else if (newScore >= 5.0)
-	    {
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - COMPLETION THRESHOLD REACHED! Score: " + newScore + "/5.0", LogLevel.WARNING);
-	    }
+	    // Store the new score
+	    m_FactionScores.Set("US", newScore);
 	    
-	    m_FactionScores.Set(leadFactionKey, newScore);
+	    // Log score changes
+	    Print("[INFO] Score updated for area=" + m_areaName + " US:" + usCount + " USSR:" + ussrCount + " Score:" + newScore + "/100 (change: " + scoreChange + ")", LogLevel.NORMAL);
+	    
+	    // Add threshold warnings
+	    if (newScore >= 90 && newScore < 100)
+	    {
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - APPROACHING COMPLETION THRESHOLD! Current score: " + newScore + "/100", LogLevel.WARNING);
+	    }
+	    else if (newScore >= 100)
+	    {
+	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - COMPLETION THRESHOLD REACHED! Score: " + newScore + "/100", LogLevel.WARNING);
+	    }
 	}
 		
 		

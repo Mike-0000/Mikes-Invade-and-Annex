@@ -435,29 +435,27 @@ class IA_AiGroup
 
     array<SCR_ChimeraCharacter> GetGroupCharacters()
     {
-        //Print("[DEBUG] GetGroupCharacters called.", LogLevel.NORMAL);
-        array<SCR_ChimeraCharacter> chars = {};
-        if (!m_group || !m_isSpawned)
-        {
-            //Print("[DEBUG] Group not spawned or m_group is null.", LogLevel.NORMAL);
-            return chars;
-        }
-
+        array<SCR_ChimeraCharacter> characters = {};
+        
+        if (!m_group)
+            return characters;
+            
+        // Get all agents in the group
         array<AIAgent> agents = {};
         m_group.GetAgents(agents);
-        //Print("[DEBUG] Found " + agents.Count() + " agents in the group.", LogLevel.NORMAL);
+        
+        // Convert agents to characters
         foreach (AIAgent agent : agents)
         {
-            SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
-            if (!ch)
-            {
-                //Print("[IA_AiGroup] Cast to SCR_ChimeraCharacter failed!", LogLevel.WARNING);
+            if (!agent)
                 continue;
-            }
-            //Print("[DEBUG] Successfully cast agent to SCR_ChimeraCharacter.", LogLevel.NORMAL);
-            chars.Insert(ch);
+                
+            SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
+            if (character)
+                characters.Insert(character);
         }
-        return chars;
+        
+        return characters;
     }
 
     // Add a pre-existing waypoint to the group
@@ -474,6 +472,17 @@ class IA_AiGroup
 
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
+        // Store last order data
+        m_lastOrderPosition = origin;
+        m_lastOrderTime = System.GetUnixTime();
+        
+        // If this is a vehicle group, update vehicle orders first
+        if (m_isDriving)
+        {
+            UpdateVehicleOrders();
+            return; // Let the vehicle order system handle it
+        }
+        
         //Print("[DEBUG] AddOrder called with origin: " + origin + ", order: " + order + ", topPriority: " + topPriority, LogLevel.NORMAL);
         if (!m_isSpawned)
         {
@@ -574,8 +583,6 @@ class IA_AiGroup
 
         m_group.AddWaypoint(w);
         //Print("[DEBUG] Waypoint added to group.", LogLevel.NORMAL);
-        m_lastOrderPosition = origin;
-        m_lastOrderTime     = System.GetUnixTime();
         //Print("[DEBUG] Order timestamp updated to " + m_lastOrderTime, LogLevel.NORMAL);
     }
 
@@ -727,20 +734,15 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     }
     else
     {
-        // For infantry (not driving), constrain to a specific zone rather than the entire group area
-        if (!m_isDriving)
-        {
-                posToUse = IA_Game.rng.GenerateRandomPointInRadius(5, 25, m_initialPosition);
-            
-        }
-        else
-        {
-            // For vehicles, use the original behavior
-            posToUse = IA_Game.rng.GenerateRandomPointInRadius(5, 25, m_initialPosition);
-        }
+        // For all units not currently assigned to drive, generate a random position nearby
+        posToUse = IA_Game.rng.GenerateRandomPointInRadius(5, 25, m_initialPosition);
     }
 
-    AddOrder(posToUse, initialOrder);
+    // When spawning, if not already driving, apply the initial order
+    if (!m_isDriving)
+    {
+        AddOrder(posToUse, initialOrder);
+    }
 }
 
 
@@ -989,32 +991,26 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 
     void AssignVehicle(Vehicle vehicle, vector destination)
     {
-        //Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle called for group, vehicle: " + vehicle + ", destination: " + destination, LogLevel.NORMAL);
-        //Print("[DEBUG_VEHICLE_LOGIC] Initial state - m_isDriving: " + m_isDriving + ", m_referencedEntity: " + m_referencedEntity, LogLevel.NORMAL);
+        //Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle called. Vehicle: " + vehicle + ", Destination: " + destination, LogLevel.NORMAL);
         
         if (!vehicle || !IsSpawned())
         {
-            //Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle early return: vehicle valid: " + (!!vehicle) + ", isSpawned: " + IsSpawned(), LogLevel.WARNING);
+            //Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle called with NULL vehicle or group not spawned", LogLevel.WARNING);
             return;
         }
-            
-        // Try to reserve the vehicle - if we can't, don't proceed
-        //Print("[DEBUG_VEHICLE_LOGIC] Attempting to reserve vehicle with IA_VehicleManager", LogLevel.NORMAL);
-        bool reserved = IA_VehicleManager.ReserveVehicle(vehicle, this);
-        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle reservation result: " + reserved, LogLevel.NORMAL);
         
+        // Try to reserve the vehicle - if we can't, don't proceed
+        bool reserved = IA_VehicleManager.ReserveVehicle(vehicle, this);
         if (!reserved)
         {
             //Print("[DEBUG_VEHICLE_LOGIC] Failed to reserve vehicle, aborting assignment", LogLevel.WARNING);
             return;
         }
-            
-        //Print("[DEBUG_VEHICLE_LOGIC] Setting vehicle state variables", LogLevel.NORMAL);
+        
+        // Save vehicle reference and update state
         m_referencedEntity = vehicle;
         m_isDriving = true;
         m_drivingTarget = destination;
-        
-        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle state after assignment - m_isDriving: " + m_isDriving + ", m_referencedEntity: " + m_referencedEntity, LogLevel.NORMAL);
         
         // Update the last order position to the vehicle's position so we can track when we've reached it
         m_lastOrderPosition = vehicle.GetOrigin();
@@ -1026,150 +1022,73 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         // NOTE: No longer adding GetInVehicle order here since units are teleported directly into the vehicle
         // by the IA_VehicleManager._PlaceSpawnedUnitsInVehicle method
         
-        //Print("[DEBUG] IA_AiGroup.AssignVehicle: Vehicle assigned with destination: " + destination.ToString(), LogLevel.NORMAL);
+        // If we have a valid destination, update the vehicle waypoint
+        if (destination != vector.Zero) 
+        {
+            IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, destination);
+        }
+        
+        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle successfully assigned to group", LogLevel.NORMAL);
     }
     
     void UpdateVehicleOrders()
     {
-        // Only update vehicle orders at certain intervals
-        int currentTime = System.GetUnixTime();
-        int timeSinceLastVehicleUpdate = currentTime - m_lastVehicleOrderTime;
-        
-        // Skip frequent updates, only do this check every few seconds
-        if (timeSinceLastVehicleUpdate < VEHICLE_ORDER_UPDATE_INTERVAL)
-            return;
-        
-        m_lastVehicleOrderTime = currentTime;
-        
-        // VALIDATION: If we have IsDriving but no referenced entity, clear the state
-        if (m_isDriving && !m_referencedEntity)
-        {
-            //Print("[DEBUG_VEHICLE_REPAIR] Found inconsistency: IsDriving=true but no referenced entity. Clearing driving state.", LogLevel.WARNING);
-            m_isDriving = false;
-            return;
-        }
-        
         if (!m_isDriving || !m_referencedEntity)
-        {
-            //Print("[DEBUG_VEHICLE_LOGIC] UpdateVehicleOrders early return: m_isDriving=" + m_isDriving + ", m_referencedEntity=" + m_referencedEntity, LogLevel.NORMAL);
             return;
-        }
-        
-        //Print("[DEBUG_VEHICLE_LOGIC] UpdateVehicleOrders processing vehicle orders", LogLevel.NORMAL);
+            
+        // Skip if we've just updated recently
+        int currentTime = System.GetUnixTime();
+        if (currentTime - m_lastVehicleOrderTime < VEHICLE_ORDER_UPDATE_INTERVAL)
+            return;
+            
+        m_lastVehicleOrderTime = currentTime;
         
         Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
         if (!vehicle)
         {
-            // Invalid vehicle reference, reset state
-            //Print("[DEBUG_VEHICLE_LOGIC] Failed to cast m_referencedEntity to Vehicle, resetting driving state", LogLevel.ERROR);
-            ClearVehicleReference(); // Use the proper method to clean up
+            // Clear vehicle reference if it's no longer valid
+            ClearVehicleReference();
             return;
         }
         
-        // Reset vehicle waypoints after 1 minute - this helps prevent AI getting stuck
-        int timeSinceLastOrder = TimeSinceLastOrder();
-        if (timeSinceLastOrder >= 60)
+        // Get all group members
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        if (characters.IsEmpty())
+            return;
+            
+        bool anyOutside = false;
+        
+        // Check if any characters are outside the vehicle
+        foreach (SCR_ChimeraCharacter character : characters)
         {
-            //Print("[DEBUG_VEHICLE_LOGIC] Resetting vehicle waypoints after timeout", LogLevel.NORMAL);
-            RemoveAllOrders(false);
-            // Find nearest road point for the destination before adding order
-            //Print("[DEBUG_VEHICLE_WAYPOINT] Resetting vehicle waypoint after timeout. Original target: " + m_drivingTarget, LogLevel.NORMAL);
-            // Get the current active group from the IA_VehicleManager instead of using group ID
-            int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
-            vector roadTarget = IA_VehicleManager.FindRandomRoadEntityInZone(m_drivingTarget, 300, currentActiveGroup);
-            if (roadTarget == vector.Zero) // Fallback if no road found
+            if (!character.IsInVehicle())
             {
-                roadTarget = m_drivingTarget;
-                //Print("[DEBUG_VEHICLE_WAYPOINT] No road found near target, using original position", LogLevel.WARNING);
+                anyOutside = true;
+                break;
             }
-            else
-            {
-                //Print("[DEBUG_VEHICLE_WAYPOINT] Found road point at: " + roadTarget + ", distance from original: " + vector.Distance(m_drivingTarget, roadTarget), LogLevel.NORMAL);
-            }
-            m_lastOrderPosition = roadTarget; 
-            AddOrder(roadTarget, IA_AiOrder.Move, true);
-            //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Resetting vehicle waypoint after timeout. New target: " + roadTarget, LogLevel.NORMAL);
-            return;
         }
         
-        array<SCR_ChimeraCharacter> chars = GetGroupCharacters();
-        if (chars.IsEmpty())
+        // If anyone is outside the vehicle, issue GetInVehicle order
+        if (anyOutside)
         {
-            //Print("[DEBUG_VEHICLE_LOGIC] No characters in group, skipping vehicle orders", LogLevel.WARNING);
-            return;
-        }
-        
-        SCR_ChimeraCharacter driver = chars[0];
-        Vehicle currentVehicle = IA_VehicleManager.GetCharacterVehicle(driver);
-        
-        //Print("[DEBUG_VEHICLE_LOGIC] Driver current vehicle: " + currentVehicle + ", target vehicle: " + vehicle, LogLevel.NORMAL);
-       /* 
-        // CASE 1: Driver is not in any vehicle yet
-        // For units that were teleported, this shouldn't happen during normal operations,
-        // but it can happen if the driver gets out or is ejected
-        if (!currentVehicle)
-        {
-            // We'll still add the GetInVehicle order in this case as a recovery mechanism
-            //Print("[DEBUG_VEHICLE_LOGIC] Driver not in vehicle, setting GetInVehicle order (recovery mechanism)", LogLevel.NORMAL);
+            // Clear existing orders
             RemoveAllOrders();
+            
+            // Add GetInVehicle order using the existing order system
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
-            //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Driver not in vehicle, setting GetInVehicle recovery order", LogLevel.NORMAL);
             return;
         }
         
-        // CASE 2: Driver is in the wrong vehicle
-        if (currentVehicle != vehicle)
+        // If everyone is in the vehicle and we have a destination, make sure we have a waypoint
+        if (!anyOutside && m_drivingTarget != vector.Zero)
         {
-            // This is unexpected since we teleport directly to the correct vehicle
-            //Print("[DEBUG_VEHICLE_LOGIC] Driver in wrong vehicle, setting GetInVehicle order (recovery mechanism)", LogLevel.WARNING);
-            RemoveAllOrders();
-            AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
-            //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Driver in wrong vehicle, setting GetInVehicle recovery order", LogLevel.NORMAL);
-            return;
-        }
-        */
-        // CASE 3: Driver is in the correct vehicle but not at destination
-        float distanceToDest = vector.Distance(vehicle.GetOrigin(), m_drivingTarget);
-        //Print("[DEBUG_VEHICLE_LOGIC] Driver in correct vehicle, distance to destination: " + distanceToDest, LogLevel.NORMAL);
-        if (distanceToDest > 15)
-        {
-            // If no active waypoint, create one to the destination, snapped to road
-            if (!HasOrders())
+            // Check if we need a new waypoint (don't have one or reached destination)
+            if (!HasActiveWaypoint() || IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget))
             {
-                //Print("[DEBUG_VEHICLE_LOGIC] No active waypoint, creating new one", LogLevel.NORMAL);
-                RemoveAllOrders();
-                // Always ensure target is on a road for vehicles
-                //Print("[DEBUG_VEHICLE_WAYPOINT] Creating new waypoint for vehicle. Original target: " + m_drivingTarget, LogLevel.NORMAL);
-                // Get the current active group from the IA_VehicleManager instead of using group ID
-                int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
-                vector roadTarget = IA_VehicleManager.FindRandomRoadEntityInZone(m_drivingTarget, 300, currentActiveGroup);
-                if (roadTarget == vector.Zero) // Fallback if no road found
-                {
-                    roadTarget = m_drivingTarget;
-                    //Print("[DEBUG_VEHICLE_WAYPOINT] No road found near target, using original position", LogLevel.WARNING);
-                }
-                else
-                {
-                    //Print("[DEBUG_VEHICLE_WAYPOINT] Found road point at: " + roadTarget + ", distance from original: " + vector.Distance(m_drivingTarget, roadTarget), LogLevel.NORMAL);
-                }
-                m_lastOrderPosition = roadTarget; 
-                // Explicitly use Move order for vehicles, never Defend
-                AddOrder(roadTarget, IA_AiOrder.Move, true);
-                //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Setting new Move order to road target: " + roadTarget, LogLevel.NORMAL);
+                // Update the waypoint using the existing utility function
+                IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
             }
-            return;
         }
-        
-        // CASE 4: Reached destination, get out
-        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle reached CASE 4", LogLevel.ERROR);
-        RemoveAllOrders();
-        //AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetOutOfVehicle);
-        
-        // Use proper cleanup method instead of directly setting member variables
-        //IA_VehicleManager.ReleaseVehicleReservation(vehicle);
-        //ClearVehicleReference();
-        
-        //Print("[DEBUG] IA_AiGroup.UpdateVehicleOrders: Vehicle reached destination, setting GetOutOfVehicle order", LogLevel.NORMAL);
     }
     
     // Manual check for completion based on vehicle position
@@ -1252,7 +1171,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     // New factory method for spawning civilian units for a vehicle crew
     static IA_AiGroup CreateCivilianGroupForVehicle(Vehicle vehicle, int unitCount)
     {
-        Print("[DEBUG_CIV_VEHICLE] CreateCivilianGroupForVehicle called with unitCount: " + unitCount, LogLevel.NORMAL);
+        Print("[DEBUG_CIV_VEHICLE] CreateCivilianGroupForVehicle called with unitCount: " + unitCount, LogLevel.WARNING);
         
         if (!vehicle || unitCount <= 0)
             return null;
@@ -1462,5 +1381,20 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         }
         
         return result;
+    }
+
+    // Helper method to get characters back into their assigned vehicle
+    void GetBackInVehicle()
+    {
+        if (!m_isDriving || !m_referencedEntity)
+            return;
+            
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (!vehicle)
+            return;
+            
+        // Clear existing orders and add GetInVehicle order
+        RemoveAllOrders();
+        AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
     }
 };

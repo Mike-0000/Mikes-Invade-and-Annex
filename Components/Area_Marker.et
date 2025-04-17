@@ -6,7 +6,7 @@ IA_AreaMarker {
  }
  coords 9694.263 13.135 1549.607
  m_areaGroup 0
- m_fZoneRadius 275
+ m_fZoneRadius 325
  m_areaName "St Pierre"
- m_radius 225
+ m_radius 450
 }
