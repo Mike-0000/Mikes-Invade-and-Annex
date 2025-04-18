@@ -103,7 +103,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         
         if (!s_areaMarkers)
         {
-            Print("[IA_AreaMarker.GetAllMarkers] s_areaMarkers is NULL, initializing empty array", LogLevel.WARNING);
+            // Print(("[IA_AreaMarker.GetAllMarkers] s_areaMarkers is NULL, initializing empty array", LogLevel.WARNING);
             s_areaMarkers = new array<IA_AreaMarker>();
             return validMarkers;
         }
@@ -114,7 +114,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             IA_AreaMarker marker = s_areaMarkers[i];
             if (!marker)
             {
-                Print("[IA_AreaMarker.GetAllMarkers] Found NULL marker at index " + i + ", removing it", LogLevel.WARNING);
+                // Print(("[IA_AreaMarker.GetAllMarkers] Found NULL marker at index " + i + ", removing it", LogLevel.WARNING);
                 s_areaMarkers.Remove(i);
                 i--;
                 continue;
@@ -123,7 +123,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             validMarkers.Insert(marker);
         }
         
-        Print("[DEBUG] GetAllMarkers returning " + validMarkers.Count() + " valid markers of " + s_areaMarkers.Count() + " total", LogLevel.NORMAL);
+        // Print(("[DEBUG] GetAllMarkers returning " + validMarkers.Count() + " valid markers of " + s_areaMarkers.Count() + " total", LogLevel.NORMAL);
         return validMarkers;
     }
 
@@ -164,13 +164,13 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		super.EOnFrame(owner);
 	    if (!owner)
 	    {
-	        //Print("[ERROR] owner is NULL", LogLevel.ERROR);
+	        //// Print(("[ERROR] owner is NULL", LogLevel.ERROR);
 	        return;
 	    }
 	
 	    if (IsProxy())
 	    {
-	        //Print("[DEBUG] Entity is proxy, skipping frame update", LogLevel.NORMAL);
+	        //// Print(("[DEBUG] Entity is proxy, skipping frame update", LogLevel.NORMAL);
 	        return;
 	    }
 	
@@ -195,7 +195,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    // Skip score processing if this zone isn't in the active group
 	    if (activeGroup != m_areaGroup)
 	    {
-	        //Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " (group " + m_areaGroup + ") - Not in active group (" + activeGroup + "), skipping score update", LogLevel.NORMAL);
+	        //// Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " (group " + m_areaGroup + ") - Not in active group (" + activeGroup + "), skipping score update", LogLevel.NORMAL);
 	        return;
 	    }
 	
@@ -203,7 +203,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    array<IEntity> entities = {};
 	    MIKE_QueryCallback callback = new MIKE_QueryCallback(entities);
 	    GetGame().GetWorld().QueryEntitiesBySphere(m_origin, m_radius, callback.OnEntityFound, FilterPlayerAndAI, EQueryEntitiesFlags.DYNAMIC);
-	
+		
+		
+
 	    // Count entities by faction
 	    IA_DictStringInt factionCounts = new IA_DictStringInt();
 	    for (int i = 0; i < entities.Count(); i++)
@@ -229,7 +231,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    if (usCount == 0 && ussrCount == 0)
 	    {
 	        m_IsActive = false;
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - No US or USSR units present, no score change", LogLevel.NORMAL);
+	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - No US or USSR units present, no score change", LogLevel.NORMAL);
 	        return;
 	    }
 	    
@@ -248,20 +250,20 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        // US has majority - increase score
 	        int advantage = usCount - ussrCount;
 	        scoreChange = advantage * 2.0; // Adjust multiplier for desired rate of increase
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - US majority (+" + scoreChange + " points)", LogLevel.NORMAL);
+	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - US majority (+" + scoreChange + " points)", LogLevel.NORMAL);
 	    }
 	    else if (ussrCount > usCount)
 	    {
 	        // USSR has majority - decrease score
 	        int advantage = ussrCount - usCount;
 	        scoreChange = -advantage * 2.0; // Adjust multiplier for desired rate of decrease
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - USSR majority (" + scoreChange + " points)", LogLevel.NORMAL);
+	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - USSR majority (" + scoreChange + " points)", LogLevel.NORMAL);
 	    }
 	    else if (usCount > 0 && usCount == ussrCount)
 	    {
 	        // Both factions have equal presence - small decrease
 	        scoreChange = -1.0;
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - Equal presence (slight USSR advantage, -1 point)", LogLevel.NORMAL);
+	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - Equal presence (slight USSR advantage, -1 point)", LogLevel.NORMAL);
 	    }
 	    
 	    // Calculate new score
@@ -278,16 +280,16 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    m_FactionScores.Set("US", newScore);
 	    
 	    // Log score changes
-	    Print("[INFO] Score updated for area=" + m_areaName + " US:" + usCount + " USSR:" + ussrCount + " Score:" + newScore + "/100 (change: " + scoreChange + ")", LogLevel.NORMAL);
+	    // Print(("[INFO] Score updated for area=" + m_areaName + " US:" + usCount + " USSR:" + ussrCount + " Score:" + newScore + "/100 (change: " + scoreChange + ")", LogLevel.NORMAL);
 	    
 	    // Add threshold warnings
 	    if (newScore >= 90 && newScore < 100)
 	    {
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - APPROACHING COMPLETION THRESHOLD! Current score: " + newScore + "/100", LogLevel.WARNING);
+	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - APPROACHING COMPLETION THRESHOLD! Current score: " + newScore + "/100", LogLevel.WARNING);
 	    }
 	    else if (newScore >= 100)
 	    {
-	        Print("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - COMPLETION THRESHOLD REACHED! Score: " + newScore + "/100", LogLevel.WARNING);
+	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - COMPLETION THRESHOLD REACHED! Score: " + newScore + "/100", LogLevel.WARNING);
 	    }
 	}
 		
@@ -299,7 +301,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		m_RplComponent = RplComponent.Cast(owner.FindComponent(RplComponent));
 		m_origin = owner.GetOrigin();
 		
-		Print("[DEBUG] IA_AreaMarker.EOnInit called for " + m_areaName + " at " + m_origin, LogLevel.NORMAL);
+		// Print(("[DEBUG] IA_AreaMarker.EOnInit called for " + m_areaName + " at " + m_origin, LogLevel.NORMAL);
 		
 		// Only add markers on the server side
 		if (Replication.IsServer() && InitCalled == false)
@@ -308,7 +310,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 			if (!s_areaMarkers.Contains(this) && this != null)
 			{
 				/*
-				//Print("Log1",LogLevel.NORMAL);
+				//// Print(("Log1",LogLevel.NORMAL);
 				InitCalled = true;
 				if(!this || !m_areaName)
 					return;
@@ -322,7 +324,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 						if (index != -1)
 						{
 							s_areaMarkers.Remove(index);
-							Print("[DEBUG] Removed duplicate marker: " + m_areaName, LogLevel.NORMAL);
+							// Print(("[DEBUG] Removed duplicate marker: " + m_areaName, LogLevel.NORMAL);
 						}
 									
 					}
@@ -330,11 +332,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 				
                 s_areaMarkers.Insert(this);
 				super.EOnInit(owner);
-				Print("[DEBUG] IA_AreaMarker added to static list: " + m_areaName + " at " + m_origin + " (Total markers: " + s_areaMarkers.Count() + ")", LogLevel.NORMAL);
+				// Print(("[DEBUG] IA_AreaMarker added to static list: " + m_areaName + " at " + m_origin + " (Total markers: " + s_areaMarkers.Count() + ")", LogLevel.NORMAL);
 			}
 			else
 			{
-				Print("[WARNING] IA_AreaMarker duplicate or null skipped: " + m_areaName + " at " + m_origin, LogLevel.WARNING);
+				// Print(("[WARNING] IA_AreaMarker duplicate or null skipped: " + m_areaName + " at " + m_origin, LogLevel.WARNING);
 			}
 		}
 	}
@@ -367,7 +369,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             m_FactionCounts.Set(factionKey, 1);
         }
 
-        //Print("Character ENTER zone. Faction=" + factionKey 
+        //// Print(("Character ENTER zone. Faction=" + factionKey 
          //   + " newCount=" + m_FactionCounts.Get(factionKey));
     }
 
@@ -395,7 +397,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             else
                 m_FactionCounts.Set(factionKey, newCount);
 
-            //Print("Character LEFT zone. Faction=" + factionKey 
+            //// Print(("Character LEFT zone. Faction=" + factionKey 
            //     + " newCount=" + GetFactionCount(factionKey));
         }
     }
@@ -441,7 +443,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         array<IA_AreaMarker> markers = {};
         if (!s_areaMarkers)
         {
-            Print("[IA_AreaMarker.GetAreaMarkersForArea] s_areaMarkers is NULL - areaName = " + areaName, LogLevel.ERROR);
+            // Print(("[IA_AreaMarker.GetAreaMarkersForArea] s_areaMarkers is NULL - areaName = " + areaName, LogLevel.ERROR);
             return markers;
         }
         
@@ -451,7 +453,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             if (!marker)
             {
                 // Remove invalid markers and adjust index
-                Print("[IA_AreaMarker.GetAreaMarkersForArea] Found NULL marker at index " + i + ", removing it", LogLevel.WARNING);
+                // Print(("[IA_AreaMarker.GetAreaMarkersForArea] Found NULL marker at index " + i + ", removing it", LogLevel.WARNING);
                 s_areaMarkers.Remove(i);
                 i--;
                 continue;
@@ -460,14 +462,14 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             string markerAreaName = marker.GetAreaName();
             if (!markerAreaName)
             {
-                Print("[IA_AreaMarker.GetAreaMarkersForArea] Marker has NULL area name at index " + i, LogLevel.WARNING);
+                // Print(("[IA_AreaMarker.GetAreaMarkersForArea] Marker has NULL area name at index " + i, LogLevel.WARNING);
                 continue;
             }
             
             if (markerAreaName == areaName)
             {
                 markers.Insert(marker);
-                Print("[IA_AreaMarker.GetAreaMarkersForArea] Found marker for area: " + areaName, LogLevel.NORMAL);
+                // Print(("[IA_AreaMarker.GetAreaMarkersForArea] Found marker for area: " + areaName, LogLevel.NORMAL);
             }
         }
         
@@ -482,10 +484,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 			return false;
 		
 		SCR_ChimeraCharacter char = SCR_ChimeraCharacter.Cast(entity);
-		//Print("Character found with "+char.GetDamageManager().GetHealth()+" damage!",LogLevel.NORMAL);
+		//// Print(("Character found with "+char.GetDamageManager().GetHealth()+" damage!",LogLevel.NORMAL);
 		if(char.GetDamageManager().GetHealth() < 0.01 || char.GetDamageManager().IsDestroyed())
 			return false;
-		//Print("Character is Alive!",LogLevel.NORMAL);
+		//// Print(("Character is Alive!",LogLevel.NORMAL);
 		return true;
 	}
 
@@ -644,7 +646,7 @@ class ZoneChecker
 
 			if (IsPlayerInZone(playerEntity))
 			{
-				//Print("Player " + playerId + " is inside the zone.");
+				//// Print(("Player " + playerId + " is inside the zone.");
 				numberOfPlayersInZone++;
 			}
 		}

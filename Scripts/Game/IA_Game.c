@@ -224,9 +224,9 @@ class IA_Game
             float aiScale = GetAIScaleFactor();
             int maxVehicles = GetMaxVehiclesForPlayerCount();
             
-            Print("[PLAYER_SCALING] Player count changed to " + currentPlayerCount + 
-                  ". AI Scale Factor: " + aiScale + 
-                  ", Max Vehicles: " + maxVehicles, LogLevel.NORMAL);
+           //Print("[PLAYER_SCALING] Player count changed to " + currentPlayerCount + 
+ //                 ". AI Scale Factor: " + aiScale + 
+//                  ", Max Vehicles: " + maxVehicles, LogLevel.NORMAL);
                   
             // Update all area instances with new scaling
             foreach (IA_AreaInstance areaInst : m_areas)

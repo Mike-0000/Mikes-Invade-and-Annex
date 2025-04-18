@@ -17,6 +17,7 @@ class IA_VehicleManager: GenericEntity
     // Group-specific vehicles
     static private ref array<ref array<IEntity>> m_groupVehicles = {};
     static private int m_currentActiveGroup = -1;
+    static private int m_previousActiveGroup = -1; // Add tracking for previous active group
     
     // Vehicle reservation system
     static private ref map<IEntity, IA_AiGroup> m_vehicleReservations = new map<IEntity, IA_AiGroup>(); // vehicle -> group that reserved it
@@ -39,24 +40,54 @@ class IA_VehicleManager: GenericEntity
     
     static void Reset()
     {
+        // Print(("[VEHICLE_DEBUG] IA_VehicleManager.Reset called", LogLevel.NORMAL);
+        
+        // Clear all tracked vehicles
         m_vehicles.Clear();
         
-        // Clear all group vehicle arrays
-        for (int i = 0; i < m_groupVehicles.Count(); i++)
-        {
-            m_groupVehicles[i].Clear();
-        }
+        // Clear vehicle groups
+        m_groupVehicles.Clear();
+        
+        // Reset active group
+        m_currentActiveGroup = -1;
+        m_previousActiveGroup = -1;
+        
+        // Clear all reservations
+        ClearAllReservations();
     }
     
     // Set the currently active area group
     static void SetActiveGroup(int groupNumber)
     {
+        // Store the previous group before changing
+        m_previousActiveGroup = m_currentActiveGroup;
+        
+        // Validate input
+        if (groupNumber < 0)
+        {
+            //// Print(("[VEHICLE_DEBUG] SetActiveGroup called with invalid group number: " + groupNumber, LogLevel.WARNING);
+            m_currentActiveGroup = -1;
+            return;
+        }
+        
+        // // Print( debug info about the group change
+        // Print(("[VEHICLE_DEBUG] Changing active group from " + m_currentActiveGroup + " to " + groupNumber, LogLevel.NORMAL);
+        
+        // Ensure we have enough slots in the array
+        if (m_groupVehicles.Count() <= groupNumber)
+        {
+            int originalSize = m_groupVehicles.Count();
+            for (int i = originalSize; i <= groupNumber; i++)
+            {
+                m_groupVehicles.Insert(new array<IEntity>());
+            }
+            // Print(("[VEHICLE_DEBUG] Expanded group vehicles array from " + originalSize + " to " + m_groupVehicles.Count() + " slots", LogLevel.NORMAL);
+        }
+        
+        // Set the active group
         m_currentActiveGroup = groupNumber;
         
-        // Clear all reservations when switching groups
-        ClearAllReservations();
-        
-        // Clean up old vehicles from previous groups
+        // Clean up vehicles from inactive groups
         CleanupInactiveGroupVehicles();
     }
     
@@ -69,44 +100,70 @@ class IA_VehicleManager: GenericEntity
     // Clean up vehicles from inactive groups
     static void CleanupInactiveGroupVehicles()
     {
-        // Don't clean up if there's no active group
-        if (m_currentActiveGroup < 0)
-            return;
-            
-        for (int groupIdx = 0; groupIdx < m_groupVehicles.Count(); groupIdx++)
+      //  // Print(("[VEHICLE_DEBUG] CleanupInactiveGroupVehicles called", LogLevel.NORMAL);
+        
+        // Skip if the active group hasn't changed
+        if (m_currentActiveGroup == m_previousActiveGroup)
         {
-            // Skip the current active group
-            if (groupIdx == m_currentActiveGroup)
-                continue;
-                
-            array<IEntity> groupVehicles = m_groupVehicles[groupIdx];
-            
-            // Clean up all vehicles in this group
-            for (int i = 0; i < groupVehicles.Count(); i++)
+            //// Print(("[VEHICLE_DEBUG] Skipping cleanup - active group unchanged: " + m_currentActiveGroup, LogLevel.NORMAL);
+            return;
+        }
+        
+        // Print(("[VEHICLE_DEBUG] Active group changed from " + m_previousActiveGroup + " to " + m_currentActiveGroup + ". Starting cleanup.", LogLevel.NORMAL);
+        
+        int inactiveGroup = m_previousActiveGroup;
+        
+        // Get vehicles in the inactive group
+        array<Vehicle> inactiveGroupVehicles = GetVehiclesInAreaGroup(inactiveGroup);
+        
+        if (inactiveGroupVehicles.IsEmpty())
+        {
+            //// Print(("[VEHICLE_DEBUG] No vehicles found in inactive group " + inactiveGroup, LogLevel.NORMAL);
+            return;
+        }
+        
+        // Print(("[VEHICLE_DEBUG] Found " + inactiveGroupVehicles.Count() + " vehicles in inactive group " + inactiveGroup, LogLevel.NORMAL);
+        
+        // Handle each vehicle in the inactive group
+        foreach (Vehicle vehicle : inactiveGroupVehicles)
+        {
+            // Check if the vehicle is reserved
+            if (IsVehicleReserved(vehicle))
             {
-                IEntity vehEntity = groupVehicles[i];
-                if (!vehEntity)
+                IA_AiGroup reservingGroup = m_vehicleReservations[vehicle];
+                
+                // If it's reserved and the group is still active, leave it alone
+                if (reservingGroup && reservingGroup.IsSpawned() && reservingGroup.GetAliveCount() > 0)
+                {
+                    // Print(("[VEHICLE_DEBUG] Vehicle " + vehicle + " has active group " + reservingGroup + " - preserving", LogLevel.NORMAL);
                     continue;
-                    
-                // Remove from main vehicles array too
-                int mainIdx = m_vehicles.Find(vehEntity);
-                if (mainIdx != -1)
-                    m_vehicles.Remove(mainIdx);
-                    
-                // Add to garbage collection
-                IA_Game.AddEntityToGc(vehEntity);
+                }
+                
+                // Otherwise release the reservation
+                //// Print(("[VEHICLE_DEBUG] Vehicle " + vehicle + " has inactive group - releasing reservation", LogLevel.NORMAL);
+                ReleaseVehicleReservation(vehicle);
             }
             
-            // Clear the group array
-            groupVehicles.Clear();
+            // If the vehicle is not occupied by players, despawn it
+            if (!IsVehicleOccupied(vehicle))
+            {
+                // Print(("[VEHICLE_DEBUG] Despawning unoccupied vehicle " + vehicle + " from inactive group", LogLevel.NORMAL);
+                DespawnVehicle(vehicle);
+            }
+            else
+            {
+                // Print(("[VEHICLE_DEBUG] Vehicle " + vehicle + " is occupied - not despawning", LogLevel.NORMAL);
+            }
         }
+        
+        // Print(("[VEHICLE_DEBUG] Inactive group cleanup complete", LogLevel.NORMAL);
     }
     
     static string GetVehicleResourceName(IA_Faction faction)
     {
-		Print("GetVehicleResourceName Called", LogLevel.NORMAL);
+		// Print(("GetVehicleResourceName Called", LogLevel.NORMAL);
         string resourceName = IA_VehicleCatalog.GetRandomVehiclePrefab(faction);
-		Print("resourceName Received as " + resourceName, LogLevel.NORMAL);
+		// Print(("resourceName Received as " + resourceName, LogLevel.NORMAL);
         if (resourceName.IsEmpty())
         {
             // Fallback in case no prefab is found
@@ -124,13 +181,13 @@ class IA_VehicleManager: GenericEntity
     // Spawn a random vehicle that matches filter criteria at the specified position
     static Vehicle SpawnRandomVehicle(IA_Faction faction, bool allowCivilian, bool allowMilitary, vector position)
     {
-        Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle called with faction " + faction + ", civilian=" + allowCivilian + ", military=" + allowMilitary, LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle called with faction " + faction + ", civilian=" + allowCivilian + ", military=" + allowMilitary, LogLevel.NORMAL);
         
         // Get catalog entries matching the filter
         array<SCR_EntityCatalogEntry> entries = IA_VehicleCatalog.GetVehicleEntriesByFilter(faction, allowCivilian, allowMilitary);
         if (entries.IsEmpty())
         {
-            Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: No matching entries found in catalog", LogLevel.WARNING);
+           //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: No matching entries found in catalog", LogLevel.WARNING);
             return null;
         }
             
@@ -138,35 +195,35 @@ class IA_VehicleManager: GenericEntity
         int randomIndex = IA_Game.rng.RandInt(0, entries.Count());
         SCR_EntityCatalogEntry entry = entries[randomIndex];
         string resourceName = entry.GetPrefab();
-        Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Selected prefab " + resourceName + " (index " + randomIndex + " of " + entries.Count() + ")", LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Selected prefab " + resourceName + " (index " + randomIndex + " of " + entries.Count() + ")", LogLevel.NORMAL);
         
         // Load resource and spawn
-        Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Loading resource " + resourceName, LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Loading resource " + resourceName, LogLevel.NORMAL);
         Resource resource = Resource.Load(resourceName);
         if (!resource)
         {
-            Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Failed to load resource: " + resourceName, LogLevel.ERROR);
+           //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Failed to load resource: " + resourceName, LogLevel.ERROR);
             return null;
         }
         
-        Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Creating spawn params at position " + position.ToString(), LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Creating spawn params at position " + position.ToString(), LogLevel.NORMAL);
         EntitySpawnParams params = IA_CreateSurfaceAdjustedSpawnParams(position);
         
-        Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Spawning entity prefab", LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Spawning entity prefab", LogLevel.NORMAL);
         IEntity entity = GetGame().SpawnEntityPrefab(resource, null, params);
         
         if (!entity)
         {
-            Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Failed to spawn entity prefab", LogLevel.ERROR);
+           //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Failed to spawn entity prefab", LogLevel.ERROR);
             return null;
         }
         
-        Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Casting to Vehicle", LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Casting to Vehicle", LogLevel.NORMAL);
         Vehicle vehicle = Vehicle.Cast(entity);
         
         if (vehicle)
         {
-            Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Successfully spawned vehicle at " + vehicle.GetOrigin().ToString(), LogLevel.NORMAL);
+           //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Successfully spawned vehicle at " + vehicle.GetOrigin().ToString(), LogLevel.NORMAL);
             // Add to main vehicles array
             m_vehicles.Insert(entity);
             
@@ -174,17 +231,17 @@ class IA_VehicleManager: GenericEntity
             if (m_currentActiveGroup >= 0 && m_currentActiveGroup < m_groupVehicles.Count())
             {
                 m_groupVehicles[m_currentActiveGroup].Insert(entity);
-                Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Added to group " + m_currentActiveGroup, LogLevel.NORMAL);
+               //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Added to group " + m_currentActiveGroup, LogLevel.NORMAL);
             }
         }
         else
         {
-            Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Failed to cast to Vehicle, entity type: " + entity.ClassName(), LogLevel.WARNING);
+           //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Failed to cast to Vehicle, entity type: " + entity.ClassName(), LogLevel.WARNING);
             // Clean up the entity if it's not a vehicle
             if (entity)
             {
                 IA_Game.AddEntityToGc(entity);
-                Print("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Added non-vehicle entity to garbage collection", LogLevel.NORMAL);
+               //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: Added non-vehicle entity to garbage collection", LogLevel.NORMAL);
             }
         }
             
@@ -194,20 +251,20 @@ class IA_VehicleManager: GenericEntity
     // Spawn a vehicle at the specified position
     static Vehicle SpawnVehicle(IA_Faction faction, vector position)
     {
-        //Print("[DEBUG] IA_VehicleManager.SpawnVehicle called with faction " + faction, LogLevel.NORMAL);
+        //// Print(("[DEBUG] IA_VehicleManager.SpawnVehicle called with faction " + faction, LogLevel.NORMAL);
         
         // Get vehicle resource name using our helper method
         string resourceName = GetVehicleResourceName(faction);
         if (resourceName.IsEmpty())
         {
-            Print("[IA_VehicleManager.SpawnVehicle] Couldn't find any vehicles for faction " + faction, LogLevel.ERROR);
+           //// Print(("[IA_VehicleManager.SpawnVehicle] Couldn't find any vehicles for faction " + faction, LogLevel.ERROR);
             return null;
         }
         
         Resource resource = Resource.Load(resourceName);
         if (!resource)
         {
-            Print("[IA_VehicleManager.SpawnVehicle] No such resource: " + resourceName, LogLevel.ERROR);
+           //// Print(("[IA_VehicleManager.SpawnVehicle] No such resource: " + resourceName, LogLevel.ERROR);
             return null;
         }
         
@@ -217,7 +274,7 @@ class IA_VehicleManager: GenericEntity
         
         if (vehicle)
         {
-            //Print("[DEBUG] IA_VehicleManager.SpawnVehicle: Successfully spawned vehicle at " + position.ToString(), LogLevel.NORMAL);
+            //// Print(("[DEBUG] IA_VehicleManager.SpawnVehicle: Successfully spawned vehicle at " + position.ToString(), LogLevel.NORMAL);
             // Add to main vehicles array
             m_vehicles.Insert(entity);
             
@@ -230,7 +287,7 @@ class IA_VehicleManager: GenericEntity
             // Automatically create AI units for the vehicle
             if (faction != IA_Faction.CIV && IA_Game.CurrentAreaInstance) // Only for military vehicles
             {
-                //Print("[DEBUG] IA_VehicleManager.SpawnVehicle: Automatically creating AI crew for vehicle", LogLevel.NORMAL);
+                //// Print(("[DEBUG] IA_VehicleManager.SpawnVehicle: Automatically creating AI crew for vehicle", LogLevel.NORMAL);
                 
                 // Declare destination variable
                 vector destination = position;
@@ -268,7 +325,7 @@ class IA_VehicleManager: GenericEntity
         }
         else
         {
-            //Print("[DEBUG] IA_VehicleManager.SpawnVehicle: Failed to spawn vehicle", LogLevel.WARNING);
+            //// Print(("[DEBUG] IA_VehicleManager.SpawnVehicle: Failed to spawn vehicle", LogLevel.WARNING);
         }
             
         return vehicle;
@@ -358,7 +415,7 @@ class IA_VehicleManager: GenericEntity
     // Spawn a random vehicle within the area group's bounds
     static Vehicle SpawnRandomVehicleInAreaGroup(IA_Faction faction, bool allowCivilian, bool allowMilitary, int groupNumber)
     {
-        //Print("[DEBUG] IA_VehicleManager.SpawnRandomVehicleInAreaGroup called with faction " + faction + ", civilian=" + allowCivilian + ", military=" + allowMilitary + ", group=" + groupNumber, LogLevel.NORMAL);
+        //// Print(("[DEBUG] IA_VehicleManager.SpawnRandomVehicleInAreaGroup called with faction " + faction + ", civilian=" + allowCivilian + ", military=" + allowMilitary + ", group=" + groupNumber, LogLevel.NORMAL);
         
         // Calculate a position within the area group
         vector centerPoint = IA_AreaMarker.CalculateGroupCenterPoint(groupNumber);
@@ -366,7 +423,7 @@ class IA_VehicleManager: GenericEntity
         
         if (centerPoint == vector.Zero || groupRadius <= 0)
         {
-            //Print("[DEBUG] IA_VehicleManager.SpawnRandomVehicleInAreaGroup: Invalid center point or radius", LogLevel.WARNING);
+            //// Print(("[DEBUG] IA_VehicleManager.SpawnRandomVehicleInAreaGroup: Invalid center point or radius", LogLevel.WARNING);
             return null;
         }
             
@@ -377,7 +434,7 @@ class IA_VehicleManager: GenericEntity
         float y = GetGame().GetWorld().GetSurfaceY(spawnPos[0], spawnPos[2]);
         spawnPos[1] = y + 0.5; // Slightly above ground
         
-        //Print("[DEBUG] IA_VehicleManager.SpawnRandomVehicleInAreaGroup: Generated position " + spawnPos.ToString(), LogLevel.NORMAL);
+        //// Print(("[DEBUG] IA_VehicleManager.SpawnRandomVehicleInAreaGroup: Generated position " + spawnPos.ToString(), LogLevel.NORMAL);
         
         // Spawn the random vehicle
         return SpawnRandomVehicle(faction, allowCivilian, allowMilitary, spawnPos);
@@ -429,96 +486,108 @@ class IA_VehicleManager: GenericEntity
     // Reserve a vehicle for a specific group
     static bool ReserveVehicle(Vehicle vehicle, IA_AiGroup reservingGroup)
     {
-        //Print("[DEBUG_VEHICLE_RESERVATION] ReserveVehicle called, vehicle: " + vehicle + ", group: " + reservingGroup, LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] ReserveVehicle called. Vehicle: " + vehicle + ", Group: " + reservingGroup, LogLevel.NORMAL);
         
         if (!vehicle || !reservingGroup)
         {
-            //Print("[DEBUG_VEHICLE_RESERVATION] ReserveVehicle failed - vehicle or group is null", LogLevel.WARNING);
+            // Print(("[VEHICLE_DEBUG] ReserveVehicle - vehicle or group is null", LogLevel.WARNING);
             return false;
         }
-            
-        // Check if vehicle is already reserved
-        bool alreadyReserved = IsVehicleReserved(vehicle);
-        bool reservedByThisGroup = IsReservedByGroup(vehicle, reservingGroup);
-        
-        //Print("[DEBUG_VEHICLE_RESERVATION] Vehicle already reserved: " + alreadyReserved + ", by this group: " + reservedByThisGroup, LogLevel.NORMAL);
-        
-        if (alreadyReserved && !reservedByThisGroup)
+
+        // If the vehicle is already reserved, only allow if it's the same group making the reservation
+        if (m_vehicleReservations.Contains(vehicle))
         {
-            //Print("[DEBUG_VEHICLE_RESERVATION] Vehicle already reserved by another group, reservation failed", LogLevel.WARNING);
-            return false;
+            IA_AiGroup currentGroup = m_vehicleReservations[vehicle];
+            if (currentGroup == reservingGroup)
+            {
+                // Already reserved by this group, just update the timestamp
+                // Print(("[VEHICLE_DEBUG] Vehicle already reserved by same group", LogLevel.NORMAL);
+                return true;
+            }
+            else
+            {
+                // Print(("[VEHICLE_DEBUG] Vehicle already reserved by different group: " + currentGroup, LogLevel.WARNING);
+                return false;
+            }
         }
-        
-        // Get the previous state of the map
-        string previousMapState = "";
+
+        // Record current reservations for debugging
+        string previousMapState = "Before reservation: ";
         foreach (IEntity veh, IA_AiGroup grp : m_vehicleReservations)
             previousMapState += veh.ToString() + " -> " + grp.ToString() + ", ";
+        // Print(("[VEHICLE_DEBUG] " + previousMapState, LogLevel.NORMAL);
+
+        // Make the reservation
+        m_vehicleReservations[vehicle] = reservingGroup;
         
-        //Print("[DEBUG_VEHICLE_RESERVATION] Reservation map before: " + previousMapState, LogLevel.NORMAL);
-            
-        // Reserve the vehicle
-        m_vehicleReservations.Set(vehicle, reservingGroup);
-        
-        // Verify the reservation was added
-        bool verifyReserved = m_vehicleReservations.Contains(vehicle);
-        IA_AiGroup verifyGroup = null;
-        if (verifyReserved)
-            verifyGroup = m_vehicleReservations.Get(vehicle);
-            
-        //Print("[DEBUG_VEHICLE_RESERVATION] Verification after Set - contains vehicle: " + verifyReserved + ", group: " + verifyGroup, LogLevel.NORMAL);
-        
-        //Print("[DEBUG] Vehicle reserved by group: " + vehicle.GetOrigin().ToString(), LogLevel.NORMAL);
+        // Debug the new state
+        // Print(("[VEHICLE_DEBUG] Vehicle reserved successfully. Total reservations: " + m_vehicleReservations.Count(), LogLevel.NORMAL);
         return true;
     }
     
-    // Check if a vehicle is already reserved
+    // Check if a vehicle is reserved by any group
     static bool IsVehicleReserved(Vehicle vehicle)
     {
         if (!vehicle)
-        {
-            //Print("[DEBUG_VEHICLE_RESERVATION] IsVehicleReserved called with null vehicle", LogLevel.WARNING);
             return false;
+            
+        bool isReserved = m_vehicleReservations.Contains(vehicle);
+        if (isReserved)
+        {
+            IA_AiGroup reservedBy = m_vehicleReservations[vehicle];
+            // Print(("[VEHICLE_DEBUG] IsVehicleReserved: Vehicle " + vehicle + " is reserved by group " + reservedBy, LogLevel.NORMAL);
         }
         
-        bool result = m_vehicleReservations.Contains(vehicle);
-        //Print("[DEBUG_VEHICLE_RESERVATION] IsVehicleReserved check for " + vehicle + " result: " + result, LogLevel.NORMAL);
-        return result;
+        return isReserved;
     }
     
     // Check if a vehicle is reserved by a specific group
     static bool IsReservedByGroup(Vehicle vehicle, IA_AiGroup group)
     {
-        //Print("[DEBUG_VEHICLE_RESERVATION] IsReservedByGroup called, vehicle: " + vehicle + ", group: " + group, LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] IsReservedByGroup called, vehicle: " + vehicle + ", group: " + group, LogLevel.NORMAL);
         
         if (!vehicle || !group)
         {
-            //Print("[DEBUG_VEHICLE_RESERVATION] IsReservedByGroup early return - vehicle or group is null", LogLevel.WARNING);
+            // Print(("[VEHICLE_DEBUG] IsReservedByGroup early return - vehicle or group is null", LogLevel.WARNING);
             return false;
         }
             
         if (!m_vehicleReservations.Contains(vehicle))
         {
-            //Print("[DEBUG_VEHICLE_RESERVATION] Vehicle not in reservation map", LogLevel.NORMAL);
+            // Print(("[VEHICLE_DEBUG] Vehicle not in reservation map", LogLevel.NORMAL);
             return false;
         }
             
-        IA_AiGroup reservingGroup = m_vehicleReservations.Get(vehicle);
+        IA_AiGroup reservingGroup = m_vehicleReservations[vehicle];
         bool result = (reservingGroup == group);
-        //Print("[DEBUG_VEHICLE_RESERVATION] Vehicle is reserved by group " + reservingGroup + ", matches query group: " + result, LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] Vehicle is reserved by group " + reservingGroup + ", matches query group: " + result, LogLevel.NORMAL);
         return result;
     }
     
-    // Release a vehicle reservation
+    // Release a vehicle's reservation
     static void ReleaseVehicleReservation(Vehicle vehicle)
     {
+        // Print(("[VEHICLE_DEBUG] ReleaseVehicleReservation called for vehicle: " + vehicle, LogLevel.NORMAL);
+        
         if (!vehicle)
-            return;
-            
-        if (m_vehicleReservations.Contains(vehicle))
         {
-            m_vehicleReservations.Remove(vehicle);
-            //Print("[DEBUG] Vehicle reservation released: " + vehicle.GetOrigin().ToString(), LogLevel.NORMAL);
+            // Print(("[VEHICLE_DEBUG] ReleaseVehicleReservation - vehicle is null", LogLevel.WARNING);
+            return;
         }
+            
+        if (!m_vehicleReservations.Contains(vehicle))
+        {
+            // Print(("[VEHICLE_DEBUG] ReleaseVehicleReservation - vehicle not in reservation map", LogLevel.WARNING);
+            return;
+        }
+            
+        // Record group before removal for debugging
+        IA_AiGroup group = m_vehicleReservations[vehicle];
+        
+        // Remove the reservation
+        m_vehicleReservations.Remove(vehicle);
+        
+        // Print(("[VEHICLE_DEBUG] Released reservation for vehicle " + vehicle + " from group " + group + ". Remaining reservations: " + m_vehicleReservations.Count(), LogLevel.NORMAL);
     }
     
     // Get count of units targeting a specific vehicle
@@ -588,34 +657,34 @@ class IA_VehicleManager: GenericEntity
     {
         if (!vehicle)
         {
-            //Print("[DEBUG_VEHICLES] HasVehicleReachedDestination - vehicle is NULL", LogLevel.WARNING);
+            // Print(("[VEHICLE_DEBUG] HasVehicleReachedDestination - vehicle is NULL", LogLevel.WARNING);
             return false;
         }
             
         vector vehiclePos = vehicle.GetOrigin();
         float distance = vector.Distance(vehiclePos, destination);
         
-        //Print("[DEBUG_VEHICLES] HasVehicleReachedDestination - vehicle at " + vehiclePos.ToString() + ", destination: " + destination.ToString() + ", distance: " + distance, LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] HasVehicleReachedDestination - vehicle at " + vehiclePos.ToString() + ", destination: " + destination.ToString() + ", distance: " + distance, LogLevel.NORMAL);
         
         // Consider reached if within 10 meters
         bool hasReached = distance < 10;
-        //Print("[DEBUG_VEHICLES] HasVehicleReachedDestination - Has reached: " + hasReached, LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] HasVehicleReachedDestination - Has reached: " + hasReached, LogLevel.NORMAL);
         return hasReached;
     }
     
     // Create waypoint only if the vehicle doesn't already have an active one or has reached its current destination
     static void UpdateVehicleWaypoint(Vehicle vehicle, IA_AiGroup aiGroup, vector destination)
     {
-        //Print("[DEBUG_VEHICLES] UpdateVehicleWaypoint called", LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] UpdateVehicleWaypoint called", LogLevel.NORMAL);
         if (!vehicle || !aiGroup)
         {
-            //Print("[DEBUG_VEHICLES] UpdateVehicleWaypoint - vehicle or aiGroup is NULL", LogLevel.WARNING);
+            // Print(("[VEHICLE_DEBUG] UpdateVehicleWaypoint - vehicle or aiGroup is NULL", LogLevel.WARNING);
             return;
         }
             
         // Get vehicle position
         vector vehiclePos = vehicle.GetOrigin();
-        //Print("[DEBUG_VEHICLES] Vehicle at " + vehiclePos.ToString() + ", destination: " + destination.ToString(), LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] Vehicle at " + vehiclePos.ToString() + ", destination: " + destination.ToString(), LogLevel.NORMAL);
         
         // Check if we need to find a road for this destination
         bool shouldFindRoad = true;
@@ -630,7 +699,7 @@ class IA_VehicleManager: GenericEntity
         if (!roadEntities.IsEmpty())
         {
             // Destination seems to already be on a road
-            //Print("[DEBUG_VEHICLES] Destination already appears to be on a road", LogLevel.NORMAL);
+            // Print(("[VEHICLE_DEBUG] Destination already appears to be on a road", LogLevel.NORMAL);
             shouldFindRoad = false;
         }
         
@@ -638,11 +707,11 @@ class IA_VehicleManager: GenericEntity
         bool hasActiveWaypoint = aiGroup.HasActiveWaypoint();
         bool hasReachedDestination = HasVehicleReachedDestination(vehicle, destination);
         
-        //Print("[DEBUG_VEHICLES] UpdateVehicleWaypoint - hasActiveWaypoint: " + hasActiveWaypoint + ", hasReachedDestination: " + hasReachedDestination, LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] UpdateVehicleWaypoint - hasActiveWaypoint: " + hasActiveWaypoint + ", hasReachedDestination: " + hasReachedDestination, LogLevel.NORMAL);
         
         if (!hasActiveWaypoint || hasReachedDestination)
         {
-            //Print("[DEBUG_VEHICLES] Vehicle needs new waypoint - creating one at " + destination.ToString(), LogLevel.NORMAL);
+            // Print(("[VEHICLE_DEBUG] Vehicle needs new waypoint - creating one at " + destination.ToString(), LogLevel.NORMAL);
             
             // If we need to find a road, update the destination
             if (shouldFindRoad)
@@ -659,7 +728,7 @@ class IA_VehicleManager: GenericEntity
                     if (searchRadius < 100)
                         searchRadius = 100;
                     
-                    //Print("[DEBUG_VEHICLES] Searching for road near destination with radius " + searchRadius, LogLevel.NORMAL);
+                    // Print(("[VEHICLE_DEBUG] Searching for road near destination with radius " + searchRadius, LogLevel.NORMAL);
                     
                     // Find a road near the destination
                     vector roadDestination = FindRandomRoadEntityInZone(destination, searchRadius, m_currentActiveGroup);
@@ -667,8 +736,12 @@ class IA_VehicleManager: GenericEntity
                     // If we found a valid road position, use it
                     if (roadDestination != vector.Zero)
                     {
-                        //Print("[DEBUG_VEHICLES] Found road at " + roadDestination.ToString() + ", using as waypoint destination", LogLevel.NORMAL);
+                        // Print(("[VEHICLE_DEBUG] Found road at " + roadDestination.ToString() + ", using as waypoint destination", LogLevel.NORMAL);
                         destination = roadDestination;
+                    }
+                    else
+                    {
+                        // Print(("[VEHICLE_DEBUG] No valid road found near destination, using original destination", LogLevel.WARNING);
                     }
                 }
             }
@@ -677,7 +750,7 @@ class IA_VehicleManager: GenericEntity
         }
         else
         {
-            //Print("[DEBUG_VEHICLES] Vehicle has active waypoint and hasn't reached destination - skipping", LogLevel.NORMAL);
+            // Print(("[VEHICLE_DEBUG] Vehicle has active waypoint and hasn't reached destination - skipping", LogLevel.NORMAL);
         }
     }
     
@@ -756,7 +829,7 @@ class IA_VehicleManager: GenericEntity
     // Spawn vehicles at all available spawn points for the active group with occupants
     static void SpawnVehiclesAtAllSpawnPoints(IA_Faction faction)
     {
-        //Print("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: Spawning vehicles for faction " + faction, LogLevel.NORMAL);
+        //// Print(("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: Spawning vehicles for faction " + faction, LogLevel.NORMAL);
         
         // If an active group is set, only spawn in that group
         int targetGroup = m_currentActiveGroup;
@@ -765,11 +838,11 @@ class IA_VehicleManager: GenericEntity
         array<IA_VehicleSpawnPoint> spawnPoints = IA_VehicleSpawnPoint.GetSpawnPointsByGroup(targetGroup);
         if (spawnPoints.IsEmpty())
         {
-            //Print("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: No spawn points found in group " + targetGroup, LogLevel.WARNING);
+            //// Print(("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: No spawn points found in group " + targetGroup, LogLevel.WARNING);
             return;
         }
         
-        //Print("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: Found " + spawnPoints.Count() + " spawn points in group " + targetGroup, LogLevel.NORMAL);
+        //// Print(("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: Found " + spawnPoints.Count() + " spawn points in group " + targetGroup, LogLevel.NORMAL);
         
         // Spawn vehicles at each point
         foreach (IA_VehicleSpawnPoint spawnPoint : spawnPoints)
@@ -782,7 +855,7 @@ class IA_VehicleManager: GenericEntity
             if (!vehicle)
                 continue;
                 
-            //Print("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: Successfully spawned vehicle at " + spawnPoint.GetOrigin().ToString(), LogLevel.NORMAL);
+            //// Print(("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: Successfully spawned vehicle at " + spawnPoint.GetOrigin().ToString(), LogLevel.NORMAL);
             
             // Get the area center point to use as a reference
             vector areaCenter = IA_AreaMarker.CalculateGroupCenterPoint(m_currentActiveGroup);
@@ -796,11 +869,11 @@ class IA_VehicleManager: GenericEntity
     // Add units to a vehicle and assign orders
     static IA_AiGroup PlaceUnitsInVehicle(Vehicle vehicle, IA_Faction faction, vector destination, IA_AreaInstance areaInstance)
     {
-        Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle called for vehicle: " + vehicle + ", faction: " + faction, LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle called for vehicle: " + vehicle + ", faction: " + faction, LogLevel.NORMAL);
         
         if (!vehicle || !areaInstance)
         {
-            Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Missing vehicle or area instance", LogLevel.WARNING);
+           //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Missing vehicle or area instance", LogLevel.WARNING);
             return null;
         }
         
@@ -808,7 +881,7 @@ class IA_VehicleManager: GenericEntity
         BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
         if (!compartmentManager)
         {
-            Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: No compartment manager found", LogLevel.WARNING);
+           //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: No compartment manager found", LogLevel.WARNING);
             return null;
         }
         
@@ -818,7 +891,7 @@ class IA_VehicleManager: GenericEntity
         
         if (compartmentCount == 0)
         {
-            Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Vehicle has no compartments", LogLevel.WARNING);
+           //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Vehicle has no compartments", LogLevel.WARNING);
             return null;
         }
         
@@ -854,9 +927,7 @@ class IA_VehicleManager: GenericEntity
         
         if (faction == IA_Faction.CIV)
         {
-            // For civilians, use the same approach as walking civilians
-            vector spawnPos = vehicle.GetOrigin() + vector.Up; // Spawn slightly above vehicle origin
-            group = IA_AiGroup.CreateCivilianGroup(spawnPos);
+            group = IA_AiGroup.CreateCivilianGroupForVehicle(vehicle, scaledCompartmentCount);
         }
         else
         {
@@ -866,7 +937,7 @@ class IA_VehicleManager: GenericEntity
         
         if (!group)
         {
-            Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Failed to create group for vehicle", LogLevel.ERROR);
+           //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Failed to create group for vehicle", LogLevel.ERROR);
             return null;
         }
         
@@ -881,19 +952,19 @@ class IA_VehicleManager: GenericEntity
         // Spawn the group if needed
         if (!group.IsSpawned())
         {
-            Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Spawning group", LogLevel.NORMAL);
+           //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Spawning group", LogLevel.NORMAL);
             group.Spawn();
         }
         
         // First assign the vehicle and destination to the group - this works for both military and civilian
-        Print("[DEBUG_VEHICLE_UNITS] Assigning vehicle and destination to group", LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_UNITS] Assigning vehicle and destination to group", LogLevel.NORMAL);
         group.AssignVehicle(vehicle, destination);
         
         // Then directly teleport units into the vehicle instead of making them walk to it
-        Print("[DEBUG_VEHICLE_UNITS] Placing units in vehicle", LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_UNITS] Placing units in vehicle", LogLevel.NORMAL);
         _PlaceSpawnedUnitsInVehicle(vehicle, group, destination);
         
-        Print("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Vehicle and destination assigned to group", LogLevel.NORMAL);
+       //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Vehicle and destination assigned to group", LogLevel.NORMAL);
         
         return group;
     }
@@ -901,6 +972,15 @@ class IA_VehicleManager: GenericEntity
     // Find a random road entity in the zone around the given position
     static vector FindRandomRoadEntityInZone(vector position, float maxDistance = 300, int groupNumber = -1)
     {
+        // Print(("[VEHICLE_DEBUG] FindRandomRoadEntityInZone called with position: " + position + ", maxDist: " + maxDistance + ", groupNum: " + groupNumber, LogLevel.NORMAL);
+        
+        // If all available positions are empty, return Zero
+        if (position == vector.Zero)
+        {
+            // Print(("[VEHICLE_DEBUG] FindRandomRoadEntityInZone - Input position is vector.Zero!", LogLevel.ERROR);
+            return vector.Zero;
+        }
+        
         // If groupNumber is provided, use it to calculate a dynamic search radius
         if (groupNumber >= 0)
         {
@@ -919,45 +999,55 @@ class IA_VehicleManager: GenericEntity
                 if (centerPoint != vector.Zero)
                 {   
                     position = centerPoint;
+                    // Print(("[VEHICLE_DEBUG] Using group center: " + position + " with radius: " + maxDistance, LogLevel.NORMAL);
                 }
-                //Print("[DEBUG] IA_VehicleManager.FindRandomRoadEntityInZone: Using dynamic radius of " + maxDistance + " based on group " + groupNumber, LogLevel.NORMAL);
             }
         }
         
-        //Print("[DEBUG] IA_VehicleManager.FindRandomRoadEntityInZone: Searching for ANY road entities within radius " + maxDistance + " from center " + position.ToString(), LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] Searching for roads within radius " + maxDistance + " from center " + position.ToString(), LogLevel.NORMAL);
         
-		// Generate a random point within the radius around the center position
-		vector randomVector = IA_Game.rng.GenerateRandomPointInRadius(1, maxDistance, position);
-		//Print("[DEBUG] IA_VehicleManager.FindRandomRoadEntityInZone: Generated random point at " + randomVector.ToString(), LogLevel.NORMAL);
-		
+        // Generate a random point within the radius around the center position
+        vector randomVector = IA_Game.rng.GenerateRandomPointInRadius(1, maxDistance, position);
+        // Print(("[VEHICLE_DEBUG] Generated random point at " + randomVector.ToString(), LogLevel.NORMAL);
+        
         // Create callback to collect road entities
         array<IEntity> roadEntities = {};
         RoadEntitiesCallback callback = new RoadEntitiesCallback(roadEntities);
         AIWorld aiWorld = GetGame().GetAIWorld();
-		SCR_AIWorld scr_aiWorld = SCR_AIWorld.Cast(aiWorld);
-		RoadNetworkManager roadMngr = scr_aiWorld.GetRoadNetworkManager();
-		array<BaseRoad> Roads = {};
-		float distanceFromPoint = 0;
-		
-		// Calculate AABB min and max vectors with large vertical range to account for mountains and valleys
-		// Use a vertical range of ±1000 meters to ensure we capture roads at different elevations
-		vector vectorAABBMin = Vector(position[0] - maxDistance, position[1] - 1000, position[2] - maxDistance);
-		vector vectorAABBMax = Vector(position[0] + maxDistance, position[1] + 1000, position[2] + maxDistance);
-		
-		//roadMngr.GetClosestRoad(randomVector, closestRoad, distanceFromPoint);
-		roadMngr.GetRoadsInAABB(vectorAABBMin, vectorAABBMax, Roads);
-		
+        SCR_AIWorld scr_aiWorld = SCR_AIWorld.Cast(aiWorld);
+        RoadNetworkManager roadMngr = scr_aiWorld.GetRoadNetworkManager();
+        array<BaseRoad> Roads = {};
+        float distanceFromPoint = 0;
+        
+        // Calculate AABB min and max vectors with large vertical range to account for mountains and valleys
+        // Use a vertical range of ±1000 meters to ensure we capture roads at different elevations
+        vector vectorAABBMin = Vector(position[0] - maxDistance, position[1] - 1000, position[2] - maxDistance);
+        vector vectorAABBMax = Vector(position[0] + maxDistance, position[1] + 1000, position[2] + maxDistance);
+        
+        //roadMngr.GetClosestRoad(randomVector, closestRoad, distanceFromPoint);
+        roadMngr.GetRoadsInAABB(vectorAABBMin, vectorAABBMax, Roads);
+        
         if (Roads.IsEmpty()){
-			Print("No Roads Found In AABB!!",LogLevel.FATAL);
+            // Print(("[VEHICLE_DEBUG] No Roads Found In AABB!!", LogLevel.WARNING);
             return FindFallbackNavigationPoint(position, maxDistance, groupNumber);
-		}
-		int randomRoadIndex = Math.RandomInt(0,Roads.Count() - 1);
+        }
+        
+        int randomRoadIndex = Math.RandomInt(0, Roads.Count() - 1);
         array<vector> arrayOfVectors = {};
-		BaseRoad randomRoad = Roads[randomRoadIndex];
-		randomRoad.GetPoints(arrayOfVectors);
+        BaseRoad randomRoad = Roads[randomRoadIndex];
+        randomRoad.GetPoints(arrayOfVectors);
+        
         // Get the road position
-        vector roadPosition = arrayOfVectors[0];
-        //Print("[DEBUG] IA_VehicleManager.FindRandomRoadEntityInZone: Selected random road at " + roadPosition.ToString(), LogLevel.NORMAL);
+        vector roadPosition;
+        if (arrayOfVectors.IsEmpty()) {
+            // Print(("[VEHICLE_DEBUG] Selected road has no points!", LogLevel.WARNING);
+            return FindFallbackNavigationPoint(position, maxDistance, groupNumber);
+        } else {
+            // Pick a random point on the road
+            int randomPointIndex = Math.RandomInt(0, arrayOfVectors.Count() - 1);
+            roadPosition = arrayOfVectors[randomPointIndex];
+            // Print(("[VEHICLE_DEBUG] Selected random road point at " + roadPosition.ToString(), LogLevel.NORMAL);
+        }
         
         return roadPosition;
     }
@@ -969,7 +1059,7 @@ class IA_VehicleManager: GenericEntity
             return false;
 	
             //if(entity.ClassName().Contains("RoadEntity"))
-				//Print("Found Entity!" + entity.ClassName(),LogLevel.NORMAL);
+				//// Print(("Found Entity!" + entity.ClassName(),LogLevel.NORMAL);
         // Check if entity is a road
         return (entity.ClassName() == "RoadEntity");
     }
@@ -977,7 +1067,7 @@ class IA_VehicleManager: GenericEntity
     // Find a fallback point that's suitable for navigation if no roads are found
     static vector FindFallbackNavigationPoint(vector position, float maxDistance = 300, int groupNumber = -1)
     {
-        //Print("[DEBUG] IA_VehicleManager.FindFallbackNavigationPoint: Finding fallback point near " + position.ToString(), LogLevel.NORMAL);
+        //// Print(("[DEBUG] IA_VehicleManager.FindFallbackNavigationPoint: Finding fallback point near " + position.ToString(), LogLevel.NORMAL);
         
         // If groupNumber is provided, use it to calculate a dynamic search radius
         if (groupNumber >= 0)
@@ -990,7 +1080,7 @@ class IA_VehicleManager: GenericEntity
             {
                 // Use the calculated radius plus a small margin
                 maxDistance = groupRadius * 1.2;
-                //Print("[DEBUG] IA_VehicleManager.FindFallbackNavigationPoint: Using dynamic radius of " + maxDistance + " based on group " + groupNumber, LogLevel.NORMAL);
+                //// Print(("[DEBUG] IA_VehicleManager.FindFallbackNavigationPoint: Using dynamic radius of " + maxDistance + " based on group " + groupNumber, LogLevel.NORMAL);
             }
         }
         
@@ -1027,7 +1117,7 @@ class IA_VehicleManager: GenericEntity
             // If slope is reasonable (less than 30 degrees, approximately 0.577 in tangent)
             if (maxSlope < 0.4)
             {
-                //Print("[DEBUG] IA_VehicleManager.FindFallbackNavigationPoint: Found suitable point at " + randPoint.ToString(), LogLevel.NORMAL);
+                //// Print(("[DEBUG] IA_VehicleManager.FindFallbackNavigationPoint: Found suitable point at " + randPoint.ToString(), LogLevel.NORMAL);
                 return randPoint;
             }
         }
@@ -1035,7 +1125,7 @@ class IA_VehicleManager: GenericEntity
         // If all attempts failed, just return a random point in a smaller radius
         vector fallbackPoint = IA_Game.rng.GenerateRandomPointInRadius(1, maxDistance/2, position);
         
-        //Print("[DEBUG] IA_VehicleManager.FindFallbackNavigationPoint: Using simple fallback at " + fallbackPoint.ToString(), LogLevel.WARNING);
+        //// Print(("[DEBUG] IA_VehicleManager.FindFallbackNavigationPoint: Using simple fallback at " + fallbackPoint.ToString(), LogLevel.WARNING);
         return fallbackPoint;
     }
     
@@ -1045,31 +1135,31 @@ class IA_VehicleManager: GenericEntity
         if (!vehicle || !aiGroup)
             return;
             
-        Print("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: Attempting to place units in vehicle", LogLevel.NORMAL);
-        Print("[DEBUG_CIV_VEHICLE] Vehicle: " + vehicle + ", Destination: " + destination, LogLevel.NORMAL);
+       //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: Attempting to place units in vehicle", LogLevel.NORMAL);
+       //// Print(("[DEBUG_CIV_VEHICLE] Vehicle: " + vehicle + ", Destination: " + destination, LogLevel.NORMAL);
 
         // Get the characters from the group
         array<SCR_ChimeraCharacter> characters = aiGroup.GetGroupCharacters();
         if (characters.IsEmpty())
         {
-            Print("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No characters found in AI group", LogLevel.WARNING);
+           //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No characters found in AI group", LogLevel.WARNING);
             return;
         }
         
-        Print("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: Found " + characters.Count() + " characters", LogLevel.NORMAL);
+       //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: Found " + characters.Count() + " characters", LogLevel.NORMAL);
 
         // Find out how many seats the vehicle has (needed again here)
         BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
         if (!compartmentManager)
         {
-            Print("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No compartment manager found", LogLevel.WARNING);
+           //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No compartment manager found", LogLevel.WARNING);
             return;
         }
         array<BaseCompartmentSlot> compartments = {};
         compartmentManager.GetCompartments(compartments);
         if (compartments.IsEmpty())
         {
-             Print("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No compartments found", LogLevel.WARNING);
+            //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No compartments found", LogLevel.WARNING);
              return;
         }
 
@@ -1102,17 +1192,17 @@ class IA_VehicleManager: GenericEntity
                     break; // Ensure we don't go out of bounds
 
                 SCR_ChimeraCharacter passenger = characters[passengerIndex];
-                Print("[DEBUG_CIV_VEHICLE] Placing passenger " + passengerIndex + " in compartment " + i, LogLevel.NORMAL);
+               //// Print(("[DEBUG_CIV_VEHICLE] Placing passenger " + passengerIndex + " in compartment " + i, LogLevel.NORMAL);
                 
                 CompartmentAccessComponent accessComponent = CompartmentAccessComponent.Cast(passenger.FindComponent(CompartmentAccessComponent));
                 if (accessComponent)
                 {
                     accessComponent.GetInVehicle(vehicle, compartment, true, 0, ECloseDoorAfterActions.CLOSE_DOOR, true);
-                    Print("[DEBUG_CIV_VEHICLE] Successfully placed passenger in vehicle", LogLevel.NORMAL);
+                   //// Print(("[DEBUG_CIV_VEHICLE] Successfully placed passenger in vehicle", LogLevel.NORMAL);
                 }
                 else
                 {
-                    Print("[DEBUG_CIV_VEHICLE] Passenger CompartmentAccessComponent is NULL", LogLevel.WARNING);
+                   //// Print(("[DEBUG_CIV_VEHICLE] Passenger CompartmentAccessComponent is NULL", LogLevel.WARNING);
                 }
                 passengerIndex++;
             }
@@ -1123,22 +1213,85 @@ class IA_VehicleManager: GenericEntity
         {
             // Make sure the driving state is set so civilians start driving
             aiGroup.ForceDrivingState(true);
+            
+            // For civilians, set up a recurring check to make sure they're still in the vehicle
+            // This ensures they get back in if they somehow exit
+            GetGame().GetCallqueue().CallLater(CheckCiviliansInVehicle, 5000, true, vehicle, aiGroup, destination);
         }
 
         // Create waypoint for the vehicle to drive to using the AI group we already created
         // This needs to happen *after* units are successfully placed, especially the driver.
-        Print("[DEBUG_CIV_VEHICLE] Creating waypoint for vehicle to drive to: " + destination, LogLevel.NORMAL);
+       //// Print(("[DEBUG_CIV_VEHICLE] Creating waypoint for vehicle to drive to: " + destination, LogLevel.NORMAL);
+        UpdateVehicleWaypoint(vehicle, aiGroup, destination);
+    }
+    
+    // Helper method to periodically check if civilians are still in their vehicle and order them back in if not
+    private static void CheckCiviliansInVehicle(Vehicle vehicle, IA_AiGroup aiGroup, vector destination)
+    {
+        // Stop checking if the vehicle or group is gone
+        if (!vehicle || !aiGroup || !aiGroup.IsSpawned())
+        {
+            // Cancel this recurring check
+            GetGame().GetCallqueue().Remove(CheckCiviliansInVehicle);
+            return;
+        }
+        
+        // Only process for civilian groups
+        if (aiGroup.GetFaction() != IA_Faction.CIV)
+            return;
+        
+        // Get all characters in the group
+        array<SCR_ChimeraCharacter> characters = aiGroup.GetGroupCharacters();
+        if (characters.IsEmpty())
+            return;
+        
+        // Check if any are outside the vehicle
+        bool anyOutside = false;
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character.IsInVehicle())
+            {
+                anyOutside = true;
+                break;
+            }
+        }
+        
+        // If anyone is outside, tell them to get back in
+        if (anyOutside)
+        {
+            // Make sure driving state is still correct
+            aiGroup.ForceDrivingState(true);
+            
+            // Clear orders and create a GetInVehicle order
+            aiGroup.RemoveAllOrders();
+            aiGroup.AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+            
+            // After a delay, update the waypoint again so they continue to their destination
+            GetGame().GetCallqueue().CallLater(UpdateWaypointAfterEntry, 5000, false, vehicle, aiGroup, destination);
+        }
+    }
+    
+    // After civilians re-enter the vehicle, restore their waypoint
+    private static void UpdateWaypointAfterEntry(Vehicle vehicle, IA_AiGroup aiGroup, vector destination)
+    {
+        if (!vehicle || !aiGroup || !aiGroup.IsSpawned())
+            return;
+        
+        // Ensure they're still flagged as driving
+        aiGroup.ForceDrivingState(true);
+        
+        // Update their waypoint to continue the journey
         UpdateVehicleWaypoint(vehicle, aiGroup, destination);
     }
     
     // Helper method to create a waypoint for a vehicle to drive to using a known AI group
     static void CreateWaypointForVehicleUsingGroup(Vehicle vehicle, vector destination, IA_AiGroup aiGroup)
     {
-        //Print("[DEBUG_VEHICLES] CreateWaypointForVehicleUsingGroup called", LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] CreateWaypointForVehicleUsingGroup called", LogLevel.NORMAL);
         
         if (!vehicle || !aiGroup)
         {
-            //Print("[DEBUG_VEHICLES] CreateWaypointForVehicleUsingGroup - vehicle or aiGroup is NULL", LogLevel.WARNING);
+            // Print(("[VEHICLE_DEBUG] CreateWaypointForVehicleUsingGroup - vehicle or aiGroup is NULL", LogLevel.WARNING);
             return;
         }
             
@@ -1155,22 +1308,22 @@ class IA_VehicleManager: GenericEntity
         // If we found a valid road position, use it instead of the original destination
         if (roadDestination != vector.Zero)
         {
-            //Print("[DEBUG_VEHICLES] Using road position for waypoint instead of original destination", LogLevel.NORMAL);
+            // Print(("[VEHICLE_DEBUG] Using road position for waypoint instead of original destination", LogLevel.NORMAL);
             destination = roadDestination;
         }
         else
         {
-            //Print("[DEBUG_VEHICLES] No road found near destination, using original destination", LogLevel.WARNING);
+            // Print(("[VEHICLE_DEBUG] No road found near destination, using original destination", LogLevel.WARNING);
         }
         
-        //Print("[DEBUG_VEHICLES] Creating waypoint at " + destination.ToString(), LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] Creating waypoint at " + destination.ToString(), LogLevel.NORMAL);
         
         // Create a move waypoint at the destination
         ResourceName waypointResource = "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";
         Resource res = Resource.Load(waypointResource);
         if (!res)
         {
-            //Print("[DEBUG_VEHICLES] CreateWaypointForVehicleUsingGroup - Failed to load waypoint resource", LogLevel.ERROR);
+            // Print(("[VEHICLE_DEBUG] CreateWaypointForVehicleUsingGroup - Failed to load waypoint resource", LogLevel.ERROR);
             return;
         }
         
@@ -1181,11 +1334,11 @@ class IA_VehicleManager: GenericEntity
         IEntity waypointEntity = GetGame().SpawnEntityPrefab(res, null, params);
         if (!waypointEntity)
         {
-            //Print("[DEBUG_VEHICLES] CreateWaypointForVehicleUsingGroup - Failed to spawn waypoint entity", LogLevel.ERROR);
+            // Print(("[VEHICLE_DEBUG] CreateWaypointForVehicleUsingGroup - Failed to spawn waypoint entity", LogLevel.ERROR);
             return;
         }
         
-        //Print("[DEBUG_VEHICLES] Waypoint entity spawned successfully", LogLevel.NORMAL);
+        // Print(("[VEHICLE_DEBUG] Waypoint entity spawned successfully", LogLevel.NORMAL);
         
         // Add the waypoint to the group
         SCR_AIWaypoint waypoint = SCR_AIWaypoint.Cast(waypointEntity);
@@ -1193,21 +1346,21 @@ class IA_VehicleManager: GenericEntity
         {
             // Set a very high priority to ensure this waypoint takes precedence
             waypoint.SetPriorityLevel(2000);
-            //Print("[DEBUG_VEHICLES] Setting waypoint priority to 2000", LogLevel.NORMAL);
+            // Print(("[VEHICLE_DEBUG] Setting waypoint priority to 2000", LogLevel.NORMAL);
             
             aiGroup.AddWaypoint(waypoint);
-            //Print("[DEBUG_VEHICLES] Added waypoint to group successfully", LogLevel.NORMAL);
+            // Print(("[VEHICLE_DEBUG] Added waypoint to group successfully", LogLevel.NORMAL);
         }
         else
         {
-            //Print("[DEBUG_VEHICLES] Failed to cast waypoint entity to SCR_AIWaypoint", LogLevel.ERROR);
+            // Print(("[VEHICLE_DEBUG] Failed to cast waypoint entity to SCR_AIWaypoint", LogLevel.ERROR);
         }
     }
     
     // Helper method to create a waypoint for a vehicle to drive to
     static void CreateWaypointForVehicle(Vehicle vehicle, SCR_ChimeraCharacter driver, vector destination)
     {
-        //Print("[DEBUG] IA_VehicleManager.CreateWaypointForVehicle: This method is deprecated. Use CreateWaypointForVehicleUsingGroup instead", LogLevel.WARNING);
+        //// Print(("[DEBUG] IA_VehicleManager.CreateWaypointForVehicle: This method is deprecated. Use CreateWaypointForVehicleUsingGroup instead", LogLevel.WARNING);
         return;
     }
 };

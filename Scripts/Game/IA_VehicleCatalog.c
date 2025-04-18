@@ -121,32 +121,32 @@ class IA_VehicleCatalog
     // Get catalog entries for a specific faction with random vehicle type
     static array<SCR_EntityCatalogEntry> GetVehicleEntries(IA_Faction faction)
     {
-        Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries called for faction " + faction, LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries called for faction " + faction, LogLevel.NORMAL);
         array<SCR_EntityCatalogEntry> result = {};
         
         // Get the faction manager
         SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
         if (!factionManager)
         {
-            Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get faction manager", LogLevel.WARNING);
+           //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get faction manager", LogLevel.WARNING);
             return result;
         }
         
         // Get the faction by key
         string factionKey = GetFactionKey(faction);
-        Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Looking for faction with key " + factionKey, LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Looking for faction with key " + factionKey, LogLevel.NORMAL);
         SCR_Faction scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey(factionKey));
         if (!scrFaction)
         {
-            Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get faction with key " + factionKey, LogLevel.WARNING);
+           //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get faction with key " + factionKey, LogLevel.WARNING);
             // For CIV vehicles, sometimes we might still want US vehicles
             if (faction == IA_Faction.CIV)
             {
-                Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Trying US faction as fallback", LogLevel.NORMAL);
+               //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Trying US faction as fallback", LogLevel.NORMAL);
                 scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
                 if (!scrFaction)
                 {
-                    Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get US faction fallback", LogLevel.WARNING);
+                   //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get US faction fallback", LogLevel.WARNING);
                     return result;
                 }
             }
@@ -157,11 +157,11 @@ class IA_VehicleCatalog
         }
         
         // Get the entity catalog for vehicles
-        Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Getting vehicle catalog for faction " + factionKey, LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Getting vehicle catalog for faction " + factionKey, LogLevel.NORMAL);
         SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
         if (!entityCatalog)
         {
-            Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get entity catalog", LogLevel.WARNING);
+           //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get entity catalog", LogLevel.WARNING);
             return result;
         }
         
@@ -179,41 +179,41 @@ class IA_VehicleCatalog
         }
         
         // Get the filtered list of vehicles
-        Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Getting filtered entity list", LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Getting filtered entity list", LogLevel.NORMAL);
         entityCatalog.GetFullFilteredEntityList(result, includedLabels, excludedLabels);
-        Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Found " + result.Count() + " entries", LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Found " + result.Count() + " entries", LogLevel.NORMAL);
         return result;
     }
     
     // Get a random catalog entry for a specific faction
     static SCR_EntityCatalogEntry GetRandomVehicleEntry(IA_Faction faction)
     {
-        Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry called for faction " + faction, LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry called for faction " + faction, LogLevel.NORMAL);
         array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
         if (entries.IsEmpty())
         {
-            Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry: No entries found", LogLevel.WARNING);
+           //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry: No entries found", LogLevel.WARNING);
             return null;
         }
             
         int idx = IA_Game.rng.RandInt(0, entries.Count());
-        Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry: Found " + entries.Count() + " entries, selected index " + idx, LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry: Found " + entries.Count() + " entries, selected index " + idx, LogLevel.NORMAL);
         return entries[idx];
     }
     
     // Get a random vehicle prefab resource name as a string
     static string GetRandomVehiclePrefab(IA_Faction faction)
     {
-        Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab called for faction " + faction, LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab called for faction " + faction, LogLevel.NORMAL);
         SCR_EntityCatalogEntry entry = GetRandomVehicleEntry(faction);
         if (!entry)
         {
-            Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab: No entry found", LogLevel.WARNING);
+           //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab: No entry found", LogLevel.WARNING);
             return "";
         }
             
         string prefab = entry.GetPrefab();
-        Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab: Selected prefab " + prefab, LogLevel.NORMAL);
+       //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab: Selected prefab " + prefab, LogLevel.NORMAL);
         return prefab;
     }
     

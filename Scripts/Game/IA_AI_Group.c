@@ -1,3 +1,13 @@
+// Add these enums at the top of the file, before the IA_AiGroup class
+enum IA_GroupDangerType
+{
+    ProjectileImpact,
+    WeaponFire,
+    ProjectileFlyby,
+    Explosion,
+    EnemySpotted
+}
+
 ///////////////////////////////////////////////////////////////////////
 // 3) AI GROUP
 ///////////////////////////////////////////////////////////////////////
@@ -20,11 +30,34 @@ class IA_AiGroup
 
     private IA_Faction m_engagedEnemyFaction = IA_Faction.NONE;
 
+    // Add reaction manager
+    private ref IA_AIReactionManager m_reactionManager = null;
+
     // Add a member variable to track last vehicle order update time
     private int m_lastVehicleOrderTime = 0;
     
     // Set minimum time between vehicle order updates (in seconds)
     private static const int VEHICLE_ORDER_UPDATE_INTERVAL = 3;
+
+    // Add these variables to the class variables section near the top
+    private int m_nextStateEvaluationTime = 0;
+    private const int MIN_STATE_EVALUATION_INTERVAL = 4000; // milliseconds
+    private const int MAX_STATE_EVALUATION_INTERVAL = 12000; // milliseconds
+    private bool m_isStateEvaluationScheduled = false;
+
+    // Danger reaction system parameters
+    private const float BULLET_IMPACT_DISTANCE_MAX = 10.0;
+    private const float PROJECTILE_FLYBY_RADIUS = 13.0;
+    private const float GUNSHOT_AUDIBLE_DISTANCE = 500.0;
+    private const float SUPPRESSED_AUDIBLE_DISTANCE = 100.0;
+    private const float EXPLOSION_REACT_DISTANCE = 220.0;
+    
+    // Danger event tracking
+    private int m_lastDangerEventTime = 0;
+    private vector m_lastDangerPosition = vector.Zero;
+    private IA_GroupDangerType m_lastDangerType = IA_GroupDangerType.EnemySpotted;
+    private float m_currentDangerLevel = 0.0; // 0.0-1.0 scale
+    private int m_consecutiveDangerEvents = 0;
 
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac)
     {
@@ -34,6 +67,7 @@ class IA_AiGroup
         m_lastOrderTime     = 0;
         m_squadType         = squad;
         m_faction           = fac;
+        m_reactionManager   = new IA_AIReactionManager();
     }
 
 	static IA_AiGroup CreateMilitaryGroup(vector initialPos, IA_SquadType squadType, IA_Faction faction)
@@ -169,12 +203,21 @@ class IA_AiGroup
 	bool HasActiveWaypoint()
 	{
 		if (!m_group)
+		{
+			Print("[VEHICLE_DEBUG] HasActiveWaypoint - group is null", LogLevel.WARNING);
 			return false;
+		}
 		
 		array<AIWaypoint> wps = {};
 		m_group.GetWaypoints(wps);
 		
-		return !wps.IsEmpty();
+		bool hasWaypoints = !wps.IsEmpty();
+		if (m_isDriving && !hasWaypoints)
+		{
+			Print("[VEHICLE_DEBUG] HasActiveWaypoint - Vehicle group has no waypoints!", LogLevel.WARNING);
+		}
+		
+		return hasWaypoints;
 	}
 
 	
@@ -268,21 +311,21 @@ class IA_AiGroup
         }
         
         // Log the actual compartment counts for debugging
-        Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Vehicle has " + compartments.Count() + 
-              " total compartments, " + usableCompartments.Count() + " usable compartments", LogLevel.NORMAL);
+       //Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Vehicle has " + compartments.Count() + 
+//              " total compartments, " + usableCompartments.Count() + " usable compartments", LogLevel.NORMAL);
         
         // Use the smaller of unitCount or usableCompartments to avoid spawning too many units
         int actualUnitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
-        Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Spawning " + actualUnitsToSpawn + 
-              " individual units for faction " + faction + " (requested: " + unitCount + 
-              ", usable compartments: " + usableCompartments.Count() + ")", LogLevel.NORMAL);
+//       //Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Spawning " + actualUnitsToSpawn + 
+ //             " individual units for faction " + faction + " (requested: " + unitCount + 
+ //             ", usable compartments: " + usableCompartments.Count() + ")", LogLevel.NORMAL);
 
         // Spawn individual units and add them to group
         for (int i = 0; i < actualUnitsToSpawn; i++)
         {
 			string charPrefabPath = GetRandomUnitPrefab(faction);
 			
-        	Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Using character prefab: " + charPrefabPath, LogLevel.NORMAL);
+ //       	Print("[DEBUG] IA_AiGroup.CreateGroupForVehicle: Using character prefab: " + charPrefabPath, LogLevel.NORMAL);
 
             // Spawn the character slightly offset from group position
             vector unitSpawnPos = groundPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
@@ -479,6 +522,7 @@ class IA_AiGroup
         // If this is a vehicle group, update vehicle orders first
         if (m_isDriving)
         {
+            Print("[VEHICLE_DEBUG] AddOrder - Passing to UpdateVehicleOrders for vehicle group. Order: " + order + ", Position: " + origin, LogLevel.NORMAL);
             UpdateVehicleOrders();
             return; // Let the vehicle order system handle it
         }
@@ -623,10 +667,16 @@ class IA_AiGroup
         if (!m_group)
             return;
         
-        //Print("[DEBUG_VEHICLE_TRACKING] RemoveAllOrders called, resetTime: " + resetLastOrderTime + ", isDriving: " + m_isDriving + ", entity: " + m_referencedEntity, LogLevel.NORMAL);
+        Print("[VEHICLE_DEBUG] RemoveAllOrders called, resetTime: " + resetLastOrderTime + ", isDriving: " + m_isDriving + ", entity: " + m_referencedEntity, LogLevel.NORMAL);
         
         array<AIWaypoint> wps = {};
         m_group.GetWaypoints(wps);
+        
+        if (!wps.IsEmpty())
+        {
+            Print("[VEHICLE_DEBUG] RemoveAllOrders - Removing " + wps.Count() + " waypoints", LogLevel.NORMAL);
+        }
+        
         foreach (AIWaypoint w : wps)
         {
             m_group.RemoveWaypoint(w);
@@ -644,29 +694,19 @@ class IA_AiGroup
                 Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
                 if (vehicle)
                 {
-                    //Print("[DEBUG_VEHICLE_TRACKING] Resetting driving state for vehicle group as requested", LogLevel.WARNING);
+                    Print("[VEHICLE_DEBUG] RemoveAllOrders - Resetting driving state for vehicle group as requested", LogLevel.WARNING);
                     // This is a valid vehicle group and resetLastOrderTime was explicitly requested
                     // Use ClearVehicleReference to properly clean up
                     ClearVehicleReference();
                 }
                 else
                 {
-                    //Print("[DEBUG_VEHICLE_TRACKING] Found inconsistency: IsDriving=true but invalid vehicle reference", LogLevel.ERROR);
+                    Print("[VEHICLE_DEBUG] RemoveAllOrders - Found inconsistency: IsDriving=true but invalid vehicle reference", LogLevel.ERROR);
                     // If referenced entity is not a vehicle, clear the state
                     m_isDriving = false;
                     m_referencedEntity = null;
                 }
             }
-            else if (resetLastOrderTime)
-            {
-                // Regular group, just clear order time
-                //Print("[DEBUG_VEHICLE_TRACKING] Resetting order time for infantry group", LogLevel.NORMAL);
-            }
-        }
-        else
-        {
-            // Preserve driving state when just clearing waypoints for new orders
-            //Print("[DEBUG_VEHICLE_TRACKING] Preserving driving state: " + m_isDriving, LogLevel.NORMAL);
         }
     }
 
@@ -802,19 +842,17 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             m_group = SCR_AIGroup.Cast(entity);
             //Print("[DEBUG] Cast main entity to SCR_AIGroup.", LogLevel.NORMAL);
         }
-	if (m_group)
-	{
-	    vector groundPos = m_initialPosition;
-	    float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-	    groundPos[1] = groundY;
-	    
-
-	    
-	    // Also update the origin if that function exists.
-	    m_group.SetOrigin(groundPos);
-	    
-	    //Print("[DEBUG] Group position forced to ground level: " + groundPos, LogLevel.NORMAL);
-	}
+        if (m_group)
+        {
+            vector groundPos = m_initialPosition;
+            float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
+            groundPos[1] = groundY;
+            
+            // Also update the origin if that function exists.
+            m_group.SetOrigin(groundPos);
+            
+            //Print("[DEBUG] Group position forced to ground level: " + groundPos, LogLevel.NORMAL);
+        }
 
         if (!m_group)
         {
@@ -824,10 +862,716 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 
         SetupDeathListener();
         WaterCheck();
+        
+        // Register with damage manager
+        /* 
+        IA_DamageManager.GetInstance().RegisterAIGroup(this);
+        */
+        
+        // Log a test message to verify logging system is working
+        Print("!!! [LOG TEST] AI Group spawned at " + GetOrigin() + " with faction " + m_faction, LogLevel.WARNING);
+        
+        // DISABLE automatic test runs to prevent false positives
+        // Test the danger event system
+        // GetGame().GetCallqueue().CallLater(TestDangerSystem, 5000);
+        
+        // Schedule the first state evaluation when the group is spawned
+        ScheduleNextStateEvaluation();
+        
+        // Start periodic danger event checks
+        GetGame().GetCallqueue().CallLater(CheckDangerEvents, 100, true);
+        
         //Print("[DEBUG] PerformSpawn completed successfully.", LogLevel.NORMAL);
         return true;
     }
 
+    // Process a danger event at the group level
+    void ProcessDangerEvent(IA_GroupDangerType dangerType, vector position, IEntity sourceEntity = null, float intensity = 0.5, bool isSuppressed = false)
+    {
+        // Force this to always print as WARNING to ensure visibility
+        Print("[IA_AI_DANGER] Group at " + GetOrigin() + " processing danger: " + 
+              typename.EnumToString(IA_GroupDangerType, dangerType) + 
+              " at position " + position, LogLevel.WARNING);
+        
+        // Skip if group is not spawned
+        if (!IsSpawned() || !m_group)
+            return;
+            
+        // Calculate distance to danger
+        float distance = vector.Distance(GetOrigin(), position);
+        
+        // Store event information
+        m_lastDangerEventTime = System.GetUnixTime();
+        m_lastDangerPosition = position;
+        m_lastDangerType = dangerType;
+        
+        // Calculate if this danger should be reacted to based on type and distance
+        bool shouldReact = false;
+        IA_AIReactionType reactionType = IA_AIReactionType.None;
+        float reactionIntensity = intensity;
+        
+        // Determine reaction based on danger type
+        switch (dangerType)
+        {
+            case IA_GroupDangerType.ProjectileImpact:
+                // React to nearby impacts only
+                if (distance <= BULLET_IMPACT_DISTANCE_MAX)
+                {
+                    shouldReact = true;
+                    reactionType = IA_AIReactionType.TakingFire;
+                    reactionIntensity = Math.Clamp(1.0 - (distance / BULLET_IMPACT_DISTANCE_MAX), 0.3, 0.8);
+                    m_consecutiveDangerEvents++;
+                    
+                    Print("[IA_AI_DANGER] Projectile impact detected at " + distance + "m", LogLevel.WARNING);
+                }
+                break;
+                
+            case IA_GroupDangerType.WeaponFire:
+                // Check if gunshot is audible based on distance and suppression
+                float maxAudibleDistance;
+                if (isSuppressed)
+                    maxAudibleDistance = SUPPRESSED_AUDIBLE_DISTANCE;
+                else
+                    maxAudibleDistance = GUNSHOT_AUDIBLE_DISTANCE;
+                
+                if (distance <= maxAudibleDistance)
+                {
+                    shouldReact = true;
+                    reactionType = IA_AIReactionType.EnemySpotted;
+                    // Lower intensity for distant or suppressed shots
+                    float distanceFactor = Math.Clamp(1.0 - (distance / maxAudibleDistance), 0.1, 0.7);
+                    float suppressionFactor;
+                    if (isSuppressed)
+                        suppressionFactor = 0.5;
+                    else
+                        suppressionFactor = 1.0;
+                    
+                    reactionIntensity = distanceFactor * suppressionFactor;
+                    m_consecutiveDangerEvents++;
+                    
+                    Print("[IA_AI_DANGER] Weapon fire detected at " + distance + "m (Suppressed: " + isSuppressed + ")", LogLevel.WARNING);
+                }
+                break;
+                
+            case IA_GroupDangerType.ProjectileFlyby:
+                // Always react to flybys with high priority
+                shouldReact = true;
+                reactionType = IA_AIReactionType.UnderAttack;
+                reactionIntensity = Math.Clamp(0.7 + (intensity * 0.3), 0.7, 1.0);
+                m_consecutiveDangerEvents += 2; // Flybys are more threatening
+                
+                Print("[IA_AI_DANGER] Projectile flyby detected!", LogLevel.WARNING);
+                break;
+                
+            case IA_GroupDangerType.Explosion:
+                // React to explosions based on distance
+                if (distance <= EXPLOSION_REACT_DISTANCE)
+                {
+                    shouldReact = true;
+                    reactionType = IA_AIReactionType.UnderAttack;
+                    // Higher intensity for closer explosions
+                    reactionIntensity = Math.Clamp(1.0 - (distance / EXPLOSION_REACT_DISTANCE), 0.5, 1.0);
+                    m_consecutiveDangerEvents += 3; // Explosions are very threatening
+                    
+                    Print("[IA_AI_DANGER] Explosion detected at " + distance + "m", LogLevel.WARNING);
+                }
+                break;
+                
+            case IA_GroupDangerType.EnemySpotted:
+                // Always react to enemy spotting with variable intensity
+                shouldReact = true;
+                reactionType = IA_AIReactionType.EnemySpotted;
+                // Use provided intensity directly
+                m_consecutiveDangerEvents++;
+                
+                Print("[IA_AI_DANGER] Enemy spotted at " + distance + "m", LogLevel.WARNING);
+                break;
+        }
+        
+        // Update danger level based on consecutive events (increases with multiple events)
+        m_currentDangerLevel = Math.Clamp(0.2 * m_consecutiveDangerEvents, 0.0, 1.0);
+        
+        // Apply decay to consecutive events over time
+        int timeSinceLastDanger = System.GetUnixTime() - m_lastDangerEventTime;
+        if (timeSinceLastDanger > 30 && m_consecutiveDangerEvents > 0)
+        {
+            m_consecutiveDangerEvents = Math.Max(0, m_consecutiveDangerEvents - 1);
+        }
+        
+        // If danger should cause a reaction, trigger it via reaction manager
+        if (shouldReact && reactionType != IA_AIReactionType.None && m_reactionManager)
+        {
+            // Check source entity for faction
+            IA_Faction sourceFaction = IA_Faction.NONE;
+            if (sourceEntity)
+            {
+                SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(sourceEntity);
+                if (character)
+                {
+                    string factionKey = character.GetFaction().GetFactionKey();
+                    if (factionKey == "US")
+                        sourceFaction = IA_Faction.US;
+                    else if (factionKey == "USSR")
+                        sourceFaction = IA_Faction.USSR;
+                    else if (factionKey == "CIV")
+                        sourceFaction = IA_Faction.CIV;
+                }
+            }
+            
+            // Apply danger level as a multiplier to the reaction intensity
+            float multiplier = 0.5 + (m_currentDangerLevel * 0.5);
+            float finalIntensity = reactionIntensity * multiplier;
+            
+            // Trigger the reaction in the manager
+            m_reactionManager.TriggerReaction(
+                reactionType,
+                finalIntensity,
+                position,
+                sourceEntity,
+                sourceFaction
+            );
+            
+            Print("[IA_AI_DANGER] Triggering reaction: " + typename.EnumToString(IA_AIReactionType, reactionType) + 
+                  " with intensity " + finalIntensity + " (base: " + reactionIntensity + 
+                  ", danger level: " + m_currentDangerLevel + ")", LogLevel.WARNING);
+        }
+    }
+    
+    // New method to reset all danger and reaction states - useful for debugging and fixing false positives
+    void ResetDangerState()
+    {
+        m_currentDangerLevel = 0.0;
+        m_consecutiveDangerEvents = 0;
+        m_lastDangerEventTime = 0;
+        m_lastDangerPosition = vector.Zero;
+        
+        if (m_reactionManager)
+        {
+            m_reactionManager.ClearAllReactions();
+        }
+        
+        Print("[IA_AI_DANGER] Manually reset ALL danger state and reactions for group at " + GetOrigin(), LogLevel.WARNING);
+    }
+    
+    // Modify the reaction manager class to ensure reactions expire properly
+    // Edit IA_AIReactionManager.ProcessReactions() method
+    /* 
+    void ProcessReactions()
+    {
+        // Process active reactions
+        if (m_activeReactions.Count() > 0)
+        {
+            // Check if current reaction has expired
+            int currentTime = System.GetUnixTime();
+            
+            // Process all reactions in the list to apply decay and remove expired ones
+            for (int i = m_activeReactions.Count() - 1; i >= 0; i--)
+            {
+                IA_AIReactionState reaction = m_activeReactions[i];
+                if (!reaction)
+                {
+                    m_activeReactions.RemoveOrdered(i);
+                continue;
+            }
+                
+                // Check if reaction has expired
+                if (currentTime - reaction.GetStartTime() > reaction.GetDuration())
+            {
+                    Print("[IA_AI_REACTION] Reaction expired: " + 
+                          typename.EnumToString(IA_AIReactionType, reaction.GetReactionType()), LogLevel.WARNING);
+                    m_activeReactions.RemoveOrdered(i);
+                continue;
+            }
+                
+                // Apply intensity decay over time for long-lasting reactions
+                if (reaction.GetDuration() > 30 && currentTime - reaction.GetStartTime() > 15)
+                {
+                    float originalIntensity = reaction.GetIntensity();
+                    float percentRemaining = 1.0 - ((currentTime - reaction.GetStartTime()) / reaction.GetDuration());
+                    float newIntensity = originalIntensity * percentRemaining;
+                    reaction.SetIntensity(newIntensity);
+                }
+            }
+            
+            // Sort reactions by priority again in case intensities have changed
+            if (m_activeReactions.Count() > 0)
+            {
+                SortReactionsByPriority();
+            }
+        }
+    }
+    */
+
+    // Test method to verify the danger system is working
+    private void TestDangerSystem()
+    {
+        if (!IsSpawned() || !m_group)
+             return;
+            
+        // Create a test position in front of the group
+        vector forward = Vector(1, 0, 0);
+        vector testPos = GetOrigin() + forward * 20;
+        
+        // Print direct debug message to confirm method is running
+        Print("!!! [TEST_DANGER_SYSTEM] Testing danger system for group at " + GetOrigin(), LogLevel.WARNING);
+        
+        // Test each danger type
+        OnProjectileImpact(testPos);
+        
+        // Schedule more tests with delays
+        GetGame().GetCallqueue().CallLater(TestWeaponFire, 1000);
+        GetGame().GetCallqueue().CallLater(TestProjectileFlyby, 2000);
+        GetGame().GetCallqueue().CallLater(TestExplosion, 3000);
+    }
+    
+    private void TestWeaponFire()
+    {
+        if (!IsSpawned()) return;
+        
+        Print("!!! [TEST_DANGER_SYSTEM] Testing weapon fire reaction", LogLevel.WARNING);
+        vector testPos = GetOrigin() + Vector(0, 0, 1) * 30;
+        OnWeaponFired(testPos, null, false);
+    }
+    
+    private void TestProjectileFlyby()
+    {
+        if (!IsSpawned()) return;
+        
+        Print("!!! [TEST_DANGER_SYSTEM] Testing projectile flyby reaction", LogLevel.WARNING);
+        vector testPos = GetOrigin() + Vector(-1, 0, 0) * 15;
+        OnProjectileFlyby(testPos);
+    }
+    
+    private void TestExplosion()
+    {
+        if (!IsSpawned()) return;
+        
+        Print("!!! [TEST_DANGER_SYSTEM] Testing explosion reaction", LogLevel.WARNING);
+        vector testPos = GetOrigin() + Vector(0, 0, -1) * 40;
+        OnExplosion(testPos);
+    }
+    
+    // Helper methods for specific danger types
+    
+    // Called when bullets hit near the group
+    void OnProjectileImpact(vector impactPosition, IEntity shooterEntity = null)
+    {
+        ProcessDangerEvent(IA_GroupDangerType.ProjectileImpact, impactPosition, shooterEntity);
+    }
+    
+    // Called when a weapon is fired that the group can hear
+    void OnWeaponFired(vector shotPosition, IEntity shooterEntity = null, bool isSuppressed = false)
+    {
+        ProcessDangerEvent(IA_GroupDangerType.WeaponFire, shotPosition, shooterEntity, 0.5, isSuppressed);
+    }
+    
+    // Called when a projectile passes very close to the group
+    void OnProjectileFlyby(vector flybyPosition, IEntity shooterEntity = null)
+    {
+        ProcessDangerEvent(IA_GroupDangerType.ProjectileFlyby, flybyPosition, shooterEntity, 0.8);
+    }
+    
+    // Called when an explosion occurs near the group
+    void OnExplosion(vector explosionPosition, IEntity sourceEntity = null)
+    {
+        ProcessDangerEvent(IA_GroupDangerType.Explosion, explosionPosition, sourceEntity, 0.9);
+    }
+    
+    // Called when the group spots an enemy
+    void OnEnemySpotted(vector enemyPosition, IEntity enemyEntity, float threatLevel = 0.5)
+    {
+        ProcessDangerEvent(IA_GroupDangerType.EnemySpotted, enemyPosition, enemyEntity, threatLevel);
+    }
+    
+    // New method to add to EvaluateGroupState to check danger level and react accordingly
+    private void EvaluateDangerState()
+    {
+        // If no current danger, reset and return
+        if (m_currentDangerLevel <= 0.0 || System.GetUnixTime() - m_lastDangerEventTime > 120)
+        {
+            if (m_consecutiveDangerEvents > 0)
+            {
+                m_consecutiveDangerEvents = 0;
+                m_currentDangerLevel = 0.0;
+                Print("[IA_AI_DANGER] Danger state reset due to timeout", LogLevel.WARNING);
+            }
+            return;
+        }
+        
+        // If already engaged or has active reaction, let those systems handle it
+        if (IsEngagedWithEnemy() || (m_reactionManager && m_reactionManager.HasActiveReaction()))
+            return;
+            
+        // If high danger level but no specific reaction yet, create a general heightened awareness state
+        if (m_currentDangerLevel > 0.7 && !m_isDriving)
+        {
+            // Group is in high danger but no specific threat identified
+            // Take defensive actions - find cover or better position
+            vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(10, 20, GetOrigin());
+            
+            // If we have a last known danger position, move away from it
+            if (m_lastDangerPosition != vector.Zero)
+            {
+                vector awayDir = GetOrigin() - m_lastDangerPosition;
+                awayDir = awayDir.Normalized();
+                defendPos = GetOrigin() + awayDir * 15;
+            }
+            
+            // Only issue new orders if we don't already have some
+            if (!HasOrders())
+            {
+                Print("[IA_AI_DANGER] High danger level detected, taking defensive position", LogLevel.WARNING);
+                AddOrder(defendPos, IA_AiOrder.Defend, true);
+            }
+        }
+        else if (m_currentDangerLevel > 0.3 && !m_isDriving && !HasOrders())
+        {
+            // Medium danger level, increase awareness by looking in danger direction
+            if (m_lastDangerPosition != vector.Zero)
+            {
+                Print("[IA_AI_DANGER] Medium danger level, orienting toward potential threat", LogLevel.WARNING);
+                AddOrder(m_lastDangerPosition, IA_AiOrder.Defend);
+            }
+        }
+    }
+
+    // Helper to set up death listener for a single unit (used by CreateGroupForVehicle)
+    private void SetupDeathListenerForUnit(IEntity unitEntity)
+    {
+         SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(unitEntity);
+         if (!ch) return;
+
+         SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
+         if (!ccc) {
+             //Print("[IA_AiGroup.SetupDeathListenerForUnit] Missing SCR_CharacterControllerComponent in AI", LogLevel.WARNING);
+             return;
+         }
+         ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
+         
+         // Register this unit with the damage manager
+         /* 
+         IA_DamageManager.GetInstance().RegisterEntity(ch, this);
+         */
+    }
+
+    private void SetupDeathListener()
+    {
+        if (!m_group)
+            return;
+            
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        
+        if (agents.IsEmpty())
+        {
+            GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
+            return;
+        }
+        
+        foreach (AIAgent agent : agents)
+        {
+            SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
+            if (!ch)
+                continue;
+                
+            SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
+            if (!ccc)
+                continue;
+                
+            ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
+            
+            // Set up danger event processing for this agent
+            ProcessAgentDangerEvents(agent);
+        }
+    }
+
+    // New method to process danger events for an agent
+    private void ProcessAgentDangerEvents(AIAgent agent)
+    {
+        if (!agent)
+            return;
+            
+        int dangerCount = agent.GetDangerEventsCount();
+        if (dangerCount <= 0)
+            return;
+            
+        // Process each danger event
+        for (int i = 0; i < dangerCount; i++)
+        {
+            AIDangerEvent dangerEvent = agent.GetDangerEvent();
+            if (!dangerEvent)
+                continue;
+                
+            EAIDangerEventType dangerType = dangerEvent.GetDangerType();
+            AIAgent senderAgent = dangerEvent.GetSender();
+            AIAgent receiverAgent = dangerEvent.GetReceiver();
+            vector dangerVector = dangerEvent.GetPosition();
+            
+            // Map the native danger type to our reaction system
+            IA_GroupDangerType mappedDangerType;
+            IA_AIReactionType reactionType;
+            float intensity = 0.5;
+            bool isSuppressed = false;
+            
+            switch (dangerType)
+            {
+                case EAIDangerEventType.Danger_ProjectileHit:
+                    mappedDangerType = IA_GroupDangerType.ProjectileImpact;
+                    reactionType = IA_AIReactionType.TakingFire;
+                    intensity = 0.7;
+                    break;
+                    
+                case EAIDangerEventType.Danger_WeaponFire:
+                    mappedDangerType = IA_GroupDangerType.WeaponFire;
+                    reactionType = IA_AIReactionType.EnemySpotted;
+                    intensity = 0.6;
+                    break;
+                    
+                case EAIDangerEventType.Danger_Explosion:
+                    mappedDangerType = IA_GroupDangerType.Explosion;
+                    reactionType = IA_AIReactionType.UnderAttack;
+                    intensity = 0.9;
+                    break;
+                    
+                case EAIDangerEventType.Danger_NewEnemy:
+                    mappedDangerType = IA_GroupDangerType.EnemySpotted;
+                    reactionType = IA_AIReactionType.EnemySpotted;
+                    intensity = 0.8;
+                    break;
+                    
+                case EAIDangerEventType.Danger_DamageTaken:
+                    mappedDangerType = IA_GroupDangerType.ProjectileImpact;
+                    reactionType = IA_AIReactionType.TakingFire;
+                    intensity = 0.6;
+                    break;
+                    
+                default:
+                    continue; // Skip other danger types for now
+            }
+            
+            // Get the source entity if available
+            IEntity sourceEntity = null;
+            if (senderAgent)
+            {
+                sourceEntity = senderAgent.GetControlledEntity();
+            }
+            
+            // Process the danger event through our existing system
+            ProcessDangerEvent(mappedDangerType, dangerVector, sourceEntity, intensity, isSuppressed);
+        }
+    }
+
+    private void WaterCheck()
+    {
+        //Print("[DEBUG] WaterCheck called (placeholder).", LogLevel.NORMAL);
+        // No extra water check here because safe areas are pre-defined.
+    }
+    
+    void UpdateVehicleOrders()
+    {
+        if (!m_isDriving || !m_referencedEntity)
+        {
+            Print("[VEHICLE_DEBUG] UpdateVehicleOrders - exiting early - isDriving: " + m_isDriving + ", referencedEntity: " + m_referencedEntity, LogLevel.WARNING);
+            return;
+        }
+            
+        // Skip if we've just updated recently
+        int currentTime = System.GetUnixTime();
+        if (currentTime - m_lastVehicleOrderTime < VEHICLE_ORDER_UPDATE_INTERVAL)
+        {
+            return;
+        }
+            
+        m_lastVehicleOrderTime = currentTime;
+        
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (!vehicle)
+        {
+            Print("[VEHICLE_DEBUG] UpdateVehicleOrders - Invalid vehicle reference, clearing", LogLevel.ERROR);
+            // Clear vehicle reference if it's no longer valid
+            ClearVehicleReference();
+            return;
+        }
+        
+        // Get all group members
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        if (characters.IsEmpty())
+        {
+            Print("[VEHICLE_DEBUG] UpdateVehicleOrders - No group characters found", LogLevel.WARNING);
+            return;
+        }
+            
+        bool anyOutside = false;
+        
+        // Check if any characters are outside the vehicle
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character.IsInVehicle())
+            {
+                anyOutside = true;
+                break;
+            }
+        }
+        
+        // If anyone is outside the vehicle, issue GetInVehicle order - works for both military and civilians
+        if (anyOutside)
+        {
+            Print("[VEHICLE_DEBUG] UpdateVehicleOrders - Members outside vehicle " + vehicle + ", ordering them back in", LogLevel.NORMAL);
+            
+            // Clear existing orders
+            RemoveAllOrders();
+            
+            // Add GetInVehicle order using the existing order system
+            AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+            
+            // Make sure driving state is still set, especially important for civilians
+            m_isDriving = true;
+            
+            return;
+        }
+        
+        // If everyone is in the vehicle and we have a destination, make sure we have a waypoint
+        if (!anyOutside && m_drivingTarget != vector.Zero)
+        {
+            // Check if we need a new waypoint (don't have one or reached destination)
+            bool hasActiveWP = HasActiveWaypoint();
+            bool vehicleReachedDest = IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget);
+            
+            Print("[VEHICLE_DEBUG] UpdateVehicleOrders - hasActiveWaypoint: " + hasActiveWP + 
+                  ", reachedDestination: " + vehicleReachedDest + 
+                  ", target: " + m_drivingTarget, LogLevel.NORMAL);
+                  
+            if (!hasActiveWP || vehicleReachedDest)
+            {
+                Print("[VEHICLE_DEBUG] UpdateVehicleOrders - Creating new waypoint for vehicle " + vehicle, LogLevel.NORMAL);
+                // Everyone's in the vehicle and we need a waypoint - ensure driving mode is on (especially for civilians) 
+                m_isDriving = true;
+                
+                // Update the waypoint using the existing utility function
+                IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
+            }
+        }
+        else if (m_drivingTarget == vector.Zero)
+        {
+            Print("[VEHICLE_DEBUG] UpdateVehicleOrders - Vehicle has zero destination target!", LogLevel.ERROR);
+        }
+    }
+
+    // Add a method to properly reset vehicle state
+    void ClearVehicleReference()
+    {
+        Print("[VEHICLE_DEBUG] ClearVehicleReference called. Previous state: isDriving=" + m_isDriving + ", entity=" + m_referencedEntity, LogLevel.WARNING);
+        
+        // If there was a vehicle reservation, release it
+        if (m_referencedEntity)
+        {
+            Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+            if (vehicle)
+            {
+                IA_VehicleManager.ReleaseVehicleReservation(vehicle);
+                Print("[VEHICLE_DEBUG] Released vehicle reservation for " + vehicle, LogLevel.NORMAL);
+            }
+        }
+        
+        // Reset vehicle-related state variables
+        m_isDriving = false;
+        m_referencedEntity = null;
+        m_drivingTarget = vector.Zero;
+        Print("[VEHICLE_DEBUG] Vehicle state has been cleared", LogLevel.NORMAL);
+    }
+
+    // Return the referenced entity (usually a vehicle)
+    IEntity GetReferencedEntity()
+    {
+        return m_referencedEntity;
+    }
+    
+    // Return the current driving target position
+    vector GetDrivingTarget()
+    {
+        return m_drivingTarget;
+    }
+
+    // Add a method to help debug the m_isDriving field
+    void ForceDrivingState(bool state)
+    {
+        //Print("[DEBUG_VEHICLE_LOGIC] ForceDrivingState called, changing from " + m_isDriving + " to " + state, LogLevel.NORMAL);
+        m_isDriving = state;
+    }
+
+    // Process AI reactions and apply appropriate behaviors
+    void ProcessReactions()
+    {
+        if (!m_reactionManager || !IsSpawned())
+            return;
+            
+        // Process the reactions in the manager
+        m_reactionManager.ProcessReactions();
+        
+        // If there's an active reaction, apply the behavior
+        if (m_reactionManager.HasActiveReaction())
+        {
+            IA_AIReactionState reaction = m_reactionManager.GetCurrentReaction();
+            ApplyReactionBehavior(reaction);
+        }
+    }
+
+    static IA_AiGroup CreateCivilianGroupForVehicle(Vehicle vehicle, int unitCount)
+    {
+        if (!vehicle || unitCount <= 0)
+            return null;
+
+        vector spawnPos = vehicle.GetOrigin() + vector.Up; // slightly above vehicle
+        // Use the standard civilian group spawner to handle spawning
+        IA_AiGroup grp = IA_AiGroup.CreateCivilianGroup(spawnPos);
+        return grp;
+    }
+    
+    void AssignVehicle(Vehicle vehicle, vector destination)
+    {
+        Print("[VEHICLE_DEBUG] AssignVehicle called. Vehicle: " + vehicle + ", Destination: " + destination, LogLevel.NORMAL);
+        
+        if (!vehicle || !IsSpawned())
+        {
+            Print("[VEHICLE_DEBUG] AssignVehicle failed - NULL vehicle or group not spawned", LogLevel.WARNING);
+            return;
+        }
+        
+        // Try to reserve the vehicle - if we can't, don't proceed
+        bool reserved = IA_VehicleManager.ReserveVehicle(vehicle, this);
+        if (!reserved)
+        {
+            Print("[VEHICLE_DEBUG] AssignVehicle failed - Could not reserve vehicle", LogLevel.WARNING);
+            return;
+        }
+        
+        // Save vehicle reference and update state
+        m_referencedEntity = vehicle;
+        m_isDriving = true;
+        m_drivingTarget = destination;
+        
+        // Update the last order position to the vehicle's position so we can track when we've reached it
+        m_lastOrderPosition = vehicle.GetOrigin();
+        m_lastOrderTime = System.GetUnixTime();
+        
+        // Clear any existing orders
+        RemoveAllOrders();
+        
+        // If we have a valid destination, update the vehicle waypoint
+        if (destination != vector.Zero) 
+        {
+            Print("[VEHICLE_DEBUG] AssignVehicle - Creating waypoint to destination: " + destination, LogLevel.NORMAL);
+            IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, destination);
+        }
+        else
+        {
+            Print("[VEHICLE_DEBUG] AssignVehicle - WARNING: Destination is vector.Zero!", LogLevel.ERROR);
+        }
+        
+        Print("[VEHICLE_DEBUG] Vehicle successfully assigned to group", LogLevel.NORMAL);
+    }
+
+    // Add this after the constructor to make sure it's properly defined
     void Despawn()
     {
         //Print("[DEBUG] Despawn called.", LogLevel.NORMAL);
@@ -844,6 +1588,19 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             //Print("[DEBUG_VEHICLE_TRACKING] Clearing vehicle state during despawn", LogLevel.NORMAL);
             ClearVehicleReference();
         }
+        
+        // Unregister group members from damage manager
+        /*
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (character)
+                IA_DamageManager.GetInstance().UnregisterEntity(character);
+        }
+        */
+
+        // Cancel any scheduled state evaluations
+        m_isStateEvaluationScheduled = false;
 
         if (m_group)
         {
@@ -856,89 +1613,49 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         //Print("[DEBUG] Group despawned successfully.", LogLevel.NORMAL);
     }
 
-    IA_Faction GetFaction()
+    // Schedule the next state evaluation at a random interval
+    private void ScheduleNextStateEvaluation()
     {
-        //Print("[DEBUG] GetFaction called. Returning: " + m_faction, LogLevel.NORMAL);
-        return m_faction;
-    }
-
-    // Public accessor for the internal SCR_AIGroup
-    SCR_AIGroup GetAIGroup()
-    {
-        return m_group;
-    }
-
-    // Return the referenced entity (usually a vehicle)
-    IEntity GetReferencedEntity()
-    {
-        return m_referencedEntity;
-    }
-    
-    // Return the current driving target position
-    vector GetDrivingTarget()
-    {
-        return m_drivingTarget;
-    }
-
-    private void SetupDeathListener()
-    {
-        //Print("[DEBUG] SetupDeathListener called.", LogLevel.NORMAL);
-        if (!m_group)
-        {
-            //Print("[DEBUG] m_group is null in SetupDeathListener.", LogLevel.NORMAL);
+        if (m_isStateEvaluationScheduled)
             return;
-        }
-        array<AIAgent> agents = {};
-        m_group.GetAgents(agents);
-
-        if (agents.IsEmpty())
-        {
-            //Print("[DEBUG] No agents found. Retrying SetupDeathListener in 1000 ms.", LogLevel.NORMAL);
-            GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
-            return;
-        }
-
-        foreach (AIAgent agent : agents)
-        {
-            SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
-            if (!ch)
-            {
-                //Print("[DEBUG] Agent does not have a valid SCR_ChimeraCharacter.", LogLevel.NORMAL);
-                continue;
-            }
-            SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
-            if (!ccc)
-            {
-                //Print("[IA_AiGroup.SetupDeathListener] Missing SCR_CharacterControllerComponent in AI", LogLevel.WARNING);
-                continue;
-            }
-            //Print("[DEBUG] Inserting death callback for agent.", LogLevel.NORMAL);
-            ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
-        }
-    }
-
-    // Helper to set up death listener for a single unit (used by CreateGroupForVehicle)
-    private void SetupDeathListenerForUnit(IEntity unitEntity)
-    {
-         SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(unitEntity);
-         if (!ch) return;
-
-         SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
-         if (!ccc) {
-             //Print("[IA_AiGroup.SetupDeathListenerForUnit] Missing SCR_CharacterControllerComponent in AI", LogLevel.WARNING);
-             return;
-         }
-         ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
+            
+        // Calculate a random delay between MIN and MAX
+        int randomDelay = Math.RandomInt(MIN_STATE_EVALUATION_INTERVAL, MAX_STATE_EVALUATION_INTERVAL);
+        
+        GetGame().GetCallqueue().CallLater(EvaluateGroupState, randomDelay);
+        m_isStateEvaluationScheduled = true;
+        
+        //Print("[DEBUG] Scheduled next state evaluation in " + randomDelay + "ms", LogLevel.NORMAL);
     }
 
     private void OnMemberDeath(notnull SCR_CharacterControllerComponent memberCtrl, IEntity killerEntity, Instigator killer)
     {
         //Print("[DEBUG] OnMemberDeath called.", LogLevel.NORMAL);
+        // Get victim info
+        IEntity victimEntity = memberCtrl.GetOwner();
+        vector deathPosition = victimEntity.GetOrigin();
+        
         if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_PLAYER)
         {
             //Print("[DEBUG] Member killed by player.", LogLevel.NORMAL);
-            // If a player kills one of our guys and we're not yet "engaged," 
-            // set some placeholder for engaged faction (CIV is used as a placeholder).
+            
+            // Use the new reaction system
+            float groupSize = GetAliveCount() + 1; // +1 for the unit that just died
+            float intensity = 1.0 / groupSize; // Higher intensity for smaller groups
+            
+            // Trigger reaction with player as source
+            if (m_reactionManager)
+            {
+                m_reactionManager.TriggerReaction(
+                    IA_AIReactionType.GroupMemberKilled, 
+                    intensity, 
+                    deathPosition, 
+                    killerEntity, 
+                    IA_Faction.CIV  // Players always treated as CIV faction for now
+                );
+            }
+            
+            // Legacy engagement system for compatibility
             if (!IsEngagedWithEnemy() && !m_isCivilian && m_faction != IA_Faction.CIV)
             {
                 //Print("[IA_AiGroup.OnMemberDeath] Player killed enemy, group engaged with CIV as placeholder");
@@ -952,449 +1669,385 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             if (!c)
             {
                 //Print("[IA_AiGroup.OnMemberDeath] cast killerEntity to character failed!", LogLevel.ERROR);
+                return;
+            }
+            
+            string fKey = c.GetFaction().GetFactionKey();
+            //Print("[DEBUG] Killer faction key: " + fKey, LogLevel.NORMAL);
+            
+            // Determine the faction
+            IA_Faction killerFaction = IA_Faction.NONE;
+            if (fKey == "US")
+            {
+                killerFaction = IA_Faction.US;
+            }
+            else if (fKey == "USSR")
+            {
+                killerFaction = IA_Faction.USSR;
+            }
+            else if (fKey == "CIV")
+            {
+                killerFaction = IA_Faction.CIV;
+            }
+            
+            // Use the new reaction system
+            if (m_reactionManager && killerFaction != m_faction) // Skip if friendly fire
+            {
+                float groupSize = GetAliveCount() + 1; // +1 for the unit that just died
+                float intensity = 1.0 / groupSize; // Higher intensity for smaller groups
+                
+                m_reactionManager.TriggerReaction(
+                    IA_AIReactionType.GroupMemberKilled, 
+                    intensity, 
+                    deathPosition, 
+                    killerEntity, 
+                    killerFaction
+                );
+            }
+            
+            // Legacy engagement system
+            if (killerFaction != m_faction)
+            {
+                m_engagedEnemyFaction = killerFaction;
+            }
+            // If friendly fire, reset engagement.
+            if (m_engagedEnemyFaction == m_faction)
+            {
+                //Print("[IA_AiGroup.OnMemberDeath] Friendly kill => resetting engagement");
+                m_engagedEnemyFaction = IA_Faction.NONE;
+            }
+        }
+    }
+
+    // Apply behavior changes based on current reaction
+    private void ApplyReactionBehavior(IA_AIReactionState reaction)
+    {
+        // Safety check
+        if (!reaction)
+            return;
+            
+        // Apply behavior based on reaction type
+        switch (reaction.GetReactionType())
+        {
+            case IA_AIReactionType.GroupMemberKilled:
+                HandleGroupMemberKilledReaction(reaction);
+                break;
+                
+            case IA_AIReactionType.UnderAttack:
+                HandleUnderAttackReaction(reaction);
+                break;
+                
+            case IA_AIReactionType.EnemySpotted:
+                HandleEnemySpottedReaction(reaction);
+                break;
+                
+            case IA_AIReactionType.TakingFire:
+                HandleTakingFireReaction(reaction);
+                break;
+                
+            // More handlers for other reaction types can be added later
+        }
+    }
+    
+    // Handle reaction when a group member is killed
+    private void HandleGroupMemberKilledReaction(IA_AIReactionState reaction)
+    {
+        // Make sure the legacy engagement system is updated
+        if (!IsEngagedWithEnemy() && !m_isCivilian && m_faction != IA_Faction.CIV)
+        {
+            IA_Faction sourceFaction = reaction.GetSourceFaction();
+            if (sourceFaction != IA_Faction.NONE)
+            {
+                m_engagedEnemyFaction = sourceFaction;
             }
             else
             {
-                string fKey = c.GetFaction().GetFactionKey();
-                //Print("[DEBUG] Killer faction key: " + fKey, LogLevel.NORMAL);
-                if (fKey == "US")
-                {
-                    m_engagedEnemyFaction = IA_Faction.US;
-                }
-                else if (fKey == "USSR")
-                {
-                    m_engagedEnemyFaction = IA_Faction.USSR;
-                }
-                else if (fKey == "CIV")
-                {
-                    m_engagedEnemyFaction = IA_Faction.CIV;
-                }
-                else
-                {
-                    //Print("[IA_AiGroup.OnMemberDeath] unknown faction key " + fKey, LogLevel.WARNING);
-                }
-                // If friendly fire, reset engagement.
-                if (m_engagedEnemyFaction == m_faction)
-                {
-                    //Print("[IA_AiGroup.OnMemberDeath] Friendly kill => resetting engagement");
-                    m_engagedEnemyFaction = IA_Faction.NONE;
-                }
+                // If we don't know the source faction, use CIV as placeholder like in original code
+                m_engagedEnemyFaction = IA_Faction.CIV;
             }
         }
-    }
-
-    private void WaterCheck()
-    {
-        //Print("[DEBUG] WaterCheck called (placeholder).", LogLevel.NORMAL);
-        // No extra water check here because safe areas are pre-defined.
-    }
-
-    void AssignVehicle(Vehicle vehicle, vector destination)
-    {
-        //Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle called. Vehicle: " + vehicle + ", Destination: " + destination, LogLevel.NORMAL);
         
-        if (!vehicle || !IsSpawned())
+        // Only take additional action if this is a high intensity reaction
+        if (reaction.GetIntensity() > 0.5)
         {
-            //Print("[DEBUG_VEHICLE_LOGIC] AssignVehicle called with NULL vehicle or group not spawned", LogLevel.WARNING);
-            return;
+            // Get defensive position away from threat
+            vector threatPos = reaction.GetSourcePosition();
+            if (threatPos != vector.Zero && !m_isDriving)
+            {
+                // Move away from threat and take cover
+                vector awayDir = m_group.GetOrigin() - threatPos;
+                awayDir = awayDir.Normalized();
+                vector retreatPos = m_group.GetOrigin() + awayDir * 20;
+                
+                RemoveAllOrders();
+                AddOrder(retreatPos, IA_AiOrder.Defend, true);
+            }
         }
-        
-        // Try to reserve the vehicle - if we can't, don't proceed
-        bool reserved = IA_VehicleManager.ReserveVehicle(vehicle, this);
-        if (!reserved)
-        {
-            //Print("[DEBUG_VEHICLE_LOGIC] Failed to reserve vehicle, aborting assignment", LogLevel.WARNING);
-            return;
-        }
-        
-        // Save vehicle reference and update state
-        m_referencedEntity = vehicle;
-        m_isDriving = true;
-        m_drivingTarget = destination;
-        
-        // Update the last order position to the vehicle's position so we can track when we've reached it
-        m_lastOrderPosition = vehicle.GetOrigin();
-        m_lastOrderTime = System.GetUnixTime();
-        
-        // Clear any existing orders
-        RemoveAllOrders();
-        
-        // NOTE: No longer adding GetInVehicle order here since units are teleported directly into the vehicle
-        // by the IA_VehicleManager._PlaceSpawnedUnitsInVehicle method
-        
-        // If we have a valid destination, update the vehicle waypoint
-        if (destination != vector.Zero) 
-        {
-            IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, destination);
-        }
-        
-        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle successfully assigned to group", LogLevel.NORMAL);
     }
     
-    void UpdateVehicleOrders()
+    // Handle reaction when under direct attack
+    private void HandleUnderAttackReaction(IA_AIReactionState reaction)
     {
-        if (!m_isDriving || !m_referencedEntity)
-            return;
-            
-        // Skip if we've just updated recently
-        int currentTime = System.GetUnixTime();
-        if (currentTime - m_lastVehicleOrderTime < VEHICLE_ORDER_UPDATE_INTERVAL)
-            return;
-            
-        m_lastVehicleOrderTime = currentTime;
-        
-        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
-        if (!vehicle)
+        // Update legacy engagement state
+        IA_Faction sourceFaction = reaction.GetSourceFaction();
+        if (sourceFaction != IA_Faction.NONE && !IsEngagedWithEnemy())
         {
-            // Clear vehicle reference if it's no longer valid
-            ClearVehicleReference();
-            return;
+            m_engagedEnemyFaction = sourceFaction;
         }
         
-        // Get all group members
-        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
-        if (characters.IsEmpty())
-            return;
-            
-        bool anyOutside = false;
-        
-        // Check if any characters are outside the vehicle
-        foreach (SCR_ChimeraCharacter character : characters)
+        // If we're in a vehicle, we might want to flee
+        if (m_isDriving && m_referencedEntity)
         {
-            if (!character.IsInVehicle())
+            // Find a position away from the threat
+            vector threatPos = reaction.GetSourcePosition();
+            if (threatPos != vector.Zero)
             {
-                anyOutside = true;
-                break;
+                vector awayDir = m_group.GetOrigin() - threatPos;
+                awayDir = awayDir.Normalized();
+                vector retreatPos = m_group.GetOrigin() + awayDir * 100;
+                
+                // Update driving target
+                m_drivingTarget = retreatPos;
+                UpdateVehicleOrders();
             }
         }
-        
-        // If anyone is outside the vehicle, issue GetInVehicle order
-        if (anyOutside)
+        else if (!m_isDriving) // If on foot, take cover and engage
         {
-            // Clear existing orders
+            // If the reaction source position is known, face that direction
+            vector sourcePos = reaction.GetSourcePosition();
+            if (sourcePos != vector.Zero)
+            {
+                RemoveAllOrders();
+                AddOrder(sourcePos, IA_AiOrder.SearchAndDestroy, true);
+            }
+        }
+    }
+    
+    // Handle reaction when enemy is spotted but not attacking yet
+    private void HandleEnemySpottedReaction(IA_AIReactionState reaction)
+    {
+        // For low intensity reactions, just observe
+        if (reaction.GetIntensity() < 0.3 && !m_isDriving)
+        {
+            vector sourcePos = reaction.GetSourcePosition();
+            if (sourcePos != vector.Zero)
+            {
+                RemoveAllOrders();
+                AddOrder(sourcePos, IA_AiOrder.Defend);
+            }
+        }
+        // For higher intensity, engage more directly
+        else if (!m_isDriving)
+        {
+            vector sourcePos = reaction.GetSourcePosition();
+            if (sourcePos != vector.Zero)
+            {
+                RemoveAllOrders();
+                AddOrder(sourcePos, IA_AiOrder.SearchAndDestroy);
+            }
+        }
+    }
+    
+    // Handle reaction when taking fire but source unknown
+    private void HandleTakingFireReaction(IA_AIReactionState reaction)
+    {
+        // If we're not already engaged, seek cover
+        if (!IsEngagedWithEnemy() && !m_isDriving)
+        {
+            // Move to a nearby position for cover
+            vector randomDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
+            vector coverPos = m_group.GetOrigin() + randomDir * 15;
+            
             RemoveAllOrders();
-            
-            // Add GetInVehicle order using the existing order system
-            AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
-            return;
-        }
-        
-        // If everyone is in the vehicle and we have a destination, make sure we have a waypoint
-        if (!anyOutside && m_drivingTarget != vector.Zero)
-        {
-            // Check if we need a new waypoint (don't have one or reached destination)
-            if (!HasActiveWaypoint() || IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget))
-            {
-                // Update the waypoint using the existing utility function
-                IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
-            }
+            AddOrder(coverPos, IA_AiOrder.Defend);
         }
     }
     
-    // Manual check for completion based on vehicle position
-    bool IsVehicleNearWaypoint(Vehicle vehicle, vector waypointPos)
+    IA_Faction GetFaction()
     {
-        if (!vehicle)
-            return false;
-            
-        vector vehiclePos = vehicle.GetOrigin();
-        float distance = vector.Distance(vehiclePos, waypointPos);
-        
-        // Be generous with distance check 
-        return distance < 15;
+        //Print("[DEBUG] GetFaction called. Returning: " + m_faction, LogLevel.NORMAL);
+        return m_faction;
     }
 
-    string GetStateDescription()
+    // Evaluate the group's state and determine appropriate actions
+    private void EvaluateGroupState()
     {
-        if (!IsSpawned())
-            return "Despawned";
-            
-        if (IsDriving())
+        // Reset the scheduled flag
+        m_isStateEvaluationScheduled = false;
+        
+        // Skip evaluation if group is not spawned or is null
+        if (!IsSpawned() || !m_group)
         {
-            vector target = GetDrivingTarget();
-            // Format vector coordinates manually for printing
-            return "Driving Vehicle to <" + target[0] + ", " + target[1] + ", " + target[2] + ">"; 
-        }
-            
-        if (IsEngagedWithEnemy())
-            return "Engaged with Faction: " + typename.EnumToString(IA_Faction, GetEngagedEnemyFaction());
-            
-        if (HasOrders())
-            return "Executing Order";
-            
-        // Check for idleness only if not driving, engaged, or having active orders
-        // Consider a group idle if the last order was given more than 60 seconds ago
-        if (TimeSinceLastOrder() > 60) 
-            return "Idle";
-            
-        // Default state if spawned but not driving, engaged, ordered, or explicitly idle
-        return "Active"; 
-    }
-
-    // Add a method to help debug the m_isDriving field
-    void ForceDrivingState(bool state)
-    {
-        //Print("[DEBUG_VEHICLE_LOGIC] ForceDrivingState called, changing from " + m_isDriving + " to " + state, LogLevel.NORMAL);
-        m_isDriving = state;
-    }
-
-    // Add a method to properly reset vehicle state
-    void ClearVehicleReference()
-    {
-        //Print("[DEBUG_VEHICLE_LOGIC] ClearVehicleReference called. Previous state: isDriving=" + m_isDriving + ", entity=" + m_referencedEntity, LogLevel.WARNING);
-        
-        // If there was a vehicle reservation, release it
-        if (m_referencedEntity)
-        {
-            Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
-            if (vehicle)
-            {
-                IA_VehicleManager.ReleaseVehicleReservation(vehicle);
-                //Print("[DEBUG_VEHICLE_LOGIC] Released vehicle reservation for " + vehicle, LogLevel.NORMAL);
-            }
-        }
-        
-        // Reset vehicle-related state variables
-        m_isDriving = false;
-        m_referencedEntity = null;
-        m_drivingTarget = vector.Zero;
-        //Print("[DEBUG_VEHICLE_LOGIC] Vehicle state has been cleared", LogLevel.NORMAL);
-    }
-
-    // Add this method to handle waypoint reached callbacks
-    void OnWaypointReached(AIWaypoint wp)
-    {
-        //Print("[DEBUG_VEHICLE_TRACKING] OnWaypointReached called for waypoint: " + wp, LogLevel.NORMAL);
-        // Handle any special logic when a waypoint is reached
-    }
-
-    // New factory method for spawning civilian units for a vehicle crew
-    static IA_AiGroup CreateCivilianGroupForVehicle(Vehicle vehicle, int unitCount)
-    {
-        Print("[DEBUG_CIV_VEHICLE] CreateCivilianGroupForVehicle called with unitCount: " + unitCount, LogLevel.WARNING);
-        
-        if (!vehicle || unitCount <= 0)
-            return null;
-
-        vector spawnPos = vehicle.GetOrigin() + vector.Up; // Spawn slightly above vehicle origin
-
-        // Create the IA_AiGroup wrapper for civilians
-        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, IA_Faction.CIV);
-        grp.m_isCivilian = true;
-
-        // Create an empty civilian AI group
-        Resource groupRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
-        if (!groupRes) {
-            Print("[DEBUG_CIV_VEHICLE] Could not load civilian group resource!", LogLevel.ERROR);
-            return null;
-        }
-        
-        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
-        grp.m_group = SCR_AIGroup.Cast(groupEnt);
-
-        if (!grp.m_group) {
-            Print("[DEBUG_CIV_VEHICLE] Could not cast spawned entity to SCR_AIGroup!", LogLevel.ERROR);
-            delete groupEnt;
-            return null;
-        }
-        
-        // Adjust group position
-        vector groundPos = spawnPos;
-        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-        groundPos[1] = groundY;
-        grp.m_group.SetOrigin(groundPos);
-
-        // Get the civilian character prefabs from entity catalog
-        array<string> civilianPrefabs = GetCivilianCharacterPrefabs();
-        
-        if (civilianPrefabs.IsEmpty()) {
-            Print("[DEBUG_CIV_VEHICLE] No civilian character prefabs found!", LogLevel.ERROR);
-            return null;
-        }
-        
-        Print("[DEBUG_CIV_VEHICLE] Found " + civilianPrefabs.Count() + " civilian character prefabs", LogLevel.NORMAL);
-
-        // Get the actual compartments to check which ones are available
-        BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
-        if (!compartmentManager) {
-            Print("[DEBUG_CIV_VEHICLE] Vehicle has no compartment manager!", LogLevel.ERROR);
-            return null;
-        }
-        
-        array<BaseCompartmentSlot> compartments = {};
-        compartmentManager.GetCompartments(compartments);
-        
-        // Filter out compartments that are not suitable for AI occupation
-        array<BaseCompartmentSlot> usableCompartments = {};
-        
-        // Collect valid compartment types for AI
-        foreach (BaseCompartmentSlot compartment : compartments)
-        {
-            ECompartmentType type = compartment.GetType();
-            
-            // Skip turret and other special compartments for civilian vehicles
-            if (type == ECompartmentType.PILOT || 
-                type == ECompartmentType.CARGO)
-            {
-                usableCompartments.Insert(compartment);
-            }
-        }
-        
-        // Calculate how many units to actually spawn
-        int unitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
-        
-        if (unitsToSpawn == 0) {
-            Print("[DEBUG_CIV_VEHICLE] No usable compartments found in vehicle!", LogLevel.ERROR);
-            return null;
-        }
-        
-        Print("[DEBUG_CIV_VEHICLE] Spawning " + unitsToSpawn + " civilian units for vehicle", LogLevel.NORMAL);
-        
-        // Now spawn the civilian units
-        for (int i = 0; i < unitsToSpawn; i++)
-        {
-            // Choose a random civilian prefab
-            string characterPrefab = civilianPrefabs[Math.RandomInt(0, civilianPrefabs.Count())];
-            
-            // Spawn the character
-            Resource charRes = Resource.Load(characterPrefab);
-            if (!charRes) {
-                Print("[DEBUG_CIV_VEHICLE] Could not load civilian character resource: " + characterPrefab, LogLevel.ERROR);
-                continue;
-            }
-            
-            IEntity charEnt = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(spawnPos));
-            if (!charEnt) {
-                Print("[DEBUG_CIV_VEHICLE] Failed to spawn civilian character!", LogLevel.ERROR);
-                continue;
-            }
-            
-            // Add character to the group
-            ChimeraCharacter character = ChimeraCharacter.Cast(charEnt);
-            if (!character) {
-                Print("[DEBUG_CIV_VEHICLE] Could not cast to ChimeraCharacter!", LogLevel.ERROR);
-                delete charEnt;
-                continue;
-            }
-            
-            // Setup character AI controller
-            AIControlComponent aiControlComp = AIControlComponent.Cast(character.FindComponent(AIControlComponent));
-            if (aiControlComp) {
-                AIAgent agent = aiControlComp.GetControlAIAgent();
-                if (agent) {
-                    grp.m_group.AddAgent(agent);
-                }
-            }
-            
-            // Setup death listener for the character
-            grp.SetupDeathListenerForUnit(charEnt);
-        }
-        
-        // Mark the group as spawned and ready for driving
-        grp.m_isSpawned = true;
-        
-        // IMPORTANT: This is needed for civilians to move properly
-        // The military version doesn't need this because it's set by AssignVehicle,
-        // but we need to initialize it here to ensure it's set
-        grp.m_isDriving = true;
-        
-        Print("[DEBUG_CIV_VEHICLE] Successfully created civilian group for vehicle", LogLevel.NORMAL);
-        return grp;
-    }
-    
-    // Helper method to get civilian character prefabs from entity catalog
-    static array<string> GetCivilianCharacterPrefabs()
-    {
-        array<string> result = {};
-        
-        // Get faction manager
-        SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
-        if (!factionManager) {
-            Print("[DEBUG_CIV_VEHICLE] Failed to get faction manager!", LogLevel.ERROR);
-            return result;
-        }
-        
-        // Try to get civilian faction
-        Faction civFaction = factionManager.GetFactionByKey("CIV");
-        
-        // If no civilian faction found, try to use alternate sources
-        if (!civFaction) {
-            Print("[DEBUG_CIV_VEHICLE] No CIV faction found, using fallback methods", LogLevel.WARNING);
-            
-            // Fallback to hardcoded civilian prefabs that are known to work
-            result.Insert("{7A9EE19AB67B298B}Prefabs/Characters/Factions/INDFOR/FIA/Character_FIA_Civilian.et");
-            result.Insert("{86B7F97BA774C2E9}Prefabs/Characters/Factions/INDFOR/FIA/Character_FIA_Civilian_2.et");
-            return result;
-        }
-        
-        SCR_Faction scrFaction = SCR_Faction.Cast(civFaction);
-        if (!scrFaction) {
-            Print("[DEBUG_CIV_VEHICLE] Failed to cast to SCR_Faction", LogLevel.ERROR);
-            return result;
-        }
-        
-        // Get the entity catalog for characters
-        SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
-        if (!entityCatalog) {
-            Print("[DEBUG_CIV_VEHICLE] Failed to get character catalog for civilians", LogLevel.ERROR);
-            return result;
-        }
-        
-        // Query the catalog for civilian character prefabs
-        array<SCR_EntityCatalogEntry> characterEntries = {};
-        array<EEditableEntityLabel> includedLabels = {};
-        array<EEditableEntityLabel> excludedLabels = {};
-        
-        // Include civilian type characters and exclude military roles
-        includedLabels.Insert(EEditableEntityLabel.FACTION_CIV);
-        // Don't use ROLE_SOLDIER as it's undefined - use existing valid labels
-        excludedLabels.Insert(EEditableEntityLabel.TRAIT_ARMED);
-        
-        entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
-        
-        if (characterEntries.IsEmpty()) {
-            Print("[DEBUG_CIV_VEHICLE] No civilian character entries found, trying broader search", LogLevel.WARNING);
-            
-            // Try a broader search without specific filters
-            includedLabels.Clear();
-            excludedLabels.Clear();
-            entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
-        }
-        
-        if (characterEntries.IsEmpty()) {
-            Print("[DEBUG_CIV_VEHICLE] Still no civilian character entries found!", LogLevel.ERROR);
-            
-            // Last resort fallback
-            result.Insert("{7A9EE19AB67B298B}Prefabs/Characters/Factions/INDFOR/FIA/Character_FIA_Civilian.et");
-            result.Insert("{86B7F97BA774C2E9}Prefabs/Characters/Factions/INDFOR/FIA/Character_FIA_Civilian_2.et");
-            return result;
-        }
-        
-        // Extract the prefab paths
-        foreach (SCR_EntityCatalogEntry entry : characterEntries) {
-            result.Insert(entry.GetPrefab());
-        }
-        
-        Print("[DEBUG_CIV_VEHICLE] Found " + result.Count() + " civilian character prefabs", LogLevel.NORMAL);
-        if (result.Count() > 0) {
-            Print("[DEBUG_CIV_VEHICLE] First civilian prefab: " + result[0], LogLevel.NORMAL);
-        }
-        
-        return result;
-    }
-
-    // Helper method to get characters back into their assigned vehicle
-    void GetBackInVehicle()
-    {
-        if (!m_isDriving || !m_referencedEntity)
+            // Still schedule the next evaluation to keep the cycle going
+            ScheduleNextStateEvaluation();
             return;
-            
+        }
+        
+        // Get current state information
+        bool isEngaged = IsEngagedWithEnemy();
+        bool isDriving = IsDriving();
+        bool hasOrders = HasOrders();
+        int timeSinceLastOrder = TimeSinceLastOrder();
+        int aliveCount = GetAliveCount();
+        
+        // Add debug statement showing key state metrics
+        Print("[IA_AI_STATE] Group at " + GetOrigin() + " | Units: " + aliveCount + 
+              " | Engaged: " + isEngaged + " | Driving: " + isDriving + 
+              " | HasOrders: " + hasOrders + " | TimeSinceOrder: " + timeSinceLastOrder + "s" +
+              " | DangerLevel: " + m_currentDangerLevel, 
+              LogLevel.WARNING);
+        
+        // Check for active reactions first
+        if (m_reactionManager && m_reactionManager.HasActiveReaction())
+        {
+            IA_AIReactionState currentReaction = m_reactionManager.GetCurrentReaction();
+            Print("[IA_AI_STATE] Processing active reaction: " + 
+                  typename.EnumToString(IA_AIReactionType, currentReaction.GetReactionType()) + 
+                  " (Intensity: " + currentReaction.GetIntensity() + ")", 
+                  LogLevel.WARNING);
+                  
+            // If there's an active reaction, let the reaction system handle it
+            ProcessReactions();
+        }
+        // If no active reactions but engaged with enemy, evaluate tactical options
+        else if (isEngaged && !isDriving)
+        {
+            Print("[IA_AI_STATE] Evaluating combat state - Enemy faction: " + 
+                  typename.EnumToString(IA_Faction, GetEngagedEnemyFaction()), 
+                  LogLevel.WARNING);
+                  
+            EvaluateCombatState();
+        }
+        // If in a vehicle, make sure vehicle orders are up to date
+        else if (isDriving)
+        {
         Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
-        if (!vehicle)
+            string vehicleType = "Unknown";
+            if (vehicle)
+                vehicleType = vehicle.ClassName();
+                
+            Print("[IA_AI_STATE] Managing vehicle state - Type: " + vehicleType + 
+                  " | Destination: " + m_drivingTarget, 
+                  LogLevel.WARNING);
+                  
+            UpdateVehicleOrders();
+        }
+        // Evaluate danger state if not already in another active state
+        else if (m_currentDangerLevel > 0.0)
+        {
+            Print("[IA_AI_STATE] Evaluating danger state - Level: " + m_currentDangerLevel, 
+                  LogLevel.WARNING);
+                  
+            EvaluateDangerState();
+        }
+        // If the group has been idle for too long, consider a new activity
+        else if (timeSinceLastOrder > 120 && !hasOrders)
+        {
+            Print("[IA_AI_STATE] Group idle for " + timeSinceLastOrder + "s - Evaluating new activities", 
+                  LogLevel.WARNING);
+                  
+            EvaluateIdleState();
+        }
+        else
+        {
+            Print("[IA_AI_STATE] No state change needed - Maintaining current behavior", 
+                  LogLevel.WARNING);
+        }
+        
+        // Schedule the next evaluation regardless of the current state
+        ScheduleNextStateEvaluation();
+    }
+
+    // Evaluate what to do during combat
+    private void EvaluateCombatState()
+    {
+        // Only take action if we don't already have orders
+        if (HasOrders())
             return;
             
-        // Clear existing orders and add GetInVehicle order
+        // Get information about the engaged enemy
+        IA_Faction enemyFaction = GetEngagedEnemyFaction();
+        
+        // Determine a tactical response based on group strength, terrain, etc.
+        int aliveCount = GetAliveCount();
+        
+        // If group is severely weakened, consider retreating
+        if (aliveCount <= 2)
+        {
+            // Retreat away from the last order position (likely where enemies are)
+            vector retreatDir = GetOrigin() - m_lastOrderPosition;
+            retreatDir = retreatDir.Normalized();
+            vector retreatPos = GetOrigin() + retreatDir * 50;
+            
         RemoveAllOrders();
-        AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+            AddOrder(retreatPos, IA_AiOrder.Patrol);
+            
+            Print("[IA_AI_STATE] Combat evaluation: Group retreating due to low numbers", LogLevel.WARNING);
+        }
+        // Otherwise, maintain combat stance
+        else
+        {
+            // If we don't have orders, set up defensive position
+            if (!HasOrders())
+            {
+                vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, GetOrigin());
+                AddOrder(defendPos, IA_AiOrder.Defend);
+                
+                Print("[IA_AI_STATE] Combat evaluation: Group taking defensive position", LogLevel.WARNING);
+            }
+        }
     }
-};
+    
+    // Evaluate what to do when idle
+    private void EvaluateIdleState()
+    {
+        // Only take action if we don't already have orders
+        if (HasOrders())
+            return;
+            
+        // For civilian units, we might want different behaviors
+        if (m_isCivilian)
+        {
+            // Civilians might wander or find shelter
+            vector wanderPos = IA_Game.rng.GenerateRandomPointInRadius(10, 30, GetOrigin());
+            AddOrder(wanderPos, IA_AiOrder.Patrol);
+            
+            Print("[IA_AI_STATE] Idle evaluation: Civilian group wandering", LogLevel.WARNING);
+        }
+        // For military units, patrol or secure area
+        else
+        {
+            // Choose randomly between patrol and defend
+            float randomChoice = Math.RandomFloat(0, 1);
+            
+            if (randomChoice < 0.7) // 70% chance to patrol
+            {
+                vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(20, 50, GetOrigin());
+                AddOrder(patrolPos, IA_AiOrder.Patrol);
+                
+                Print("[IA_AI_STATE] Idle evaluation: Military group patrolling", LogLevel.WARNING);
+            }
+            else // 30% chance to defend
+            {
+                vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 15, GetOrigin());
+                AddOrder(defendPos, IA_AiOrder.Defend);
+                
+                Print("[IA_AI_STATE] Idle evaluation: Military group defending position", LogLevel.WARNING);
+            }
+        }
+    }
+
+    private void CheckDangerEvents()
+    {
+        if (!m_group)
+            return;
+            
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        
+        foreach (AIAgent agent : agents)
+        {
+            ProcessAgentDangerEvents(agent);
+        }
+    }
+};  // End of IA_AiGroup class

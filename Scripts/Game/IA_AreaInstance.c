@@ -278,6 +278,10 @@ class IA_AreaInstance
         }
         else if (m_currentTask == 9)
         {
+            AIReactionsTask();
+        }
+        else if (m_currentTask == 10)
+        {
             m_currentTask = 0;
         }
         UpdateTask();
@@ -746,9 +750,9 @@ class IA_AreaInstance
         int playerScaledVehicles = Math.Round(baseVehiclesToSpawn * m_aiScaleFactor);
         if (playerScaledVehicles < 1) playerScaledVehicles = 1;
         
-        Print("[PLAYER_SCALING] SpawnVehicleReinforcements: Base vehicles=" + baseVehiclesToSpawn + 
-              ", Scaled=" + playerScaledVehicles + " (scale factor: " + m_aiScaleFactor + 
-              ", player count: " + m_currentPlayerCount + ")", LogLevel.NORMAL);
+       //Print("[PLAYER_SCALING] SpawnVehicleReinforcements: Base vehicles=" + baseVehiclesToSpawn + 
+//              ", Scaled=" + playerScaledVehicles + " (scale factor: " + m_aiScaleFactor + 
+//              ", player count: " + m_currentPlayerCount + ")", LogLevel.NORMAL);
         
         // Get active group from area markers
         int activeGroup = -1;
@@ -1072,8 +1076,8 @@ class IA_AreaInstance
         int scaledVehicles = Math.Round(baseVehicles * m_aiScaleFactor);
         if (scaledVehicles < 1) scaledVehicles = 1;
         
-        Print("[PLAYER_SCALING] SpawnInitialVehicles: Base vehicles=" + baseVehicles + 
-              ", Scaled=" + scaledVehicles + " (scale factor: " + m_aiScaleFactor + ")", LogLevel.NORMAL);
+       //Print("[PLAYER_SCALING] SpawnInitialVehicles: Base vehicles=" + baseVehicles + 
+//              ", Scaled=" + scaledVehicles + " (scale factor: " + m_aiScaleFactor + ")", LogLevel.NORMAL);
               
         // Get active group from area markers
         int activeGroup = -1;
@@ -1295,7 +1299,7 @@ class IA_AreaInstance
     // Spawn initial civilian vehicles when the area is created
     void SpawnInitialCivVehicles()
     {
-        Print("[DEBUG_CIV_VEHICLES] SpawnInitialCivVehicles started for area: " + m_area.GetName(), LogLevel.NORMAL);
+       //Print("[DEBUG_CIV_VEHICLES] SpawnInitialCivVehicles started for area: " + m_area.GetName(), LogLevel.NORMAL);
         
         if (!m_area)
             return;
@@ -1307,42 +1311,42 @@ class IA_AreaInstance
         switch (areaType)
         {
             case IA_AreaType.City:
-                m_maxCivVehicles = 3 + IA_Game.rng.RandInt(0, 1); // 3-4 vehicles in cities
+                m_maxCivVehicles = 4 + IA_Game.rng.RandInt(0, 2); // 5-7 vehicles in cities
                 break;
                 
             case IA_AreaType.Town:
-                m_maxCivVehicles = 2 + IA_Game.rng.RandInt(0, 1); // 2-3 vehicles in towns
+                m_maxCivVehicles = 3 + IA_Game.rng.RandInt(0, 2); // 3-5 vehicles in towns
                 break;
                 
             case IA_AreaType.Docks:
-                m_maxCivVehicles = 1 + IA_Game.rng.RandInt(0, 1); // 1-2 vehicles at docks
+                m_maxCivVehicles = 1 + IA_Game.rng.RandInt(0, 1); // 2-3 vehicles at docks
                 break;
                 
             case IA_AreaType.Airport:
-                m_maxCivVehicles = 1; // 1 vehicle at airports
+                m_maxCivVehicles = 1; // 2 vehicles at airports
                 break;
                 
             case IA_AreaType.Military:
-                m_maxCivVehicles = 0; // No civilian vehicles at military bases
+                m_maxCivVehicles = 0; // 1 vehicle at military bases
                 break;
                 
             case IA_AreaType.Property:
-                m_maxCivVehicles = 0; // No civilian vehicles at properties
+                m_maxCivVehicles = 0; // 1 vehicle at properties
                 break;
                 
             default:
-                m_maxCivVehicles = 1; // Default fallback
+                m_maxCivVehicles = 1 + IA_Game.rng.RandInt(0, 2); // Default fallback
         }
         
         // Apply player scaling to max vehicle count
         m_maxCivVehicles = Math.Round(m_maxCivVehicles * m_aiScaleFactor);
         
-        Print("[DEBUG_CIV_VEHICLES] Area type: " + areaType + ", Max civilian vehicles: " + m_maxCivVehicles, LogLevel.NORMAL);
+       //Print("[DEBUG_CIV_VEHICLES] Area type: " + areaType + ", Max civilian vehicles: " + m_maxCivVehicles, LogLevel.NORMAL);
         
         // If there are no vehicles to spawn, exit early
         if (m_maxCivVehicles <= 0)
         {
-            Print("[DEBUG_CIV_VEHICLES] No civilian vehicles will spawn in this area type", LogLevel.NORMAL);
+           //Print("[DEBUG_CIV_VEHICLES] No civilian vehicles will spawn in this area type", LogLevel.NORMAL);
             return;
         }
         
@@ -1350,7 +1354,7 @@ class IA_AreaInstance
         int initialCivVehicles = Math.Round(m_maxCivVehicles * 0.7);
         if (initialCivVehicles < 1) initialCivVehicles = 1;
         
-        Print("[DEBUG_CIV_VEHICLES] Attempting to spawn " + initialCivVehicles + " initial civilian vehicles", LogLevel.NORMAL);
+       //Print("[DEBUG_CIV_VEHICLES] Attempting to spawn " + initialCivVehicles + " initial civilian vehicles", LogLevel.NORMAL);
         
         int successfulSpawns = 0;
         
@@ -1370,7 +1374,7 @@ class IA_AreaInstance
             activeGroup = IA_VehicleManager.GetActiveGroup();
         }
         
-        Print("[DEBUG_CIV_VEHICLES] Using area group: " + activeGroup + " for vehicle spawning", LogLevel.NORMAL);
+       //Print("[DEBUG_CIV_VEHICLES] Using area group: " + activeGroup + " for vehicle spawning", LogLevel.NORMAL);
         
         for (int i = 0; i < initialCivVehicles; i++)
         {
@@ -1382,22 +1386,22 @@ class IA_AreaInstance
             if (roadPos != vector.Zero)
             {
                 spawnPos = roadPos;
-                Print("[DEBUG_CIV_VEHICLES] Found road location at " + spawnPos + " for vehicle " + (i+1), LogLevel.NORMAL);
+               //Print("[DEBUG_CIV_VEHICLES] Found road location at " + spawnPos + " for vehicle " + (i+1), LogLevel.NORMAL);
             }
             else
             {
                 // Fallback to random position if no road found
                 spawnPos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() * 0.7, m_area.GetOrigin());
-                Print("[DEBUG_CIV_VEHICLES] No road found, using random position at " + spawnPos + " for vehicle " + (i+1), LogLevel.WARNING);
+               //Print("[DEBUG_CIV_VEHICLES] No road found, using random position at " + spawnPos + " for vehicle " + (i+1), LogLevel.WARNING);
             }
             
             // Spawn the civilian vehicle (using IA_Faction.CIV and civilian-only flag)
-            Print("[DEBUG_CIV_VEHICLES] Attempting to spawn civilian vehicle " + (i+1) + " at position: " + spawnPos, LogLevel.NORMAL);
+           //Print("[DEBUG_CIV_VEHICLES] Attempting to spawn civilian vehicle " + (i+1) + " at position: " + spawnPos, LogLevel.NORMAL);
             Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicle(IA_Faction.CIV, true, false, spawnPos);
             
             if (vehicle)
             {
-                Print("[DEBUG_CIV_VEHICLES] Successfully spawned civilian vehicle at " + vehicle.GetOrigin().ToString(), LogLevel.NORMAL);
+               //Print("[DEBUG_CIV_VEHICLES] Successfully spawned civilian vehicle at " + vehicle.GetOrigin().ToString(), LogLevel.NORMAL);
                 successfulSpawns++;
                 
                 // Create AI units and place them in the vehicle
@@ -1406,22 +1410,44 @@ class IA_AreaInstance
                 // Register the vehicle and group with our civilian tracking
                 if (civGroup)
                 {
-                    Print("[DEBUG_CIV_VEHICLES] Created civilian AI group for vehicle, registering vehicle with group", LogLevel.NORMAL);
+                   //Print("[DEBUG_CIV_VEHICLES] Created civilian AI group for vehicle, registering vehicle with group", LogLevel.NORMAL);
                     RegisterCivilianVehicle(vehicle, civGroup);
                 }
                 else
                 {
                     // If no group was created, just track the vehicle
-                    Print("[DEBUG_CIV_VEHICLES] No civilian AI group created for vehicle, tracking vehicle only", LogLevel.NORMAL);
+                   //Print("[DEBUG_CIV_VEHICLES] No civilian AI group created for vehicle, tracking vehicle only", LogLevel.NORMAL);
                     m_areaCivVehicles.Insert(vehicle);
                 }
             }
             else
             {
-                Print("[DEBUG_CIV_VEHICLES] Failed to spawn civilian vehicle at position: " + spawnPos, LogLevel.WARNING);
+               //Print("[DEBUG_CIV_VEHICLES] Failed to spawn civilian vehicle at position: " + spawnPos, LogLevel.WARNING);
             }
         }
         
-        Print("[DEBUG_CIV_VEHICLES] SpawnInitialCivVehicles completed - Successfully spawned " + successfulSpawns + " of " + initialCivVehicles + " civilian vehicles", LogLevel.NORMAL);
+       //Print("[DEBUG_CIV_VEHICLES] SpawnInitialCivVehicles completed - Successfully spawned " + successfulSpawns + " of " + initialCivVehicles + " civilian vehicles", LogLevel.NORMAL);
+    }
+
+    // New task for processing AI reactions
+    private void AIReactionsTask()
+    {
+        // Process reactions for all military groups
+        foreach (IA_AiGroup group : m_military)
+        {
+            if (group && group.IsSpawned())
+            {
+                group.ProcessReactions();
+            }
+        }
+        
+        // Process reactions for civilian groups if needed
+        foreach (IA_AiGroup group : m_civilians)
+        {
+            if (group && group.IsSpawned())
+            {
+                group.ProcessReactions();
+            }
+        }
     }
 }
