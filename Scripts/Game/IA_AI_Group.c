@@ -41,8 +41,8 @@ class IA_AiGroup
 
     // Add these variables to the class variables section near the top
     private int m_nextStateEvaluationTime = 0;
-    private const int MIN_STATE_EVALUATION_INTERVAL = 4000; // milliseconds
-    private const int MAX_STATE_EVALUATION_INTERVAL = 12000; // milliseconds
+    private const int MIN_STATE_EVALUATION_INTERVAL = 5000; // milliseconds
+    private const int MAX_STATE_EVALUATION_INTERVAL = 15000; // milliseconds
     private bool m_isStateEvaluationScheduled = false;
 
     // Danger reaction system parameters
@@ -59,27 +59,67 @@ class IA_AiGroup
     private float m_currentDangerLevel = 0.0; // 0.0-1.0 scale
     private int m_consecutiveDangerEvents = 0;
 
+    // Rate limiting for logging
+    private static const int BEHAVIOR_LOG_RATE_LIMIT_SECONDS = 3;
+    private int m_lastApplyUnderFireLogTime = 0;
+    private int m_lastApplyEnemySpottedLogTime = 0;
+    private int m_lastDangerDetectLogTime = 0;
+    private int m_lastDangerTriggerLogTime = 0;
+
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac)
     {
-        //Print("[DEBUG] IA_AiGroup constructor called with pos: " + initialPos + ", squad: " + squad + ", faction: " + fac, LogLevel.NORMAL);
+        //Initialize basic properties
         m_lastOrderPosition = initialPos;
         m_initialPosition   = initialPos;
         m_lastOrderTime     = 0;
         m_squadType         = squad;
         m_faction           = fac;
-        m_reactionManager   = new IA_AIReactionManager();
+        
+        // Initialize danger system
+        m_lastDangerEventTime = 0;
+        m_lastDangerDetectLogTime = 0;
+        m_lastDangerTriggerLogTime = 0;
+        m_currentDangerLevel = 0.0;
+        m_consecutiveDangerEvents = 0;
+        
+        // Create reaction manager
+        m_reactionManager = new IA_AIReactionManager();
+        
+        // --- BEGIN ADDED DEBUG LOG ---
+        string managerStatus;
+        if (m_reactionManager)
+            managerStatus = "CREATED";
+        else
+            managerStatus = "NULL";
+            
+        Print("[IA_AI_INIT_DEBUG] Group created - Faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              " | SquadType: " + typename.EnumToString(IA_SquadType, m_squadType) + 
+              " | m_reactionManager: " + managerStatus, LogLevel.WARNING);
+        // --- END ADDED DEBUG LOG ---
     }
 
 	static IA_AiGroup CreateMilitaryGroup(vector initialPos, IA_SquadType squadType, IA_Faction faction)
 	{
-	    //Print("[DEBUG] CreateMilitaryGroup called", LogLevel.NORMAL);
+	    // --- BEGIN ADDED DEBUG LOG ---
+        Print("[IA_AI_CRITICAL] CreateMilitaryGroup START - Faction: " + typename.EnumToString(IA_Faction, faction) + 
+              " | SquadType: " + typename.EnumToString(IA_SquadType, squadType),
+              LogLevel.WARNING);
+        // --- END ADDED DEBUG LOG ---
 	    IA_AiGroup grp = new IA_AiGroup(initialPos,squadType,faction);
+	    
+	    // Add critical log after object creation
+	    Print("[IA_AI_CRITICAL] Military group object created, isCivilian=" + grp.m_isCivilian, LogLevel.WARNING);
+	    
 	    grp.m_lastOrderPosition = initialPos;
 	    grp.m_initialPosition   = initialPos;
 	    grp.m_lastOrderTime     = 0;
 	    grp.m_squadType         = squadType;
 	    grp.m_faction           = faction;
 	    grp.m_isCivilian        = false;
+	    
+	    // Add critical log just before returning
+	    Print("[IA_AI_CRITICAL] CreateMilitaryGroup returning group with faction=" + 
+	          typename.EnumToString(IA_Faction, grp.m_faction) + ", isCivilian=" + grp.m_isCivilian, LogLevel.WARNING);
 	    return grp;
 	}
 
@@ -364,6 +404,9 @@ class IA_AiGroup
     // --- New factory method for spawning military groups from individual units ---
     static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount)
     {
+        Print("[IA_AI_CRITICAL] CreateMilitaryGroupFromUnits START - Faction: " + typename.EnumToString(IA_Faction, faction) + 
+              ", unitCount: " + unitCount, LogLevel.WARNING);
+              
         if (unitCount <= 0)
             return null;
 
@@ -409,7 +452,8 @@ class IA_AiGroup
         // Set the origin again after casting just in case
         grp.m_group.SetOrigin(groundPos);
 
-        //Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Spawning " + unitCount + " individual units for faction " + faction, LogLevel.NORMAL);
+        Print("[IA_AI_CRITICAL] CreateMilitaryGroupFromUnits: Spawning " + unitCount + " individual units for faction " + 
+              typename.EnumToString(IA_Faction, faction), LogLevel.WARNING);
 
         // Spawn individual units and add them to group
         for (int i = 0; i < unitCount; i++)
@@ -447,27 +491,59 @@ class IA_AiGroup
             }
         }
 
-        // Mark the group as spawned since we manually added units
-        grp.m_isSpawned = true;
-
+        // IMPORTANT FIX: Instead of manually setting m_isSpawned, call the proper Spawn() method 
+        // to set up all necessary systems, including danger event handling
+        Print("[IA_AI_CRITICAL] CreateMilitaryGroupFromUnits: Calling Spawn() to set up event handlers", LogLevel.WARNING);
+        grp.Spawn(IA_AiOrder.Patrol, initialPos);
+        
         // Perform water check for the group's final position
-        grp.WaterCheck();
+        // Note: WaterCheck() is already called inside Spawn(), so this is redundant
+        // grp.WaterCheck();
 
-        //Print("[DEBUG] IA_AiGroup.CreateMilitaryGroupFromUnits: Finished creating group with " + grp.GetAliveCount() + " units.", LogLevel.NORMAL);
+        Print("[IA_AI_CRITICAL] CreateMilitaryGroupFromUnits: Finished creating group with " + 
+              grp.GetAliveCount() + " units. isSpawned=" + grp.IsSpawned(), LogLevel.WARNING);
         return grp;
     }
 
     IA_Faction GetEngagedEnemyFaction()
     {
-        //Print("[DEBUG] GetEngagedEnemyFaction called. Returning: " + m_engagedEnemyFaction, LogLevel.NORMAL);
-        return m_engagedEnemyFaction;
+		if(m_isCivilian)
+			return IA_Faction.NONE;
+        // Keep the original function implementation and just add this logging before the return
+        Print("[IA_NEW_DEBUG] GetEngagedEnemyFaction called. Group faction: " + m_faction, LogLevel.WARNING);
+		if(IsEngagedWithEnemy()){
+			return m_engagedEnemyFaction;
+		}
+        return IA_Faction.NONE; // Or whatever your original return value is
     }
 
     bool IsEngagedWithEnemy()
     {
-        bool engaged = (m_engagedEnemyFaction != IA_Faction.NONE);
-        //Print("[DEBUG] IsEngagedWithEnemy called. Engaged: " + engaged, LogLevel.NORMAL);
-        return engaged;
+		if(m_isCivilian)
+			return false;
+        // First, check if we have a valid enemy faction set
+        bool result = m_engagedEnemyFaction != IA_Faction.NONE;
+        
+        // Military units (non-civilian) should engage when they detect danger
+        if (!result && !m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
+        {
+            // If we've had a danger event in the last 60 seconds, consider the unit engaged
+            int currentTime = System.GetUnixTime();
+            int timeSinceLastDanger = currentTime - m_lastDangerEventTime;
+            
+            if (m_lastDangerEventTime > 0 && timeSinceLastDanger < 60)
+            {
+                // Consider the unit engaged if there was recent danger
+                result = true;
+                    // For military units, set an appropriate enemy faction based on this unit's faction
+                    
+                m_engagedEnemyFaction = IA_Faction.US;
+                
+            }
+        }
+        
+        Print("[IA_NEW_DEBUG] IsEngagedWithEnemy called. Group faction: " + m_faction + ", Result: " + result, LogLevel.WARNING);
+        return result;
     }
 
     void MarkAsUnengaged()
@@ -761,11 +837,19 @@ class IA_AiGroup
 void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector.Zero)
 {
     //Print("[DEBUG] Spawn called with initialOrder: " + initialOrder + ", orderPos: " + orderPos, LogLevel.NORMAL);
+    Print("[IA_AI_CRITICAL] Spawn called - Faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+          ", isCivilian: " + m_isCivilian, LogLevel.WARNING);
+          
     if (!PerformSpawn())
     {
+        Print("[IA_AI_CRITICAL] PerformSpawn returned false for faction: " + 
+              typename.EnumToString(IA_Faction, m_faction), LogLevel.WARNING);
         //Print("[DEBUG] PerformSpawn returned false. Aborting Spawn.", LogLevel.NORMAL);
         return;
     }
+    
+    Print("[IA_AI_CRITICAL] PerformSpawn succeeded for faction: " + 
+          typename.EnumToString(IA_Faction, m_faction), LogLevel.WARNING);
 
     vector posToUse;
     if (orderPos != vector.Zero)
@@ -783,6 +867,9 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     {
         AddOrder(posToUse, initialOrder);
     }
+    
+    Print("[IA_AI_CRITICAL] Spawn completed for faction: " + 
+          typename.EnumToString(IA_Faction, m_faction), LogLevel.WARNING);
 }
 
 
@@ -791,6 +878,10 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 	
     private bool PerformSpawn()
     {
+        // Add critical debug at start of function
+        Print("[IA_AI_CRITICAL] PerformSpawn START - Faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              ", isCivilian: " + m_isCivilian, LogLevel.WARNING);
+              
         //Print("[DEBUG] PerformSpawn called.", LogLevel.NORMAL);
         if (IsSpawned())
         {
@@ -808,6 +899,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         else
         {
             resourceName = IA_SquadResourceName(m_squadType, m_faction);
+            Print("[IA_AI_CRITICAL] Military group resource name: " + resourceName, LogLevel.WARNING);
             //Print("[DEBUG] Spawning military. Resource: " + resourceName, LogLevel.NORMAL);
         }
 
@@ -879,37 +971,144 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         ScheduleNextStateEvaluation();
         
         // Start periodic danger event checks
+        Print("[IA_DEBUG_ESSENTIAL] Scheduling periodic CheckDangerEvents - Group faction: " + 
+              typename.EnumToString(IA_Faction, m_faction) + ", isCivilian: " + m_isCivilian, LogLevel.WARNING);
         GetGame().GetCallqueue().CallLater(CheckDangerEvents, 100, true);
+        Print("[IA_DEBUG_ESSENTIAL] CheckDangerEvents has been scheduled", LogLevel.WARNING);
         
         //Print("[DEBUG] PerformSpawn completed successfully.", LogLevel.NORMAL);
+        Print("[IA_AI_CRITICAL] PerformSpawn COMPLETED - Faction: " + typename.EnumToString(IA_Faction, m_faction), LogLevel.WARNING);
         return true;
     }
 
     // Process a danger event at the group level
     void ProcessDangerEvent(IA_GroupDangerType dangerType, vector position, IEntity sourceEntity = null, float intensity = 0.5, bool isSuppressed = false)
     {
-        // Force this to always print as WARNING to ensure visibility
-        Print("[IA_AI_DANGER] Group at " + GetOrigin() + " processing danger: " + 
-              typename.EnumToString(IA_GroupDangerType, dangerType) + 
-              " at position " + position, LogLevel.WARNING);
-        
+        Print("[IA_DEBUG_CRITICAL] ProcessDangerEvent - Group Faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              ", isCivilian: " + m_isCivilian + ", DangerType: " + typename.EnumToString(IA_GroupDangerType, dangerType), LogLevel.WARNING);
+              
+        // --- ADDED CHECK: Immediately skip for civilians ---
+        if (m_isCivilian || m_faction == IA_Faction.CIV) {
+            Print("[IA_DEBUG_CRITICAL] ProcessDangerEvent - SKIPPED because unit is civilian", LogLevel.WARNING);
+            return;
+        }
+        // --- END OF ADDED CHECK ---
+
+        // --- BEGIN ADDED DEBUG LOG ---
+        // Log every danger event with group information, regardless of other conditions
+        Print("[IA_AI_DANGER_DEBUG] ProcessDangerEvent START - Group Faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              " | isCivilian: " + m_isCivilian + " | Type: " + typename.EnumToString(IA_GroupDangerType, dangerType),
+              LogLevel.WARNING);
+        // --- END ADDED DEBUG LOG ---
+
         // Skip if group is not spawned
         if (!IsSpawned() || !m_group)
+        {
+            // --- ADDED DEBUG LOG ---
+            Print("[IA_AI_DANGER_DEBUG] ProcessDangerEvent SKIPPED - Group not spawned or null", LogLevel.ERROR);
+            // --- END DEBUG LOG ---
             return;
+        }
+        
+        // --- FRIENDLY FIRE CHECK: Check if the source entity is friendly ---
+        if (sourceEntity)
+        {
+            // Try to get the faction of the source entity
+            IA_Faction sourceFaction = IA_Faction.NONE;
+            SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(sourceEntity);
             
+            if (character)
+            {
+                // Try to get faction from a character entity
+                FactionAffiliationComponent factionComponent = FactionAffiliationComponent.Cast(character.FindComponent(FactionAffiliationComponent));
+                if (factionComponent)
+                {
+                    Faction faction = factionComponent.GetAffiliatedFaction();
+                    if (faction)
+                    {
+                        string factionKey = faction.GetFactionKey();
+                        // Map the faction key to our IA_Faction enum
+                        if (factionKey == "US")
+                            sourceFaction = IA_Faction.US;
+                        else if (factionKey == "USSR")
+                            sourceFaction = IA_Faction.USSR;
+                        else if (factionKey == "FIA")
+                            sourceFaction = IA_Faction.FIA;
+                        else if (factionKey == "CIV")
+                            sourceFaction = IA_Faction.CIV;
+                        
+                        Print("[IA_FRIENDLY_CHECK] Source entity faction detected: " + factionKey + 
+                              " mapped to " + typename.EnumToString(IA_Faction, sourceFaction), LogLevel.WARNING);
+                    }
+                }
+            }
+            
+            // Check if source is from the same faction as this group
+            if (sourceFaction != IA_Faction.NONE && sourceFaction == m_faction)
+            {
+                Print("[IA_FRIENDLY_CHECK] Ignoring danger from friendly faction: " + 
+                      typename.EnumToString(IA_Faction, sourceFaction), LogLevel.WARNING);
+                      
+                // Skip processing for friendly fire
+                return;
+            }
+            
+            // If we could identify a valid enemy faction, set it
+            if (sourceFaction != IA_Faction.NONE && sourceFaction != m_faction)
+            {
+                m_engagedEnemyFaction = sourceFaction;
+                Print("[IA_FRIENDLY_CHECK] Setting enemy faction to: " + 
+                      typename.EnumToString(IA_Faction, m_engagedEnemyFaction), LogLevel.WARNING);
+            }
+            // Improvement: If we have danger but no identified enemy faction, set a reasonable fallback faction
+            else if (m_engagedEnemyFaction == IA_Faction.NONE)
+            {
+                // Set a reasonable enemy faction based on our own faction
+                if (m_faction == IA_Faction.USSR)
+                    m_engagedEnemyFaction = IA_Faction.US;
+                else if (m_faction == IA_Faction.US)
+                    m_engagedEnemyFaction = IA_Faction.USSR;
+                else if (m_faction == IA_Faction.FIA)
+                    m_engagedEnemyFaction = IA_Faction.US; // FIA typically fights US
+                else
+                    m_engagedEnemyFaction = IA_Faction.US; // Default fallback
+
+                Print("[IA_FRIENDLY_CHECK] No source faction identified, using fallback enemy faction: " + 
+                      typename.EnumToString(IA_Faction, m_engagedEnemyFaction), LogLevel.WARNING);
+            }
+        }
+        // --- END FRIENDLY FIRE CHECK ---
+        
+        // Even if we don't have a source entity, make sure we have an engaged enemy faction for non-friendly events
+        else if (m_engagedEnemyFaction == IA_Faction.NONE)
+        {
+            // Set a reasonable enemy faction based on our own faction
+            if (m_faction == IA_Faction.USSR)
+                m_engagedEnemyFaction = IA_Faction.US;
+            else if (m_faction == IA_Faction.US)
+                m_engagedEnemyFaction = IA_Faction.USSR;
+            else if (m_faction == IA_Faction.FIA)
+                m_engagedEnemyFaction = IA_Faction.US; // FIA typically fights US
+            else
+                m_engagedEnemyFaction = IA_Faction.US; // Default fallback
+                
+            Print("[IA_FRIENDLY_CHECK] No source entity, using fallback enemy faction: " + 
+                  typename.EnumToString(IA_Faction, m_engagedEnemyFaction), LogLevel.WARNING);
+        }
+
         // Calculate distance to danger
         float distance = vector.Distance(GetOrigin(), position);
-        
+
         // Store event information
         m_lastDangerEventTime = System.GetUnixTime();
         m_lastDangerPosition = position;
         m_lastDangerType = dangerType;
-        
+
         // Calculate if this danger should be reacted to based on type and distance
         bool shouldReact = false;
         IA_AIReactionType reactionType = IA_AIReactionType.None;
         float reactionIntensity = intensity;
-        
+
         // Determine reaction based on danger type
         switch (dangerType)
         {
@@ -918,14 +1117,30 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 if (distance <= BULLET_IMPACT_DISTANCE_MAX)
                 {
                     shouldReact = true;
-                    reactionType = IA_AIReactionType.TakingFire;
+                    reactionType = IA_AIReactionType.UnderFire; // Changed from TakingFire
                     reactionIntensity = Math.Clamp(1.0 - (distance / BULLET_IMPACT_DISTANCE_MAX), 0.3, 0.8);
                     m_consecutiveDangerEvents++;
+
+                    int currentTime_pi = System.GetUnixTime();
+                    if (currentTime_pi - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
+                    {
+                        Print("[IA_AI_DANGER] Projectile impact detected at " + distance + "m", LogLevel.WARNING);
+                        m_lastDangerDetectLogTime = currentTime_pi;
+                    }
                     
-                    Print("[IA_AI_DANGER] Projectile impact detected at " + distance + "m", LogLevel.WARNING);
+                    // --- ADDED DEBUG LOG ---
+                    Print("[IA_AI_DANGER_DEBUG] ProjectileImpact evaluated - Distance: " + distance + 
+                          " | Max: " + BULLET_IMPACT_DISTANCE_MAX + " | shouldReact: true", LogLevel.WARNING);
+                    // --- END DEBUG LOG ---
                 }
+                // --- ADDED DEBUG LOG ---
+                else {
+                    Print("[IA_AI_DANGER_DEBUG] ProjectileImpact TOO FAR - Distance: " + distance + 
+                          " | Max: " + BULLET_IMPACT_DISTANCE_MAX + " | shouldReact: false", LogLevel.WARNING);
+                }
+                // --- END DEBUG LOG ---
                 break;
-                
+
             case IA_GroupDangerType.WeaponFire:
                 // Check if gunshot is audible based on distance and suppression
                 float maxAudibleDistance;
@@ -949,18 +1164,28 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                     reactionIntensity = distanceFactor * suppressionFactor;
                     m_consecutiveDangerEvents++;
                     
-                    Print("[IA_AI_DANGER] Weapon fire detected at " + distance + "m (Suppressed: " + isSuppressed + ")", LogLevel.WARNING);
+                    int currentTime_wf = System.GetUnixTime();
+                    if (currentTime_wf - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
+                    {
+                        Print("[IA_AI_DANGER] Weapon fire detected at " + distance + "m (Suppressed: " + isSuppressed + ")", LogLevel.WARNING);
+                        m_lastDangerDetectLogTime = currentTime_wf;
+                    }
                 }
                 break;
                 
             case IA_GroupDangerType.ProjectileFlyby:
                 // Always react to flybys with high priority
                 shouldReact = true;
-                reactionType = IA_AIReactionType.UnderAttack;
+                reactionType = IA_AIReactionType.UnderFire; // Changed from UnderAttack
                 reactionIntensity = Math.Clamp(0.7 + (intensity * 0.3), 0.7, 1.0);
                 m_consecutiveDangerEvents += 2; // Flybys are more threatening
                 
-                Print("[IA_AI_DANGER] Projectile flyby detected!", LogLevel.WARNING);
+                int currentTime_pf = System.GetUnixTime();
+                if (currentTime_pf - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
+                {
+                    Print("[IA_AI_DANGER] Projectile flyby detected!", LogLevel.WARNING);
+                    m_lastDangerDetectLogTime = currentTime_pf;
+                }
                 break;
                 
             case IA_GroupDangerType.Explosion:
@@ -968,12 +1193,14 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 if (distance <= EXPLOSION_REACT_DISTANCE)
                 {
                     shouldReact = true;
-                    reactionType = IA_AIReactionType.UnderAttack;
-                    // Higher intensity for closer explosions
-                    reactionIntensity = Math.Clamp(1.0 - (distance / EXPLOSION_REACT_DISTANCE), 0.5, 1.0);
                     m_consecutiveDangerEvents += 3; // Explosions are very threatening
                     
-                    Print("[IA_AI_DANGER] Explosion detected at " + distance + "m", LogLevel.WARNING);
+                    int currentTime_ex = System.GetUnixTime();
+                    if (currentTime_ex - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
+                    {
+                        Print("[IA_AI_DANGER] Explosion detected at " + distance + "m", LogLevel.WARNING);
+                        m_lastDangerDetectLogTime = currentTime_ex;
+                    }
                 }
                 break;
                 
@@ -984,20 +1211,33 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 // Use provided intensity directly
                 m_consecutiveDangerEvents++;
                 
-                Print("[IA_AI_DANGER] Enemy spotted at " + distance + "m", LogLevel.WARNING);
+                int currentTime_esd = System.GetUnixTime();
+                if (currentTime_esd - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
+                {
+                    Print("[IA_AI_DANGER] Enemy spotted at " + distance + "m", LogLevel.WARNING);
+                    m_lastDangerDetectLogTime = currentTime_esd;
+                }
                 break;
         }
         
+        // --- ADDED DEBUG LOG ---
+        // Log the final decision before applying the reaction
+        Print("[IA_AI_DANGER_DEBUG] Final reaction decision - Faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              " | shouldReact: " + shouldReact + 
+              " | reactionType: " + typename.EnumToString(IA_AIReactionType, reactionType),
+              LogLevel.WARNING);
+        // --- END DEBUG LOG ---
+
         // Update danger level based on consecutive events (increases with multiple events)
         m_currentDangerLevel = Math.Clamp(0.2 * m_consecutiveDangerEvents, 0.0, 1.0);
-        
+
         // Apply decay to consecutive events over time
         int timeSinceLastDanger = System.GetUnixTime() - m_lastDangerEventTime;
         if (timeSinceLastDanger > 30 && m_consecutiveDangerEvents > 0)
         {
             m_consecutiveDangerEvents = Math.Max(0, m_consecutiveDangerEvents - 1);
         }
-        
+
         // If danger should cause a reaction, trigger it via reaction manager
         if (shouldReact && reactionType != IA_AIReactionType.None && m_reactionManager)
         {
@@ -1009,19 +1249,41 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 if (character)
                 {
                     string factionKey = character.GetFaction().GetFactionKey();
+                    Print("Source Entity = " + factionKey, LogLevel.NORMAL);
                     if (factionKey == "US")
                         sourceFaction = IA_Faction.US;
                     else if (factionKey == "USSR")
                         sourceFaction = IA_Faction.USSR;
                     else if (factionKey == "CIV")
                         sourceFaction = IA_Faction.CIV;
+                    else if (factionKey == "FIA")
+                        sourceFaction = IA_Faction.FIA;
                 }
             }
             
+            // Use engaged enemy faction if we couldn't determine the source faction
+            if (sourceFaction == IA_Faction.NONE)
+            {
+                sourceFaction = m_engagedEnemyFaction;
+                Print("[IA_AI_DANGER_DEBUG] Using engaged enemy faction for reaction: " + 
+                      typename.EnumToString(IA_Faction, sourceFaction), LogLevel.ERROR);
+            }
+
             // Apply danger level as a multiplier to the reaction intensity
             float multiplier = 0.5 + (m_currentDangerLevel * 0.5);
             float finalIntensity = reactionIntensity * multiplier;
-            
+
+            // --- MODIFIED DEBUG LOG ---
+            // Log right before triggering, including more info
+            Print("[IA_AI_DANGER_DEBUG] About to TriggerReaction: " + typename.EnumToString(IA_AIReactionType, reactionType) + 
+                  " | Group Faction: " + typename.EnumToString(IA_Faction, m_faction) +
+                  " | isCivilian: " + m_isCivilian +
+                  " | Intensity: " + finalIntensity +
+                  " | Position: " + position + 
+                  " | SourceFaction: " + typename.EnumToString(IA_Faction, sourceFaction),
+                  LogLevel.WARNING);
+            // --- END MODIFIED DEBUG LOG ---
+
             // Trigger the reaction in the manager
             m_reactionManager.TriggerReaction(
                 reactionType,
@@ -1030,11 +1292,28 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 sourceEntity,
                 sourceFaction
             );
-            
-            Print("[IA_AI_DANGER] Triggering reaction: " + typename.EnumToString(IA_AIReactionType, reactionType) + 
-                  " with intensity " + finalIntensity + " (base: " + reactionIntensity + 
-                  ", danger level: " + m_currentDangerLevel + ")", LogLevel.WARNING);
+
+            int currentTime_tr = System.GetUnixTime();
+            if (currentTime_tr - m_lastDangerTriggerLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
+            {
+                Print("[IA_AI_DANGER] Triggering reaction: " + typename.EnumToString(IA_AIReactionType, reactionType) +
+                      " with intensity " + finalIntensity + " (base: " + reactionIntensity +
+                      ", danger level: " + m_currentDangerLevel + ")", LogLevel.WARNING);
+                m_lastDangerTriggerLogTime = currentTime_tr;
+            }
         }
+        // --- ADDED DEBUG LOG ---
+        else if (shouldReact && reactionType != IA_AIReactionType.None) {
+            string managerStatus;
+            if (m_reactionManager)
+                managerStatus = "NOT NULL";
+            else
+                managerStatus = "NULL";
+                
+            Print("[IA_AI_DANGER_DEBUG] NOT triggering reaction - m_reactionManager is " + 
+                  managerStatus, LogLevel.ERROR);
+        }
+        // --- END DEBUG LOG ---
     }
     
     // New method to reset all danger and reaction states - useful for debugging and fixing false positives
@@ -1174,12 +1453,53 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     // Called when an explosion occurs near the group
     void OnExplosion(vector explosionPosition, IEntity sourceEntity = null)
     {
+        // --- BEGIN ADDED DEBUG LOG ---
+		if(!sourceEntity){
+			Print("[IA_EXPLOSION_DEBUG] OnExplosion called - Group faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              ", isCivilian: " + m_isCivilian + 
+              ", Position: " + explosionPosition + 
+              ", SourceEntity: IS NULL!",LogLevel.ERROR);
+		}
+        else 
+        {
+            Print("[IA_EXPLOSION_DEBUG] OnExplosion called - Group faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+                ", isCivilian: " + m_isCivilian + 
+                ", Position: " + explosionPosition + 
+                ", SourceEntity: " + sourceEntity.ToString(),
+                LogLevel.WARNING);
+        }
+              
+        // Check if the reaction manager exists
+        string managerStatus;
+        if (m_reactionManager)
+            managerStatus = "NOT NULL";
+        else
+            managerStatus = "NULL";
+            
+        // Check if m_group exists
+        string groupStatus;
+        if (m_group)
+            groupStatus = "NOT NULL";
+        else
+            groupStatus = "NULL";
+            
+        Print("[IA_EXPLOSION_DEBUG] OnExplosion: m_reactionManager is " + managerStatus + 
+              ", group isSpawned: " + IsSpawned() + 
+              ", m_group: " + groupStatus,
+              LogLevel.WARNING);
+        // --- END ADDED DEBUG LOG ---
+        
         ProcessDangerEvent(IA_GroupDangerType.Explosion, explosionPosition, sourceEntity, 0.9);
     }
     
     // Called when the group spots an enemy
     void OnEnemySpotted(vector enemyPosition, IEntity enemyEntity, float threatLevel = 0.5)
     {
+        Print("[IA_NEW_DEBUG] OnEnemySpotted called. Group faction: " + m_faction + 
+              ", Entity: " + enemyEntity + 
+              ", ThreatLevel: " + threatLevel, 
+              LogLevel.WARNING);
+          
         ProcessDangerEvent(IA_GroupDangerType.EnemySpotted, enemyPosition, enemyEntity, threatLevel);
     }
     
@@ -1256,32 +1576,67 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 
     private void SetupDeathListener()
     {
+        Print("[IA_DEBUG] SetupDeathListener started - Group faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              ", isCivilian: " + m_isCivilian, LogLevel.WARNING);
+              
         if (!m_group)
+        {
+            Print("[IA_DEBUG] SetupDeathListener - m_group is null, rescheduling", LogLevel.ERROR);
+            GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
             return;
+        }
             
         array<AIAgent> agents = {};
         m_group.GetAgents(agents);
         
         if (agents.IsEmpty())
         {
+            Print("[IA_DEBUG] SetupDeathListener - No agents found, rescheduling", LogLevel.ERROR);
             GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
             return;
         }
         
+        // Log the number of agents found
+        Print("[IA_DEBUG] SetupDeathListener - Found " + agents.Count() + " agents", LogLevel.WARNING);
+        
         foreach (AIAgent agent : agents)
         {
+            if (!agent)
+            {
+                Print("[IA_DEBUG] SetupDeathListener - Found null agent in group", LogLevel.ERROR);
+                continue;
+            }
+                
             SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
             if (!ch)
+            {
+                Print("[IA_DEBUG] SetupDeathListener - Failed to cast to SCR_ChimeraCharacter", LogLevel.ERROR);
                 continue;
+            }
                 
             SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
             if (!ccc)
+            {
+                Print("[IA_DEBUG] SetupDeathListener - Failed to find SCR_CharacterControllerComponent", LogLevel.ERROR);
                 continue;
+            }
                 
             ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
             
             // Set up danger event processing for this agent
             ProcessAgentDangerEvents(agent);
+            
+            // Verify the agent has danger event capability
+            int dangerCount = agent.GetDangerEventsCount();
+            Print("[IA_DEBUG] SetupDeathListener - Agent has " + dangerCount + " danger events initially", LogLevel.WARNING);
+        }
+        
+        // For military units, we want to ensure they can properly respond to danger
+        if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
+        {
+            Print("[IA_DEBUG] Military unit setup complete - Scheduling immediate danger check", LogLevel.WARNING);
+            // Schedule an immediate check for danger events to ensure the system is working
+            GetGame().GetCallqueue().CallLater(CheckDangerEvents, 100, false);
         }
     }
 
@@ -1289,76 +1644,221 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     private void ProcessAgentDangerEvents(AIAgent agent)
     {
         if (!agent)
+        {
+            Print("[IA_DEBUG] ProcessAgentDangerEvents - Agent is null", LogLevel.ERROR);
             return;
+        }
             
         int dangerCount = agent.GetDangerEventsCount();
+        Print("[IA_DEBUG] ProcessAgentDangerEvents - Group faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              ", Agent danger events count: " + dangerCount, LogLevel.WARNING);
+              
         if (dangerCount <= 0)
             return;
-            
+           
+        // --- BEGIN ADDED DEBUG LOG ---
+        Print("[IA_AGENT_DANGER_DEBUG] ProcessAgentDangerEvents START - Group faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              ", Found " + dangerCount + " danger events", LogLevel.WARNING);
+        // --- END ADDED DEBUG LOG ---
+
         // Process each danger event
         for (int i = 0; i < dangerCount; i++)
         {
-            AIDangerEvent dangerEvent = agent.GetDangerEvent();
+            int outCount;
+            AIDangerEvent dangerEvent = agent.GetDangerEvent(i, outCount);
             if (!dangerEvent)
+            {
+                Print("[IA_DEBUG] ProcessAgentDangerEvents - Danger event at index " + i + " is null", LogLevel.ERROR);
                 continue;
+            }
                 
             EAIDangerEventType dangerType = dangerEvent.GetDangerType();
             AIAgent senderAgent = dangerEvent.GetSender();
             AIAgent receiverAgent = dangerEvent.GetReceiver();
             vector dangerVector = dangerEvent.GetPosition();
             
+            // --- BEGIN ADDED DEBUG LOG ---
+            Print("[IA_AGENT_DANGER_DEBUG] Processing event " + i + " of type: " + dangerType + 
+                  " at position: " + dangerVector, LogLevel.WARNING);
+            // --- END ADDED DEBUG LOG ---
+                
             // Map the native danger type to our reaction system
             IA_GroupDangerType mappedDangerType;
             IA_AIReactionType reactionType;
             float intensity = 0.5;
             bool isSuppressed = false;
             
+            // Default to handling the event unless we explicitly skip it
+            bool handleEvent = true;
+            Print("Danger Type Detected: " + dangerType, LogLevel.NORMAL);
             switch (dangerType)
             {
                 case EAIDangerEventType.Danger_ProjectileHit:
                     mappedDangerType = IA_GroupDangerType.ProjectileImpact;
-                    reactionType = IA_AIReactionType.TakingFire;
+                    reactionType = IA_AIReactionType.UnderFire; // Changed from TakingFire
                     intensity = 0.7;
+                    // --- ADDED DEBUG LOG ---
+                    Print("[IA_AGENT_DANGER_DEBUG] Mapped ProjectileHit to ProjectileImpact with intensity " + intensity, LogLevel.WARNING);
+                    // --- END ADDED DEBUG LOG ---
                     break;
                     
                 case EAIDangerEventType.Danger_WeaponFire:
                     mappedDangerType = IA_GroupDangerType.WeaponFire;
                     reactionType = IA_AIReactionType.EnemySpotted;
                     intensity = 0.6;
+                    // --- ADDED DEBUG LOG ---
+                    Print("[IA_AGENT_DANGER_DEBUG] Mapped WeaponFire to WeaponFire with intensity " + intensity, LogLevel.WARNING);
+                    // --- END ADDED DEBUG LOG ---
                     break;
                     
                 case EAIDangerEventType.Danger_Explosion:
                     mappedDangerType = IA_GroupDangerType.Explosion;
-                    reactionType = IA_AIReactionType.UnderAttack;
+                    // FIX: Add appropriate reaction type for explosions
+                    reactionType = IA_AIReactionType.UnderFire; // Use UnderFire as the reaction type for explosions
                     intensity = 0.9;
+                    // --- ADDED DEBUG LOG ---
+                    Print("[IA_AGENT_DANGER_DEBUG] Mapped Explosion to Explosion with intensity " + intensity, LogLevel.WARNING);
+                    // --- END ADDED DEBUG LOG ---
                     break;
                     
                 case EAIDangerEventType.Danger_NewEnemy:
                     mappedDangerType = IA_GroupDangerType.EnemySpotted;
                     reactionType = IA_AIReactionType.EnemySpotted;
                     intensity = 0.8;
+                    // --- ADDED DEBUG LOG ---
+                    Print("[IA_AGENT_DANGER_DEBUG] Mapped NewEnemy to EnemySpotted with intensity " + intensity, LogLevel.WARNING);
+                    // --- END ADDED DEBUG LOG ---
                     break;
                     
                 case EAIDangerEventType.Danger_DamageTaken:
                     mappedDangerType = IA_GroupDangerType.ProjectileImpact;
-                    reactionType = IA_AIReactionType.TakingFire;
+                    reactionType = IA_AIReactionType.UnderFire; // Changed from TakingFire
                     intensity = 0.6;
+                    // --- ADDED DEBUG LOG ---
+                    Print("[IA_AGENT_DANGER_DEBUG] Mapped DamageTaken to ProjectileImpact with intensity " + intensity, LogLevel.WARNING);
+                    // --- END ADDED DEBUG LOG ---
                     break;
                     
                 default:
+                    // --- ADDED DEBUG LOG ---
+                    Print("[IA_AGENT_DANGER_DEBUG] Unhandled danger type: " + dangerType + " - skipping", LogLevel.WARNING);
+                    // --- END ADDED DEBUG LOG ---
+                    handleEvent = false;
                     continue; // Skip other danger types for now
             }
+            
+            // Only proceed if we've decided to handle this event type
+            if (!handleEvent)
+                continue;
             
             // Get the source entity if available
             IEntity sourceEntity = null;
             if (senderAgent)
             {
                 sourceEntity = senderAgent.GetControlledEntity();
+                // --- ADDED DEBUG LOG ---
+                string entityInfo = "NULL";
+                if (sourceEntity)
+                {
+                    entityInfo = sourceEntity.ToString();
+                }
+                Print("[IA_AGENT_DANGER_DEBUG] Source entity: " + entityInfo, LogLevel.WARNING);
+                // --- END ADDED DEBUG LOG ---
             }
+            
+            // Calculate distance to danger
+            float distance = vector.Distance(GetOrigin(), dangerVector);
+            Print("[IA_AGENT_DANGER_DEBUG] Distance to danger: " + distance + "m", LogLevel.WARNING);
+            
+            // Use distance-based logic for intensity
+            switch (mappedDangerType)
+            {
+                case IA_GroupDangerType.ProjectileImpact:
+                    // Higher intensity for closer impacts
+                    if (distance < BULLET_IMPACT_DISTANCE_MAX)
+                    {
+                        // Scale intensity based on distance (closer = more intense)
+                        intensity = Math.Clamp(1.0 - (distance / BULLET_IMPACT_DISTANCE_MAX), 0.4, 0.9);
+                        Print("[IA_AGENT_DANGER_DEBUG] Adjusted ProjectileImpact intensity to " + intensity + " based on distance", LogLevel.WARNING);
+                    }
+                    else
+                    {
+                        // Too far to care much
+                        intensity = 0.2;
+                    }
+                    break;
+                    
+                case IA_GroupDangerType.ProjectileFlyby:
+                    // Similar to impacts but slightly lower intensity
+                    if (distance < PROJECTILE_FLYBY_RADIUS)
+                    {
+                        intensity = Math.Clamp(0.8 - (distance / PROJECTILE_FLYBY_RADIUS), 0.3, 0.7);
+                        Print("[IA_AGENT_DANGER_DEBUG] Adjusted ProjectileFlyby intensity to " + intensity + " based on distance", LogLevel.WARNING);
+                    }
+                    else
+                    {
+                        intensity = 0.1;
+                    }
+                    break;
+                    
+                case IA_GroupDangerType.WeaponFire:
+                    // Scale based on audible distance
+                    float maxDistance;
+                    if (isSuppressed)
+                    {
+                        maxDistance = SUPPRESSED_AUDIBLE_DISTANCE;
+                    }
+                    else
+                    {
+                        maxDistance = GUNSHOT_AUDIBLE_DISTANCE;
+                    }
+                    
+                    if (distance < maxDistance)
+                    {
+                        intensity = Math.Clamp(0.6 - (distance / maxDistance) * 0.5, 0.1, 0.6);
+                        Print("[IA_AGENT_DANGER_DEBUG] Adjusted WeaponFire intensity to " + intensity + " based on distance", LogLevel.WARNING);
+                    }
+                    else
+                    {
+                        // Too far to hear
+                        intensity = 0.0;
+                        handleEvent = false;
+                    }
+                    break;
+                    
+                case IA_GroupDangerType.Explosion:
+                    // Explosions have wider effect radius
+                    if (distance < EXPLOSION_REACT_DISTANCE)
+                    {
+                        intensity = Math.Clamp(1.0 - (distance / EXPLOSION_REACT_DISTANCE), 0.3, 0.9);
+                        Print("[IA_AGENT_DANGER_DEBUG] Adjusted Explosion intensity to " + intensity + " based on distance", LogLevel.WARNING);
+                    }
+                    else
+                    {
+                        // Too far to be concerning
+                        intensity = 0.0;
+                        handleEvent = false;
+                    }
+                    break;
+            }
+            
+            // Skip if distance-based logic determined this isn't worth reacting to
+            if (!handleEvent || intensity <= 0.0)
+                continue;
+            
+            // --- ADDED DEBUG LOG ---
+            Print("[IA_AGENT_DANGER_DEBUG] About to call ProcessDangerEvent with type: " + 
+                  typename.EnumToString(IA_GroupDangerType, mappedDangerType) + 
+                  ", intensity: " + intensity, LogLevel.WARNING);
+            // --- END ADDED DEBUG LOG ---
             
             // Process the danger event through our existing system
             ProcessDangerEvent(mappedDangerType, dangerVector, sourceEntity, intensity, isSuppressed);
         }
+
+        Print("[IA_NEW_DEBUG] ProcessAgentDangerEvents - Group faction: " + m_faction + 
+              ", Agent has had this many danger events: " + agent.GetDangerEventsCount(),
+              LogLevel.WARNING);
     }
 
     private void WaterCheck()
@@ -1502,17 +2002,90 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     // Process AI reactions and apply appropriate behaviors
     void ProcessReactions()
     {
+        // --- ADDED CHECK: Immediately skip for civilians ---
+        if (m_isCivilian || m_faction == IA_Faction.CIV) {
+            return;
+        }
+        // --- END OF ADDED CHECK ---
+        
+        // Skip if not initialized or spawned
         if (!m_reactionManager || !IsSpawned())
             return;
             
-        // Process the reactions in the manager
+        // Process reactions in the manager
         m_reactionManager.ProcessReactions();
         
-        // If there's an active reaction, apply the behavior
+        // Check if there's an active reaction to respond to
         if (m_reactionManager.HasActiveReaction())
         {
+            // Get the current reaction state
             IA_AIReactionState reaction = m_reactionManager.GetCurrentReaction();
-            ApplyReactionBehavior(reaction);
+            if (reaction)
+            {
+                // --- BEGIN ADDED DEBUG LOG ---
+                IA_AIReactionType reactionType = reaction.GetReactionType();
+                Print("[IA_AI_REACTION_DEBUG] ProcessReactions(): Group Faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+                      " | Reaction Type: " + typename.EnumToString(IA_AIReactionType, reactionType) + 
+                      " | isCivilian: " + m_isCivilian, LogLevel.WARNING);
+                // --- END ADDED DEBUG LOG ---
+                
+                // Apply behavior based on the reaction state
+                ApplyReactionBehavior(reaction);
+            }
+        }
+    }
+    
+    // Apply specific behaviors for reactions
+    private void ApplyReactionBehavior(IA_AIReactionState reaction)
+    {
+        // Safety check
+        if (!reaction)
+            return;
+            
+        // --- BEGIN ADDED DEBUG LOG ---
+        IA_AIReactionType reactionType = reaction.GetReactionType();
+        Print("[IA_AI_REACTION_DEBUG] ApplyReactionBehavior(): Group Faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              " | Reaction Type: " + typename.EnumToString(IA_AIReactionType, reactionType) + 
+              " | isCivilian: " + m_isCivilian, LogLevel.WARNING);
+        // --- END ADDED DEBUG LOG ---
+            
+        // Apply behavior based on reaction type
+        switch (reaction.GetReactionType())
+        {
+            case IA_AIReactionType.GroupMemberKilled:
+                // --- ADDED DEBUG LOG ---
+                Print("[IA_AI_REACTION_DEBUG] Switch: About to call HandleGroupMemberKilledReaction", LogLevel.WARNING);
+                // --- END DEBUG LOG ---
+                HandleGroupMemberKilledReaction(reaction);
+                break;
+                
+            case IA_AIReactionType.UnderFire: // Changed from UnderAttack
+                // --- ADDED DEBUG LOG ---
+                Print("[IA_AI_REACTION_DEBUG] Switch: About to call HandleUnderFireReaction", LogLevel.WARNING);
+                // --- END DEBUG LOG ---
+                int currentTime_uf = System.GetUnixTime();
+                if (currentTime_uf - m_lastApplyUnderFireLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
+                {
+                    Print("[IA_AI_BEHAVIOR] Applying UnderFire reaction behavior.", LogLevel.WARNING);
+                    m_lastApplyUnderFireLogTime = currentTime_uf;
+                }
+                HandleUnderFireReaction(reaction); // Renamed handler
+                break;
+                
+            case IA_AIReactionType.EnemySpotted:
+                // --- ADDED DEBUG LOG ---
+                Print("[IA_AI_REACTION_DEBUG] Switch: About to call HandleEnemySpottedReaction", LogLevel.WARNING);
+                // --- END DEBUG LOG ---
+                int currentTime_es = System.GetUnixTime();
+                if (currentTime_es - m_lastApplyEnemySpottedLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
+                {
+                    Print("[IA_AI_BEHAVIOR] Applying EnemySpotted reaction behavior.", LogLevel.WARNING);
+                    m_lastApplyEnemySpottedLogTime = currentTime_es;
+                }
+                HandleEnemySpottedReaction(reaction);
+                break;
+                
+            // More handlers for other reaction types can be added later
         }
     }
 
@@ -1637,13 +2210,58 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         
         if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_PLAYER)
         {
-            //Print("[DEBUG] Member killed by player.", LogLevel.NORMAL);
+            Print("[IA_AI_DEATH_DEBUG] Member killed by player.", LogLevel.WARNING);
+            
+            // Improved player faction detection - Try to get actual faction instead of defaulting to CIV
+            IA_Faction playerFaction = IA_Faction.NONE;
+            SCR_ChimeraCharacter playerCharacter = SCR_ChimeraCharacter.Cast(killerEntity);
+            
+            if (playerCharacter)
+            {
+                // Try to get faction from the player character
+                FactionAffiliationComponent factionComponent = FactionAffiliationComponent.Cast(playerCharacter.FindComponent(FactionAffiliationComponent));
+                if (factionComponent)
+                {
+                    Faction faction = factionComponent.GetAffiliatedFaction();
+                    if (faction)
+                    {
+                        string factionKey = faction.GetFactionKey();
+                        // Map the faction key to our IA_Faction enum
+                        if (factionKey == "US")
+                            playerFaction = IA_Faction.US;
+                        else if (factionKey == "USSR")
+                            playerFaction = IA_Faction.USSR;
+                        else if (factionKey == "FIA")
+                            playerFaction = IA_Faction.FIA;
+                        else if (factionKey == "CIV")
+                            playerFaction = IA_Faction.CIV;
+                        
+                        Print("[IA_AI_DEATH_DEBUG] Player faction detected: " + factionKey + 
+                              " mapped to " + typename.EnumToString(IA_Faction, playerFaction), LogLevel.WARNING);
+                    }
+                }
+            }
+            
+            // If we couldn't determine player faction, use an appropriate fallback based on our own faction
+            if (playerFaction == IA_Faction.NONE)
+            {
+                // Pick a reasonable opposing faction based on our own
+                if (m_faction == IA_Faction.USSR)
+                    playerFaction = IA_Faction.US;
+                else if (m_faction == IA_Faction.US)
+                    playerFaction = IA_Faction.USSR;
+                else
+                    playerFaction = IA_Faction.CIV; // Default fallback if all else fails
+                
+                Print("[IA_AI_DEATH_DEBUG] Couldn't determine player faction. Using fallback: " + 
+                      typename.EnumToString(IA_Faction, playerFaction), LogLevel.WARNING);
+            }
             
             // Use the new reaction system
             float groupSize = GetAliveCount() + 1; // +1 for the unit that just died
             float intensity = 1.0 / groupSize; // Higher intensity for smaller groups
             
-            // Trigger reaction with player as source
+            // Trigger reaction with player as source and determined faction
             if (m_reactionManager)
             {
                 m_reactionManager.TriggerReaction(
@@ -1651,15 +2269,15 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                     intensity, 
                     deathPosition, 
                     killerEntity, 
-                    IA_Faction.CIV  // Players always treated as CIV faction for now
+                    playerFaction
                 );
             }
             
             // Legacy engagement system for compatibility
             if (!IsEngagedWithEnemy() && !m_isCivilian && m_faction != IA_Faction.CIV)
             {
-                //Print("[IA_AiGroup.OnMemberDeath] Player killed enemy, group engaged with CIV as placeholder");
-                m_engagedEnemyFaction = IA_Faction.CIV; 
+                m_engagedEnemyFaction = playerFaction;
+                Print("[IA_AI_DEATH_DEBUG] Setting enemy faction to player faction: " + typename.EnumToString(IA_Faction, playerFaction), LogLevel.WARNING);
             }
         }
         else if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_AI)
@@ -1688,6 +2306,10 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             else if (fKey == "CIV")
             {
                 killerFaction = IA_Faction.CIV;
+            }
+            else if (fKey == "FIA")
+            {
+                killerFaction = IA_Faction.FIA;
             }
             
             // Use the new reaction system
@@ -1719,39 +2341,10 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         }
     }
 
-    // Apply behavior changes based on current reaction
-    private void ApplyReactionBehavior(IA_AIReactionState reaction)
-    {
-        // Safety check
-        if (!reaction)
-            return;
-            
-        // Apply behavior based on reaction type
-        switch (reaction.GetReactionType())
-        {
-            case IA_AIReactionType.GroupMemberKilled:
-                HandleGroupMemberKilledReaction(reaction);
-                break;
-                
-            case IA_AIReactionType.UnderAttack:
-                HandleUnderAttackReaction(reaction);
-                break;
-                
-            case IA_AIReactionType.EnemySpotted:
-                HandleEnemySpottedReaction(reaction);
-                break;
-                
-            case IA_AIReactionType.TakingFire:
-                HandleTakingFireReaction(reaction);
-                break;
-                
-            // More handlers for other reaction types can be added later
-        }
-    }
-    
     // Handle reaction when a group member is killed
     private void HandleGroupMemberKilledReaction(IA_AIReactionState reaction)
     {
+        Print("[IA_AI_BEHAVIOR_HANDLER] Executing: HandleGroupMemberKilledReaction", LogLevel.WARNING); // Added log
         // Make sure the legacy engagement system is updated
         if (!IsEngagedWithEnemy() && !m_isCivilian && m_faction != IA_Faction.CIV)
         {
@@ -1786,18 +2379,35 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     }
     
     // Handle reaction when under direct attack
-    private void HandleUnderAttackReaction(IA_AIReactionState reaction)
+    private void HandleUnderFireReaction(IA_AIReactionState reaction)
     {
+        Print("[IA_AI_BEHAVIOR_HANDLER] Executing: HandleUnderFireReaction", LogLevel.WARNING); // Existing log
+
         // Update legacy engagement state
         IA_Faction sourceFaction = reaction.GetSourceFaction();
+
+        // Existing Debug Log
+        Print("[IA_AI_BEHAVIOR_DEBUG] HandleUnderFireReaction Faction Check - Source: " + typename.EnumToString(IA_Faction, sourceFaction) +
+              " | Group: " + typename.EnumToString(IA_Faction, m_faction), LogLevel.WARNING);
+
         if (sourceFaction != IA_Faction.NONE && !IsEngagedWithEnemy())
         {
             m_engagedEnemyFaction = sourceFaction;
         }
-        
+
         // If we're in a vehicle, we might want to flee
         if (m_isDriving && m_referencedEntity)
         {
+            // --- BEGIN MODIFIED DEBUG LOG ---
+            string entityInfo;
+            if (m_referencedEntity)
+                entityInfo = m_referencedEntity.ToString();
+            else
+                entityInfo = "NULL";
+                
+            Print("[IA_AI_BEHAVIOR_DEBUG] HandleUnderFireReaction - Executing VEHICLE branch. (m_isDriving=" + m_isDriving + ", m_referencedEntity=" + entityInfo + ")", LogLevel.WARNING);
+            // --- END MODIFIED DEBUG LOG ---
+
             // Find a position away from the threat
             vector threatPos = reaction.GetSourcePosition();
             if (threatPos != vector.Zero)
@@ -1805,7 +2415,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 vector awayDir = m_group.GetOrigin() - threatPos;
                 awayDir = awayDir.Normalized();
                 vector retreatPos = m_group.GetOrigin() + awayDir * 100;
-                
+
                 // Update driving target
                 m_drivingTarget = retreatPos;
                 UpdateVehicleOrders();
@@ -1813,19 +2423,62 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         }
         else if (!m_isDriving) // If on foot, take cover and engage
         {
-            // If the reaction source position is known, face that direction
+             // --- BEGIN ADDED DEBUG LOG ---
+            Print("[IA_AI_BEHAVIOR_DEBUG] HandleUnderFireReaction - Executing INFANTRY branch. (m_isDriving=" + m_isDriving + ")", LogLevel.WARNING);
+            // --- END ADDED DEBUG LOG ---
+
+            // Get the reaction source position
             vector sourcePos = reaction.GetSourcePosition();
+
+            // --- BEGIN ADDED DEBUG LOG ---
+            Print("[IA_AI_BEHAVIOR_DEBUG] HandleUnderFireReaction (Infantry) - Source Position: " + sourcePos, LogLevel.WARNING);
+            // --- END ADDED DEBUG LOG ---
+
             if (sourcePos != vector.Zero)
             {
-                RemoveAllOrders();
-                AddOrder(sourcePos, IA_AiOrder.SearchAndDestroy, true);
+                Print("[IA_AI_BEHAVIOR_DEBUG] HandleUnderFireReaction (Infantry) - Source valid, attempting to add S&D order.", LogLevel.WARNING);
+                // Log current waypoint count before adding
+                array<AIWaypoint> wpsBefore = {};
+                int countBefore = 0;
+                if(m_group) countBefore = m_group.GetWaypoints(wpsBefore);
+                Print("[IA_AI_BEHAVIOR_DEBUG] Waypoint count BEFORE AddOrder: " + countBefore, LogLevel.WARNING);
+
+                RemoveAllOrders(); // Clears existing waypoints
+                AddOrder(sourcePos, IA_AiOrder.SearchAndDestroy, true); // Adds S&D waypoint
+
+                // Log current waypoint count after adding
+                array<AIWaypoint> wpsAfter = {};
+                int countAfter = 0;
+                 if(m_group) countAfter = m_group.GetWaypoints(wpsAfter);
+                Print("[IA_AI_BEHAVIOR_DEBUG] Waypoint count AFTER AddOrder: " + countAfter, LogLevel.WARNING);
+            }
+            else
+            {
+                // --- BEGIN ADDED DEBUG LOG ---
+                Print("[IA_AI_BEHAVIOR_DEBUG] HandleUnderFireReaction (Infantry) - Source position is ZERO, cannot add S&D order.", LogLevel.ERROR);
+                // --- END ADDED DEBUG LOG ---
             }
         }
+        // --- BEGIN ADDED DEBUG LOG ---
+        // Add a fallback log just in case something unexpected happens
+        else
+        {
+            string entityInfo;
+            if (m_referencedEntity)
+                entityInfo = m_referencedEntity.ToString();
+            else
+                entityInfo = "NULL";
+                
+            Print("[IA_AI_BEHAVIOR_DEBUG] HandleUnderFireReaction - NEITHER vehicle nor infantry branch executed!? m_isDriving=" + m_isDriving + ", m_referencedEntity=" + entityInfo, LogLevel.ERROR);
+        }
+        // --- END ADDED DEBUG LOG ---
     }
     
     // Handle reaction when enemy is spotted but not attacking yet
     private void HandleEnemySpottedReaction(IA_AIReactionState reaction)
     {
+        Print("[IA_AI_BEHAVIOR_HANDLER] Executing: HandleEnemySpottedReaction | Intensity: " + reaction.GetIntensity(), LogLevel.WARNING); // Added log with intensity
+
         // For low intensity reactions, just observe
         if (reaction.GetIntensity() < 0.3 && !m_isDriving)
         {
@@ -1848,21 +2501,6 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         }
     }
     
-    // Handle reaction when taking fire but source unknown
-    private void HandleTakingFireReaction(IA_AIReactionState reaction)
-    {
-        // If we're not already engaged, seek cover
-        if (!IsEngagedWithEnemy() && !m_isDriving)
-        {
-            // Move to a nearby position for cover
-            vector randomDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
-            vector coverPos = m_group.GetOrigin() + randomDir * 15;
-            
-            RemoveAllOrders();
-            AddOrder(coverPos, IA_AiOrder.Defend);
-        }
-    }
-    
     IA_Faction GetFaction()
     {
         //Print("[DEBUG] GetFaction called. Returning: " + m_faction, LogLevel.NORMAL);
@@ -1872,6 +2510,18 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     // Evaluate the group's state and determine appropriate actions
     private void EvaluateGroupState()
     {
+        // Replace ternary operator with if-else
+        string isCivilianText;
+        if (m_faction == IA_Faction.CIV)
+            isCivilianText = "true";
+        else
+            isCivilianText = "false";
+       	if(!m_isCivilian)
+        	Print("[IA_NEW_DEBUG] EvaluateGroupState start - Group faction: " + m_faction + 
+              ", IsEngaged: " + IsEngagedWithEnemy() +
+              ", IsCivilian: " + isCivilianText, 
+              LogLevel.WARNING);
+          
         // Reset the scheduled flag
         m_isStateEvaluationScheduled = false;
         
@@ -1897,105 +2547,284 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
               " | DangerLevel: " + m_currentDangerLevel, 
               LogLevel.WARNING);
         
-        // Check for active reactions first
-        if (m_reactionManager && m_reactionManager.HasActiveReaction())
+        // --- MODIFIED: Only check active reactions for military units ---
+        bool reactionIsActive = false;
+        
+        // Only process reactions for military units
+        if (!m_isCivilian && m_faction != IA_Faction.CIV && m_reactionManager)
         {
-            IA_AIReactionState currentReaction = m_reactionManager.GetCurrentReaction();
-            Print("[IA_AI_STATE] Processing active reaction: " + 
-                  typename.EnumToString(IA_AIReactionType, currentReaction.GetReactionType()) + 
-                  " (Intensity: " + currentReaction.GetIntensity() + ")", 
-                  LogLevel.WARNING);
-                  
-            // If there's an active reaction, let the reaction system handle it
-            ProcessReactions();
+            // --- BEGIN ADDED DEBUG LOG ---
+            // Check reaction state *before* the main conditional block
+            IA_AIReactionType currentReactionType = IA_AIReactionType.None;
+            reactionIsActive = m_reactionManager.HasActiveReaction();
+            if (reactionIsActive)
+                currentReactionType = m_reactionManager.GetCurrentReaction().GetReactionType();
+            
+            Print("[IA_AI_STATE_DEBUG] Checking Reaction State - IsActive: " + reactionIsActive +
+                  " | CurrentType: " + typename.EnumToString(IA_AIReactionType, currentReactionType), LogLevel.WARNING);
+            // --- END ADDED DEBUG LOG ---
+            
+            // Check for active reactions first. If one exists, handle it and *stop* this evaluation cycle.
+            // This gives the reaction behavior (like S&D from UnderFire) priority.
+            if (reactionIsActive)
+            {
+                IA_AIReactionState currentReaction = m_reactionManager.GetCurrentReaction();
+                Print("[IA_AI_STATE] Prioritizing active reaction: " +
+                      typename.EnumToString(IA_AIReactionType, currentReaction.GetReactionType()) +
+                      " (Intensity: " + currentReaction.GetIntensity() + ")",
+                      LogLevel.WARNING);
+    
+                // Apply the behavior for the current reaction
+                ProcessReactions();
+    
+                // Schedule the next evaluation and exit *now* to let the reaction behavior execute.
+                ScheduleNextStateEvaluation();
+                return;
+            }
         }
-        // If no active reactions but engaged with enemy, evaluate tactical options
+        // --- END OF MODIFIED SECTION ---
+
+        // If no active reactions, proceed with other state evaluations:
+
+        // If engaged with enemy (and not driving)
         else if (isEngaged && !isDriving)
         {
-            Print("[IA_AI_STATE] Evaluating combat state - Enemy faction: " + 
-                  typename.EnumToString(IA_Faction, GetEngagedEnemyFaction()), 
+            Print("[IA_AI_STATE] Evaluating combat state - Enemy faction: " +
+                  typename.EnumToString(IA_Faction, GetEngagedEnemyFaction()),
                   LogLevel.WARNING);
-                  
+
             EvaluateCombatState();
         }
-        // If in a vehicle, make sure vehicle orders are up to date
+        // If in a vehicle
         else if (isDriving)
         {
-        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+            Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
             string vehicleType = "Unknown";
             if (vehicle)
                 vehicleType = vehicle.ClassName();
-                
-            Print("[IA_AI_STATE] Managing vehicle state - Type: " + vehicleType + 
-                  " | Destination: " + m_drivingTarget, 
+
+            Print("[IA_AI_STATE] Managing vehicle state - Type: " + vehicleType +
+                  " | Destination: " + m_drivingTarget,
                   LogLevel.WARNING);
-                  
+
             UpdateVehicleOrders();
         }
         // Evaluate danger state if not already in another active state
         else if (m_currentDangerLevel > 0.0)
         {
-            Print("[IA_AI_STATE] Evaluating danger state - Level: " + m_currentDangerLevel, 
+            Print("[IA_AI_STATE] Evaluating danger state - Level: " + m_currentDangerLevel,
                   LogLevel.WARNING);
-                  
+
             EvaluateDangerState();
         }
-        // If the group has been idle for too long, consider a new activity
+        // If the group has been idle for too long
         else if (timeSinceLastOrder > 120 && !hasOrders)
         {
-            Print("[IA_AI_STATE] Group idle for " + timeSinceLastOrder + "s - Evaluating new activities", 
+            Print("[IA_AI_STATE] Group idle for " + timeSinceLastOrder + "s - Evaluating new activities",
                   LogLevel.WARNING);
-                  
+
             EvaluateIdleState();
         }
+        // If none of the above, the group is likely following an old order or just finished one.
         else
         {
-            Print("[IA_AI_STATE] No state change needed - Maintaining current behavior", 
+            Print("[IA_AI_STATE] No specific state change needed - Maintaining current behavior or order",
                   LogLevel.WARNING);
         }
-        
-        // Schedule the next evaluation regardless of the current state
+
+        // Schedule the next evaluation regardless of the current state (unless already returned)
         ScheduleNextStateEvaluation();
     }
 
     // Evaluate what to do during combat
     private void EvaluateCombatState()
     {
-        // Only take action if we don't already have orders
-        if (HasOrders())
-            return;
-            
-        // Get information about the engaged enemy
-        IA_Faction enemyFaction = GetEngagedEnemyFaction();
-        
-        // Determine a tactical response based on group strength, terrain, etc.
-        int aliveCount = GetAliveCount();
-        
-        // If group is severely weakened, consider retreating
-        if (aliveCount <= 2)
-        {
-            // Retreat away from the last order position (likely where enemies are)
-            vector retreatDir = GetOrigin() - m_lastOrderPosition;
-            retreatDir = retreatDir.Normalized();
-            vector retreatPos = GetOrigin() + retreatDir * 50;
-            
-        RemoveAllOrders();
-            AddOrder(retreatPos, IA_AiOrder.Patrol);
-            
-            Print("[IA_AI_STATE] Combat evaluation: Group retreating due to low numbers", LogLevel.WARNING);
-        }
-        // Otherwise, maintain combat stance
+        // Get reaction status with if-else instead of ternary operator
+        string hasReactionText;
+        if (m_reactionManager && m_reactionManager.HasActiveReaction())
+            hasReactionText = "true";
         else
+            hasReactionText = "false";
+        
+        Print("[IA_NEW_DEBUG] EvaluateCombatState - Group faction: " + m_faction + 
+              ", IsEngaged: " + IsEngagedWithEnemy() + 
+              ", HasReaction: " + hasReactionText +
+              ", AliveCount: " + GetAliveCount() +
+              ", HasOrders: " + HasOrders() +
+              ", TimeSinceLastOrder: " + TimeSinceLastOrder() + "s", 
+              LogLevel.WARNING);
+          
+        // If the last order was very recent, let it execute
+        int timeSinceLastOrder = TimeSinceLastOrder();
+        if (timeSinceLastOrder < 3) {
+             return;
+        }
+
+        // --- AGGRESSIVE MILITARY COMBAT HANDLING ---
+        // For military units ONLY - handle combat more aggressively
+        if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
         {
-            // If we don't have orders, set up defensive position
-            if (!HasOrders())
+            // Check for danger events first - these need highest priority
+            int currentTime = System.GetUnixTime();
+            int timeSinceLastDanger = currentTime - m_lastDangerEventTime;
+
+            // --- ENSURE WE HAVE A PROPER ENEMY FACTION ---
+            // If we have a danger event but no enemy faction, check if we need to set a default one
+            if (m_lastDangerEventTime > 0 && m_engagedEnemyFaction == IA_Faction.NONE)
             {
-                vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, GetOrigin());
-                AddOrder(defendPos, IA_AiOrder.Defend);
+                // We know there's danger but we couldn't determine the faction - set a sensible default
+                if (m_faction == IA_Faction.USSR)
+                    m_engagedEnemyFaction = IA_Faction.US;
+                else if (m_faction == IA_Faction.US)
+                    m_engagedEnemyFaction = IA_Faction.USSR;
+
                 
-                Print("[IA_AI_STATE] Combat evaluation: Group taking defensive position", LogLevel.WARNING);
+                Print("[IA_COMBAT_FACTION] No enemy faction identified, defaulting to: " + 
+                      typename.EnumToString(IA_Faction, m_engagedEnemyFaction), LogLevel.WARNING);
+            }
+            // --- END ENEMY FACTION CHECK ---
+
+            // More aggressive stance: respond to ANY danger in last 60 seconds
+            if (m_lastDangerEventTime > 0 && timeSinceLastDanger < 60)
+            {
+                Print("[IA_COMBAT_ENHANCED] Military unit responding to danger - Time since event: " + 
+                      timeSinceLastDanger + "s, DangerType: " + 
+                      typename.EnumToString(IA_GroupDangerType, m_lastDangerType), 
+                      LogLevel.WARNING);
+                
+                // Get a target position to attack - prefer last danger position
+                vector targetPos = m_lastDangerPosition;
+                if (targetPos == vector.Zero)
+                {
+                    // If no valid danger position, use a position near the group
+                    targetPos = IA_Game.rng.GenerateRandomPointInRadius(20, 50, GetOrigin());
+                }
+                
+                // Check if we have a semi-recent order to handle the threat already
+                if (timeSinceLastOrder < 30 && HasOrders() && vector.Distance(m_lastOrderPosition, targetPos) < 50)
+                {
+                    // We have a recent order near the danger point - keep following it
+                    Print("[IA_COMBAT_ENHANCED] Military unit already has order near danger point", 
+                          LogLevel.WARNING);
+                }
+                else
+                {
+                    // Issue a new Search & Destroy order to respond aggressively
+                    Print("[IA_COMBAT_ENHANCED] Military unit engaging danger - Issuing S&D at: " + 
+                          targetPos, LogLevel.WARNING);
+                    
+                    RemoveAllOrders();
+                    AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, true);
+                    
+                    // If this unit wasn't already engaged with an enemy, set an appropriate enemy faction
+                    if (m_engagedEnemyFaction == IA_Faction.NONE)
+                    {
+                        if (m_faction == IA_Faction.USSR)
+                            m_engagedEnemyFaction = IA_Faction.US;
+                        else if (m_faction == IA_Faction.US)
+                            m_engagedEnemyFaction = IA_Faction.USSR;
+    
+                        
+                        Print("[IA_COMBAT_ENHANCED] Setting enemy faction to: " + m_engagedEnemyFaction, 
+                              LogLevel.WARNING);
+                    }
+                    
+                    // Exit early - we've handled this case
+                    return;
+                }
+            }
+            
+            // Even if no recent danger, military units should maintain combat readiness
+            // if they're already engaged
+            if (IsEngagedWithEnemy() && GetAliveCount() > 0)
+            {
+                // If we haven't issued a new order in a while, issue a new one to maintain pressure
+                if (timeSinceLastOrder > 30)
+                {
+                    // Determine a tactical response based on group strength
+                    int aliveCount = GetAliveCount();
+                    vector currentPos = GetOrigin();
+                    
+                    // For stronger groups, be more aggressive
+                    if (aliveCount >= 3)
+                    {
+                        // Generate a search point in the general direction of last danger/order
+                        vector searchDir = vector.Zero;
+                        
+                        // Try to use last danger position as reference
+                        if (m_lastDangerPosition != vector.Zero)
+                        {
+                            searchDir = m_lastDangerPosition - currentPos;
+                            if (searchDir.LengthSq() > 0.1)
+                                searchDir = searchDir.Normalized();
+                            else
+                                searchDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
+                        }
+                        else
+                        {
+                            // Use random direction
+                            searchDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
+                        }
+                        
+                        // Generate point 50-100m ahead in that direction
+                        vector searchPoint = currentPos + (searchDir * Math.RandomFloat(50, 100));
+                        
+                        Print("[IA_COMBAT_ENHANCED] Military unit continuing search - Issuing S&D at: " + 
+                              searchPoint, LogLevel.WARNING);
+                        
+                        RemoveAllOrders();
+                        AddOrder(searchPoint, IA_AiOrder.SearchAndDestroy, true);
+                    }
+                    // For weaker groups, be more defensive
+                    else
+                    {
+                        vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, currentPos);
+                        
+                        Print("[IA_COMBAT_ENHANCED] Military unit (weakened) taking defensive position at: " + 
+                              defendPos, LogLevel.WARNING);
+                        
+                        RemoveAllOrders();
+                        AddOrder(defendPos, IA_AiOrder.Defend);
+                    }
+                    
+                    // Exit early - we've handled this case
+                    return;
+                }
             }
         }
+        // --- END AGGRESSIVE MILITARY COMBAT HANDLING ---
+
+        // If we reach here, we're either a civilian or didn't qualify for the military handling above
+        // Get information about the engaged enemy
+        IA_Faction enemyFaction = GetEngagedEnemyFaction();
+
+        // If group is severely weakened, consider retreating
+        int aliveCount = GetAliveCount();
+        if (aliveCount <= 2)
+        {
+            vector retreatDir = GetOrigin() - m_lastOrderPosition;
+            if (retreatDir.LengthSq() > 0.1) // Check against small threshold for robustness
+                 retreatDir = retreatDir.Normalized();
+            else // If last order position is same as current or zero, pick random direction
+                 retreatDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
+
+            vector retreatPos = GetOrigin() + retreatDir * 50; // Retreat 50m
+
+            Print("[IA_AI_STATE] Combat evaluation: Group retreating due to low numbers (" + aliveCount + ")", LogLevel.WARNING);
+            RemoveAllOrders();
+            AddOrder(retreatPos, IA_AiOrder.Patrol); // Retreat order is Patrol
+        }
+        // Otherwise, maintain combat stance by defending
+        else
+        {
+            vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, GetOrigin());
+            Print("[IA_AI_STATE] Combat evaluation: Group taking defensive position (No recent/active orders)", LogLevel.WARNING);
+            RemoveAllOrders();
+            AddOrder(defendPos, IA_AiOrder.Defend);
+        }
+
+        // Add debug logging to check faction identification
+        Print("[IA_AI_COMBAT_DEBUG] EvaluateCombatState: Group faction: " + m_faction + ", Enemy faction: " + enemyFaction + ", IsEngaged: " + IsEngagedWithEnemy(), LogLevel.WARNING);
     }
     
     // Evaluate what to do when idle
@@ -2039,14 +2868,45 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 
     private void CheckDangerEvents()
     {
+        // Add debug log BEFORE faction check to see if function is being called
+        Print("[IA_DEBUG_ESSENTIAL] CheckDangerEvents called for group faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              ", isCivilian: " + m_isCivilian, LogLevel.WARNING);
+        
+		if(m_faction == IA_Faction.CIV)
+		{
+            // Add explanation for early return
+            Print("[IA_DEBUG_ESSENTIAL] CheckDangerEvents - Skipping for civilian faction", LogLevel.WARNING);
+			return;
+		}
+        
+        Print("[IA_DEBUG] CheckDangerEvents processing for faction: " + typename.EnumToString(IA_Faction, m_faction) + 
+              ", isCivilian: " + m_isCivilian, LogLevel.WARNING);
+        
         if (!m_group)
+        {
+            Print("[IA_DEBUG_ESSENTIAL] CheckDangerEvents - m_group is null, cannot process", LogLevel.ERROR);
             return;
+        }
             
         array<AIAgent> agents = {};
         m_group.GetAgents(agents);
         
+        Print("[IA_DEBUG] CheckDangerEvents - Found " + agents.Count() + " agents in group", LogLevel.WARNING);
+        
+        if (agents.IsEmpty())
+        {
+            Print("[IA_DEBUG_ESSENTIAL] CheckDangerEvents - No agents found in the group", LogLevel.ERROR);
+            return;
+        }
+        
         foreach (AIAgent agent : agents)
         {
+            if (!agent)
+            {
+                Print("[IA_DEBUG] CheckDangerEvents - Found null agent in group", LogLevel.ERROR);
+                continue;
+            }
+            
             ProcessAgentDangerEvents(agent);
         }
     }

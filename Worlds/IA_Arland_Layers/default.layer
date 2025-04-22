@@ -22,6 +22,26 @@ PerceptionManager PerceptionManager : "{028DAEAD63E056BE}Prefabs/World/Game/Perc
 }
 SCR_GameModeEditor GameMode_Editor_Full : "{DA3986AF1B5032B7}Prefabs/MP/Modes/Editor/GameMode_Editor_Full.et" {
  coords 1891.659 11.326 1821.161
+ {
+  SCR_FactionManager {
+   ID "56E685E92F1B7E7A"
+   Factions {
+    SCR_Faction "{56DEAC40D2DBC8B1}" {
+     m_bIsPlayable 1
+     m_aFriendlyFactionsIds {
+      "CIV"
+     }
+    }
+    SCR_Faction "{56DEAC40D3C2E623}" {
+     m_bShowInWelcomeScreenIfNonPlayable 0
+    }
+    SCR_Faction "{56DEAC40D132400B}" {
+     m_bShowInWelcomeScreenIfNonPlayable 0
+    }
+   }
+   m_bCanChangeFactionsPlayable 0
+  }
+ }
 }
 IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
  coords 4829.486 28.5 11737.061

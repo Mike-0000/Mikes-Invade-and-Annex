@@ -1,9 +1,8 @@
 enum IA_AIReactionType
 {
     None,               // No special reaction
-    TakingFire,         // Under fire but source unknown
     EnemySpotted,       // Enemy spotted in distance
-    UnderAttack,        // Taking direct fire from known enemy
+    UnderFire,          // NEW: Replaces TakingFire and UnderAttack (projectile impacts/flybys)
     GroupMemberHit,     // Group member was hit but still alive
     GroupMemberKilled,  // Group member was killed
     VehicleDisabled,    // Vehicle damaged or disabled
@@ -51,7 +50,22 @@ class IA_AIReactionState
             return false;
             
         int currentTime = System.GetUnixTime();
-        return (currentTime - m_reactionStartTime < m_reactionDuration);
+        int elapsedTime = currentTime - m_reactionStartTime;
+        bool isActive = (elapsedTime < m_reactionDuration);
+        
+        // --- BEGIN ADDED DEBUG LOG ---
+        // Only log non-None reactions to avoid spam
+        if (m_reactionType != IA_AIReactionType.None)
+        {
+            Print("[IA_AI_REACTION_DEBUG] IsReactionActive check: Type=" + 
+                typename.EnumToString(IA_AIReactionType, m_reactionType) + 
+                ", ElapsedTime=" + elapsedTime + 
+                "s, Duration=" + m_reactionDuration + 
+                "s, IsActive=" + isActive, LogLevel.WARNING);
+        }
+        // --- END ADDED DEBUG LOG ---
+        
+        return isActive;
     }
     
     void ClearReaction()
@@ -88,6 +102,11 @@ class IA_AIReactionManager
     // Last time reactions were processed
     private int m_lastReactionProcessTime = 0;
     
+    // Rate limiting for logging
+    private static const int LOG_RATE_LIMIT_SECONDS = 3;
+    private int m_lastTriggerLogTime = 0;
+    private int m_lastStateChangeLogTime = 0; // For supersede/new current logs
+    
     void IA_AIReactionManager()
     {
         m_pendingReactions = new array<ref IA_AIReactionState>();
@@ -113,16 +132,47 @@ class IA_AIReactionManager
             
         m_lastReactionProcessTime = currentTime;
         
+        // --- BEGIN ADDED DEBUG LOG ---
+        // Always log reaction processing
+        bool currentActive = m_currentReaction.IsReactionActive();
+        int pendingCount = m_pendingReactions.Count();
+        Print("[IA_AI_REACTION_DEBUG] ProcessReactions: CurrentActive=" + currentActive + 
+              ", PendingCount=" + pendingCount, LogLevel.WARNING);
+              
+        // If active, add more details about current reaction
+        if (currentActive)
+        {
+            Print("[IA_AI_REACTION_DEBUG] Current reaction: Type=" + 
+                  typename.EnumToString(IA_AIReactionType, m_currentReaction.GetReactionType()) + 
+                  ", TimeRemaining=" + m_currentReaction.GetTimeRemaining() + "s", LogLevel.WARNING);
+        }
+        // --- END ADDED DEBUG LOG ---
+        
         // Check if current reaction has expired
         if (!m_currentReaction.IsReactionActive())
         {
+            // --- ADDED DEBUG LOG ---
+            Print("[IA_AI_REACTION_DEBUG] Current reaction has expired or is inactive", LogLevel.WARNING);
+            // --- END ADDED DEBUG LOG ---
+            
             // If we have pending reactions, process the next one
             if (!m_pendingReactions.IsEmpty())
             {
+                // --- ADDED DEBUG LOG ---
+                Print("[IA_AI_REACTION_DEBUG] Processing next reaction from pending queue (size: " + 
+                      m_pendingReactions.Count() + ")", LogLevel.WARNING);
+                // --- END ADDED DEBUG LOG ---
+                
                 // Get highest priority reaction from queue
                 IA_AIReactionState nextReaction = SelectHighestPriorityReaction();
                 if (nextReaction)
                 {
+                    // --- ADDED DEBUG LOG ---
+                    Print("[IA_AI_REACTION_DEBUG] Selected next reaction: " + 
+                          typename.EnumToString(IA_AIReactionType, nextReaction.GetReactionType()) + 
+                          ", Intensity: " + nextReaction.GetIntensity(), LogLevel.WARNING);
+                    // --- END ADDED DEBUG LOG ---
+                    
                     m_currentReaction = nextReaction;
                     m_pendingReactions.RemoveItem(nextReaction);
                 }
@@ -140,9 +190,39 @@ class IA_AIReactionManager
         IA_AIReactionState newReaction = new IA_AIReactionState();
         newReaction.SetReaction(type, intensity, duration, sourcePos, sourceEntity, sourceFaction);
         
+        // --- BEGIN ENHANCED LOGGING ---
+        int currentTime = System.GetUnixTime();
+        
+        // Always log this important info regardless of rate limiting
+        Print("[IA_AI_REACTION_DEBUG] TriggerReaction called with Type: " + typename.EnumToString(IA_AIReactionType, type) +
+              ", Intensity: " + intensity + ", Duration: " + duration +
+              ", Position: " + sourcePos, LogLevel.WARNING);
+              
+        // Only rate limit the original less detailed log
+        if (currentTime - m_lastTriggerLogTime > LOG_RATE_LIMIT_SECONDS)
+        {
+            Print("[IA_AI_REACTION_MGR] TriggerReaction called with Type: " + typename.EnumToString(IA_AIReactionType, type) +
+                  ", Intensity: " + intensity + ", Duration: " + duration, LogLevel.WARNING);
+            m_lastTriggerLogTime = currentTime;
+        }
+        // --- END ENHANCED LOGGING ---
+        
         // If no active reaction, set this as current
         if (!m_currentReaction.IsReactionActive())
         {
+            // --- BEGIN ENHANCED LOGGING ---
+            Print("[IA_AI_REACTION_DEBUG] No active reaction. Setting new reaction as current: " + 
+                typename.EnumToString(IA_AIReactionType, newReaction.GetReactionType()) + 
+                " (Duration: " + duration + "s)", LogLevel.WARNING);
+                
+            // Only rate limit the original less detailed log
+            if (currentTime - m_lastStateChangeLogTime > LOG_RATE_LIMIT_SECONDS)
+            {
+                Print("[IA_AI_REACTION_MGR] No active reaction. Setting new reaction as current: " + typename.EnumToString(IA_AIReactionType, newReaction.GetReactionType()), LogLevel.WARNING);
+                m_lastStateChangeLogTime = currentTime;
+            }
+            // --- END ENHANCED LOGGING ---
+            
             m_currentReaction = newReaction;
         }
         else
@@ -150,6 +230,23 @@ class IA_AIReactionManager
             // Check if this reaction should supersede the current one
             if (ShouldSupersede(newReaction, m_currentReaction))
             {
+                // --- BEGIN ENHANCED LOGGING ---
+                Print("[IA_AI_REACTION_DEBUG] New reaction (" + typename.EnumToString(IA_AIReactionType, newReaction.GetReactionType()) +
+                      ", intensity: " + newReaction.GetIntensity() + 
+                      ") supersedes current (" + typename.EnumToString(IA_AIReactionType, m_currentReaction.GetReactionType()) +
+                      ", intensity: " + m_currentReaction.GetIntensity() + 
+                      "). Adding current to pending.", LogLevel.WARNING);
+                
+                // Only rate limit the original less detailed log
+                if (currentTime - m_lastStateChangeLogTime > LOG_RATE_LIMIT_SECONDS)
+                {
+                    Print("[IA_AI_REACTION_MGR] New reaction (" + typename.EnumToString(IA_AIReactionType, newReaction.GetReactionType()) +
+                          ") supersedes current (" + typename.EnumToString(IA_AIReactionType, m_currentReaction.GetReactionType()) +
+                          "). Adding current to pending.", LogLevel.WARNING);
+                    m_lastStateChangeLogTime = currentTime;
+                }
+                // --- END ENHANCED LOGGING ---
+                
                 // Add current reaction to pending queue
                 m_pendingReactions.Insert(m_currentReaction);
                 
@@ -158,6 +255,14 @@ class IA_AIReactionManager
             }
             else
             {
+                // --- BEGIN ENHANCED LOGGING ---
+                Print("[IA_AI_REACTION_DEBUG] New reaction (" + typename.EnumToString(IA_AIReactionType, newReaction.GetReactionType()) +
+                      ", intensity: " + newReaction.GetIntensity() + 
+                      ") does NOT supersede current (" + typename.EnumToString(IA_AIReactionType, m_currentReaction.GetReactionType()) +
+                      ", intensity: " + m_currentReaction.GetIntensity() + 
+                      "). Adding to pending queue.", LogLevel.WARNING);
+                // --- END ENHANCED LOGGING ---
+                
                 // Add to pending queue
                 m_pendingReactions.Insert(newReaction);
             }
@@ -212,10 +317,9 @@ class IA_AIReactionManager
             case IA_AIReactionType.Surrounded: return 9;
             case IA_AIReactionType.HighCasualties: return 8;
             case IA_AIReactionType.VehicleDisabled: return 7;
-            case IA_AIReactionType.UnderAttack: return 6;
+            case IA_AIReactionType.UnderFire: return 6;
             case IA_AIReactionType.Flanked: return 5;
             case IA_AIReactionType.GroupMemberHit: return 4;
-            case IA_AIReactionType.TakingFire: return 3;
             case IA_AIReactionType.Suppressed: return 2;
             case IA_AIReactionType.EnemySpotted: return 1;
             default: return 0;
@@ -231,8 +335,7 @@ class IA_AIReactionManager
         switch (type)
         {
             case IA_AIReactionType.EnemySpotted: baseDuration = 30; break;
-            case IA_AIReactionType.TakingFire: baseDuration = 45; break;
-            case IA_AIReactionType.UnderAttack: baseDuration = 60; break;
+            case IA_AIReactionType.UnderFire: baseDuration = 60; break;
             case IA_AIReactionType.GroupMemberHit: baseDuration = 30; break;
             case IA_AIReactionType.GroupMemberKilled: baseDuration = 90; break;
             case IA_AIReactionType.VehicleDisabled: baseDuration = 120; break;
