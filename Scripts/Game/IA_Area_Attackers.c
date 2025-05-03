@@ -35,7 +35,13 @@ class IA_AreaAttackers
 
         IA_SquadType st = IA_GetRandomSquadType();
         //Print("[DEBUG] Random squad type chosen: " + st, LogLevel.NORMAL);
-        IA_AiGroup grp  = IA_AiGroup.CreateMilitaryGroup(origin, st, m_faction);
+        
+        // Calculate unit count based on squad type
+        int unitCount = IA_SquadCount(st, m_faction);
+        
+        // Use CreateMilitaryGroupFromUnits instead of CreateMilitaryGroup
+        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(origin, m_faction, unitCount);
+        
         m_groups.Insert(grp);
         //Print("[DEBUG] New military group created and inserted.", LogLevel.NORMAL);
         grp.Spawn();

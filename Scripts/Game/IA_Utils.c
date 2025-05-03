@@ -5,7 +5,8 @@ enum IA_AiOrder
     Patrol,
     SearchAndDestroy,
     GetInVehicle,
-    GetOutOfVehicle
+    GetOutOfVehicle,
+    PriorityMove
 };
 
 ResourceName IA_AiOrderResource(IA_AiOrder order)
@@ -35,6 +36,11 @@ ResourceName IA_AiOrderResource(IA_AiOrder order)
     {
         //Print("[DEBUG] Returning resource for GetOutOfVehicle", LogLevel.NORMAL);
         return "{2602CAB8AB74FBBF}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_GetOut.et";
+    }
+    else if (order == IA_AiOrder.PriorityMove)
+    {
+        //Print("[DEBUG] Returning resource for PriorityMove", LogLevel.NORMAL);
+        return "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";
     }
     //Print("[DEBUG] Returning default resource for Move", LogLevel.NORMAL);
     return "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";

@@ -7,99 +7,124 @@ enum IA_GroupDangerType
     EnemySpotted
 }
 
+// Add this enum after the existing IA_GroupDangerType enum
+enum IA_GroupTacticalState
+{
+    Neutral,       // Default state, no specific tactical objective
+    Attacking,     // Actively seeking and engaging enemies
+    Defending,     // Holding position and engaging enemies that approach
+    Retreating,    // Falling back to regroup/recover
+    Flanking,      // Attempting to move around enemies to hit from side/rear
+    LastStand,     // Final defensive posture when heavily outnumbered
+    Regrouping,     // Gathering forces before next action
+    DefendPatrol,    // Patrol behavior using defend orders
+    InVehicle       // Group is currently assigned to a vehicle
+}
+
+// Class to track danger events for processing
+class IA_GroupDangerEvent
+{
+    IA_GroupDangerType m_type;
+    vector m_position;
+    IEntity m_source;
+    float m_intensity;
+    bool m_isSuppressed;
+    int m_time;
+}
+
 class IA_AiGroup
 {
-    private SCR_AIGroup m_group = null;
+    private SCR_AIGroup m_group;
     private bool        m_isSpawned = false;
-    private vector      m_initialPosition;
-
+    private bool        m_isCivilian = false;
     private IA_SquadType m_squadType;
     private IA_Faction   m_faction;
-    private bool         m_isCivilian;
-
-    private vector m_lastOrderPosition;
-    private int    m_lastOrderTime;
-
-    private bool   m_isDriving = false;
-    private vector m_drivingTarget = vector.Zero;
-    private IEntity m_referencedEntity;
-
-    private IA_Faction m_engagedEnemyFaction = IA_Faction.NONE;
-
-    // Add reaction manager
-    private ref IA_AIReactionManager m_reactionManager = null;
-
-    // Add a member variable to track last vehicle order update time
-    private int m_lastVehicleOrderTime = 0;
     
-    // Set minimum time between vehicle order updates (in seconds)
-    private static const int VEHICLE_ORDER_UPDATE_INTERVAL = 3;
-
-    // Add these variables to the class variables section near the top
-    private int m_nextStateEvaluationTime = 0;
-    private const int MIN_STATE_EVALUATION_INTERVAL = 5000; // milliseconds
-    private const int MAX_STATE_EVALUATION_INTERVAL = 15000; // milliseconds
-    private bool m_isStateEvaluationScheduled = false;
-
-    // Danger reaction system parameters
+    private vector      m_initialPosition;
+    private vector      m_lastOrderPosition;
+    private vector      m_lastConfirmedPosition = vector.Zero;
+    private int         m_lastOrderTime = 0;
+    
+    // Vehicle movement state
+    private bool        m_isDriving = false;
+    private IEntity     m_referencedEntity = null;
+    private vector      m_drivingTarget = vector.Zero;
+    private int         m_lastVehicleOrderTime = 0;
+    private const int   VEHICLE_ORDER_UPDATE_INTERVAL = 5;
+    
+    // Danger state tracking
+    private float       m_currentDangerLevel = 0.0;
+    private int         m_lastDangerEventTime = 0;
+    private vector      m_lastDangerPosition = vector.Zero;
+    private ref array<ref IA_GroupDangerEvent> m_dangerEvents = {};
+    private int         m_consecutiveDangerEvents = 0;
+    
+    // Reaction system constants and variables
     private const float BULLET_IMPACT_DISTANCE_MAX = 10.0;
     private const float PROJECTILE_FLYBY_RADIUS = 13.0;
     private const float GUNSHOT_AUDIBLE_DISTANCE = 500.0;
     private const float SUPPRESSED_AUDIBLE_DISTANCE = 100.0;
     private const float EXPLOSION_REACT_DISTANCE = 220.0;
     
-    private int m_lastDangerEventTime = 0;
-    private vector m_lastDangerPosition = vector.Zero;
-    private IA_GroupDangerType m_lastDangerType = IA_GroupDangerType.EnemySpotted;
-    private float m_currentDangerLevel = 0.0; // 0.0-1.0 scale
-    private int m_consecutiveDangerEvents = 0;
-
+    // Logging and rate limiting
     private static const int BEHAVIOR_LOG_RATE_LIMIT_SECONDS = 3;
-    private int m_lastApplyUnderFireLogTime = 0;
-    private int m_lastApplyEnemySpottedLogTime = 0;
     private int m_lastDangerDetectLogTime = 0;
     private int m_lastDangerTriggerLogTime = 0;
+    private int m_lastApplyUnderFireLogTime = 0;
+    private int m_lastApplyEnemySpottedLogTime = 0;
+    
+    // Combat state tracking
+    IA_Faction m_engagedEnemyFaction = IA_Faction.NONE;
+    
+    // State evaluation scheduling
+    private int m_nextStateEvaluationTime = 0;
+    private const int MIN_STATE_EVALUATION_INTERVAL = 10000; // milliseconds, increased from 5000
+    private const int MAX_STATE_EVALUATION_INTERVAL = 25000; // milliseconds, increased from 15000
+    private bool m_isStateEvaluationScheduled = false;
+    
+    // Tactical state
+    private IA_GroupTacticalState m_tacticalState = IA_GroupTacticalState.Neutral;
+    private int m_tacticalStateStartTime = 0;
+    private int m_tacticalStateMinDuration = 60; // seconds, increased from 30
+    private vector m_tacticalStateTarget = vector.Zero;
+    private IEntity m_tacticalStateEntity = null;
+    private IA_Area m_lastAssignedArea = null;
+    private bool m_isStateManagedByAuthority = false; // New flag
 
-    private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac)
+    // Danger event processing performance optimization
+    private static const int AGENT_EVENT_CHECK_INTERVAL_MS = 300; // Check agent events every 300ms
+    private int m_lastAgentEventCheckTime = 0;
+    private static const int DANGER_PROCESS_INTERVAL_MS = 150; // Process at most one danger event every 150ms
+    private int m_lastDangerProcessTime = 0;
+
+    // Flanking state tracking
+    private bool m_isInFlankingPhase = false; // True if in first phase of flanking (moving to flank position)
+    private vector m_originalThreatPosition = vector.Zero; // The original position that triggered the flanking maneuver
+
+    private int m_initialUnitCount = 0; // Store the original number of units in the group
+
+    // Add after the m_isStateManagedByAuthority variable
+    private bool m_hasPendingStateRequest = false;
+    private IA_GroupTacticalState m_requestedState = IA_GroupTacticalState.Neutral;
+    private vector m_requestedStatePosition = vector.Zero;
+    private IEntity m_requestedStateEntity = null;
+
+    private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount)
     {
-        m_lastOrderPosition = initialPos;
-        m_initialPosition   = initialPos;
-        m_lastOrderTime     = 0;
-        m_squadType         = squad;
-        m_faction           = fac;
-        
-        m_lastDangerEventTime = 0;
-        m_lastDangerDetectLogTime = 0;
-        m_lastDangerTriggerLogTime = 0;
-        m_currentDangerLevel = 0.0;
-        m_consecutiveDangerEvents = 0;
-        
-        m_reactionManager = new IA_AIReactionManager();
-        
-        string managerStatus;
-        if (m_reactionManager)
-            managerStatus = "CREATED";
-        else
-            managerStatus = "NULL";
-            
-
+        m_initialPosition = initialPos;
+        m_squadType = squad;
+        m_faction = fac;
+        m_initialUnitCount = unitCount; // Store initial count passed as argument
     }
 
 	static IA_AiGroup CreateMilitaryGroup(vector initialPos, IA_SquadType squadType, IA_Faction faction)
 	{
-
-	    IA_AiGroup grp = new IA_AiGroup(initialPos,squadType,faction);
-
-	    
-	    grp.m_lastOrderPosition = initialPos;
-	    grp.m_initialPosition   = initialPos;
-	    grp.m_lastOrderTime     = 0;
-	    grp.m_squadType         = squadType;
-	    grp.m_faction           = faction;
-	    grp.m_isCivilian        = false;
-	    
-
-	    return grp;
+        // Redirect to CreateMilitaryGroupFromUnits instead of using prefabs
+        // Calculate unit count based on squad type
+        int unitCount = IA_SquadCount(squadType, faction);
+        
+        // Create group using the new unit-based approach
+        return CreateMilitaryGroupFromUnits(initialPos, faction, unitCount);
 	}
 
 	static string GetRandomUnitPrefab(IA_Faction faction){
@@ -228,7 +253,9 @@ class IA_AiGroup
 	
     static IA_AiGroup CreateCivilianGroup(vector initialPos)
     {
-        IA_AiGroup grp = new IA_AiGroup(initialPos, IA_SquadType.Riflemen, IA_Faction.CIV);
+        // Pass unit count 1 to the constructor
+        IA_AiGroup grp = new IA_AiGroup(initialPos, IA_SquadType.Riflemen, IA_Faction.CIV, 1);
+        //grp.m_initialUnitCount = 1; // No longer needed here
         grp.m_isCivilian = true;
         return grp;
     }
@@ -240,7 +267,7 @@ class IA_AiGroup
 
         vector spawnPos = vehicle.GetOrigin() + vector.Up; // Spawn slightly above vehicle origin
 
-        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, faction);
+        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, faction, unitCount);
         grp.m_isCivilian = false;
 
 		Resource groupRes;
@@ -329,17 +356,20 @@ class IA_AiGroup
 
         grp.WaterCheck();
 
+        // Initialize tactical state and schedule evaluation
+        grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, groundPos);
+        grp.ScheduleNextStateEvaluation();
+        grp.SetupDeathListener(); // Ensure CheckDangerEvents is scheduled
+
         return grp;
     }
 
     static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount)
     {
-
-              
         if (unitCount <= 0)
             return null;
 
-        IA_AiGroup grp = new IA_AiGroup(initialPos, IA_SquadType.Riflemen, faction); // SquadType might be less relevant here
+        IA_AiGroup grp = new IA_AiGroup(initialPos, IA_SquadType.Riflemen, faction, unitCount);
         grp.m_isCivilian = false;
 
         Resource groupRes;
@@ -350,29 +380,29 @@ class IA_AiGroup
             case IA_Faction.US:
                 groupRes = Resource.Load("{EACD97CF4A702FAE}Prefabs/Groups/BLUFOR/Group_US_Base.et");
                 break;
+            case IA_Faction.CIV:
+                groupRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
+                break;
             case IA_Faction.FIA:
                 groupRes = Resource.Load("{242BC3C6BCE96EA5}Prefabs/Groups/INDFOR/Group_FIA_Base.et");
                 break;
-            default: // Handle CIV or other cases if needed, though this is for military
-                return null;
         }
 
         if (!groupRes) {
             return null;
         }
 
-        // Spawn the base group entity and adjust its position to ground level
-        vector groundPos = initialPos;
-        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-        groundPos[1] = groundY;
-        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(groundPos));
+        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(initialPos));
         grp.m_group = SCR_AIGroup.Cast(groupEnt);
 
         if (!grp.m_group) {
-            delete groupEnt; // Clean up the spawned group entity
+            delete groupEnt;
             return null;
         }
 
+        vector groundPos = initialPos;
+        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
+        groundPos[1] = groundY;
         grp.m_group.SetOrigin(groundPos);
 
         for (int i = 0; i < unitCount; i++)
@@ -401,7 +431,19 @@ class IA_AiGroup
             }
         }
 
-        grp.Spawn(IA_AiOrder.Patrol, initialPos);
+        // Instead of using Spawn directly, we'll handle initialization here
+        grp.PerformSpawn();
+        
+        // Explicitly set a default tactical state for the new group
+        if (initialPos != vector.Zero)
+        {
+            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, initialPos);
+        }
+        else
+        {
+            vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, grp.GetOrigin());
+            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos);
+        }
 
         return grp;
     }
@@ -551,23 +593,55 @@ class IA_AiGroup
             
         }
 
-        ResourceName rname = IA_AiOrderResource(order);
+        ResourceName rname;
+        // Special handling for Defend orders to prevent errors
+        if (order == IA_AiOrder.Defend) 
+        {
+            // --- BEGIN ADDED: Debug logging for direct defend orders ---
+            Print(string.Format("[IA_AiGroup.AddOrder] DIRECT DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Current Pos: %4 | Target: %5 | ScriptLine: 330", 
+                this, typename.EnumToString(IA_Faction, m_faction), GetAliveCount(), GetOrigin().ToString(), origin.ToString()), LogLevel.NORMAL);
+            // --- END ADDED ---
+            
+            rname = "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
+        }
+        else
+        {
+            rname = IA_AiOrderResource(order);
+        }
+        
+        // --- BEGIN ADDED LOGGING ---
+        Print(string.Format("[IA_Waypoint DEBUG AddOrder] Group %1 | Order: %2 | Waypoint Resource: %3 | Target: %4", 
+            m_group, typename.EnumToString(IA_AiOrder, order), rname, origin), LogLevel.DEBUG);
+        // --- END ADDED LOGGING ---
+        
         Resource res = Resource.Load(rname);
         if (!res)
         {
+            // --- BEGIN ADDED LOGGING ---
+            Print(string.Format("[IA_Waypoint] Failed to load waypoint resource: %1 for Group %2", rname, m_group), LogLevel.ERROR);
+            // --- END ADDED LOGGING ---
             return;
         }
 
         IEntity waypointEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(origin));
         SCR_AIWaypoint w = SCR_AIWaypoint.Cast(waypointEnt);
+		
         if (!w)
         {
+            // --- BEGIN MODIFIED LOGGING ---
+            string entStr = "null";
+            if (waypointEnt)
+                entStr = waypointEnt.ToString();
+            Print(string.Format("[IA_Waypoint] Failed to cast spawned entity to SCR_AIWaypoint. Resource: %1, Origin: %2, Entity: %3 for Group %4", rname, origin, entStr, m_group), LogLevel.ERROR);
+            // --- END MODIFIED LOGGING ---
+            if (waypointEnt)
+                IA_Game.AddEntityToGc(waypointEnt);
             return;
         }
-
+		
         if (m_isDriving)
         {
-            w.SetPriorityLevel(400); // Keep vehicles as is
+            w.SetPriorityLevel(40); // Keep vehicles as is
         }
         else
         {
@@ -576,7 +650,25 @@ class IA_AiGroup
             w.SetPriorityLevel(priorityLevel);
         }
 
+        // --- BEGIN ADDED: Additional logging before adding waypoint to group ---
+        if (order == IA_AiOrder.Defend)
+        {
+            Print(string.Format("[IA_Waypoint] PRE-ADD DEFEND WAYPOINT: Group %1 | Waypoint %2 | Position %3 | Priority %4", 
+                m_group, w, w.GetOrigin().ToString(), w.GetPriorityLevel()), LogLevel.NORMAL);
+            
+            // Add additional group state info
+            array<AIWaypoint> existingWaypoints = {};
+            m_group.GetWaypoints(existingWaypoints);
+            Print(string.Format("[IA_Waypoint] GROUP STATE BEFORE DEFEND: Existing Waypoints: %1", 
+                existingWaypoints.Count()), LogLevel.NORMAL);
+        }
+        // --- END ADDED ---
+
         m_group.AddWaypoint(w);
+        
+        // --- BEGIN ADDED LOGGING ---
+        Print(string.Format("[IA_Waypoint] Added Order: %1 at %2 for Group %3", typename.EnumToString(IA_AiOrder, order), origin, m_group), LogLevel.WARNING);
+        // --- END ADDED LOGGING ---
     }
 
     void SetInitialPosition(vector pos)
@@ -617,6 +709,13 @@ class IA_AiGroup
         foreach (AIWaypoint w : wps)
         {
             m_group.RemoveWaypoint(w);
+        }
+        
+        // Reset flanking phase state when all orders are removed
+        if (m_isInFlankingPhase)
+        {
+            Print(string.Format("[RemoveAllOrders] Resetting flanking state for Group %1", m_group), LogLevel.NORMAL);
+            m_isInFlankingPhase = false;
         }
         
         if (resetLastOrderTime)
@@ -670,44 +769,74 @@ class IA_AiGroup
             return vector.Zero;
         }
         vector origin = m_group.GetOrigin();
+        m_lastConfirmedPosition = origin;
         return origin;
     }
 
     bool IsSpawned()
     {
-		if (GetAliveCount() == 0){
-			m_isSpawned = false;
-		}
         return m_isSpawned;
     }
 
-void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector.Zero)
-{
-
-          
-    if (!PerformSpawn())
+    void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector.Zero)
     {
-
-        return;
+        if (IsSpawned())
+        {
+            return;
+        }
+        
+        if (!PerformSpawn())
+        {
+            // Failed to spawn the group
+            return;
+        }
+        
+        // Initialize the default tactical state based on the initial order
+        IA_GroupTacticalState initialState = IA_GroupTacticalState.Neutral;
+        
+        // Map initial order to appropriate tactical state
+        if (initialOrder == IA_AiOrder.Defend) 
+        {
+            initialState = IA_GroupTacticalState.Defending;
+        } 
+        else if (initialOrder == IA_AiOrder.Patrol) 
+        {
+            initialState = IA_GroupTacticalState.DefendPatrol;
+        }
+        else if (initialOrder == IA_AiOrder.SearchAndDestroy) 
+        {
+            initialState = IA_GroupTacticalState.Attacking;
+        }
+        else if (initialOrder == IA_AiOrder.Move || initialOrder == IA_AiOrder.PriorityMove)
+        {
+            // For both move types, use a neutral state but the direct order will still be applied
+            initialState = IA_GroupTacticalState.Neutral;
+        }
+        
+        // Set the initial tactical state with explicit position
+        vector posToUse;
+        if (orderPos != vector.Zero)
+        {
+            posToUse = orderPos;
+        }
+        else
+        {
+            posToUse = m_initialPosition;
+        }
+        
+        // Ensure a tactical state is set
+        SetTacticalState(initialState, posToUse);
+        
+        // If using a move order, apply it directly instead of relying on the tactical state
+        if (initialOrder == IA_AiOrder.Move || initialOrder == IA_AiOrder.PriorityMove)
+        {
+            AddOrder(posToUse, initialOrder, true);
+        }
+        else
+        {
+            ApplyTacticalStateOrders();
+        }
     }
-
-
-    vector posToUse;
-    if (orderPos != vector.Zero)
-    {
-        posToUse = orderPos;
-    }
-    else
-    {
-        posToUse = IA_Game.rng.GenerateRandomPointInRadius(5, 25, m_initialPosition);
-    }
-
-    if (!m_isDriving)
-    {
-        AddOrder(posToUse, initialOrder);
-    }
-
-}
 
 
 	
@@ -715,61 +844,55 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 	
     private bool PerformSpawn()
     {
-
         if (IsSpawned())
         {
             return false;
         }
         m_isSpawned = true;
 
-        string resourceName;
-        if (m_isCivilian)
-        {
-            resourceName = IA_RandomCivilianResourceName();
-        }
-        else
-        {
-            resourceName = IA_SquadResourceName(m_squadType, m_faction);
-        }
+        // Skip the old prefab spawning logic for military groups since we're using CreateMilitaryGroupFromUnits
+        // which already creates and populates the group with individual units
 
-        Resource res = Resource.Load(resourceName);
-        if (!res)
+        // Only handle civilian groups or if the group was manually created without units
+        if (m_isCivilian || !m_group)
         {
-            return false;
-        }
-
-        IEntity entity = GetGame().SpawnEntityPrefab(res, null, IA_CreateSurfaceAdjustedSpawnParams(m_initialPosition));
-        if (m_isCivilian)
-        {
-            Resource groupRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
-            IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(m_initialPosition));
-            m_group = SCR_AIGroup.Cast(groupEnt);
-
-        }
-        else
-        {
-            m_group = SCR_AIGroup.Cast(entity);
-        }
-        if (m_group)
-        {
-            vector groundPos = m_initialPosition;
-            float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-            groundPos[1] = groundY;
+            string resourceName;
+            if (m_isCivilian)
+            {
+                resourceName = IA_RandomCivilianResourceName();
+                
+                Resource res = Resource.Load(resourceName);
+                if (!res)
+                {
+                    return false;
+                }
+                
+                IEntity entity = GetGame().SpawnEntityPrefab(res, null, IA_CreateSurfaceAdjustedSpawnParams(m_initialPosition));
+                
+                Resource groupRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
+                IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(m_initialPosition));
+                m_group = SCR_AIGroup.Cast(groupEnt);
+            }
             
-            m_group.SetOrigin(groundPos);
+            if (m_group)
+            {
+                vector groundPos = m_initialPosition;
+                float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
+                groundPos[1] = groundY;
+                
+                m_group.SetOrigin(groundPos);
+                m_lastConfirmedPosition = groundPos;
+            }
             
-        }
-
-        if (!m_group)
-        {
-
-            return false;
+            if (!m_group)
+            {
+                return false;
+            }
         }
 
         SetupDeathListener();
         WaterCheck();
         
-
         ScheduleNextStateEvaluation();
 
         GetGame().GetCallqueue().CallLater(CheckDangerEvents, 250, true);
@@ -780,390 +903,200 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
     // Process a danger event at the group level
     void ProcessDangerEvent(IA_GroupDangerType dangerType, vector position, IEntity sourceEntity = null, float intensity = 0.5, bool isSuppressed = false)
     {
-        if (m_isCivilian || m_faction == IA_Faction.CIV) {
-            return;
+        // Rate limit processing per group
+        int currentTime_proc = GetGame().GetWorld().GetWorldTime(); // Use world time for milliseconds
+        if (currentTime_proc - m_lastDangerProcessTime < DANGER_PROCESS_INTERVAL_MS)
+        {
+            return; // Skip processing if too soon
         }
+        m_lastDangerProcessTime = currentTime_proc;
 
+        // Skip for civilians
+        if (m_isCivilian || m_faction == IA_Faction.CIV)
+            return;
+        
         if (!IsSpawned() || !m_group)
             return;
-
+    
+        // Try to get the faction of the source entity
+        IA_Faction sourceFaction = IA_Faction.NONE;
         if (sourceEntity)
         {
-
-            // Try to get the faction of the source entity
-            IA_Faction sourceFaction = IA_Faction.NONE;
+            // Try to get faction from a character entity
             SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(sourceEntity);
-            
             if (character)
             {
-
-                // Try to get faction from a character entity
                 FactionAffiliationComponent factionComponent = FactionAffiliationComponent.Cast(character.FindComponent(FactionAffiliationComponent));
                 if (factionComponent)
                 {
-
                     Faction faction = factionComponent.GetAffiliatedFaction();
-                    if (faction)
-                    {
-                        string factionKey = faction.GetFactionKey();
-                        // Map the faction key to our IA_Faction enum
-                        if (factionKey == "US")
-                            sourceFaction = IA_Faction.US;
-                        else if (factionKey == "USSR")
-                            sourceFaction = IA_Faction.USSR;
-                        else if (factionKey == "FIA")
-                            sourceFaction = IA_Faction.FIA;
-                        else if (factionKey == "CIV")
-                            sourceFaction = IA_Faction.CIV;
-                    }
-                }
-            }
-
-            // Check if source is from the same faction as this group
-            if (sourceFaction != IA_Faction.NONE && sourceFaction == m_faction)
-            {
-                return;
-            }
-            
-            // If we could identify a valid enemy faction, set it
-            if (sourceFaction != IA_Faction.NONE && sourceFaction != m_faction)
-            {
-                m_engagedEnemyFaction = sourceFaction;
-            }
-            // Improvement: If we have danger but no identified enemy faction, set a reasonable fallback faction
-            else if (m_engagedEnemyFaction == IA_Faction.NONE)
-            {
-                // Set a reasonable enemy faction based on our own faction
-                if (m_faction == IA_Faction.USSR)
-                    m_engagedEnemyFaction = IA_Faction.US;
-                else if (m_faction == IA_Faction.US)
-                    m_engagedEnemyFaction = IA_Faction.USSR;
-                else if (m_faction == IA_Faction.FIA)
-                    m_engagedEnemyFaction = IA_Faction.US; // FIA typically fights US
-                else
-                    m_engagedEnemyFaction = IA_Faction.US; // Default fallback
-
-            }
-        }
-        // --- END FRIENDLY FIRE CHECK ---
-        
-        // Even if we don't have a source entity, make sure we have an engaged enemy faction for non-friendly events
-        else if (m_engagedEnemyFaction == IA_Faction.NONE)
-        {
-            // Set a reasonable enemy faction based on our own faction
-            if (m_faction == IA_Faction.USSR)
-                m_engagedEnemyFaction = IA_Faction.US;
-            else if (m_faction == IA_Faction.US)
-                m_engagedEnemyFaction = IA_Faction.USSR;
-            else if (m_faction == IA_Faction.FIA)
-                m_engagedEnemyFaction = IA_Faction.US; // FIA typically fights US
-            else
-                m_engagedEnemyFaction = IA_Faction.US; // Default fallback
-        }
-
-        // Calculate distance to danger
-        float distance = vector.Distance(GetOrigin(), position);
-
-        // Store event information
-        m_lastDangerEventTime = System.GetUnixTime();
-        m_lastDangerPosition = position;
-        m_lastDangerType = dangerType;
-
-        // Calculate if this danger should be reacted to based on type and distance
-        bool shouldReact = false;
-        IA_AIReactionType reactionType = IA_AIReactionType.None;
-        float reactionIntensity = intensity;
-
-        // Determine reaction based on danger type
-        switch (dangerType)
-        {
-            case IA_GroupDangerType.ProjectileImpact:
-                // React to nearby impacts only
-                if (distance <= BULLET_IMPACT_DISTANCE_MAX)
-                {
-                    shouldReact = true;
-                    reactionType = IA_AIReactionType.UnderFire; // Changed from TakingFire
-                    reactionIntensity = Math.Clamp(1.0 - (distance / BULLET_IMPACT_DISTANCE_MAX), 0.3, 0.8);
-                    m_consecutiveDangerEvents++;
-
-                    int currentTime_pi = System.GetUnixTime();
-                    if (currentTime_pi - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
-                    {
-                        m_lastDangerDetectLogTime = currentTime_pi;
-                    }
-
-                }
-                break;
-
-            case IA_GroupDangerType.WeaponFire:
-                // Check if gunshot is audible based on distance and suppression
-                float maxAudibleDistance;
-                if (isSuppressed)
-                    maxAudibleDistance = SUPPRESSED_AUDIBLE_DISTANCE;
-                else
-                    maxAudibleDistance = GUNSHOT_AUDIBLE_DISTANCE;
-                
-                if (distance <= maxAudibleDistance)
-                {
-                    shouldReact = true;
-                    reactionType = IA_AIReactionType.EnemySpotted;
-                    // Lower intensity for distant or suppressed shots
-                    float distanceFactor = Math.Clamp(1.0 - (distance / maxAudibleDistance), 0.1, 0.7);
-                    float suppressionFactor;
-                    if (isSuppressed)
-                        suppressionFactor = 0.5;
-                    else
-                        suppressionFactor = 1.0;
-                    
-                    reactionIntensity = distanceFactor * suppressionFactor;
-                    m_consecutiveDangerEvents++;
-                    
-                    int currentTime_wf = System.GetUnixTime();
-                    if (currentTime_wf - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
-                    {
-                        m_lastDangerDetectLogTime = currentTime_wf;
-                    }
-                }
-                break;
-                
-            case IA_GroupDangerType.ProjectileFlyby:
-                // Always react to flybys with high priority
-                shouldReact = true;
-                reactionType = IA_AIReactionType.UnderFire; // Changed from UnderAttack
-                reactionIntensity = Math.Clamp(0.7 + (intensity * 0.3), 0.7, 1.0);
-                m_consecutiveDangerEvents += 2; // Flybys are more threatening
-                
-                int currentTime_pf = System.GetUnixTime();
-                if (currentTime_pf - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
-                {
-                    m_lastDangerDetectLogTime = currentTime_pf;
-                }
-                break;
-                
-            case IA_GroupDangerType.Explosion:
-                // React to explosions based on distance
-                if (distance <= EXPLOSION_REACT_DISTANCE)
-                {
-                    shouldReact = true;
-                    m_consecutiveDangerEvents += 3; // Explosions are very threatening
-                    
-                    int currentTime_ex = System.GetUnixTime();
-                    if (currentTime_ex - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
-                    {
-                        m_lastDangerDetectLogTime = currentTime_ex;
-                    }
-                }
-                break;
-                
-            case IA_GroupDangerType.EnemySpotted:
-                // Always react to enemy spotting with variable intensity
-                shouldReact = true;
-                reactionType = IA_AIReactionType.EnemySpotted;
-                // Use provided intensity directly
-                m_consecutiveDangerEvents++;
-                
-                int currentTime_esd = System.GetUnixTime();
-                if (currentTime_esd - m_lastDangerDetectLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
-                {
-                    //Print("[IA_AI_DANGER] Enemy spotted at " + distance + "m", LogLevel.WARNING);
-                    m_lastDangerDetectLogTime = currentTime_esd;
-                }
-                break;
-        }
-        
-        // --- ADDED DEBUG LOG ---
-        // Log the final decision before applying the reaction
-
-        // --- END DEBUG LOG ---
-
-        // Update danger level based on consecutive events (increases with multiple events)
-        m_currentDangerLevel = Math.Clamp(0.2 * m_consecutiveDangerEvents, 0.0, 1.0);
-
-        // Apply decay to consecutive events over time
-        int timeSinceLastDanger = System.GetUnixTime() - m_lastDangerEventTime;
-        if (timeSinceLastDanger > 30 && m_consecutiveDangerEvents > 0)
-        {
-            m_consecutiveDangerEvents = Math.Max(0, m_consecutiveDangerEvents - 1);
-        }
-
-        // If danger should cause a reaction, trigger it via reaction manager
-        if (shouldReact && reactionType != IA_AIReactionType.None && m_reactionManager)
-        {
-            // Check source entity for faction
-            IA_Faction sourceFaction = IA_Faction.NONE;
-            if (sourceEntity)
-            {
-                SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(sourceEntity);
-                if (character)
-                {
-                    string factionKey = character.GetFaction().GetFactionKey();
-                    //Print("Source Entity = " + factionKey, LogLevel.NORMAL);
+                    if (!faction)
+                        return;
+                    string factionKey = faction.GetFactionKey();
+                    // Map the faction key to our IA_Faction enum
                     if (factionKey == "US")
                         sourceFaction = IA_Faction.US;
                     else if (factionKey == "USSR")
                         sourceFaction = IA_Faction.USSR;
-                    else if (factionKey == "CIV")
-                        sourceFaction = IA_Faction.CIV;
                     else if (factionKey == "FIA")
                         sourceFaction = IA_Faction.FIA;
+                    else if (factionKey == "CIV")
+                        sourceFaction = IA_Faction.CIV;
+                    
                 }
             }
             
-            // Use engaged enemy faction if we couldn't determine the source faction
-            if (sourceFaction == IA_Faction.NONE)
-            {
-                sourceFaction = m_engagedEnemyFaction;
-
-            }
-
-            // Apply danger level as a multiplier to the reaction intensity
-            float multiplier = 0.5 + (m_currentDangerLevel * 0.5);
-            float finalIntensity = reactionIntensity * multiplier;
-
-            // --- END MODIFIED DEBUG LOG ---
-
-            // Trigger the reaction in the manager
-            m_reactionManager.TriggerReaction(
-                reactionType,
-                finalIntensity,
-                position,
-                sourceEntity,
-                sourceFaction
-            );
-
-            int currentTime_tr = System.GetUnixTime();
-            if (currentTime_tr - m_lastDangerTriggerLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
-            {
-
-                m_lastDangerTriggerLogTime = currentTime_tr;
-            }
+            // --- MODIFIED CHECK: Skip if source faction is unknown OR same as own faction ---
+            if (sourceFaction == IA_Faction.NONE || sourceFaction == m_faction)
+                return; // Ignore unknown or friendly sources
+            // --- END MODIFIED CHECK ---
+                
+            // If we identified a valid enemy faction, set it (we know it's not NONE and not m_faction here)
+            m_engagedEnemyFaction = sourceFaction;
         }
-        // --- ADDED DEBUG LOG ---
-        else if (shouldReact && reactionType != IA_AIReactionType.None) {
-            string managerStatus;
-            if (m_reactionManager)
-                managerStatus = "NOT NULL";
-            else
-                managerStatus = "NULL";
-
-        }
-        // --- END DEBUG LOG ---
+        
+        // Update last danger info
+        m_lastDangerEventTime = System.GetUnixTime();
+        m_lastDangerPosition = position;
+        m_consecutiveDangerEvents++;
+        
+        // Create a danger event for later processing
+        IA_GroupDangerEvent dangerEvent = new IA_GroupDangerEvent();
+        dangerEvent.m_type = dangerType;
+        dangerEvent.m_position = position;
+        dangerEvent.m_source = sourceEntity;
+        dangerEvent.m_intensity = intensity;
+        dangerEvent.m_isSuppressed = isSuppressed;
+        dangerEvent.m_time = m_lastDangerEventTime;
+        
+        // Add to queue
+        m_dangerEvents.Insert(dangerEvent);
+        
+        // Update danger level
+            EvaluateDangerState();
     }
     
-    // New method to reset all danger and reaction states - useful for debugging and fixing false positives
     void ResetDangerState()
     {
+        m_dangerEvents.Clear();
         m_currentDangerLevel = 0.0;
         m_consecutiveDangerEvents = 0;
         m_lastDangerEventTime = 0;
         m_lastDangerPosition = vector.Zero;
-        
-        if (m_reactionManager)
-        {
-            m_reactionManager.ClearAllReactions();
-        }
-        
     }
     
-
-
-    
-    // Helper methods for specific danger types
-    
-    // Called when bullets hit near the group
     void OnProjectileImpact(vector impactPosition, IEntity shooterEntity = null)
     {
-
-        ProcessDangerEvent(IA_GroupDangerType.ProjectileImpact, impactPosition, shooterEntity);
+        ProcessDangerEvent(IA_GroupDangerType.ProjectileImpact, impactPosition, shooterEntity, 0.3);
     }
     
-    // Called when a weapon is fired that the group can hear
     void OnWeaponFired(vector shotPosition, IEntity shooterEntity = null, bool isSuppressed = false)
     {
-
-        ProcessDangerEvent(IA_GroupDangerType.WeaponFire, shotPosition, shooterEntity, 0.5, isSuppressed);
+        ProcessDangerEvent(IA_GroupDangerType.WeaponFire, shotPosition, shooterEntity, 0.4, isSuppressed);
     }
     
-    // Called when a projectile passes very close to the group
     void OnProjectileFlyby(vector flybyPosition, IEntity shooterEntity = null)
     {
-
-        ProcessDangerEvent(IA_GroupDangerType.ProjectileFlyby, flybyPosition, shooterEntity, 0.8);
+        ProcessDangerEvent(IA_GroupDangerType.ProjectileFlyby, flybyPosition, shooterEntity, 0.3);
     }
     
-    // Called when an explosion occurs near the group
     void OnExplosion(vector explosionPosition, IEntity sourceEntity = null)
     {
-        // Check if the reaction manager exists
-        string managerStatus;
-        if (m_reactionManager)
-            managerStatus = "NOT NULL";
-        else
-            managerStatus = "NULL";
-        
-        // Check if m_group exists
-        string groupStatus;
-        if (m_group)
-            groupStatus = "NOT NULL";
-        else
-            groupStatus = "NULL";
-
-        // --- END ADDED DEBUG LOG ---
-        
-
-        
-        ProcessDangerEvent(IA_GroupDangerType.Explosion, explosionPosition, sourceEntity, 0.9);
+        ProcessDangerEvent(IA_GroupDangerType.Explosion, explosionPosition, sourceEntity, 0.7);
     }
     
-    // Called when the group spots an enemy
     void OnEnemySpotted(vector enemyPosition, IEntity enemyEntity, float threatLevel = 0.5)
     {
-
         ProcessDangerEvent(IA_GroupDangerType.EnemySpotted, enemyPosition, enemyEntity, threatLevel);
     }
     
-    // New method to add to EvaluateGroupState to check danger level and react accordingly
     private void EvaluateDangerState()
     {
-        // If no current danger, reset and return
-        if (m_currentDangerLevel <= 0.0 || System.GetUnixTime() - m_lastDangerEventTime > 120)
+        // Early exit if there are no danger events to process
+        if (m_dangerEvents.IsEmpty())
         {
-            if (m_consecutiveDangerEvents > 0)
-            {
-                m_consecutiveDangerEvents = 0;
-                m_currentDangerLevel = 0.0;
-                //Print("[IA_AI_DANGER] Danger state reset due to timeout", LogLevel.WARNING);
-            }
+            m_currentDangerLevel = 0.0;
+            m_consecutiveDangerEvents = 0;
             return;
         }
         
-        // If already engaged or has active reaction, let those systems handle it
-        if (IsEngagedWithEnemy() || (m_reactionManager && m_reactionManager.HasActiveReaction()))
-            return;
-            
-        // If high danger level but no specific reaction yet, create a general heightened awareness state
-        if (m_currentDangerLevel > 0.7 && !m_isDriving)
+        // Current time to calculate recency
+        int currentTime = System.GetUnixTime();
+        
+        // Calculate the combined danger level from all events
+        float dangerLevel = 0.0;
+        vector dangerCenterSum = vector.Zero;
+        float totalWeight = 0.0;
+        
+        // First collect only weapon fire events for position calculation
+        vector weaponFireCenterSum = vector.Zero;
+        float weaponFireTotalWeight = 0.0;
+        
+        // Process all danger events, but weigh recent events higher
+        foreach (IA_GroupDangerEvent dangerEvent : m_dangerEvents)
         {
-
-            vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(10, 20, GetOrigin());
+            // Calculate how recent this event is (0-30 seconds)
+            int timeSince = currentTime - dangerEvent.m_time;
             
-            if (m_lastDangerPosition != vector.Zero)
+            // Events older than 30 seconds have minimal impact
+            if (timeSince > 30)
+                continue;
+                
+            // Calculate recency factor (1.0 for now, 0.0 for 30 seconds ago)
+            float recencyFactor = 1.0 - (timeSince / 30.0);
+            
+            // Calculate weight based on intensity and recency
+            float weight = dangerEvent.m_intensity * recencyFactor;
+            
+            // Apply suppression modifier if applicable
+            if (dangerEvent.m_isSuppressed)
+                weight *= 0.5;
+                
+            // Add to total danger level regardless of event type
+            dangerLevel += weight;
+            
+            // Special handling for WeaponFire events - track them separately
+            if (dangerEvent.m_type == IA_GroupDangerType.WeaponFire)
             {
-                vector awayDir = GetOrigin() - m_lastDangerPosition;
-                awayDir = awayDir.Normalized();
-                defendPos = GetOrigin() + awayDir * 15;
+                weaponFireCenterSum += dangerEvent.m_position * weight;
+                weaponFireTotalWeight += weight;
             }
             
-            if (!HasOrders())
+            // Skip ProjectileImpact for position calculation but still count for danger level
+            if (dangerEvent.m_type != IA_GroupDangerType.ProjectileImpact)
             {
-                AddOrder(defendPos, IA_AiOrder.Defend, true);
+                // Add to weighted position calculation
+                dangerCenterSum += dangerEvent.m_position * weight;
+                totalWeight += weight;
             }
+            
+            // Update consecutive events for compatibility with old system
+            m_consecutiveDangerEvents++;
         }
-        else if (m_currentDangerLevel > 0.3 && !m_isDriving && !HasOrders())
+        
+        // Normalize the danger level (cap at 1.0)
+        dangerLevel = Math.Clamp(dangerLevel, 0.0, 1.0);
+        
+        // Prioritize weapon fire events for danger center position
+        if (weaponFireTotalWeight > 0.1)
         {
-            if (m_lastDangerPosition != vector.Zero)
+            m_lastDangerPosition = weaponFireCenterSum / weaponFireTotalWeight;
+        }
+        // Fall back to other events (excluding ProjectileImpact) if no weapon fire events
+        else if (totalWeight > 0.1)
+        {
+            m_lastDangerPosition = dangerCenterSum / totalWeight;
+        }
+        
+        // Update the current danger level
+        m_currentDangerLevel = dangerLevel;
+        
+        // Clear old events
+        for (int i = m_dangerEvents.Count() - 1; i >= 0; i--)
+        {
+            if (currentTime - m_dangerEvents[i].m_time > 30)
             {
-                AddOrder(m_lastDangerPosition, IA_AiOrder.Defend);
+                m_dangerEvents.Remove(i);
             }
         }
     }
@@ -1244,16 +1177,19 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         if (!agent)
             return;
         
-
+        // Skip for civilians
+        if (m_isCivilian || m_faction == IA_Faction.CIV)
+            return;
+        
         int dangerCount = agent.GetDangerEventsCount();
         
         if (dangerCount <= 0)
             return;
+        
         IEntity agentEntity = agent.GetControlledEntity(); 
-		FactionAffiliationComponent agentFacComp = FactionAffiliationComponent.Cast(agentEntity.FindComponent(FactionAffiliationComponent));
-		FactionKey agentFactionKey = agentFacComp.GetAffiliatedFactionKey();
-		
-		
+        FactionAffiliationComponent agentFacComp = FactionAffiliationComponent.Cast(agentEntity.FindComponent(FactionAffiliationComponent));
+        FactionKey agentFactionKey = agentFacComp.GetAffiliatedFactionKey();
+        
         for (int i = 0; i < dangerCount; i++)
         {
             int outCount;
@@ -1265,7 +1201,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 
             EAIDangerEventType dangerType = dangerEvent.GetDangerType();
             vector dangerVector = dangerEvent.GetPosition();
-			
+            
             IEntity sourceEntity = null;
 
             IA_GroupDangerType mappedDangerType;
@@ -1276,23 +1212,34 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             bool handleEvent = true;
             switch (dangerType)
             {
-				             
                 case EAIDangerEventType.Danger_WeaponFire:
                     mappedDangerType = IA_GroupDangerType.WeaponFire;
                     reactionType = IA_AIReactionType.EnemySpotted;
-					 AIDangerEventWeaponFire eventWeaponFire = AIDangerEventWeaponFire.Cast(dangerEvent);
-					 sourceEntity = eventWeaponFire.GetObject();
+                    AIDangerEventWeaponFire eventWeaponFire = AIDangerEventWeaponFire.Cast(dangerEvent);
+                    sourceEntity = eventWeaponFire.GetObject();
 
-					 
-					FactionAffiliationComponent facComp = FactionAffiliationComponent.Cast(sourceEntity.FindComponent(FactionAffiliationComponent));
-					FactionKey sourceFactionKey = facComp.GetAffiliatedFactionKey();
-					if(agentFactionKey == sourceFactionKey) // Check For Friendly Fire
-						continue;					
+                    // Check if sourceEntity is valid before proceeding
+                    if (sourceEntity)
+                    {
+                        FactionAffiliationComponent facComp = FactionAffiliationComponent.Cast(sourceEntity.FindComponent(FactionAffiliationComponent));
+                        // Check if facComp is valid before checking faction key
+                        if (facComp)
+                        {
+                            FactionKey sourceFactionKey = facComp.GetAffiliatedFactionKey();
+                            if(agentFactionKey == sourceFactionKey) // Check For Friendly Fire
+                                continue; 
+                        }else{
+                            continue;
+                        }
+                        // else: Cannot determine source faction, assume hostile for now
+                    }
+                    // else: Cannot determine source entity, assume hostile
+
                     intensity = 0.6;
                     break;
                     
                 case EAIDangerEventType.Danger_Explosion:
-					 mappedDangerType = IA_GroupDangerType.Explosion;
+                    mappedDangerType = IA_GroupDangerType.Explosion;
                     reactionType = IA_AIReactionType.UnderFire; 
                     intensity = 0.9;
                     break;
@@ -1311,16 +1258,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             
             if (!handleEvent)
                 continue;
-            // Get the source entity if available
-
-
-            // If we have a sourceEntity, get detailed information about it
-            string entityInfo = "NULL";
-            if (sourceEntity)
-            {
-                entityInfo = sourceEntity.ToString();
-            }
-            
+                
             // Calculate distance to danger
             float distance = vector.Distance(GetOrigin(), dangerVector);
             
@@ -1394,6 +1332,7 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             
             if (!handleEvent || intensity <= 0.0)
                 continue;
+                
             ProcessDangerEvent(mappedDangerType, dangerVector, sourceEntity, intensity, isSuppressed);
         }
     }
@@ -1513,146 +1452,23 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 
     void ProcessReactions()
     {
-        if (m_isCivilian || m_faction == IA_Faction.CIV) {
+        // This function is now a no-op as reaction processing is handled by the area instance
             return;
-        }
-        
-        if (!m_reactionManager || !IsSpawned())
-            return;
-            
-        m_reactionManager.ProcessReactions();
-        
-        if (m_reactionManager.HasActiveReaction())
-        {
-            IA_AIReactionState reaction = m_reactionManager.GetCurrentReaction();
-            if (reaction)
-            {
-                IA_AIReactionType reactionType = reaction.GetReactionType();
-
-                
-                // Apply behavior based on the reaction state
-                ApplyReactionBehavior(reaction);
-            }
-        }
-    }
-    
-    // Apply specific behaviors for reactions
-    private void ApplyReactionBehavior(IA_AIReactionState reaction)
-    {
-        // Safety check
-        if (!reaction)
-            return;
-            
-        IA_AIReactionType reactionType = reaction.GetReactionType();
-
-            
-        switch (reaction.GetReactionType())
-        {
-            case IA_AIReactionType.GroupMemberKilled:
-
-                HandleGroupMemberKilledReaction(reaction);
-                break;
-                
-            case IA_AIReactionType.UnderFire: // Changed from UnderAttack
-
-                int currentTime_uf = System.GetUnixTime();
-                if (currentTime_uf - m_lastApplyUnderFireLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
-                {
-                    m_lastApplyUnderFireLogTime = currentTime_uf;
-                }
-                HandleUnderFireReaction(reaction); // Renamed handler
-                break;
-                
-            case IA_AIReactionType.EnemySpotted:
-
-                int currentTime_es = System.GetUnixTime();
-                if (currentTime_es - m_lastApplyEnemySpottedLogTime > BEHAVIOR_LOG_RATE_LIMIT_SECONDS)
-                {
-                    m_lastApplyEnemySpottedLogTime = currentTime_es;
-                }
-                HandleEnemySpottedReaction(reaction);
-                break;
-                
-        }
-    }
-
-    static IA_AiGroup CreateCivilianGroupForVehicle(Vehicle vehicle, int unitCount)
-    {
-        if (!vehicle || unitCount <= 0)
-            return null;
-
-        vector spawnPos = vehicle.GetOrigin() + vector.Up; // slightly above vehicle
-        IA_AiGroup grp = IA_AiGroup.CreateCivilianGroup(spawnPos);
-        return grp;
-    }
-    
-    void AssignVehicle(Vehicle vehicle, vector destination)
-    {
-        
-        if (!vehicle || !IsSpawned())
-        {
-            return;
-        }
-        
-        bool reserved = IA_VehicleManager.ReserveVehicle(vehicle, this);
-        if (!reserved)
-        {
-            return;
-        }
-        
-        m_referencedEntity = vehicle;
-        m_isDriving = true;
-        m_drivingTarget = destination;
-        
-        m_lastOrderPosition = vehicle.GetOrigin();
-        m_lastOrderTime = System.GetUnixTime();
-        
-        RemoveAllOrders();
-        
-        if (destination != vector.Zero) 
-        {
-            IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, destination);
-        }
-
-        
-    }
-
-    void Despawn()
-    {
-        if (!IsSpawned())
-        {
-            return;
-        }
-        m_isSpawned = false;
-        
-        if (m_isDriving || m_referencedEntity)
-        {
-            ClearVehicleReference();
-        }
-        
-
-
-        m_isStateEvaluationScheduled = false;
-
-        if (m_group)
-        {
-            m_group.DeactivateAllMembers();
-        }
-        RemoveAllOrders();
-        IA_Game.AddEntityToGc(m_group);
-        m_group = null;
     }
 
     private void ScheduleNextStateEvaluation()
     {
         if (m_isStateEvaluationScheduled)
             return;
-            
-        int randomDelay = Math.RandomInt(MIN_STATE_EVALUATION_INTERVAL, MAX_STATE_EVALUATION_INTERVAL);
         
-        GetGame().GetCallqueue().CallLater(EvaluateGroupState, randomDelay);
+        // Random interval between min and max times
+        int interval = Math.RandomInt(MIN_STATE_EVALUATION_INTERVAL, MAX_STATE_EVALUATION_INTERVAL);
+        
+        // Schedule the next evaluation
+        GetGame().GetCallqueue().CallLater(EvaluateGroupState, interval, false);
+        
         m_isStateEvaluationScheduled = true;
-        
+        m_nextStateEvaluationTime = System.GetUnixTime() + (interval / 1000);
     }
 
     private void OnMemberDeath(notnull SCR_CharacterControllerComponent memberCtrl, IEntity killerEntity, Instigator killer)
@@ -1701,41 +1517,21 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
 
             }
             
-            // Use the new reaction system
-            float groupSize = GetAliveCount() + 1; // +1 for the unit that just died
-            float intensity = 1.0 / groupSize; // Higher intensity for smaller groups
-            
-            // Trigger reaction with player as source and determined faction
-            if (m_reactionManager)
-            {
-                m_reactionManager.TriggerReaction(
-                    IA_AIReactionType.GroupMemberKilled, 
-                    intensity, 
-                    deathPosition, 
-                    killerEntity, 
-                    playerFaction
-                );
-            }
-            
             // Legacy engagement system for compatibility
             if (!IsEngagedWithEnemy() && !m_isCivilian && m_faction != IA_Faction.CIV)
             {
                 m_engagedEnemyFaction = playerFaction;
-                //Print("[IA_AI_DEATH_DEBUG] Setting enemy faction to player faction: " + typename.EnumToString(IA_Faction, playerFaction), LogLevel.WARNING);
             }
         }
         else if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_AI)
         {
-            ////Print("[DEBUG] Member killed by AI.", LogLevel.NORMAL);
             SCR_ChimeraCharacter c = SCR_ChimeraCharacter.Cast(killerEntity);
             if (!c)
             {
-                ////Print("[IA_AiGroup.OnMemberDeath] cast killerEntity to character failed!", LogLevel.ERROR);
                 return;
             }
             
             string fKey = c.GetFaction().GetFactionKey();
-            ////Print("[DEBUG] Killer faction key: " + fKey, LogLevel.NORMAL);
             
             // Determine the faction
             IA_Faction killerFaction = IA_Faction.NONE;
@@ -1756,21 +1552,6 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                 killerFaction = IA_Faction.FIA;
             }
             
-            // Use the new reaction system
-            if (m_reactionManager && killerFaction != m_faction) // Skip if friendly fire
-            {
-                float groupSize = GetAliveCount() + 1; // +1 for the unit that just died
-                float intensity = 1.0 / groupSize; // Higher intensity for smaller groups
-                
-                m_reactionManager.TriggerReaction(
-                    IA_AIReactionType.GroupMemberKilled, 
-                    intensity, 
-                    deathPosition, 
-                    killerEntity, 
-                    killerFaction
-                );
-            }
-            
             // Legacy engagement system
             if (killerFaction != m_faction)
             {
@@ -1779,265 +1560,83 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             // If friendly fire, reset engagement.
             if (m_engagedEnemyFaction == m_faction)
             {
-                ////Print("[IA_AiGroup.OnMemberDeath] Friendly kill => resetting engagement");
                 m_engagedEnemyFaction = IA_Faction.NONE;
             }
         }
     }
 
-    // Handle reaction when a group member is killed
-    private void HandleGroupMemberKilledReaction(IA_AIReactionState reaction)
+    // Evaluate and potentially change tactical state based on situation
+    void EvaluateTacticalState()
     {
-        //Print("[IA_AI_BEHAVIOR_HANDLER] Executing: HandleGroupMemberKilledReaction", LogLevel.WARNING); // Added log
-        // Make sure the legacy engagement system is updated
-        if (!IsEngagedWithEnemy() && !m_isCivilian && m_faction != IA_Faction.CIV)
-        {
-            IA_Faction sourceFaction = reaction.GetSourceFaction();
-            if (sourceFaction != IA_Faction.NONE)
-            {
-                m_engagedEnemyFaction = sourceFaction;
-            }
-            else
-            {
-                // If we don't know the source faction, use CIV as placeholder like in original code
-                m_engagedEnemyFaction = IA_Faction.CIV;
-            }
-        }
-        
-        // Only take additional action if this is a high intensity reaction
-        if (reaction.GetIntensity() > 0.5)
-        {
-            // Get defensive position away from threat
-            vector threatPos = reaction.GetSourcePosition();
-            if (threatPos != vector.Zero && !m_isDriving)
-            {
-                // Move away from threat and take cover
-                vector awayDir = m_group.GetOrigin() - threatPos;
-                awayDir = awayDir.Normalized();
-                vector retreatPos = m_group.GetOrigin() + awayDir * 20;
-                
-                RemoveAllOrders();
-                AddOrder(retreatPos, IA_AiOrder.Defend, true);
-            }
-        }
-    }
-    
-    // Handle reaction when under direct attack
-    private void HandleUnderFireReaction(IA_AIReactionState reaction)
-    {
-
-        IA_Faction sourceFaction = reaction.GetSourceFaction();
-        if (sourceFaction != IA_Faction.NONE && !IsEngagedWithEnemy())
-        {
-            m_engagedEnemyFaction = sourceFaction;
-        }
-
-        if (m_isDriving && m_referencedEntity)
-        {
-            string entityInfo;
-            if (m_referencedEntity)
-                entityInfo = m_referencedEntity.ToString();
-            else
-                entityInfo = "NULL";
-
-            vector threatPos = reaction.GetSourcePosition();
-            if (threatPos != vector.Zero)
-            {
-                vector awayDir = m_group.GetOrigin() - threatPos;
-                awayDir = awayDir.Normalized();
-                vector retreatPos = m_group.GetOrigin() + awayDir * 100;
-
-                // Update driving target
-                m_drivingTarget = retreatPos;
-                UpdateVehicleOrders();
-            }
-        }
-        else if (!m_isDriving) // If on foot, take cover and engage
-        {
-
-            vector sourcePos = reaction.GetSourcePosition();
-
-
-            if (sourcePos != vector.Zero)
-            {
-
-                array<AIWaypoint> wpsBefore = {};
-                int countBefore = 0;
-                if(m_group) countBefore = m_group.GetWaypoints(wpsBefore);
-
-                RemoveAllOrders(); // Clears existing waypoints
-                AddOrder(sourcePos, IA_AiOrder.SearchAndDestroy, true); // Adds S&D waypoint
-
-                array<AIWaypoint> wpsAfter = {};
-                int countAfter = 0;
-                 if(m_group) countAfter = m_group.GetWaypoints(wpsAfter);
-            }
-
-        }
-        // --- BEGIN ADDED DEBUG LOG ---
-        // Add a fallback log just in case something unexpected happens
-        else
-        {
-            string entityInfo;
-            if (m_referencedEntity)
-                entityInfo = m_referencedEntity.ToString();
-            else
-                entityInfo = "NULL";
-                
-            //Print("[IA_AI_BEHAVIOR_DEBUG] HandleUnderFireReaction - NEITHER vehicle nor infantry branch executed!? m_isDriving=" + m_isDriving + ", m_referencedEntity=" + entityInfo, LogLevel.ERROR);
-        }
-        // --- END ADDED DEBUG LOG ---
-    }
-    
-    // Handle reaction when enemy is spotted but not attacking yet
-    private void HandleEnemySpottedReaction(IA_AIReactionState reaction)
-    {
-        //Print("[IA_AI_BEHAVIOR_HANDLER] Executing: HandleEnemySpottedReaction | Intensity: " + reaction.GetIntensity(), LogLevel.WARNING); // Added log with intensity
-
-        // For low intensity reactions, just observe
-        if (reaction.GetIntensity() < 0.3 && !m_isDriving)
-        {
-            vector sourcePos = reaction.GetSourcePosition();
-            if (sourcePos != vector.Zero)
-            {
-                RemoveAllOrders();
-                AddOrder(sourcePos, IA_AiOrder.Defend);
-            }
-        }
-        // For higher intensity, engage more directly
-        else if (!m_isDriving)
-        {
-            vector sourcePos = reaction.GetSourcePosition();
-            if (sourcePos != vector.Zero)
-            {
-                RemoveAllOrders();
-                AddOrder(sourcePos, IA_AiOrder.SearchAndDestroy);
-            }
-        }
-    }
-    
-    IA_Faction GetFaction()
-    {
-        ////Print("[DEBUG] GetFaction called. Returning: " + m_faction, LogLevel.NORMAL);
-        return m_faction;
-    }
-
-    // Evaluate the group's state and determine appropriate actions
-    private void EvaluateGroupState()
-    {
-        // Replace ternary operator with if-else
-        string isCivilianText;
-        if (m_faction == IA_Faction.CIV)
-            isCivilianText = "true";
-        else
-            isCivilianText = "false";
-
-          
-        // Reset the scheduled flag
-        m_isStateEvaluationScheduled = false;
-        
-        // Skip evaluation if group is not spawned or is null
-        if (!IsSpawned() || !m_group)
-        {
-            // Still schedule the next evaluation to keep the cycle going
-            ScheduleNextStateEvaluation();
-            return;
-        }
-        
-        // Get current state information
-        bool isEngaged = IsEngagedWithEnemy();
-        bool isDriving = IsDriving();
-        bool hasOrders = HasOrders();
-        int timeSinceLastOrder = TimeSinceLastOrder();
-        int aliveCount = GetAliveCount();
-        
-        // Add debug statement showing key state metrics
-
-        
-        // --- MODIFIED: Only check active reactions for military units ---
-        bool reactionIsActive = false;
-        
-        // Only process reactions for military units
-        if (!m_isCivilian && m_faction != IA_Faction.CIV && m_reactionManager)
-        {
-            // --- BEGIN ADDED DEBUG LOG ---
-            // Check reaction state *before* the main conditional block
-            IA_AIReactionType currentReactionType = IA_AIReactionType.None;
-            reactionIsActive = m_reactionManager.HasActiveReaction();
-            if (reactionIsActive)
-                currentReactionType = m_reactionManager.GetCurrentReaction().GetReactionType();
-
-            if (reactionIsActive)
-            {
-                IA_AIReactionState currentReaction = m_reactionManager.GetCurrentReaction();
-
-    
-                // Apply the behavior for the current reaction
-                ProcessReactions();
-    
-                // Schedule the next evaluation and exit *now* to let the reaction behavior execute.
-                ScheduleNextStateEvaluation();
-                return;
-            }
-        }
-        // --- END OF MODIFIED SECTION ---
-
-        // If no active reactions, proceed with other state evaluations:
-
-        // If engaged with enemy (and not driving)
-        else if (isEngaged && !isDriving)
-        {
-
-
-            EvaluateCombatState();
-        }
-        // If in a vehicle
-        else if (isDriving)
-        {
-            Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
-            string vehicleType = "Unknown";
-            if (vehicle)
-                vehicleType = vehicle.ClassName();
-
-
-            UpdateVehicleOrders();
-        }
-        else if (m_currentDangerLevel > 0.0)
-        {
-
-
-            EvaluateDangerState();
-        }
-        else if (timeSinceLastOrder > 120 && !hasOrders)
-        {
-
-
-            EvaluateIdleState();
-        }
-        else
-        {
-
-        }
-
-        ScheduleNextStateEvaluation();
-    }
-
-    // Evaluate what to do during combat
-    private void EvaluateCombatState()
-    {
-        // Get reaction status with if-else instead of ternary operator
-        string hasReactionText;
-        if (m_reactionManager && m_reactionManager.HasActiveReaction())
-            hasReactionText = "true";
-        else
-            hasReactionText = "false";
-        
-
-          
         // If the last order was very recent, let it execute
         int timeSinceLastOrder = TimeSinceLastOrder();
         if (timeSinceLastOrder < 3) {
              return;
+        }
+
+        // If the state is being managed by an external authority (like AreaInstance),
+        // do not allow the group to change its own tactical state autonomously.
+        if (m_isStateManagedByAuthority)
+        {
+            // When under authority control, ALWAYS maintain the assigned state
+            // If we don't have orders but should have orders for this state type, reapply them
+            if (!HasOrders())
+            {
+                // Only reapply for states that should have persistent orders
+                if (m_tacticalState == IA_GroupTacticalState.Attacking || 
+                    m_tacticalState == IA_GroupTacticalState.Defending || 
+                    m_tacticalState == IA_GroupTacticalState.DefendPatrol ||
+                    m_tacticalState == IA_GroupTacticalState.Flanking ||
+                    m_tacticalState == IA_GroupTacticalState.LastStand)
+                {
+                    Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Reapplying authority-managed state %1 for group %2", 
+                        typename.EnumToString(IA_GroupTacticalState, m_tacticalState), this), LogLevel.DEBUG);
+                    ApplyTacticalStateOrders();
+                }
+            }
+            
+            // Even under authority control, check for critical conditions that should force a state change
+            // These are emergency conditions that override even authority control
+            int aliveCount = GetAliveCount();
+            int initialCount = GetInitialUnitCount();
+            
+            // Critical condition for flanking/attackers down to last unit
+            if ((m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking) && 
+                aliveCount == 1 && initialCount > 2)
+            {
+                // Request retreat to preserve the last unit
+                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] CRITICAL CONDITION: Attacking/Flanking group %1 down to last unit - requesting retreat", 
+                    this), LogLevel.WARNING);
+                    
+                // Instead of directly changing, request a state change
+                RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
+            }
+            // Severe condition: Less than 33% of original strength for attackers/flankers
+            else if ((m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking) && 
+                   initialCount >= 3 && aliveCount < (initialCount / 3))
+            {
+                float survivingRatio;
+                if (initialCount > 0) {
+                    survivingRatio = aliveCount / (float)initialCount;
+                } else {
+                    survivingRatio = 0;
+                }
+                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] SEVERE LOSSES: Attacking/Flanking group %1 at %2% strength - reassessing role", 
+                    this, Math.Round(survivingRatio * 100)), LogLevel.WARNING);
+                    
+                // High danger - request retreat or last stand based on current danger level
+                if (m_currentDangerLevel > 0.7)
+                {
+                    RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
+                }
+                else
+                {
+                    // Lower danger - hold position but request switch to defending
+                    RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
+                }
+            }
+            
+            return; // Exit early if state is managed externally
         }
 
         if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
@@ -2052,105 +1651,131 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
                     m_engagedEnemyFaction = IA_Faction.US;
                 else if (m_faction == IA_Faction.US)
                     m_engagedEnemyFaction = IA_Faction.USSR;
-
-                
             }
 
-            if (m_lastDangerEventTime > 0 && timeSinceLastDanger < 60)
+            // Check if this is a new danger or if we need to react to it - extend the danger reaction time to 90 seconds
+            if (m_lastDangerEventTime > 0 && timeSinceLastDanger < 90)
             {
-         
-                
+                // Get position to react to
                 vector targetPos = m_lastDangerPosition;
                 if (targetPos == vector.Zero)
                 {
                     targetPos = IA_Game.rng.GenerateRandomPointInRadius(20, 50, GetOrigin());
                 }
                 
-                // Check if we have a semi-recent order to handle the threat already
-                if (timeSinceLastOrder < 30 && HasOrders() && vector.Distance(m_lastOrderPosition, targetPos) < 50)
-                {
-                    // We have a recent order near the danger point - keep following it
+                // Update tactical state based on situation using request instead of direct change
+                int aliveCount = GetAliveCount();
+                float dangerLevel = m_currentDangerLevel;
+                int initialCount = GetInitialUnitCount();
+                float strengthRatio;
+                if (initialCount > 0) {
+                    strengthRatio = aliveCount / (float)initialCount;
+                } else {
+                    strengthRatio = 1.0;
                 }
+                
+                // High danger and critically low strength (<=25%) - retreat
+                if ((dangerLevel > 0.6 && aliveCount <= 2) || (dangerLevel > 0.5 && strengthRatio <= 0.25))
+                {
+                    RequestTacticalStateChange(IA_GroupTacticalState.Retreating, targetPos);
+                }
+                // High danger but good numbers - defend
+                else if (dangerLevel > 0.65)
+                {
+                    RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
+                }
+                // Critical numbers, make last stand
+                else if (aliveCount == 1 && dangerLevel > 0.3)
+                {
+                    RequestTacticalStateChange(IA_GroupTacticalState.LastStand, GetOrigin());
+                }
+                // Good numbers with flanking opportunity
+                else if (aliveCount >= 3 && strengthRatio >= 0.6 && Math.RandomFloat(0, 1) < 0.45)
+                {
+                    RequestTacticalStateChange(IA_GroupTacticalState.Flanking, targetPos);
+                }
+                // Default to attacking when no special conditions
                 else
                 {
-
-                    
-                    RemoveAllOrders();
-                    AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, true);
-                    
-                    // If this unit wasn't already engaged with an enemy, set an appropriate enemy faction
-                    if (m_engagedEnemyFaction == IA_Faction.NONE)
-                    {
-                        if (m_faction == IA_Faction.USSR)
-                            m_engagedEnemyFaction = IA_Faction.US;
-                        else if (m_faction == IA_Faction.US)
-                            m_engagedEnemyFaction = IA_Faction.USSR;
-
-                    }
-                    
-                    // Exit early - we've handled this case
-                    return;
+                    RequestTacticalStateChange(IA_GroupTacticalState.Attacking, targetPos);
                 }
+                
+                // If this unit wasn't already engaged with an enemy, set an appropriate enemy faction
+                if (m_engagedEnemyFaction == IA_Faction.NONE)
+                {
+                    if (m_faction == IA_Faction.USSR)
+                        m_engagedEnemyFaction = IA_Faction.US;
+                    else if (m_faction == IA_Faction.US)
+                        m_engagedEnemyFaction = IA_Faction.USSR;
+                }
+                
+                // Exit early - we've handled this case through tactical state
+                return;
             }
             
             // Even if no recent danger, military units should maintain combat readiness
             // if they're already engaged
-            if (IsEngagedWithEnemy() && GetAliveCount() > 0)
+            if (IsEngagedWithEnemy() && GetAliveCount() > 0 && timeSinceLastOrder > 30)
             {
-                // If we haven't issued a new order in a while, issue a new one to maintain pressure
-                if (timeSinceLastOrder > 30)
+                // Defer to tactical state system - ensure we have a combat-related state
+                if (m_tacticalState == IA_GroupTacticalState.Neutral)
                 {
-                    // Determine a tactical response based on group strength
+                    // No tactical state set yet, choose one based on circumstances
                     int aliveCount = GetAliveCount();
-                    vector currentPos = GetOrigin();
-                    
-                    // For stronger groups, be more aggressive
-                    if (aliveCount >= 3)
-                    {
-                        // Generate a search point in the general direction of last danger/order
-                        vector searchDir = vector.Zero;
-                        
-                        // Try to use last danger position as reference
-                        if (m_lastDangerPosition != vector.Zero)
-                        {
-                            searchDir = m_lastDangerPosition - currentPos;
-                            if (searchDir.LengthSq() > 0.1)
-                                searchDir = searchDir.Normalized();
-                            else
-                                searchDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
-                        }
-                        else
-                        {
-                            // Use random direction
-                            searchDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
-                        }
-                        
-                        // Generate point 50-100m ahead in that direction
-                        vector searchPoint = currentPos + (searchDir * Math.RandomFloat(50, 100));
-                        
-
-                        
-                        RemoveAllOrders();
-                        AddOrder(searchPoint, IA_AiOrder.SearchAndDestroy, true);
+                    int initialCount = GetInitialUnitCount();
+                    float strengthRatio;
+                    if (initialCount > 0) {
+                        strengthRatio = aliveCount / (float)initialCount;
+                    } else {
+                        strengthRatio = 1.0;
                     }
-                    // For weaker groups, be more defensive
+                    
+                    // If attacking but critically weakened, change to defense
+                    if (aliveCount <= 2 || strengthRatio < 0.3)
+                    {
+                        Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Group %1 unit strength too low for attack/flank - requesting Defend", this), LogLevel.DEBUG);
+                        RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
+                    }
+                    else if (aliveCount >= 3 && strengthRatio >= 0.6 && Math.RandomFloat(0, 1) < 0.35)
+                    {
+                        RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition);
+                    }
                     else
                     {
-                        vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, currentPos);
-
-                        
-                        RemoveAllOrders();
-                        AddOrder(defendPos, IA_AiOrder.Defend);
+                        RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition);
+                    }
+                }
+                // We already have a tactical state, just refresh orders if needed
+                else if (!HasOrders())
+                {
+                    // Before refreshing orders, check if current state is still appropriate
+                    int aliveCount = GetAliveCount();
+                    int initialCount = GetInitialUnitCount();
+                    float strengthRatio;
+                    if (initialCount > 0) {
+                        strengthRatio = aliveCount / (float)initialCount;
+                    } else {
+                        strengthRatio = 1.0;
                     }
                     
-                    // Exit early - we've handled this case
-                    return;
+                    // If attacking but critically weakened, change to defense
+                    if ((m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking) && 
+                        (aliveCount <= 2 || strengthRatio < 0.3))
+                    {
+                        Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Group %1 unit strength too low for attack/flank - requesting Defend", this), LogLevel.DEBUG);
+                        RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
+                    }
+                    else
+                    {
+                        ApplyTacticalStateOrders();
+                    }
                 }
+                
+                return;
             }
         }
-        // --- END AGGRESSIVE MILITARY COMBAT HANDLING ---
 
-        // If we reach here, we're either a civilian or didn't qualify for the military handling above
+        // For civilians or fallback for military units
         // Get information about the engaged enemy
         IA_Faction enemyFaction = GetEngagedEnemyFaction();
 
@@ -2158,136 +1783,316 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         int aliveCount = GetAliveCount();
         if (aliveCount <= 2)
         {
-            vector retreatDir = GetOrigin() - m_lastOrderPosition;
-            if (retreatDir.LengthSq() > 0.1) // Check against small threshold for robustness
-                 retreatDir = retreatDir.Normalized();
-            else // If last order position is same as current or zero, pick random direction
-                 retreatDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
-
-            vector retreatPos = GetOrigin() + retreatDir * 50; // Retreat 50m
-
-            //Print("[IA_AI_STATE] Combat evaluation: Group retreating due to low numbers (" + aliveCount + ")", LogLevel.WARNING);
-            RemoveAllOrders();
-            AddOrder(retreatPos, IA_AiOrder.Patrol); // Retreat order is Patrol
+            if (!m_isCivilian && m_faction != IA_Faction.CIV)
+            {
+                // Use tactical state for military units
+                RequestTacticalStateChange(IA_GroupTacticalState.Retreating);
+            }
+            else
+            {
+                // Direct orders for civilians
+                vector retreatDir = GetOrigin() - m_lastOrderPosition;
+                if (retreatDir.LengthSq() > 0.1)
+                    retreatDir = retreatDir.Normalized();
+                else
+                    retreatDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
+    
+                vector retreatPos = GetOrigin() + retreatDir * 50;
+                RemoveAllOrders();
+                AddOrder(retreatPos, IA_AiOrder.Patrol);
+            }
         }
         // Otherwise, maintain combat stance by defending
-        else
+        else if (m_isCivilian || m_faction == IA_Faction.CIV)
         {
+            // Direct orders for civilians
             vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, GetOrigin());
-            //Print("[IA_AI_STATE] Combat evaluation: Group taking defensive position (No recent/active orders)", LogLevel.WARNING);
             RemoveAllOrders();
             AddOrder(defendPos, IA_AiOrder.Defend);
         }
-
-        // Add debug logging to check faction identification
-        //Print("[IA_AI_COMBAT_DEBUG] EvaluateCombatState: Group faction: " + m_faction + ", Enemy faction: " + enemyFaction + ", IsEngaged: " + IsEngagedWithEnemy(), LogLevel.WARNING);
     }
     
-    // Evaluate what to do when idle
-    private void EvaluateIdleState()
+    // Return current tactical state as string (for debug)
+    string GetTacticalStateAsString()
     {
-        // Only take action if we don't already have orders
-        if (HasOrders())
+        return typename.EnumToString(IA_GroupTacticalState, m_tacticalState);
+    }
+
+    IA_GroupTacticalState GetTacticalState()
+    {
+        return m_tacticalState;
+    }
+    
+    // --- BEGIN ADDED: Getter for Danger Level ---
+    float GetCurrentDangerLevel()
+    {
+        return m_currentDangerLevel;
+    }
+    // --- END ADDED ---
+    
+    // --- BEGIN ADDED: Getter for Last Danger Position ---
+    vector GetLastDangerPosition()
+    {
+        return m_lastDangerPosition;
+    }
+    // --- END ADDED ---
+    
+    // --- BEGIN ADDED: Getter for Initial Unit Count ---
+    int GetInitialUnitCount()
+    {
+        return m_initialUnitCount;
+    }
+    // --- END ADDED ---
+
+    // Fix accidental removal of CreateCivilianGroupForVehicle and AssignVehicle methods
+    static IA_AiGroup CreateCivilianGroupForVehicle(Vehicle vehicle, int unitCount)
+    {
+        if (!vehicle || unitCount <= 0)
+            return null;
+
+        vector spawnPos = vehicle.GetOrigin() + vector.Up; // slightly above vehicle
+        IA_AiGroup grp = IA_AiGroup.CreateCivilianGroup(spawnPos);
+        return grp;
+    }
+
+    void AssignVehicle(Vehicle vehicle, vector destination)
+    {
+        if (!vehicle || !IsSpawned())
+        {
             return;
-            
-        // For civilian units, we might want different behaviors
-        if (m_isCivilian)
-        {
-            // Civilians might wander or find shelter
-            vector wanderPos = IA_Game.rng.GenerateRandomPointInRadius(10, 30, GetOrigin());
-            AddOrder(wanderPos, IA_AiOrder.Patrol);
-            
-            //Print("[IA_AI_STATE] Idle evaluation: Civilian group wandering", LogLevel.WARNING);
         }
-        // For military units, patrol or secure area
-        else
+        
+        bool reserved = IA_VehicleManager.ReserveVehicle(vehicle, this);
+        if (!reserved)
         {
-            // Choose randomly between patrol and defend
-            float randomChoice = Math.RandomFloat(0, 1);
-            
-            if (randomChoice < 0.7) // 70% chance to patrol
-            {
-                vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(20, 50, GetOrigin());
-                AddOrder(patrolPos, IA_AiOrder.Patrol);
-                
-            }
-            else // 30% chance to defend
-            {
-                vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 15, GetOrigin());
-                AddOrder(defendPos, IA_AiOrder.Defend);
-                
-            }
+            return;
+        }
+        
+        m_referencedEntity = vehicle;
+        m_isDriving = true;
+        m_drivingTarget = destination;
+        
+        m_lastOrderPosition = vehicle.GetOrigin();
+        m_lastOrderTime = System.GetUnixTime();
+        
+        RemoveAllOrders();
+        
+        if (destination != vector.Zero) 
+        {
+            IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, destination);
         }
     }
 
-    private void CheckDangerEvents()
+    void Despawn()
     {
-
-        
-		if(m_faction == IA_Faction.CIV)
-		{
-			return;
-		}
-
-        
-        if (!m_group)
+        if (!IsSpawned())
         {
             return;
         }
+        m_isSpawned = false;
+        
+        if (m_isDriving || m_referencedEntity)
+        {
+            ClearVehicleReference();
+        }
+        
+        m_isStateEvaluationScheduled = false;
+
+        if (m_group)
+        {
+            m_group.DeactivateAllMembers();
+        }
+        RemoveAllOrders();
+        IA_Game.AddEntityToGc(m_group);
+        m_group = null;
+    }
+
+    // Add a public SetTacticalState method to replace the one we accidentally removed
+    void SetTacticalState(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null, bool fromAuthority = false)
+    {
+        // Add logging to show the state change
+        if (m_tacticalState != newState)
+        {
+            Print(string.Format("[IA_AiGroup.SetTacticalState] Group %1 changing state: %2 -> %3", 
+                this, m_tacticalState, newState), LogLevel.DEBUG);
+        }
+        
+        // Authority safety check - log a warning when called without authority flag
+        if (!fromAuthority)
+        {
+            Print(string.Format("[IA_AiGroup.SetTacticalState] WARNING: Called without authority flag. Groups should request state changes instead of setting directly."), 
+                LogLevel.WARNING);
+        }
+        
+        // Manage the authority flag - can be acquired by authority, or released by non-authority
+        if (fromAuthority)
+        {
+            m_isStateManagedByAuthority = true; // Authority takes control
+        }
+        else if (m_isStateManagedByAuthority)
+        {
+            // If currently under authority control, log that we're getting a non-authority state change
+            Print(string.Format("[IA_AiGroup.SetTacticalState] WARNING: Group %1 state changed from %2 to %3 by non-authority source!", 
+                this, m_tacticalState, newState), LogLevel.WARNING);
+            m_isStateManagedByAuthority = false; // Only release authority when explicitly changed by non-authority
+        }
+
+        // Clear any pending state request
+        m_hasPendingStateRequest = false;
+
+        m_tacticalState = newState;
+        m_tacticalStateTarget = targetPos;
+        
+        // Apply orders based on the state
+        RemoveAllOrders();
+        
+        switch (m_tacticalState)
+        {
+            case IA_GroupTacticalState.Attacking:
+                if (targetPos != vector.Zero)
+                {
+                    AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, true);
+                }
+                break;
+                
+            case IA_GroupTacticalState.Defending:
+                vector defendPos;
+                if (targetPos != vector.Zero) {
+                    defendPos = targetPos;
+                } else {
+                    defendPos = m_lastConfirmedPosition; // No target, defend where you're standing
+                }
+                
+                // Log Defend State Info
+                Print(string.Format("[IA_AiGroup.SetTacticalState] DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Position: %4 | Target: %5", 
+                    this, m_faction, GetAliveCount(), m_lastConfirmedPosition.ToString(), defendPos.ToString()), LogLevel.NORMAL);
+                
+                // Add some vertical offset to avoid waypoints in ground
+                if (defendPos[1] < 5)
+                {
+                    defendPos[1] = defendPos[1] + 0.5;
+                }
+                
+                AddOrder(defendPos, IA_AiOrder.Defend, true);
+                break;
+                
+            case IA_GroupTacticalState.Flanking:
+                // If a specific target is given, use that
+                if (targetPos != vector.Zero)
+                {
+                    AddOrder(targetPos, IA_AiOrder.Move, true);
+                }
+                break;
+                
+            case IA_GroupTacticalState.DefendPatrol:
+                // No target for patrol state - generate one
+                if (m_lastAssignedArea)
+                {
+                    vector areaOrigin = m_lastAssignedArea.GetOrigin();
+                    float radius = m_lastAssignedArea.GetRadius() * 0.75; // Stay within the area
+                    
+                    // Only generate a random patrol if we're not already close to the center
+                    if (vector.Distance(m_lastConfirmedPosition, areaOrigin) > 15)
+                    {
+                        // Generate a random point to patrol to within the area
+                        vector patrolPoint = IA_Game.rng.GenerateRandomPointInRadius(1, radius, areaOrigin);
+                        
+                        // Apply orders
+                        AddOrder(patrolPoint, IA_AiOrder.Move, false);
+                    }
+                    else
+                    {
+                        // We're at the center already, just defend this position
+                        AddOrder(m_lastConfirmedPosition, IA_AiOrder.Defend, false);
+                    }
+                }
+                break;
             
+            case IA_GroupTacticalState.InVehicle:
+                // For groups in vehicles - maybe handled at a higher level
+                break;
+                
+            default:
+                // Unknown state, do nothing
+                break;
+        }
+    }
+
+    // Add a public ApplyTacticalStateOrders method to reapply orders based on current state
+    void ApplyTacticalStateOrders()
+    {
+        // Simply call SetTacticalState with the current state
+        SetTacticalState(m_tacticalState, m_tacticalStateTarget);
+    }
+
+    // Make sure CheckDangerEvents is defined as a public method
+    void CheckDangerEvents()
+    {
+        // Throttle the main check logic per group
+        int currentTime_check = GetGame().GetWorld().GetWorldTime();
+        if (currentTime_check - m_lastAgentEventCheckTime < AGENT_EVENT_CHECK_INTERVAL_MS)
+        {
+            return; // Skip check if too soon
+        }
+        m_lastAgentEventCheckTime = currentTime_check;
+
+        if (!IsSpawned() || !m_group)
+            return;
+        
+        // Skip for civilian groups
+        if (m_isCivilian)
+            return;
+        
+        // For each agent in the group, check if they have any danger events
         array<AIAgent> agents = {};
         m_group.GetAgents(agents);
         
-        
-        if (agents.IsEmpty())
-        {
-            return;
-        }
-        
         foreach (AIAgent agent : agents)
         {
-            if (!agent)
+            if (agent)
             {
-                continue;
+                ProcessAgentDangerEvents(agent);
             }
-            
-            ProcessAgentDangerEvents(agent);
         }
     }
 
-    // Calculate priority based on situational factors
-    private int CalculateWaypointPriority(IA_AiOrder order)
+    // Make sure CalculateWaypointPriority is defined as a public method
+    int CalculateWaypointPriority(IA_AiOrder order)
     {
-        // Base priority level starts at 100
-        int priority = 10;
+        // Base priority level starts at 0
+        int priority = 0;
         
         // Increase priority based on order type
         switch (order)
         {
             case IA_AiOrder.SearchAndDestroy:
-                priority += 100; // Combat orders highest priority
+                priority += 40; // Combat orders highest priority
                 break;
             case IA_AiOrder.Defend:
-                priority += 50; // Defensive orders medium-high priority
-                break;
+                return 0;
             case IA_AiOrder.GetInVehicle:
-                priority += 250;  // Vehicle mounting is important
+                priority += 100;  // Vehicle mounting is important
+                break;
+            case IA_AiOrder.PriorityMove:
+                return 100;  // High priority movement
+            case IA_AiOrder.Move:
+                priority += 30;  // Move orders medium priority (between combat and patrol)
                 break;
             case IA_AiOrder.Patrol:
-                priority += 10;  // Patrol orders lowest priority
+                priority += 0;  // Patrol orders lowest priority
                 break;
         }
         
         // Increase priority if in danger
         if (m_currentDangerLevel > 0.0)
         {
-            priority += Math.Round(100 * m_currentDangerLevel);
+            priority += Math.Round(1 * m_currentDangerLevel);
         }
         
         // Increase priority if engaged with enemy
         if (IsEngagedWithEnemy())
         {
-            priority += 75;
+            priority += 15;
         }
         
         // Adjust priority based on group strength
@@ -2295,12 +2100,12 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
         if (aliveCount == 2)
         {
             // Small groups prioritize their orders more (survival focused)
-            priority += 250;
+            priority += 10;
         }
-		if (aliveCount == 1)
+        if (aliveCount == 1)
         {
             // Small groups prioritize their orders more (survival focused)
-            priority += 500;
+            priority += 30;
         }
         
         // More recent danger events increase priority
@@ -2309,10 +2114,126 @@ void Spawn(IA_AiOrder initialOrder = IA_AiOrder.Patrol, vector orderPos = vector
             int timeSinceLastDanger = System.GetUnixTime() - m_lastDangerEventTime;
             if (timeSinceLastDanger < 30)
             {
-                priority += 75; // Recent danger gets higher priority
+                priority += 5; // Recent danger gets higher priority
             }
         }
         
         return priority;
     }
+
+    // Make sure CalculateFlankingPosition is defined as a public method
+    vector CalculateFlankingPosition(vector enemyPos, vector groupPos)
+    {
+        // Get direction from enemy to group
+        vector dirFromEnemy = groupPos - enemyPos;
+        dirFromEnemy = dirFromEnemy.Normalized();
+        
+        // Calculate perpendicular vectors (both left and right flanks)
+        vector leftFlank = Vector(-dirFromEnemy[2], 0, dirFromEnemy[0]);
+        vector rightFlank = Vector(dirFromEnemy[2], 0, -dirFromEnemy[0]);
+        
+        // Choose one flank direction randomly
+        vector flankDir;
+        if (Math.RandomFloat(0, 1) < 0.5)
+        {
+            flankDir = leftFlank;
+        }
+        else
+        {
+            flankDir = rightFlank;
+        }
+        
+        // Calculate flanking distance based on situation
+        float flankDistance = Math.RandomFloat(60, 100);
+        
+        // Calculate final flanking position
+        vector flankPos = enemyPos + (flankDir * flankDistance);
+        
+        return flankPos;
+    }
+
+    // Make sure we still have EvaluateGroupState method
+    void EvaluateGroupState()
+    {
+        m_isStateEvaluationScheduled = false;
+        
+        if (!IsSpawned() || !m_group)
+            return;
+        
+        // Evaluate danger state
+        EvaluateDangerState();
+        
+        // Evaluate tactical state
+        EvaluateTacticalState();
+        
+        // Schedule next evaluation
+        ScheduleNextStateEvaluation();
+    }
+
+    // Add GetFaction method that was missing
+    IA_Faction GetFaction()
+    {
+        return m_faction;
+    }
+
+    // Add a public setter for the assigned area
+    void SetAssignedArea(IA_Area area)
+    {
+        m_lastAssignedArea = area;
+    }
+
+    //------------------------------------------------------------------------------------------------
+    bool IsStateManagedByAuthority()
+    {
+        return m_isStateManagedByAuthority;
+    }
+    
+    //------------------------------------------------------------------------------------------------
+
+    // Add this new method before SetTacticalState method
+    void RequestTacticalStateChange(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null)
+    {
+        // Don't create redundant requests
+        if (m_hasPendingStateRequest && m_requestedState == newState)
+            return;
+            
+        // Log the request
+        Print(string.Format("[IA_AiGroup.RequestTacticalStateChange] Group %1 requesting state change from %2 to %3", 
+            this, typename.EnumToString(IA_GroupTacticalState, m_tacticalState), 
+            typename.EnumToString(IA_GroupTacticalState, newState)), LogLevel.DEBUG);
+            
+        // Set pending request data
+        m_hasPendingStateRequest = true;
+        m_requestedState = newState;
+        m_requestedStatePosition = targetPos;
+        m_requestedStateEntity = targetEntity;
+    }
+
+    // Add these getter methods
+    bool HasPendingStateRequest()
+    {
+        return m_hasPendingStateRequest;
+    }
+
+    IA_GroupTacticalState GetRequestedState()
+    {
+        return m_requestedState;
+    }
+
+    vector GetRequestedStatePosition()
+    {
+        return m_requestedStatePosition;
+    }
+
+    IEntity GetRequestedStateEntity()
+    {
+        return m_requestedStateEntity;
+    }
+
+    // Clear pending state request (called when request is processed)
+    void ClearStateRequest()
+    {
+        m_hasPendingStateRequest = false;
+    }
+
 };  
