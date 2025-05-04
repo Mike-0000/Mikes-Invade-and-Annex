@@ -465,6 +465,18 @@ class IA_AreaInstance
             }
         }
         
+        // --- BEGIN ADDED: Check for attacker replacement needs ---
+        // Call the new function to prioritize attacker replacement if needed
+        if (IsUnderAttack())
+        {
+            // Only run occasionally (15% chance per strength update)
+            if (Math.RandomFloat01() < 0.15)
+            {
+                PrioritizeAttackerReplacement();
+            }
+        }
+        // --- END ADDED ---
+        
         // --- BEGIN ADDED: Update max historical strength if needed ---
         if (totalCount > m_maxHistoricalStrength)
         {
@@ -729,6 +741,32 @@ class IA_AreaInstance
             Print(string.Format("[AreaInstance.MilitaryTask] Role Calc Final (Under Attack): Total=%1, Def=%2, Flank=%3, Attack=%4, Critical=%5",
                 totalMilitaryGroups, targetDefenders, targetFlankers, targetAttackers, m_criticalState), LogLevel.DEBUG);
         }
+
+        // --- BEGIN ADDED: Update defender state when under attack ---
+        // When area is under attack, explicitly switch defenders to Defending state instead of DefendPatrol
+        if (isUnderAttack)
+        {
+            // For each group currently assigned as DefendPatrol, update to Defending
+            foreach (IA_AiGroup g : m_military)
+            {
+                if (!g || g.GetAliveCount() == 0)
+                    continue;
+                    
+                // Get current state
+                IA_GroupTacticalState currentState;
+                if (m_assignedGroupStates.Find(g, currentState))
+                {
+                    // If this is a defender in patrol state, explicitly change to defending
+                    if (currentState == IA_GroupTacticalState.DefendPatrol)
+                    {
+                        m_assignedGroupStates.Set(g, IA_GroupTacticalState.Defending);
+                        Print(string.Format("[AreaInstance.MilitaryTask] AREA UNDER ATTACK: Converting defender from patrol to defensive stance at %1", 
+                            g.GetOrigin().ToString()), LogLevel.NORMAL);
+                    }
+                }
+            }
+        }
+        // --- END ADDED ---
 
         // --- MOVED: Store pending state change requests rather than processing immediately ---
         m_pendingStateRequests.Clear(); // Clear previous requests
@@ -1170,84 +1208,27 @@ class IA_AreaInstance
                 }
                 else 
                 {
-                    // NEW CHECK: Prevent defender count from going too low
-                    IA_GroupTacticalState roleBeforeChange = IA_GroupTacticalState.Neutral;
-                    if (m_assignedGroupStates.Find(g, roleBeforeChange) && 
-                        (roleBeforeChange == IA_GroupTacticalState.Defending || roleBeforeChange == IA_GroupTacticalState.DefendPatrol) &&
-                        currentDefendersAfterCap <= finalTargetDefenders) 
+                    // --- BEGIN ENHANCED: Higher approval chance when low on attackers ---
+                    // Check how critically we need attackers
+                    float approvalProbability = 0.5; // Base 50% chance
+                    
+                    // If we have no attackers at all, almost always approve (90%)
+                    if (currentAttackersAfterCap == 0)
                     {
-                        approveRequest = false;
-                        reason = string.Format("Cannot reduce defender count below minimum (%1/%2)", 
-                            currentDefendersAfterCap, finalTargetDefenders);
-                        Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL DEFENDER CHECK: Prevented change to Attacking. Defenders: %1/%2",
-                            currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
+                        approvalProbability = 0.9;
+                        reason = "Critical attacker shortage - high priority approval";
+                        Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL ATTACKER SHORTAGE (0 attackers). Prioritizing approval for Group %1", 
+                            g.GetOrigin().ToString()), LogLevel.NORMAL);
                     }
-                    else
+                    // If we're well below target, increase chance (75%)
+                    else if (currentAttackersAfterCap < finalTargetAttackers * 0.5)
                     {
-                        // Approve if we're under target (use a probability to avoid all groups switching at once)
-                        approveRequest = (Math.RandomFloat(0, 1) < 0.5);
-                        if (approveRequest)
-                        {
-                            currentAttackersAfterCap++;
-                            // Determine which role the group is coming from and decrement accordingly
-                            if (m_assignedGroupStates.Find(g, roleBeforeChange))
-                            {
-                                if (roleBeforeChange == IA_GroupTacticalState.Defending || roleBeforeChange == IA_GroupTacticalState.DefendPatrol)
-                                {
-                                    // --- BEGIN ADDED: Log defender check values ---
-                                    Print(string.Format("[DEFENDER CHECK (Attacking)] Request from %1: currentDefendersAfterCap=%2, finalTargetDefenders=%3",
-                                        g.GetOrigin().ToString(), currentDefendersAfterCap, finalTargetDefenders), LogLevel.DEBUG);
-                                    // --- END ADDED ---
-                                    
-                                    // NEW CHECK: Prevent defender count from going too low
-                                    if (m_assignedGroupStates.Find(g, roleBeforeChange) && 
-                                        (roleBeforeChange == IA_GroupTacticalState.Defending || roleBeforeChange == IA_GroupTacticalState.DefendPatrol) &&
-                                        currentDefendersAfterCap <= finalTargetDefenders) 
-                                    {
-                                        // --- BEGIN ADDED: Log defender check denial values ---
-                                        Print(string.Format("[DEFENDER CHECK DENIAL (Attacking)] Denied for %1: currentDefendersAfterCap=%2 <= finalTargetDefenders=%3",
-                                            g.GetOrigin().ToString(), currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
-                                        // --- END ADDED ---
-                                        approveRequest = false;
-                                        reason = string.Format("Cannot reduce defender count below minimum (%1/%2)", 
-                                            currentDefendersAfterCap, finalTargetDefenders);
-                                        Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL DEFENDER CHECK: Prevented change to Attacking. Defenders: %1/%2",
-                                            currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
-                                    }
-                                    else
-                                    {
-                                        // Approve if we're under target (use a probability to avoid all groups switching at once)
-                                        approveRequest = (Math.RandomFloat(0, 1) < 0.5);
-                                        if (approveRequest)
-                                        {
-                                            currentAttackersAfterCap++;
-                                            // Determine which role the group is coming from and decrement accordingly
-                                            if (m_assignedGroupStates.Find(g, roleBeforeChange))
-                                            {
-                                                if (roleBeforeChange == IA_GroupTacticalState.Defending || roleBeforeChange == IA_GroupTacticalState.DefendPatrol)
-                                                {
-                                                    // ENHANCED CHECK: Only decrement defender count if we're well above target
-                                                    if (currentDefendersAfterCap > finalTargetDefenders + 1)
-                                                    {
-                                                        currentDefendersAfterCap--;
-                                                    }
-                                                    else
-                                                    {
-                                                        Print(string.Format("[AreaInstance.MilitaryTask] DEFENDER PROTECTION: Not decrementing defender count (%1/%2)",
-                                                            currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
-                                                    }
-                                                }
-                                                else if (roleBeforeChange == IA_GroupTacticalState.Flanking)
-                                                    currentFlankersAfterCap--;
-                                            }
-                                        }
-                                    }
-                                }
-                                else if (roleBeforeChange == IA_GroupTacticalState.Flanking)
-                                    currentFlankersAfterCap--;
-                            }
-                        }
+                        approvalProbability = 0.75;
+                        reason = "Significant attacker shortage - increased approval chance";
+                        Print(string.Format("[AreaInstance.MilitaryTask] ATTACKER SHORTAGE (%1/%2). Increasing approval chance for Group %3", 
+                            currentAttackersAfterCap, finalTargetAttackers, g.GetOrigin().ToString()), LogLevel.NORMAL);
                     }
+                    // --- END ENHANCED ---
                 }
             }
             else if (requestedState == IA_GroupTacticalState.Flanking)
@@ -1308,8 +1289,8 @@ class IA_AreaInstance
                                             currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
                                     }
                                 }
-                                else if (roleBeforeChange == IA_GroupTacticalState.Attacking)
-                                    currentAttackersAfterCap--;
+                                else if (roleBeforeChange == IA_GroupTacticalState.Flanking)
+                                    currentFlankersAfterCap--;
                             }
                         }
                     }
@@ -1419,17 +1400,66 @@ class IA_AreaInstance
             IA_GroupTacticalState finalAssignedState = m_assignedGroupStates.Get(g); // Get final role for this cycle
             IA_GroupTacticalState actualState = g.GetTacticalState();
             vector targetForState = primaryThreatLocation; // Default
+            
+            // --- BEGIN ADDED: Special handling for attacker reinforcement ---
+            // Check if we're critically short on attackers and this group could help
+            if (g.GetAliveCount() >= 3 && isUnderAttack && actualState != IA_GroupTacticalState.Attacking)
+            {
+                // Count how many attackers we currently have
+                int currentAttackerCount = 0;
+                foreach (IA_AiGroup atg : m_military)
+                {
+                    if (atg && atg.GetAliveCount() > 0 && !atg.IsDriving())
+                    {
+                        IA_GroupTacticalState ats = atg.GetTacticalState();
+                        if (ats == IA_GroupTacticalState.Attacking)
+                            currentAttackerCount++;
+                    }
+                }
+                
+                // If we have no active attackers but we're under attack, force this group to attack
+                // if they're in good condition and not already in a critical state
+                if (currentAttackerCount == 0 && g.GetAliveCount() >= 4 && 
+                    actualState != IA_GroupTacticalState.Retreating && 
+                    actualState != IA_GroupTacticalState.LastStand)
+                {
+                    finalAssignedState = IA_GroupTacticalState.Attacking;
+                    m_assignedGroupStates.Set(g, finalAssignedState);
+                    Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY ATTACKER ASSIGNMENT: No active attackers! Group %1 assigned attacker role.",
+                        g.GetOrigin().ToString()), LogLevel.NORMAL);
+                }
+            }
+            // --- END ADDED ---
 
             // Determine correct target based on FINAL assigned state
             if (finalAssignedState == IA_GroupTacticalState.Defending || finalAssignedState == IA_GroupTacticalState.DefendPatrol)
             {
-                 targetForState = m_area.GetOrigin(); // Defend/Patrol around origin
-                 
-                 // If peril forced defend, use group origin for defenders converting from other roles
-                 if(needsRoleUpdate.Contains(g) && (actualState == IA_GroupTacticalState.Attacking || actualState == IA_GroupTacticalState.Flanking)){
+                if (finalAssignedState == IA_GroupTacticalState.Defending && isUnderAttack)
+                {
+                    // When under attack use a random position within the inner ~60% of the area for defenders
+                    float defenseRadius = m_area.GetRadius() * 0.6;
+                    
+                    // Units should be distributed throughout the inner area instead of all at origin
+                    targetForState = IA_Game.rng.GenerateRandomPointInRadius(defenseRadius * 0.2, defenseRadius, m_area.GetOrigin());
+                    
+                }
+                else if (finalAssignedState == IA_GroupTacticalState.DefendPatrol)
+                {
+                    // For patrol state, use wider area (up to 80% of area radius)
+                    float patrolRadius = m_area.GetRadius() * 0.8;
+                    targetForState = IA_Game.rng.GenerateRandomPointInRadius(1, patrolRadius, m_area.GetOrigin());
+                }
+                else
+                {
+                    // Default fallback to area origin for other cases
+                    targetForState = m_area.GetOrigin();
+                }
+                
+                // If peril forced defend, use group origin for defenders converting from other roles
+                if(needsRoleUpdate.Contains(g) && (actualState == IA_GroupTacticalState.Attacking || actualState == IA_GroupTacticalState.Flanking)){
                     targetForState = g.GetOrigin(); // Retreating attacker/flanker defends where they are initially
                     Print(string.Format("[AreaInstance.MilitaryTask] Group %1 Peril Defend Target OVERRIDE to Group Origin.", g.GetOrigin().ToString()), LogLevel.DEBUG);
-                 }
+                }
             }
             else if (finalAssignedState == IA_GroupTacticalState.Flanking && !validThreatLocation)
             {
@@ -1659,6 +1689,62 @@ class IA_AreaInstance
                 g.SetTacticalState(IA_GroupTacticalState.DefendPatrol, pos, null, true); // Added authority flag
             }
         }
+
+        // --- BEGIN ADDED: Attacker Replacement Logic ---
+        // After Stage 5: Role Distribution Accounting, around line 1522 after the post-reassignment log
+
+        // --- BEGIN ADDED: Detect and replace lost attackers ---
+        // Check if we previously had attackers but now have significantly fewer
+        if (isUnderAttack && currentAttackers < targetAttackers && totalMilitaryGroups > 1) {
+            // We're losing attackers while under attack - need to reinforce
+            int missingAttackers = targetAttackers - currentAttackers;
+            
+            // If we've lost most of our attacking force, this is critical
+            if (missingAttackers >= 2 || (targetAttackers > 0 && currentAttackers == 0)) {
+                Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL ATTACKER LOSS DETECTED: %1/%2 attackers remaining. Forcing attacker replacement.", 
+                    currentAttackers, targetAttackers), LogLevel.NORMAL);
+                
+                // Find suitable defenders to convert
+                int defendersToConvert = Math.Min(missingAttackers, Math.Max(1, currentDefenders - 1));
+                int convertCount = 0;
+                
+                // Find healthy defenders to convert to attackers
+                foreach (IA_AiGroup g : m_military) {
+                    if (!g || g.GetAliveCount() < 3 || g.IsDriving())
+                        continue;
+                        
+                    IA_GroupTacticalState groupState;
+                    if (!m_assignedGroupStates.Find(g, groupState))
+                        continue;
+                        
+                    // Only convert defenders with sufficient strength
+                    if ((groupState == IA_GroupTacticalState.Defending || groupState == IA_GroupTacticalState.DefendPatrol) 
+                        && g.GetAliveCount() >= 3 && convertCount < defendersToConvert) {
+                        
+                        // Check if state is time-locked
+                        int stateStartTime = currentTime;
+                        m_stateStartTimes.Find(g, stateStartTime);
+                        int stateDuration = currentTime - stateStartTime;
+                        
+                        // Even override time locks in critical situations
+                        if (currentAttackers == 0 || stateDuration >= MINIMUM_STATE_DURATION / 2) {
+                            // Immediately change to attacker role
+                            m_assignedGroupStates.Set(g, IA_GroupTacticalState.Attacking);
+                            m_stateStartTimes.Set(g, currentTime);
+                            m_stateStability.Set(g, 0);
+                            
+                            Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY CONVERSION: Group %1 converted from defender to attacker", 
+                                g.GetOrigin().ToString()), LogLevel.NORMAL);
+                                
+                            convertCount++;
+                            currentAttackers++;
+                            currentDefenders--;
+                        }
+                    }
+                }
+            }
+        }
+        // --- END ADDED ---
     }
 
     private void AiAttackersTask()
@@ -3120,5 +3206,89 @@ class IA_AreaInstance
             typename.EnumToString(IA_GroupTacticalState, currentState),
             typename.EnumToString(IA_GroupTacticalState, requestedState),
             critical), LogLevel.NORMAL);
+    }
+
+    // Add this function near the end of the class, before the closing bracket
+    // Attempts to prioritize rebuilding the attacking force when it has been decimated
+    private void PrioritizeAttackerReplacement()
+    {
+        // Get current time for state tracking
+        int currentTime = System.GetUnixTime();
+        
+        // Only run this function when we're under attack
+        if (!IsUnderAttack())
+            return;
+        
+        // Count current attackers
+        int currentAttackers = 0;
+        int totalAvailableGroups = 0;
+        
+        foreach (IA_AiGroup g : m_military)
+        {
+            if (!g || g.GetAliveCount() == 0 || g.IsDriving())
+                continue;
+                
+            totalAvailableGroups++;
+            
+            IA_GroupTacticalState state;
+            if (m_assignedGroupStates.Find(g, state) && state == IA_GroupTacticalState.Attacking)
+                currentAttackers++;
+        }
+        
+        // If no groups available, we can't do anything
+        if (totalAvailableGroups <= 1)
+            return;
+        
+        // Calculate target attackers (similar to MilitaryOrderTask logic)
+        float defenderPercentage;
+        if (m_criticalState)
+        {
+            defenderPercentage = 0.6;
+        }
+        else
+        {
+            defenderPercentage = 0.45;
+        }
+        int targetDefenders = Math.Max(1, Math.Round(totalAvailableGroups * defenderPercentage));
+        int targetAttackers = totalAvailableGroups - targetDefenders;
+        
+        // If attacker count is severely depleted, force reassignment
+        if (currentAttackers < targetAttackers && (currentAttackers == 0 || currentAttackers < targetAttackers * 0.5))
+        {
+            Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] CRITICAL ATTACKER DEPLETION: %1/%2 attackers. Forcing reassignment.", 
+                currentAttackers, targetAttackers), LogLevel.NORMAL);
+            
+            // Find suitable defenders to convert (up to the number needed)
+            int neededAttackers = Math.Min(targetAttackers - currentAttackers, Math.Max(1, totalAvailableGroups - targetDefenders - 1));
+            int convertCount = 0;
+            
+            foreach (IA_AiGroup g : m_military)
+            {
+                if (!g || g.GetAliveCount() < 3 || g.IsDriving() || convertCount >= neededAttackers)
+                    continue;
+                    
+                IA_GroupTacticalState state;
+                if (!m_assignedGroupStates.Find(g, state))
+                    continue;
+                    
+                // Only convert defenders with sufficient strength
+                if ((state == IA_GroupTacticalState.Defending || state == IA_GroupTacticalState.DefendPatrol) 
+                    && g.GetAliveCount() >= 3)
+                {
+                    // Force change to attacker role
+                    m_assignedGroupStates.Set(g, IA_GroupTacticalState.Attacking);
+                    m_stateStartTimes.Set(g, currentTime);
+                    m_stateStability.Set(g, 0);
+                    
+                    // Apply the change immediately
+                    g.SetTacticalState(IA_GroupTacticalState.Attacking, m_area.GetOrigin(), null, true);
+                    
+                    Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] EMERGENCY CONVERSION: Group %1 converted from defender to attacker", 
+                        g.GetOrigin().ToString()), LogLevel.NORMAL);
+                        
+                    convertCount++;
+                }
+            }
+        }
     }
 }

@@ -1017,14 +1017,12 @@ class IA_VehicleManager: GenericEntity
         SCR_AIWorld scr_aiWorld = SCR_AIWorld.Cast(aiWorld);
         RoadNetworkManager roadMngr = scr_aiWorld.GetRoadNetworkManager();
         array<BaseRoad> Roads = {};
-        float distanceFromPoint = 0;
         
         // Calculate AABB min and max vectors with large vertical range to account for mountains and valleys
         // Use a vertical range of ±1000 meters to ensure we capture roads at different elevations
         vector vectorAABBMin = Vector(position[0] - maxDistance, position[1] - 1000, position[2] - maxDistance);
         vector vectorAABBMax = Vector(position[0] + maxDistance, position[1] + 1000, position[2] + maxDistance);
         
-        //roadMngr.GetClosestRoad(randomVector, closestRoad, distanceFromPoint);
         roadMngr.GetRoadsInAABB(vectorAABBMin, vectorAABBMax, Roads);
         
         if (Roads.IsEmpty()){
