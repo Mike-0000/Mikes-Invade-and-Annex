@@ -437,12 +437,12 @@ class IA_AiGroup
         // Explicitly set a default tactical state for the new group
         if (initialPos != vector.Zero)
         {
-            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, initialPos);
+            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, initialPos, null, true); // Added authority flag
         }
         else
         {
             vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, grp.GetOrigin());
-            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos);
+            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos, null, true); // Added authority flag
         }
 
         return grp;
@@ -1578,7 +1578,9 @@ class IA_AiGroup
         // do not allow the group to change its own tactical state autonomously.
         if (m_isStateManagedByAuthority)
         {
-            // When under authority control, ALWAYS maintain the assigned state
+            // When under authority control, only check for critical emergency conditions
+            // that might warrant a state change request to the authority
+            
             // If we don't have orders but should have orders for this state type, reapply them
             if (!HasOrders())
             {
@@ -1595,12 +1597,12 @@ class IA_AiGroup
                 }
             }
             
-            // Even under authority control, check for critical conditions that should force a state change
-            // These are emergency conditions that override even authority control
+            // Even under authority control, check for critical conditions that should force a state change request
+            // These are emergency conditions that may override current orders
             int aliveCount = GetAliveCount();
             int initialCount = GetInitialUnitCount();
             
-            // Critical condition for flanking/attackers down to last unit
+            // Critical condition 1: Flanking/attackers down to last unit
             if ((m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking) && 
                 aliveCount == 1 && initialCount > 2)
             {
@@ -1608,12 +1610,14 @@ class IA_AiGroup
                 Print(string.Format("[IA_AiGroup.EvaluateTacticalState] CRITICAL CONDITION: Attacking/Flanking group %1 down to last unit - requesting retreat", 
                     this), LogLevel.WARNING);
                     
-                // Instead of directly changing, request a state change
+                // Request state change rather than making it directly
                 RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
+                return;
             }
-            // Severe condition: Less than 33% of original strength for attackers/flankers
-            else if ((m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking) && 
-                   initialCount >= 3 && aliveCount < (initialCount / 3))
+            
+            // Critical condition 2: Severe losses (less than 33% of original strength) for attackers/flankers
+            if ((m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking) && 
+                initialCount >= 3 && aliveCount < (initialCount / 3))
             {
                 float survivingRatio;
                 if (initialCount > 0) {
@@ -1621,10 +1625,10 @@ class IA_AiGroup
                 } else {
                     survivingRatio = 0;
                 }
-                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] SEVERE LOSSES: Attacking/Flanking group %1 at %2% strength - reassessing role", 
+                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] SEVERE LOSSES: Attacking/Flanking group %1 at %2% strength - requesting role reassessment", 
                     this, Math.Round(survivingRatio * 100)), LogLevel.WARNING);
                     
-                // High danger - request retreat or last stand based on current danger level
+                // High danger - request retreat or defend based on current danger level
                 if (m_currentDangerLevel > 0.7)
                 {
                     RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
@@ -1634,17 +1638,58 @@ class IA_AiGroup
                     // Lower danger - hold position but request switch to defending
                     RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
                 }
+                return;
             }
             
-            return; // Exit early if state is managed externally
+            // Critical condition 3: Under immediate threat with appropriate response needed
+            if (m_currentDangerLevel > 0.8 && m_lastDangerPosition != vector.Zero)
+            {
+                int timeSinceLastDanger = System.GetUnixTime() - m_lastDangerEventTime;
+                if (timeSinceLastDanger < 10) // Very recent danger (last 10 seconds)
+                {
+                    Print(string.Format("[IA_AiGroup.EvaluateTacticalState] IMMEDIATE THREAT: Group %1 under high danger (%2) - requesting appropriate response",
+                        this, m_currentDangerLevel), LogLevel.WARNING);
+
+                    // Request appropriate response based on current state and strength
+                    if (aliveCount <= 2)
+                    {
+                        RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
+                    }
+                    // --- MODIFIED: If already assigned offensive role by authority, request attack instead of defend ---
+                    else if (m_isStateManagedByAuthority && (m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking))
+                    {
+                        RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition); // Attack the source of danger
+                    }
+                    // Replace this block
+                    /*
+                    else if (m_tacticalState != IA_GroupTacticalState.Defending)
+                    {
+                        RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
+                    }
+                    */
+                    // With this block
+                    else // Default response for immediate threat when not retreating or already assigned offense
+                    {
+                        // Request attack towards the source of the danger
+                        RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition);
+                    }
+                    return;
+                }
+            }
+            
+            return; // Exit early for authority-managed groups
         }
 
+        // --- AUTONOMOUS BEHAVIOR FOR NON-AUTHORITY MANAGED GROUPS ---
+        // This section only executes for groups NOT managed by the area authority
+        
         if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
         {
             // Check for danger events first - these need highest priority
             int currentTime = System.GetUnixTime();
             int timeSinceLastDanger = currentTime - m_lastDangerEventTime;
 
+            // Update engagement status if needed
             if (m_lastDangerEventTime > 0 && m_engagedEnemyFaction == IA_Faction.NONE)
             {
                 if (m_faction == IA_Faction.USSR)
@@ -1653,7 +1698,7 @@ class IA_AiGroup
                     m_engagedEnemyFaction = IA_Faction.USSR;
             }
 
-            // Check if this is a new danger or if we need to react to it - extend the danger reaction time to 90 seconds
+            // Detect and react to danger
             if (m_lastDangerEventTime > 0 && timeSinceLastDanger < 90)
             {
                 // Get position to react to
@@ -1663,7 +1708,7 @@ class IA_AiGroup
                     targetPos = IA_Game.rng.GenerateRandomPointInRadius(20, 50, GetOrigin());
                 }
                 
-                // Update tactical state based on situation using request instead of direct change
+                // Request tactical state based on situation
                 int aliveCount = GetAliveCount();
                 float dangerLevel = m_currentDangerLevel;
                 int initialCount = GetInitialUnitCount();
@@ -1674,6 +1719,7 @@ class IA_AiGroup
                     strengthRatio = 1.0;
                 }
                 
+                // Request appropriate state change based on situation
                 // High danger and critically low strength (<=25%) - retreat
                 if ((dangerLevel > 0.6 && aliveCount <= 2) || (dangerLevel > 0.5 && strengthRatio <= 0.25))
                 {
@@ -1700,7 +1746,7 @@ class IA_AiGroup
                     RequestTacticalStateChange(IA_GroupTacticalState.Attacking, targetPos);
                 }
                 
-                // If this unit wasn't already engaged with an enemy, set an appropriate enemy faction
+                // Ensure faction is set for combat
                 if (m_engagedEnemyFaction == IA_Faction.NONE)
                 {
                     if (m_faction == IA_Faction.USSR)
@@ -1709,18 +1755,15 @@ class IA_AiGroup
                         m_engagedEnemyFaction = IA_Faction.USSR;
                 }
                 
-                // Exit early - we've handled this case through tactical state
                 return;
             }
             
-            // Even if no recent danger, military units should maintain combat readiness
-            // if they're already engaged
+            // Even if no recent danger, maintain combat readiness if already engaged
             if (IsEngagedWithEnemy() && GetAliveCount() > 0 && timeSinceLastOrder > 30)
             {
-                // Defer to tactical state system - ensure we have a combat-related state
+                // If no tactical state set, request one based on circumstances
                 if (m_tacticalState == IA_GroupTacticalState.Neutral)
                 {
-                    // No tactical state set yet, choose one based on circumstances
                     int aliveCount = GetAliveCount();
                     int initialCount = GetInitialUnitCount();
                     float strengthRatio;
@@ -1730,7 +1773,7 @@ class IA_AiGroup
                         strengthRatio = 1.0;
                     }
                     
-                    // If attacking but critically weakened, change to defense
+                    // Request appropriate state based on strength
                     if (aliveCount <= 2 || strengthRatio < 0.3)
                     {
                         Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Group %1 unit strength too low for attack/flank - requesting Defend", this), LogLevel.DEBUG);
@@ -1745,30 +1788,10 @@ class IA_AiGroup
                         RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition);
                     }
                 }
-                // We already have a tactical state, just refresh orders if needed
+                // If already have a tactical state but need orders, refresh them
                 else if (!HasOrders())
                 {
-                    // Before refreshing orders, check if current state is still appropriate
-                    int aliveCount = GetAliveCount();
-                    int initialCount = GetInitialUnitCount();
-                    float strengthRatio;
-                    if (initialCount > 0) {
-                        strengthRatio = aliveCount / (float)initialCount;
-                    } else {
-                        strengthRatio = 1.0;
-                    }
-                    
-                    // If attacking but critically weakened, change to defense
-                    if ((m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking) && 
-                        (aliveCount <= 2 || strengthRatio < 0.3))
-                    {
-                        Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Group %1 unit strength too low for attack/flank - requesting Defend", this), LogLevel.DEBUG);
-                        RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
-                    }
-                    else
-                    {
-                        ApplyTacticalStateOrders();
-                    }
+                    ApplyTacticalStateOrders();
                 }
                 
                 return;
@@ -1776,17 +1799,16 @@ class IA_AiGroup
         }
 
         // For civilians or fallback for military units
-        // Get information about the engaged enemy
-        IA_Faction enemyFaction = GetEngagedEnemyFaction();
-
+        // These groups operate more independently
+        
         // If group is severely weakened, consider retreating
         int aliveCount = GetAliveCount();
         if (aliveCount <= 2)
         {
             if (!m_isCivilian && m_faction != IA_Faction.CIV)
             {
-                // Use tactical state for military units
-                RequestTacticalStateChange(IA_GroupTacticalState.Retreating);
+                // Request tactical state for military units
+                RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
             }
             else
             {
@@ -1802,10 +1824,10 @@ class IA_AiGroup
                 AddOrder(retreatPos, IA_AiOrder.Patrol);
             }
         }
-        // Otherwise, maintain combat stance by defending
+        // Otherwise, maintain combat stance by defending for civilians
         else if (m_isCivilian || m_faction == IA_Faction.CIV)
         {
-            // Direct orders for civilians
+            // Only give direct orders for civilians
             vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, GetOrigin());
             RemoveAllOrders();
             AddOrder(defendPos, IA_AiOrder.Defend);
@@ -1823,12 +1845,7 @@ class IA_AiGroup
         return m_tacticalState;
     }
     
-    // --- BEGIN ADDED: Getter for Danger Level ---
-    float GetCurrentDangerLevel()
-    {
-        return m_currentDangerLevel;
-    }
-    // --- END ADDED ---
+
     
     // --- BEGIN ADDED: Getter for Last Danger Position ---
     vector GetLastDangerPosition()
@@ -1915,6 +1932,9 @@ class IA_AiGroup
         {
             Print(string.Format("[IA_AiGroup.SetTacticalState] Group %1 changing state: %2 -> %3", 
                 this, m_tacticalState, newState), LogLevel.DEBUG);
+                
+            // Record the time when the state changed
+            m_tacticalStateStartTime = System.GetUnixTime();
         }
         
         // Authority safety check - log a warning when called without authority flag
@@ -2021,8 +2041,8 @@ class IA_AiGroup
     // Add a public ApplyTacticalStateOrders method to reapply orders based on current state
     void ApplyTacticalStateOrders()
     {
-        // Simply call SetTacticalState with the current state
-        SetTacticalState(m_tacticalState, m_tacticalStateTarget);
+        // Simply call SetTacticalState with the current state and authority status
+        SetTacticalState(m_tacticalState, m_tacticalStateTarget, null, m_isStateManagedByAuthority); // Pass authority status
     }
 
     // Make sure CheckDangerEvents is defined as a public method
@@ -2234,6 +2254,24 @@ class IA_AiGroup
     void ClearStateRequest()
     {
         m_hasPendingStateRequest = false;
+    }
+
+    // Method to get current danger level
+    float GetCurrentDangerLevel()
+    {
+        return m_currentDangerLevel;
+    }
+    
+    // Alias for GetCurrentDangerLevel to match call in AreaInstance
+    float GetDangerLevel()
+    {
+        return m_currentDangerLevel;
+    }
+    
+    // Return the Unix timestamp when the tactical state was last changed
+    int GetLastStateChangeTime()
+    {
+        return m_tacticalStateStartTime;
     }
 
 };  
