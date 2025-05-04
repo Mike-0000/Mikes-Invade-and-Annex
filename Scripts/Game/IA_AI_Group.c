@@ -914,7 +914,7 @@ class IA_AiGroup
         // Skip for civilians
         if (m_isCivilian || m_faction == IA_Faction.CIV)
             return;
-        
+            
         if (!IsSpawned() || !m_group)
             return;
     
@@ -931,7 +931,7 @@ class IA_AiGroup
                 {
                     Faction faction = factionComponent.GetAffiliatedFaction();
                     if (!faction)
-                        return;
+                        return; // Ignore if faction cannot be determined
                     string factionKey = faction.GetFactionKey();
                     // Map the faction key to our IA_Faction enum
                     if (factionKey == "US")
@@ -941,26 +941,39 @@ class IA_AiGroup
                     else if (factionKey == "FIA")
                         sourceFaction = IA_Faction.FIA;
                     else if (factionKey == "CIV")
-                        sourceFaction = IA_Faction.CIV;
-                    
+                        sourceFaction = IA_Faction.CIV; // Include CIV to potentially ignore civilian sources later
+                        
                 }
             }
             
-            // --- MODIFIED CHECK: Skip if source faction is unknown OR same as own faction ---
-            if (sourceFaction == IA_Faction.NONE || sourceFaction == m_faction)
-                return; // Ignore unknown or friendly sources
+            // --- MODIFIED CHECK: Skip if source faction is unknown OR same as own faction OR civilian ---
+            if (sourceFaction == IA_Faction.NONE || sourceFaction == m_faction || sourceFaction == IA_Faction.CIV)
+                return; // Ignore unknown, friendly, or civilian sources
             // --- END MODIFIED CHECK ---
                 
-            // If we identified a valid enemy faction, set it (we know it's not NONE and not m_faction here)
+            // If we identified a valid enemy faction, set it (we know it's not NONE, CIV and not m_faction here)
             m_engagedEnemyFaction = sourceFaction;
         }
         
-        // Update last danger info
+        // Update last danger info - Shared for both infantry and vehicles
         m_lastDangerEventTime = System.GetUnixTime();
+        
+        // --- BEGIN ADDED: Vehicle specific handling ---
+        // If driving, we only care about the timestamp for the simple reaction.
+        // No need to store detailed events or update danger level for vehicles for now.
+        if (m_isDriving)
+        {
+            Print(string.Format("[IA_AiGroup.ProcessDangerEvent] Vehicle Group %1 recorded danger event from %2 at %3. LastDangerTime: %4", 
+                this, sourceFaction, position.ToString(), m_lastDangerEventTime), LogLevel.DEBUG);
+            return; // Exit early for vehicles after updating timestamp
+        }
+        // --- END ADDED ---
+
+        // --- Infantry specific handling (original logic) ---
         m_lastDangerPosition = position;
         m_consecutiveDangerEvents++;
         
-        // Create a danger event for later processing
+        // Create a danger event for later processing (infantry only)
         IA_GroupDangerEvent dangerEvent = new IA_GroupDangerEvent();
         dangerEvent.m_type = dangerType;
         dangerEvent.m_position = position;
@@ -969,11 +982,11 @@ class IA_AiGroup
         dangerEvent.m_isSuppressed = isSuppressed;
         dangerEvent.m_time = m_lastDangerEventTime;
         
-        // Add to queue
+        // Add to queue (infantry only)
         m_dangerEvents.Insert(dangerEvent);
         
-        // Update danger level
-            EvaluateDangerState();
+        // Update danger level (infantry only)
+        EvaluateDangerState(); 
     }
     
     void ResetDangerState()
@@ -1029,8 +1042,8 @@ class IA_AiGroup
         float totalWeight = 0.0;
         
         // First collect only weapon fire events for position calculation
-        vector weaponFireCenterSum = vector.Zero;
-        float weaponFireTotalWeight = 0.0;
+        // Collect relevant positions for median calculation
+        array<vector> relevantPositions = {};
         
         // Process all danger events, but weigh recent events higher
         foreach (IA_GroupDangerEvent dangerEvent : m_dangerEvents)
@@ -1056,18 +1069,15 @@ class IA_AiGroup
             dangerLevel += weight;
             
             // Special handling for WeaponFire events - track them separately
-            if (dangerEvent.m_type == IA_GroupDangerType.WeaponFire)
+            if (dangerEvent.m_type == IA_GroupDangerType.WeaponFire ||
+                dangerEvent.m_type == IA_GroupDangerType.Explosion ||
+                dangerEvent.m_type == IA_GroupDangerType.EnemySpotted)
             {
-                weaponFireCenterSum += dangerEvent.m_position * weight;
-                weaponFireTotalWeight += weight;
-            }
-            
-            // Skip ProjectileImpact for position calculation but still count for danger level
-            if (dangerEvent.m_type != IA_GroupDangerType.ProjectileImpact)
-            {
-                // Add to weighted position calculation
-                dangerCenterSum += dangerEvent.m_position * weight;
-                totalWeight += weight;
+                // Only consider recent events for position
+                if (recencyFactor > 0) // Equivalent to timeSince <= 30
+                {
+                    relevantPositions.Insert(dangerEvent.m_position);
+                }
             }
             
             // Update consecutive events for compatibility with old system
@@ -1078,14 +1088,26 @@ class IA_AiGroup
         dangerLevel = Math.Clamp(dangerLevel, 0.0, 1.0);
         
         // Prioritize weapon fire events for danger center position
-        if (weaponFireTotalWeight > 0.1)
+        // Calculate median position if there are relevant events
+        int posCount = relevantPositions.Count();
+        if (posCount > 0)
         {
-            m_lastDangerPosition = weaponFireCenterSum / weaponFireTotalWeight;
+            // Sort positions by x-coordinate to find the median
+            // Note: This is a simplified median based on one axis.
+            IA_VectorUtils.SortVectorsByX(relevantPositions);
+            
+            // Find the middle index
+            int medianIndex = posCount / 2;
+            
+            // Set the last danger position to the median position
+            m_lastDangerPosition = relevantPositions[medianIndex];
         }
-        // Fall back to other events (excluding ProjectileImpact) if no weapon fire events
-        else if (totalWeight > 0.1)
+        else
         {
-            m_lastDangerPosition = dangerCenterSum / totalWeight;
+            // No relevant recent danger events, reset position
+            // Keep the existing logic for danger level, but reset position if no source points found.
+            // Or should we keep the last known position? Resetting seems safer if no current threat loc.
+            m_lastDangerPosition = vector.Zero;
         }
         
         // Update the current danger level
@@ -1350,6 +1372,23 @@ class IA_AiGroup
         }
             
         int currentTime = System.GetUnixTime();
+
+        // --- BEGIN ADDED: Vehicle Danger Reaction ---
+        // Check if the vehicle experienced danger recently
+        if (m_lastDangerEventTime > 0 && currentTime - m_lastDangerEventTime < 60)
+        {
+            // Danger within the last 60 seconds - remove orders and let base game take over
+            if (HasActiveWaypoint()) // Only remove if orders exist
+            {
+                Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Vehicle Group %1 under recent danger (last %2s ago). Removing orders.", 
+                    this, currentTime - m_lastDangerEventTime), LogLevel.DEBUG);
+                RemoveAllOrders(false); // Clear waypoints, don't reset internal order timer
+            }
+            // Skip the rest of the logic for this cycle to allow base game reactions
+            return; 
+        }
+        // --- END ADDED ---
+            
         if (currentTime - m_lastVehicleOrderTime < VEHICLE_ORDER_UPDATE_INTERVAL)
         {
             return;
@@ -1360,7 +1399,7 @@ class IA_AiGroup
         Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
         if (!vehicle)
         {
-
+            // Vehicle is gone, clear reference and stop driving state
             ClearVehicleReference();
             return;
         }
@@ -1368,6 +1407,8 @@ class IA_AiGroup
         array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
         if (characters.IsEmpty())
         {
+            // No units left in the group, something is wrong
+            // TODO: Maybe despawn the group or handle this case?
             return;
         }
             
@@ -1384,14 +1425,16 @@ class IA_AiGroup
         
         if (anyOutside)
         {
-            
+            // Someone is outside, order them back in
+            Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 members outside vehicle. Ordering GetInVehicle.", this), LogLevel.DEBUG);
             RemoveAllOrders();
             
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
             
+            // Ensure driving state is set correctly
             m_isDriving = true;
             
-            return;
+            return; // Don't proceed with movement orders until everyone is inside
         }
         
         // If everyone is in the vehicle and we have a destination, make sure we have a waypoint
@@ -1401,11 +1444,14 @@ class IA_AiGroup
             bool hasActiveWP = HasActiveWaypoint();
             bool vehicleReachedDest = IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget);
             
-
+            // Debug print for waypoint status
+            // Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle waypoint check: HasActiveWP=%1, ReachedDest=%2", this, hasActiveWP, vehicleReachedDest), LogLevel.DEBUG);
                   
             if (!hasActiveWP || vehicleReachedDest)
             {
-
+                // Need a new waypoint
+                Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle needs new waypoint to %2.", this, m_drivingTarget.ToString()), LogLevel.DEBUG);
+                // Ensure driving state is set
                 m_isDriving = true;
                 
                 IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
@@ -1413,6 +1459,9 @@ class IA_AiGroup
         }
         else if (m_drivingTarget == vector.Zero)
         {
+            // Vehicle group has no destination - perhaps assign a patrol or hold?
+            // For now, do nothing, let it idle or follow base game logic.
+            // Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle has no driving target.", this), LogLevel.DEBUG);
         }
     }
 
@@ -1655,23 +1704,55 @@ class IA_AiGroup
                     {
                         RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
                     }
-                    // --- MODIFIED: If already assigned offensive role by authority, request attack instead of defend ---
-                    else if (m_isStateManagedByAuthority && (m_tacticalState == IA_GroupTacticalState.Attacking || m_tacticalState == IA_GroupTacticalState.Flanking))
+                    else // More than 2 units alive
                     {
-                        RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition); // Attack the source of danger
-                    }
-                    // Replace this block
-                    /*
-                    else if (m_tacticalState != IA_GroupTacticalState.Defending)
-                    {
-                        RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
-                    }
-                    */
-                    // With this block
-                    else // Default response for immediate threat when not retreating or already assigned offense
-                    {
-                        // Request attack towards the source of the danger
-                        RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition);
+                        // --- BEGIN ADDED: Distance check for flanking --- 
+                        vector currentPos = GetOrigin();
+                        float distanceSqToThreat = vector.DistanceSq(currentPos, m_lastDangerPosition);
+                        bool threatFarEnoughForFlank = distanceSqToThreat >= (100 * 100); // 100 meters squared
+                        // --- END ADDED --- 
+                        
+                        // If already assigned an offensive role by authority, maintain offense
+                        // MODIFIED: Handle Attacking and Flanking separately
+                        if (m_isStateManagedByAuthority && m_tacticalState == IA_GroupTacticalState.Attacking)
+                        {
+                             // 35% chance to request flanking, otherwise attack - ONLY if far enough
+                            if (threatFarEnoughForFlank && Math.RandomFloat01() < 0.35)
+                            {
+                                RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition);
+                                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Assigned Attacker, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG);
+                            }
+                            else
+                            {
+                                RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition); // Continue attacking
+                                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Assigned Attacker, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.DEBUG);
+                            }
+                        }
+                        // If already assigned Flanking, continue flanking (don't request Attacking)
+                        else if (m_isStateManagedByAuthority && m_tacticalState == IA_GroupTacticalState.Flanking)
+                        {
+                             // Continue Flanking - potentially re-evaluate flank position if threat moved significantly?
+                             // For now, just don't request a change to attacking. Maybe request Flanking again?
+                             // Let's request Flanking again to potentially update the target position if needed by AreaInstance logic.
+                             // RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition); // REMOVED: Don't re-request flank if already flanking.
+                             Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Maintaining FLANKING (Already Flanking, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG); // MODIFIED Log message
+                        }
+                        else // Not currently assigned an offensive role by authority
+                        {
+                             // Higher chance (50%) to request flanking if not already attacking/flanking - ONLY if far enough
+                            if (threatFarEnoughForFlank && Math.RandomFloat01() < 0.50)
+                            {
+                                RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition);
+                                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Not Assigned Offense, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG);
+                            }
+                            else
+                            {
+                                // Default response: request attack towards the source of the danger
+                                // This case implies the current state is not Attacking or Flanking
+                                RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition);
+                                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Not Assigned Offense, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.DEBUG);
+                            }
+                        }
                     }
                     return;
                 }
@@ -1740,11 +1821,12 @@ class IA_AiGroup
                 {
                     RequestTacticalStateChange(IA_GroupTacticalState.Flanking, targetPos);
                 }
-                // Default to attacking when no special conditions
-                else
+                // Default to attacking when no special conditions, UNLESS currently flanking
+                else if (m_tacticalState != IA_GroupTacticalState.Flanking) // <--- Added condition here
                 {
                     RequestTacticalStateChange(IA_GroupTacticalState.Attacking, targetPos);
                 }
+                // If currently flanking and none of the above conditions met, the group will continue flanking (by not requesting a change here)
                 
                 // Ensure faction is set for combat
                 if (m_engagedEnemyFaction == IA_Faction.NONE)
@@ -2000,7 +2082,29 @@ class IA_AiGroup
                 // If a specific target is given, use that
                 if (targetPos != vector.Zero)
                 {
-                    AddOrder(targetPos, IA_AiOrder.Move, true);
+                    // --- BEGIN MODIFIED: Calculate proper flanking position ---
+                    // Instead of just moving to the target position, calculate a proper flanking maneuver
+                    vector groupPos = GetOrigin();
+                    vector enemyPos = targetPos; // The target position is where we believe the enemy is
+                    
+                    // Calculate a flanking position using our utility method
+                    vector flankPos = CalculateFlankingPosition(enemyPos, groupPos);
+                    
+                    // Store the original threat position for later use
+                    m_originalThreatPosition = enemyPos;
+                    m_isInFlankingPhase = true;
+                    
+                    // Log the flanking maneuver
+                    Print(string.Format("[IA_AiGroup.SetTacticalState] FLANKING MANEUVER: Group %1 flanking from %2 around enemy at %3 to position %4", 
+                        this, groupPos.ToString(), enemyPos.ToString(), flankPos.ToString()), LogLevel.NORMAL);
+                    
+                    // Add the order to move to the flanking position first
+                    AddOrder(flankPos, IA_AiOrder.Move, true);
+                    
+                    // Then add a secondary order to attack the original position once flanking is complete
+                    // This creates a two-phase flanking maneuver: first move to flank, then attack
+                    AddOrder(enemyPos, IA_AiOrder.SearchAndDestroy, false);
+                    // --- END MODIFIED ---
                 }
                 break;
                 
@@ -2141,33 +2245,68 @@ class IA_AiGroup
         return priority;
     }
 
-    // Make sure CalculateFlankingPosition is defined as a public method
+    // Improved flanking position calculation
     vector CalculateFlankingPosition(vector enemyPos, vector groupPos)
     {
         // Get direction from enemy to group
         vector dirFromEnemy = groupPos - enemyPos;
+        float distanceToEnemy = dirFromEnemy.Length();
         dirFromEnemy = dirFromEnemy.Normalized();
         
-        // Calculate perpendicular vectors (both left and right flanks)
-        vector leftFlank = Vector(-dirFromEnemy[2], 0, dirFromEnemy[0]);
-        vector rightFlank = Vector(dirFromEnemy[2], 0, -dirFromEnemy[0]);
+        // --- BEGIN MODIFIED FLANKING LOGIC ---
+        // Calculate perpendicular direction vectors (both left and right flanks)
+        vector leftFlankDir = Vector(-dirFromEnemy[2], 0, dirFromEnemy[0]).Normalized();
+        vector rightFlankDir = Vector(dirFromEnemy[2], 0, -dirFromEnemy[0]).Normalized();
         
-        // Choose one flank direction randomly
-        vector flankDir;
-        if (Math.RandomFloat(0, 1) < 0.5)
+        // Calculate flanking distance - varies based on distance to enemy and group size
+        float baseFlanking = 80; // Base flanking distance
+        int aliveCount = GetAliveCount();
+        
+        // Scale flank distance based on original distance to ensure it's proportional
+        float distanceScale = Math.Clamp(distanceToEnemy / 200, 0.5, 2.0);
+        float groupSizeScale = Math.Clamp(aliveCount / 5.0, 0.7, 1.3); // Larger groups flank wider
+        
+        // Add some randomness to flanking distance (60-120% of calculated value)
+        float randomFactor = Math.RandomFloat(0.6, 1.2);
+        
+        // Calculate final flanking distance with all factors
+        float flankDistance = baseFlanking * distanceScale * groupSizeScale * randomFactor;
+        
+        // Ensure minimum and maximum flanking distances
+        flankDistance = Math.Clamp(flankDistance, 50, 150);
+        
+        // Get a slight forward component to enable encirclement
+        vector forwardComponent = -dirFromEnemy * Math.RandomFloat(0, 0.4); // Small random forward push
+        
+        // Calculate final potential flanking positions including the forward component
+        vector finalLeftFlankDir = (leftFlankDir + forwardComponent).Normalized();
+        vector finalRightFlankDir = (rightFlankDir + forwardComponent).Normalized();
+        
+        vector leftFlankPos = enemyPos + (finalLeftFlankDir * flankDistance);
+        vector rightFlankPos = enemyPos + (finalRightFlankDir * flankDistance);
+        
+        // Calculate squared distances from group's current position to potential flank positions
+        float distSqToLeft = vector.DistanceSq(groupPos, leftFlankPos);
+        float distSqToRight = vector.DistanceSq(groupPos, rightFlankPos);
+        
+        // Choose the closer flanking position
+        vector flankPos;
+        if (distSqToLeft <= distSqToRight)
         {
-            flankDir = leftFlank;
+            flankPos = leftFlankPos;
+            Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Group %1 choosing LEFT flank (Closer: %.1fm vs %.1fm)", 
+                this, Math.Sqrt(distSqToLeft), Math.Sqrt(distSqToRight)), LogLevel.DEBUG);
         }
         else
         {
-            flankDir = rightFlank;
+            flankPos = rightFlankPos;
+            Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Group %1 choosing RIGHT flank (Closer: %.1fm vs %.1fm)", 
+                this, Math.Sqrt(distSqToRight), Math.Sqrt(distSqToLeft)), LogLevel.DEBUG);
         }
         
-        // Calculate flanking distance based on situation
-        float flankDistance = Math.RandomFloat(60, 100);
-        
-        // Calculate final flanking position
-        vector flankPos = enemyPos + (flankDir * flankDistance);
+        Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Calculated flank position at %1 (distance=%.1fm)", 
+            flankPos.ToString(), flankDistance), LogLevel.DEBUG);
+        // --- END MODIFIED FLANKING LOGIC ---
         
         return flankPos;
     }
@@ -2273,5 +2412,12 @@ class IA_AiGroup
     {
         return m_tacticalStateStartTime;
     }
+    
+    // --- BEGIN ADDED: Getter for Last Danger Event Time ---
+    int GetLastDangerEventTime()
+    {
+        return m_lastDangerEventTime;
+    }
+    // --- END ADDED ---
 
 };  

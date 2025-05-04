@@ -1,3 +1,8 @@
 SCR_PlayerController {
  ID "1A9BA6BEFA06E3B1"
+ components {
+  IA_PlayerRoleComponent "{65496342E1A43A9E}" {
+   m_eEditorAssignedRole RIFLEMAN
+  }
+ }
 }

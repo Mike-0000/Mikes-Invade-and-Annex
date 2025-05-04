@@ -1,6 +1,8 @@
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  StPierre {
   coords 3165.069 11.577 2799.28
+  m_fZoneRadius 250
+  m_radius 250
  }
  StPierreHarbor {
   coords 1194.773 2.23 3339.724

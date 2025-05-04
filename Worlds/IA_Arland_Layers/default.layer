@@ -16,6 +16,8 @@ SCR_AIWorld : "{01DC74137CFDDB6A}Prefabs/AI/SCR_AIWorld_Arland.et" {
   }
  }
  coords 1399.146 38 2878.283
+ "Max number of cached BTs" 50
+ "Active AI limit" 512
 }
 PerceptionManager PerceptionManager : "{028DAEAD63E056BE}Prefabs/World/Game/PerceptionManager.et" {
  coords 1891.659 11.438 1822.161
@@ -43,10 +45,97 @@ SCR_GameModeEditor GameMode_Editor_Full : "{DA3986AF1B5032B7}Prefabs/MP/Modes/Ed
   }
  }
 }
+GenericEntity {
+ components {
+  MeshObject "{6549634369F00654}" {
+   Object "{A5B43FE12B863CFB}Assets/Structures/Signs/Military/SignRectangle_01_75x45_double.xob"
+   Materials {
+    MaterialAssignClass "{6549634369F00728}" {
+     SourceMaterial "SignRectangle_01_75x45_double"
+     AssignedMaterial "{C33B4EA530D5B7FD}Assets/Structures/Signs/Military/Data/Sign_VehicleRepair_US_01.emat"
+    }
+    MaterialAssignClass "{6549634369F0073B}" {
+     SourceMaterial "SignRectangle_01_75x45_double_MLOD"
+     AssignedMaterial "{6A01AC6557A5866A}Assets/Structures/Signs/Military/Data/Sign_VehicleRepair_US_01_MLOD.emat"
+    }
+   }
+   LODFactors {
+    10 5 1 1 1
+   }
+  }
+  RigidBody "{6549634369F0061E}" {
+   ResponseIndex "TinyDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+  SCR_DestructionMultiPhaseComponent "{6549634369F004E3}" {
+   Enabled 0
+   "Additional hit zones" {
+    SCR_HitZone Default {
+     HZDefault 1
+     "Melee multiplier" 1
+     "Kinetic multiplier" 1
+     "Explosive multiplier" 90
+     "Incendiary multiplier" 1
+    }
+   }
+   m_fBaseHealth 500
+   m_fForceToDamageScale 350
+   m_DestroySpawnObjects {
+    SCR_DebrisSpawnable "{6549634369F00542}" {
+     m_ModelPrefabs {
+      "{4433CC4880AFA51C}Prefabs/Structures/Signs/Military/Dst/SignRectangle_01_75x45_double_dst_VehicleRepair_US_01.et" "{5E817543C497BA14}Assets/Structures/Signs/Military/Dst/SignRectangle_01_75x45_double_dst_02.xob"
+     }
+     m_fMass 3
+     m_eMaterialSoundType WOOD_PLANK_SMALL
+    }
+    SCR_ParticleSpawnable "{6549634369F00559}" {
+     m_Particle "{63D673751320F318}Particles/Props/Dest_Prop_Wood_Medium.ptc"
+    }
+   }
+   m_bDeleteAfterFinalPhase 0
+   m_aDamagePhases {
+    SCR_DamagePhaseData "{6549634369F0052C}" {
+     m_PhaseModel "{B095A4522DD264F4}Assets/Structures/Signs/Military/Dst/SignRectangle_01_75x45_double_dst_00.xob"
+    }
+   }
+   m_eMaterialSoundType BREAK_METAL_POLE
+  }
+  ActionsManagerComponent "{6549634369F00430}" {
+   ActionContexts {
+    UserActionContext "{6549634282887DB3}" {
+     ContextName "main"
+     Position PointInfo "{6549634289E346F1}" {
+      Offset 0.0001 1.266 0.038
+     }
+     Radius 0.4
+    }
+   }
+   additionalActions {
+    IA_ChangeRoleUserAction "{6549634281765587}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole RIFLEMAN
+    }
+   }
+  }
+  RplComponent "{6549634369F0040A}" {
+  }
+  Hierarchy "{6549634369F00407}" {
+  }
+ }
+ coords 1408.629 38 2909.18
+ angleY 167.662
+}
 IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
  coords 4829.486 28.5 11737.061
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
  coords 4828.903 28.5 11735.593
  m_numberOfGroups 1
+}
+GenericEntity : "{E6F2AF0848553EF9}Prefabs/MP/Campaign/Sign_VehicleRepair_US_Campaign_HeliDepot.et" {
+ coords 1406.179 38 2908.743
+ angleY 160.245
 }

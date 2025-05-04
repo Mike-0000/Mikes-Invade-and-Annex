@@ -1,4 +1,3 @@
-
 ///////////////////////////////////////////////////////////////////////
 // 4) AREA TYPE
 ///////////////////////////////////////////////////////////////////////
@@ -86,6 +85,22 @@ static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
         else if (m_type == IA_AreaType.Property)
             return 1;
         return 0;
+    }
+
+    int GetReinforcementGroupQuota()
+    {
+        // Define total reinforcement groups per area type
+        switch (m_type)
+        {
+            case IA_AreaType.City:       return 8;
+            case IA_AreaType.Town:       return 6;
+            case IA_AreaType.Military:   return 6;
+            case IA_AreaType.Airport:    return 5;
+            case IA_AreaType.Docks:      return 4;
+            case IA_AreaType.Property:   return 3;
+            default:                     return 4; // Default fallback
+        }
+        return 0; // Should not be reached
     }
 
     int GetCivilianCount()
