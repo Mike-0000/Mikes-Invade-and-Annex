@@ -157,18 +157,17 @@ class IA_RoleManager
             IEntity playerEntity = playerManager.GetPlayerControlledEntity(playerId);
             if (playerEntity)
             {
-				
-                IA_PlayerRoleComponent roleComp = IA_PlayerRoleComponent.Cast(playerEntity.FindComponent(IA_PlayerRoleComponent));
-                if (roleComp)
+				SCR_ChimeraCharacter char = SCR_ChimeraCharacter.Cast(playerEntity);
+                if (char)
                 {
-                    roleComp.SetRole(newRole);
+                    char.SetRole(newRole, true); // Force replication as this is a server-authoritative change
                     Print(string.Format("Assigned role %1 to player %2", 
                         typename.EnumToString(IA_PlayerRole, newRole), 
                         playerId), LogLevel.NORMAL);
                 }
                 else
                 {
-                    Print(string.Format("IA_PlayerRoleComponent not found on entity for player %1", playerId), LogLevel.WARNING);
+                    Print(string.Format("Could not cast player entity to SCR_ChimeraCharacter for player %1", playerId), LogLevel.WARNING);
                 }
             }
         }

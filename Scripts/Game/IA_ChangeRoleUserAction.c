@@ -39,7 +39,9 @@ class IA_ChangeRoleUserAction : ScriptedUserAction
         // Get player ID
         PlayerManager playerManager = GetGame().GetPlayerManager();
         int playerId = playerManager.GetPlayerIdFromControlledEntity(pUserEntity);
-        
+        if(!playerId){
+			Print("PlayerID is NULL!",LogLevel.ERROR);
+		}
         // Check if player is allowed to take this role
         if (!IsPlayerAllowed(pUserEntity, playerId))
         {
@@ -73,8 +75,8 @@ class IA_ChangeRoleUserAction : ScriptedUserAction
     override bool CanBeShownScript(IEntity user)
     {
         // Don't show action if user already has this role
-        IA_PlayerRoleComponent roleComp = IA_PlayerRoleComponent.GetRoleComponent(user);
-        if (roleComp && roleComp.GetRole() == m_TargetRole)
+		SCR_ChimeraCharacter char = SCR_ChimeraCharacter.Cast(user);
+        if (char && char.GetRole() == m_TargetRole)
             return false;
             
         // If there are specific conditions for showing this action, check them here
@@ -93,8 +95,8 @@ class IA_ChangeRoleUserAction : ScriptedUserAction
             return false;
             
         // Don't allow if user already has this role
-        IA_PlayerRoleComponent roleComp = IA_PlayerRoleComponent.GetRoleComponent(user);
-        if (roleComp && roleComp.GetRole() == m_TargetRole)
+		SCR_ChimeraCharacter char = SCR_ChimeraCharacter.Cast(user);
+        if (char && char.GetRole() == m_TargetRole)
             return false;
             
         // Check if role is at capacity (only if we're on the server)

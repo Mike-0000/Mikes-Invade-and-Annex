@@ -1,68 +1,20 @@
-// Enum for Player Roles
-enum IA_PlayerRole
-{
-	NONE = 0,
-	RIFLEMAN,
-	MACHINEGUNNER,
-	GRENADIER,
-	MARKSMAN,
-	MEDIC,
-	ANTITANK_LIGHT,
-	ANTITANK_HEAVY,
-	TEAMLEADER,
-	PILOT,
-	CREWMAN
-};
-
-// Game Component Class (Metadata for the component)
-[ComponentEditorProps(category: "Invade & Annex/Player", description: "Tracks player role.")]
-class IA_PlayerRoleComponentClass : ScriptComponentClass
-{
-	// This class typically remains empty unless you need static configuration.
-};
-
-// Game Component Implementation (The actual logic)
-class IA_PlayerRoleComponent : ScriptComponent
-{
-	// This attribute allows setting a default role in the editor, but the actual role will be managed by gameplay logic.
-	[Attribute(defvalue: "0", uiwidget: UIWidgets.ComboBox, desc: "Initial/Default player role (can be overridden)", enums: ParamEnumArray.FromEnum(IA_PlayerRole))]
-	private IA_PlayerRole m_eEditorAssignedRole;
-
-	// The currently assigned role for this player instance.
-	private IA_PlayerRole m_eCurrentRole;
-
-	// Network replication: This variable's value will be synchronized across server and clients.
-	// 'OnRoleChanged' is the callback function triggered on clients when the value is updated by the server.
+modded class SCR_ChimeraCharacter{
+	
 	[RplProp(onRplName: "OnRoleChanged")]
 	private IA_PlayerRole m_eReplicatedRole;
-
-	//------------------------------------------------------------------------------------------------
-	// LIFECYCLE & INITIALIZATION
-	//------------------------------------------------------------------------------------------------
-
-	// OnPostInit is called after the component is created and basic properties are set.
-	override void OnPostInit(IEntity owner)
+	
+	private IA_PlayerRole m_eCurrentRole;
+	
+	override void EOnInit(IEntity owner)
 	{
-		super.OnPostInit(owner);
-		// We need EOnInit for further setup after all components are ready.
-		SetEventMask(owner, EntityEvent.INIT);
-
+		super.EOnInit(owner);
 		// The server is authoritative for setting the initial role.
 		if (Replication.IsServer())
 		{
 			// Initialize with the value set in the editor or a default.
 			// Use 'false' for forceReplication initially, unless you specifically need the callback to run immediately.
-			SetRole(m_eEditorAssignedRole, false);
+			SetRole(IA_PlayerRole.RIFLEMAN, false);
 		}
-	}
-
-	// EOnInit is called after the entity and all its components are fully initialized.
-	override void EOnInit(IEntity owner)
-	{
-		super.EOnInit(owner);
-
-		// For clients, when the entity initializes, the replicated role might already be set.
-		// We sync the local m_eCurrentRole to match the initial replicated state.
 		if (!Replication.IsServer())
 		{
 			m_eCurrentRole = m_eReplicatedRole;
@@ -70,13 +22,7 @@ class IA_PlayerRoleComponent : ScriptComponent
 			// HandleRoleChangeEffects(m_eCurrentRole);
 		}
 	}
-
-	//------------------------------------------------------------------------------------------------
-	// ROLE MANAGEMENT (Server-Side Logic)
-	//------------------------------------------------------------------------------------------------
-
-	// Sets the player's role. This should ONLY be called on the server.
-	// Returns true if the role was actually changed, false otherwise.
+	
 	bool SetRole(IA_PlayerRole newRole, bool forceReplication = false)
 	{
 		// Enforce server-only execution for role changes.
@@ -104,24 +50,13 @@ class IA_PlayerRoleComponent : ScriptComponent
 
 		return true;
 	}
-
-	//------------------------------------------------------------------------------------------------
-	// ROLE ACCESS (Client & Server)
-	//------------------------------------------------------------------------------------------------
-
-	// Gets the player's current role. Safe to call on both server and clients.
-	IA_PlayerRole GetRole()
+		IA_PlayerRole GetRole()
 	{
 		// On clients, m_eCurrentRole is updated by the OnRoleChanged callback.
 		// On the server, m_eCurrentRole is updated directly by SetRole.
 		return m_eCurrentRole;
 	}
-
-	//------------------------------------------------------------------------------------------------
-	// REPLICATION CALLBACK (Client-Side Logic)
-	//------------------------------------------------------------------------------------------------
-
-	// This function is automatically called on clients when the server changes 'm_eReplicatedRole'.
+	
 	private void OnRoleChanged()
 	{
 		// Update the client's local understanding of the role.
@@ -132,17 +67,10 @@ class IA_PlayerRoleComponent : ScriptComponent
 		// Perform any client-side logic needed when the role changes (e.g., update UI elements).
 		HandleRoleChangeEffects(m_eCurrentRole);
 	}
-
-	//------------------------------------------------------------------------------------------------
-	// ROLE CHANGE EFFECTS (Server & Client)
-	//------------------------------------------------------------------------------------------------
-
-	// Centralized function to handle the consequences of a role change.
-	// This is called on the server immediately when SetRole is called,
-	// and on clients when the OnRoleChanged callback is triggered.
+	
 	private void HandleRoleChangeEffects(IA_PlayerRole newRole)
 	{
-		IEntity owner = GetOwner();
+		IEntity owner = this;
 		if (!owner) return; // Safety check
 
 		//Print(string.Format("IA_PlayerRoleComponent::HandleRoleChangeEffects - Processing role %1 for entity %2 (Server: %3)",
@@ -171,16 +99,23 @@ class IA_PlayerRoleComponent : ScriptComponent
 		// 		break;
 		// }
 	}
+	
+}
 
-	//------------------------------------------------------------------------------------------------
-	// STATIC HELPER FUNCTION
-	//------------------------------------------------------------------------------------------------
 
-	// Provides a convenient way to get this component from any player entity.
-	static IA_PlayerRoleComponent GetRoleComponent(IEntity playerEntity)
-	{
-		if (!playerEntity)
-			return null;
-		return IA_PlayerRoleComponent.Cast(playerEntity.FindComponent(IA_PlayerRoleComponent));
-	}
-}; 
+// Enum for Player Roles
+enum IA_PlayerRole
+{
+	NONE = 0,
+	RIFLEMAN,
+	MACHINEGUNNER,
+	GRENADIER,
+	MARKSMAN,
+	MEDIC,
+	ANTITANK_LIGHT,
+	ANTITANK_HEAVY,
+	TEAMLEADER,
+	PILOT,
+	CREWMAN
+};
+

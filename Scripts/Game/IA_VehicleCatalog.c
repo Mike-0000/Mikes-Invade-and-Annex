@@ -268,4 +268,101 @@ class IA_VehicleCatalog
         
         return result;
     }
+    
+    // Get a random vehicle prefab resource name as a string by specific labels
+    static string GetRandomVehiclePrefabBySpecificLabels(EEditableEntityLabel factionLabel, array<EEditableEntityLabel> explicitIncludedTraitLabels, array<EEditableEntityLabel> explicitExcludedTraitLabels)
+    {
+        //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels called. Faction: %1, Included Traits: %2, Excluded Traits: %3", typename.EnumToString(EEditableEntityLabel, factionLabel), explicitIncludedTraitLabels.Count(), explicitExcludedTraitLabels.Count()), LogLevel.NORMAL);
+
+        array<SCR_EntityCatalogEntry> result = {};
+        
+        SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+        if (!factionManager)
+        {
+            //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Failed to get faction manager", LogLevel.WARNING);
+            return "";
+        }
+        
+        // Convert IA_Faction enum style (if it were passed, but we use EEditableEntityLabel for faction now) to key
+        // For EEditableEntityLabel, we need to derive the faction key somewhat differently or ensure the label IS a faction key label.
+        // Assuming factionLabel is one of EEditableEntityLabel.FACTION_US, EEditableEntityLabel.FACTION_USSR, etc.
+        string factionKey = "";
+        switch (factionLabel)
+        {
+            case EEditableEntityLabel.FACTION_US:
+                factionKey = "US";
+                break;
+            case EEditableEntityLabel.FACTION_USSR:
+                factionKey = "USSR";
+                break;
+            case EEditableEntityLabel.FACTION_CIV:
+                factionKey = "CIV";
+                break;
+            case EEditableEntityLabel.FACTION_FIA:
+                factionKey = "FIA";
+                break;
+            default:
+                //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Invalid or non-faction label provided as factionLabel: %1", typename.EnumToString(EEditableEntityLabel, factionLabel)), LogLevel.WARNING);
+                return ""; // Not a valid faction label
+        }
+        
+        //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Looking for faction with key %1", factionKey), LogLevel.NORMAL);
+        SCR_Faction scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey(factionKey));
+        if (!scrFaction)
+        {
+            //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Failed to get faction with key %1", factionKey), LogLevel.WARNING);
+            return "";
+        }
+        
+        SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+        if (!entityCatalog)
+        {
+            //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Failed to get vehicle entity catalog for faction %1", factionKey), LogLevel.WARNING);
+            return "";
+        }
+        
+        array<EEditableEntityLabel> includedLabels = {};
+        includedLabels.Insert(factionLabel); // Add the main faction label
+        foreach (EEditableEntityLabel traitLabel : explicitIncludedTraitLabels)
+        {
+            if (traitLabel != 0) // Ensure no "none" or default labels are accidentally included if 0 is used for that
+                includedLabels.Insert(traitLabel);
+        }
+        
+        // Use the explicitly passed excluded labels. Ensure it's not null if passed from attribute.
+        array<EEditableEntityLabel> finalExcludedLabels = {};
+        if (explicitExcludedTraitLabels)
+        {
+            finalExcludedLabels.Copy(explicitExcludedTraitLabels);
+        }
+        
+        //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Getting full filtered entity list.");
+        //Print("[DEBUG] Final Included Labels Count: " + includedLabels.Count());
+        //foreach (EEditableEntityLabel lbl : includedLabels) Print("[DEBUG] Incl: " + typename.EnumToString(EEditableEntityLabel, lbl));
+        //Print("[DEBUG] Final Excluded Labels Count: " + finalExcludedLabels.Count());
+        //foreach (EEditableEntityLabel lbl : finalExcludedLabels) Print("[DEBUG] Excl: " + typename.EnumToString(EEditableEntityLabel, lbl));
+
+        entityCatalog.GetFullFilteredEntityList(result, includedLabels, finalExcludedLabels);
+        
+        //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Found %1 entries after filtering.", result.Count()), LogLevel.NORMAL);
+
+        if (result.IsEmpty())
+        {
+            //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: No entries found matching the specific labels.", LogLevel.WARNING);
+            return "";
+        }
+            
+        int idx = IA_Game.rng.RandInt(0, result.Count()); // result.Count() is exclusive, so 0 to Count-1
+        SCR_EntityCatalogEntry entry = result[idx];
+        
+        if (!entry)
+        {
+        	//Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Selected entry is null? This should not happen if list is not empty.", LogLevel.ERROR);
+        	return "";
+        }
+        
+        string prefab = entry.GetPrefab();
+        //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Selected prefab %1", prefab), LogLevel.NORMAL);
+        return prefab;
+    }
 }; 

@@ -1,0 +1,138 @@
+GenericEntity {
+ ID "654F7B2D597716C6"
+ components {
+  MeshObject "{6549634369F00654}" {
+   Object "{A5B43FE12B863CFB}Assets/Structures/Signs/Military/SignRectangle_01_75x45_double.xob"
+   Materials {
+    MaterialAssignClass "{6549634369F00728}" {
+     SourceMaterial "SignRectangle_01_75x45_double"
+     AssignedMaterial "{C33B4EA530D5B7FD}Assets/Structures/Signs/Military/Data/Sign_VehicleRepair_US_01.emat"
+    }
+    MaterialAssignClass "{6549634369F0073B}" {
+     SourceMaterial "SignRectangle_01_75x45_double_MLOD"
+     AssignedMaterial "{6A01AC6557A5866A}Assets/Structures/Signs/Military/Data/Sign_VehicleRepair_US_01_MLOD.emat"
+    }
+   }
+   LODFactors {
+    10 5 1 1 1
+   }
+  }
+  RigidBody "{6549634369F0061E}" {
+   ResponseIndex "TinyDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+  SCR_DestructionMultiPhaseComponent "{6549634369F004E3}" {
+   Enabled 0
+   "Additional hit zones" {
+    SCR_HitZone Default {
+     HZDefault 1
+     "Melee multiplier" 1
+     "Kinetic multiplier" 1
+     "Explosive multiplier" 90
+     "Incendiary multiplier" 1
+    }
+   }
+   m_fBaseHealth 500
+   m_fForceToDamageScale 350
+   m_DestroySpawnObjects {
+    SCR_DebrisSpawnable "{6549634369F00542}" {
+     m_ModelPrefabs {
+      "{4433CC4880AFA51C}Prefabs/Structures/Signs/Military/Dst/SignRectangle_01_75x45_double_dst_VehicleRepair_US_01.et" "{5E817543C497BA14}Assets/Structures/Signs/Military/Dst/SignRectangle_01_75x45_double_dst_02.xob"
+     }
+     m_fMass 3
+     m_eMaterialSoundType WOOD_PLANK_SMALL
+    }
+    SCR_ParticleSpawnable "{6549634369F00559}" {
+     m_Particle "{63D673751320F318}Particles/Props/Dest_Prop_Wood_Medium.ptc"
+    }
+   }
+   m_bDeleteAfterFinalPhase 0
+   m_aDamagePhases {
+    SCR_DamagePhaseData "{6549634369F0052C}" {
+     m_PhaseModel "{B095A4522DD264F4}Assets/Structures/Signs/Military/Dst/SignRectangle_01_75x45_double_dst_00.xob"
+    }
+   }
+   m_eMaterialSoundType BREAK_METAL_POLE
+  }
+  ActionsManagerComponent "{6549634369F00430}" {
+   ActionContexts {
+    UserActionContext "{6549634282887DB3}" {
+     ContextName "main"
+     Position PointInfo "{6549634289E346F1}" {
+      Offset 0.0001 1.266 0.038
+     }
+     Radius 0.4
+    }
+   }
+   additionalActions {
+    IA_ChangeRoleUserAction "{6549634281765587}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole RIFLEMAN
+    }
+    IA_ChangeRoleUserAction "{654F7B267D3E29F7}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole MACHINEGUNNER
+    }
+    IA_ChangeRoleUserAction "{654F7B27865AE08D}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole GRENADIER
+    }
+    IA_ChangeRoleUserAction "{654F7B279207A40E}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole MARKSMAN
+    }
+    IA_ChangeRoleUserAction "{654F7B2791B25479}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole MEDIC
+    }
+    IA_ChangeRoleUserAction "{654F7B27953112A7}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole ANTITANK_LIGHT
+    }
+    IA_ChangeRoleUserAction "{654F7B2799C8ADC1}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole ANTITANK_HEAVY
+    }
+    IA_ChangeRoleUserAction "{654F7B279D72E40B}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole TEAMLEADER
+    }
+    IA_ChangeRoleUserAction "{654F7B27A0FBC7D3}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole PILOT
+    }
+    IA_ChangeRoleUserAction "{654F7B27A49AB72D}" {
+     ParentContextList {
+      "main"
+     }
+     m_TargetRole CREWMAN
+    }
+   }
+  }
+  RplComponent "{6549634369F0040A}" {
+  }
+  Hierarchy "{6549634369F00407}" {
+  }
+ }
+ coords 1408.629 38 2909.18
+ angleY 167.662
+}

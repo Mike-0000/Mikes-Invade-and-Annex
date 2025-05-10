@@ -20,7 +20,7 @@ class IA_PlayerRoleHandler
         s_ProcessedPlayers = new map<int, bool>();
         
         // Start periodic player checks
-        GetGame().GetCallqueue().CallLater(PeriodicPlayerCheck, 5000, true);
+        GetGame().GetCallqueue().CallLater(PeriodicPlayerCheck, 2500, true);
         
         Print("IA_PlayerRoleHandler initialized with periodic player checks.", LogLevel.NORMAL);
     }
@@ -89,7 +89,7 @@ class IA_PlayerRoleHandler
         Print(string.Format("Player %1 connected, initializing role...", playerId), LogLevel.NORMAL);
         
         // The player entity might not be ready yet, set up a delayed check
-        GetGame().GetCallqueue().CallLater(InitializePlayerRole, 2000, false, playerId);
+        GetGame().GetCallqueue().CallLater(InitializePlayerRole, 1500, false, playerId);
     }
     
     // Initialize a player's role (called with delay after connection)
@@ -103,16 +103,19 @@ class IA_PlayerRoleHandler
         if (!playerEntity)
         {
             // Player entity still not available, try again later
-            GetGame().GetCallqueue().CallLater(InitializePlayerRole, 2000, false, playerId);
+            Print(string.Format("InitializePlayerRole: Player entity for player %1 not yet available. Retrying.", playerId), LogLevel.DEBUG);
+            GetGame().GetCallqueue().CallLater(InitializePlayerRole, 1000, false, playerId);
             return;
         }
         
-        // Check if the player entity has the role component
-        IA_PlayerRoleComponent roleComp = IA_PlayerRoleComponent.GetRoleComponent(playerEntity);
-        if (!roleComp)
+        // Check if the player entity is an SCR_ChimeraCharacter
+		SCR_ChimeraCharacter playerChar = SCR_ChimeraCharacter.Cast(playerEntity);
+        if (!playerChar) 
         {
-            Print(string.Format("Player %1 doesn't have IA_PlayerRoleComponent attached!", playerId), LogLevel.WARNING);
-            return;
+            // This means the controlled entity is not an SCR_ChimeraCharacter.
+            // Roles are applied to characters, so we cannot proceed with role assignment for this entity.
+            Print(string.Format("InitializePlayerRole: Controlled entity for player %1 is not an SCR_ChimeraCharacter. Cannot assign role.", playerId), LogLevel.WARNING);
+            return; 
         }
         
         // Initialize with default role (Rifleman)

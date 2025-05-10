@@ -1,0 +1,17 @@
+GenericEntity {
+ ID "65552AD16FD1A017"
+ components {
+  IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+   m_aIncludedTraitLabels {
+    51 11
+   }
+  }
+  RplComponent "{65552ACFEEE1ECE1}" {
+   AutoHierarchy 1
+  }
+  Hierarchy "{65552ACFF0BAF086}" {
+  }
+ }
+ coords 1387.744 38 2883.169
+ angleY 73.052
+}
