@@ -1,0 +1,49 @@
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ StPierre1 {
+  coords 9683.567 13.835 1551.374
+  m_fZoneRadius 250
+  m_radius 250
+ }
+ StPierre2 {
+  coords 10022.746 2.466 1551.948
+  m_fZoneRadius 125
+  m_areaName "St Pierre Docks"
+  m_areaType "Docks"
+  m_radius 125
+ }
+ StPierre3 {
+  coords 9249.326 59.189 2078.377
+  m_fZoneRadius 75
+  m_areaName "Vernon"
+  m_areaType "Town"
+  m_radius 75
+ }
+ StPierre4 {
+  coords 9342.281 197.117 1149.776
+  m_fZoneRadius 90
+  m_areaName "Montfort Castle"
+  m_areaType "Military"
+  m_radius 90
+ }
+ Inn {
+  coords 9238.752 85.906 1546.287
+  m_fZoneRadius 35
+  m_areaName "The Runaway Inn"
+  m_areaType "Property"
+  m_radius 35
+ }
+ Farms {
+  coords 9103.576 79.259 2318.238
+  m_fZoneRadius 35
+  m_areaName "St Pierre Farms"
+  m_areaType "Property"
+  m_radius 35
+ }
+ Inn2 {
+  coords 8090.892 223.03 4168.968
+  m_fZoneRadius 30
+  m_areaName "St Pierre Checkpoint"
+  m_areaType "SmallMilitary"
+  m_radius 30
+ }
+}

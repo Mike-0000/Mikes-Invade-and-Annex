@@ -5,7 +5,7 @@ class IA_VehicleRespawnerClass : SCR_VehicleSpawnerClass
 
 class IA_VehicleRespawner : SCR_VehicleSpawner
 {
-	static const float DEFAULT_RESPAWN_INTERVAL_S = 120.0;
+	static const float DEFAULT_RESPAWN_INTERVAL_S = 15.0;
 	static const float MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN = 10.0; // Min distance to an existing ALIVE vehicle to prevent re-spawn
 	static const int INITIAL_SPAWN_DELAY_MS = 1000; // 1 second delay for initial spawn
 

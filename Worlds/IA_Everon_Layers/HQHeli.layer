@@ -1,0 +1,59 @@
+$grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
+ UnarmedHeli2 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     51
+    }
+    m_aExcludedTraitLabels {
+     21
+    }
+   }
+  }
+  coords 4881.585 28.593 11795.05
+  angleY -136.549
+ }
+ AttackHeli2 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     51 21
+    }
+   }
+  }
+  coords 4877.953 28.577 11875.535
+  angleY -136.549
+ }
+ Heli4 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4879.756 28.577 11821.992
+  angleY -136.549
+ }
+ Heli5 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4878.579 28.577 11849.967
+  angleY -136.549
+ }
+}
+$grp GenericEntity : "{C1ADC7F69BB42C76}Prefabs/RoleSwitcher.et" {
+ {
+  coords 4941.655 28.775 11763.389
+  angleY -90.728
+ }
+ {
+  coords 4910.64 28.594 11784.52
+  angleY -119.382
+ }
+}

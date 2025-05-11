@@ -1,0 +1,49 @@
+$grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
+ Heli2 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 1359.113 38 2872.896
+  angleY 121
+ }
+ AttackHeli {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     51 21
+    }
+   }
+  }
+  coords 1307.216 38 2859.592
+  angleY 121
+ }
+ UnarmedHeli1 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     51
+    }
+    m_aExcludedTraitLabels {
+     21
+    }
+   }
+  }
+  coords 1385.024 38.016 2880.491
+  angleY 121
+ }
+ Heli3 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 1332.049 38 2865.717
+  angleY 121
+ }
+}

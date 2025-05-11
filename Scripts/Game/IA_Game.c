@@ -33,9 +33,9 @@ class IA_Game
     private const float MAX_PLAYER_COUNT = 100;
     
     // Scale caps
-    private const float MIN_SCALE_FACTOR = 0.4;      // Minimum scaling for solo players
-    private const float BASELINE_SCALE_FACTOR = 1.0; // Baseline scaling (at BASELINE_PLAYER_COUNT)
-    private const float MAX_SCALE_FACTOR = 1.6;      // Maximum scaling cap for high player counts
+    private const float MIN_SCALE_FACTOR = 1.0;      // Minimum scaling for solo players
+    private const float BASELINE_SCALE_FACTOR = 1.3; // Baseline scaling (at BASELINE_PLAYER_COUNT)
+    private const float MAX_SCALE_FACTOR = 1.9;      // Maximum scaling cap for high player counts
 
     // Static method to set the current area instance
     static void SetCurrentAreaInstance(IA_AreaInstance instance)
@@ -117,7 +117,7 @@ class IA_Game
 	}
 
     // Get current US player count in the game
-    static int GetUSPlayerCount()
+    static int GetPlayerCount()
     {
         int playerCount = 0;
         PlayerManager playerManager = GetGame().GetPlayerManager();
@@ -149,9 +149,8 @@ class IA_Game
     // Calculate scale factor for AI spawning based on player count
     static float GetAIScaleFactor()
     {
-		return 1.6;
         // Get current player count
-        int playerCount = GetUSPlayerCount();
+        int playerCount = GetPlayerCount();
         
         // Handle zero players explicitly
         if (playerCount <= 0) return MIN_SCALE_FACTOR;
@@ -188,8 +187,8 @@ class IA_Game
     // Calculate max vehicles based on player count (also using a more gentle scaling curve)
     static int GetMaxVehiclesForPlayerCount(int baseMaxVehicles = 3)
     {
-        int playerCount = GetUSPlayerCount();
-        
+        int playerCount = GetPlayerCount();
+        Print("Base Max Vehicle = " + baseMaxVehicles, LogLevel.NORMAL);
         // Logarithmic-style scaling for vehicles
         // Base 0-15 players: baseline vehicles
         if (playerCount <= BASELINE_PLAYER_COUNT)
@@ -216,7 +215,7 @@ class IA_Game
             return;
             
         m_playerCheckTimer = 0;
-        int currentPlayerCount = GetUSPlayerCount();
+        int currentPlayerCount = GetPlayerCount();
         
         if (currentPlayerCount != m_lastPlayerCount)
         {
@@ -224,9 +223,9 @@ class IA_Game
             float aiScale = GetAIScaleFactor();
             int maxVehicles = GetMaxVehiclesForPlayerCount();
             
-           //Print("[PLAYER_SCALING] Player count changed to " + currentPlayerCount + 
- //                 ". AI Scale Factor: " + aiScale + 
-//                  ", Max Vehicles: " + maxVehicles, LogLevel.NORMAL);
+           Print("[PLAYER_SCALING] Player count changed to " + currentPlayerCount + 
+                 ". AI Scale Factor: " + aiScale + 
+                  ", Max Vehicles: " + maxVehicles, LogLevel.NORMAL);
                   
             // Update all area instances with new scaling
             foreach (IA_AreaInstance areaInst : m_areas)

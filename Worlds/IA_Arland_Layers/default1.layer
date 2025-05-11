@@ -24,6 +24,39 @@ PerceptionManager PerceptionManager : "{028DAEAD63E056BE}Prefabs/World/Game/Perc
 }
 SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
  components {
+  SCR_DebriefingScreenComponent "{65552AEEB5A2CE5E}" {
+   m_BaseLayout SCR_DebriefingScreenUnevenFourTiles "{65552AEF3C0B8B52}" {
+    m_sFourUnevenTilesLayout "{DFE8A23A8550514C}UI/layouts/Menus/DeployMenu/DebriefingScreenFourUnevenTiles.layout"
+    m_TopLeftTile SCR_DebriefingScreenBigImageContent "{5D349E30244A4792}" {
+     m_sContentImage "{62897631F4A6C7F3}UI/Textures/MissionLoadingScreens/Reforger_ConflictArt_UI.edds"
+    }
+    m_TopRightTile SCR_DebriefingScreenFinishedObjectivesContent "{5D349E305DB53338}" {
+     m_bIsInteractible 1
+     m_sTitleText "#AR-DebriefingScreen_Objectives"
+     m_sFinishedObjectivesTileLayout "{B3A6950DF2D34576}UI/layouts/Menus/DeployMenu/DebriefingScreenFinishedObjectivesTile.layout"
+    }
+    m_BottomLeftTile SCR_DebriefingScreenSummaryContent "{5D349E3056A9E455}" {
+     m_sTitleText "#AR-DebriefingScreen_Debriefing"
+     m_sSubtitleText "#AR-DebriefingScreen_Subtitle"
+     m_sSubtitleLostText "#AR-DebriefingScreen_Subtitle_Lost"
+    }
+    m_BottomRightTile SCR_DebriefingScreenStatisticsContent "{5D349E3049CC104E}" {
+     m_sTitleText "#AR-DebriefingScreen_Statistics"
+     m_aStatistics {
+      SCR_DebriefingScreenStatisticShotsFired "{5D349E306369C7B4}" {
+      }
+      SCR_DebriefingScreenStatisticKills "{5D349E30617925FA}" {
+      }
+      SCR_DebriefingScreenStatisticDeaths "{5D349E306543E543}" {
+      }
+      SCR_DebriefingScreenStatisticDistanceWalked "{5D349E309B4CDF81}" {
+      }
+      SCR_DebriefingScreenStatisticDistanceDriven "{5D349E3098F208B6}" {
+      }
+     }
+    }
+   }
+  }
   SCR_EntityCatalogManagerComponent "{5C9AD18D91F9E87E}" {
    m_aEntityCatalogs {
     SCR_EntityCatalogMultiList "{5C9AD18D9D38E99E}" : "{AB06FC03FBA685C8}Configs/EntityCatalog/CIV/Characters_EntityCatalog_CIV.conf" {
@@ -94,13 +127,68 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   SCR_GameModeHealthSettings "{5A22E11F9ACBB1DF}" {
    m_bPermitUnconsciousVON 1
   }
+  SCR_RespawnBriefingComponent "{65552AF13AFD04B3}" {
+   m_sJournalConfigPath "{13438C835CFF21FB}Configs/Journal/Journal.conf"
+   m_Info SCR_UIInfo "{65552AF3152BD044}" {
+    Description "#AR-Campaign_GamemodeTutorial"
+   }
+   m_aGameModeHints {
+    SCR_UIInfo "{65552AF33BED1C68}" {
+     Name "#AR-BriefingCampaign_Hint_Name_01"
+     Description "#AR-BriefingCampaign_Hint_Description_01"
+     Icon "{324E923535DCACF8}UI/Textures/DeployMenu/Briefing/conflict_HintBanner_1_UI.edds"
+    }
+   }
+   m_aWinConditions {
+    SCR_BriefingVictoryCondition "{65552AF3E7A9A448}" {
+     victoryCondition SEIZE
+     name "Seize the Entire Island"
+    }
+   }
+  }
   SCR_RespawnSystemComponent "{56B2B4793051E7C9}" {
    m_SpawnLogic SCR_MenuSpawnLogic "{654F7B2E826DD03D}" {
    }
    m_fDeployMenuOpenDelay 3
   }
+  SCR_WelcomeScreenComponent "{65552AF6586B943C}" {
+   m_sHeaderTitle "Welcome to Mike's Invade and Annex"
+   m_sHeaderSubtitle "Welcome to Mike's Invade and Annex"
+   m_BaseLayout SCR_WelcomeScreenThreeHorizontalColumns "{65552AF65DB4999B}" {
+    m_LeftColumn SCR_WelcomeScreenIntroductionContent "{65552AF67A42FB82}" {
+     m_sTitleText "Invade and Annex Introduction"
+     m_aIntroduction {
+      SCR_WelcomeScreenIntroduction "{65552AF7939A1BCE}" {
+       m_sContentTitleText "Introduction"
+       m_sContentDescriptionText "Invade and Annex is a Cooperative gamemode where the Players face off against a dynamically generated AI force. It is a Island Conquer mission similar to Conflict, but you only have a single AO to handle at once."
+      }
+     }
+    }
+    m_MiddleColumn SCR_WelcomeScreenIntroductionContent "{65552AF71902BF3E}" {
+     m_sTitleText "Development Progress"
+     m_aIntroduction {
+      SCR_WelcomeScreenIntroduction "{65552AF727D8778F}" {
+       m_sContentTitleText "Alpha Stage"
+       m_sContentDescriptionText "During Alpha the feature set will slowly be built up to match previous implementations of Invade and Annex while also including new gameplay components that leverage Reforrger's new functionality."
+      }
+     }
+    }
+    m_RightColumn SCR_WelcomeScreenIntroductionContent "{65552AF89C8C5544}" {
+     m_sTitleText "Discord Info"
+     m_aIntroduction {
+      SCR_WelcomeScreenIntroduction "{65552AF8A11A40FE}" {
+       m_sContentTitleText "Discord"
+       m_sContentDescriptionText "For more information or to provide suggestions access the Discord here: discord.gg/VXYxGFnpbm"
+      }
+     }
+    }
+   }
+  }
  }
  coords 1406.474 38 2902.029
+ m_aDisabledResourceTypes {
+  0
+ }
  {
   SCR_FactionManager FactionManager_Editor1 : "{4A188E44289B9A50}Prefabs/MP/Managers/Factions/FactionManager_Editor.et" {
    coords 0 0 0
@@ -130,34 +218,10 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   }
  }
 }
-GenericEntity {
- components {
-  IA_VehicleRespawner "{65552ACE8AFA29BB}" {
-   m_aIncludedTraitLabels {
-    51 11
-   }
-  }
-  RplComponent "{65552ACFEEE1ECE1}" {
-   AutoHierarchy 1
-  }
-  Hierarchy "{65552ACFF0BAF086}" {
-  }
- }
- coords 1387.744 38 2883.169
- angleY 73.052
-}
 IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
  coords 4829.486 28.5 11737.061
-}
-SCR_SpawnPoint : "{5A2220DD0C16958B}Prefabs/MP/Spawning/SpawnPoint_US.et" {
- coords 1408.393 38 2902.577
- angleY -14.379
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
  coords 4828.903 28.5 11735.593
  m_numberOfGroups 1
-}
-GenericEntity : "{C1ADC7F69BB42C76}Prefabs/RoleSwitcher.et" {
- coords 1408.427 38 2909.436
- angleY 165.908
 }

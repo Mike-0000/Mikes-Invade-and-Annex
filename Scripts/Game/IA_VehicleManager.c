@@ -981,7 +981,11 @@ class IA_VehicleManager: GenericEntity
             return vector.Zero;
         }
         
-        // If groupNumber is provided, use it to calculate a dynamic search radius
+        // Initialize searchCenter and searchRadius based on input parameters
+        vector searchCenter = position;
+        float searchRadius = maxDistance;
+        
+        // If groupNumber is provided, use it to calculate a dynamic search radius and potentially update searchCenter
         if (groupNumber >= 0)
         {
             // Get the group center point
@@ -994,20 +998,34 @@ class IA_VehicleManager: GenericEntity
             if (groupRadius > 0)
             {
                 // Use the calculated radius plus a small margin
-                maxDistance = groupRadius * 1.2;
+                searchRadius = groupRadius * 1.2;
                 // Use the group center as the position if it's valid
                 if (centerPoint != vector.Zero)
                 {   
-                    position = centerPoint;
-                    // Print(("[VEHICLE_DEBUG] Using group center: " + position + " with radius: " + maxDistance, LogLevel.NORMAL);
+                    searchCenter = centerPoint;
+                    // Print(("[VEHICLE_DEBUG] Using group center: " + searchCenter + " with radius: " + searchRadius, LogLevel.NORMAL);
                 }
             }
         }
         
-        // Print(("[VEHICLE_DEBUG] Searching for roads within radius " + maxDistance + " from center " + position.ToString(), LogLevel.NORMAL);
+        // If the current area instance is under attack, restrict search to a smaller radius around the area origin
+        if (IA_Game.CurrentAreaInstance && IA_Game.CurrentAreaInstance.IsUnderAttack())
+        {
+            vector areaOrigin = IA_Game.CurrentAreaInstance.m_area.GetOrigin();
+            if (areaOrigin != vector.Zero) // Ensure areaOrigin is valid
+            {
+                searchCenter = areaOrigin;
+                float defensiveRadius = IA_Game.CurrentAreaInstance.m_area.GetRadius() * 0.4; // 40% of area radius
+                if (defensiveRadius < 100) defensiveRadius = 100; // Ensure a minimum radius of 100m
+                searchRadius = defensiveRadius;
+                // Print(("[VEHICLE_DEBUG] Area under attack! Search centered on area origin " + searchCenter.ToString() + " with radius " + searchRadius, LogLevel.NORMAL);
+            }
+        }
+        
+        // Print(("[VEHICLE_DEBUG] Searching for roads within radius " + searchRadius + " from center " + searchCenter.ToString(), LogLevel.NORMAL);
         
         // Generate a random point within the radius around the center position
-        vector randomVector = IA_Game.rng.GenerateRandomPointInRadius(1, maxDistance, position);
+        vector randomVector = IA_Game.rng.GenerateRandomPointInRadius(1, searchRadius, searchCenter);
         // Print(("[VEHICLE_DEBUG] Generated random point at " + randomVector.ToString(), LogLevel.NORMAL);
         
         // Create callback to collect road entities
@@ -1020,8 +1038,8 @@ class IA_VehicleManager: GenericEntity
         
         // Calculate AABB min and max vectors with large vertical range to account for mountains and valleys
         // Use a vertical range of ±1000 meters to ensure we capture roads at different elevations
-        vector vectorAABBMin = Vector(position[0] - maxDistance, position[1] - 1000, position[2] - maxDistance);
-        vector vectorAABBMax = Vector(position[0] + maxDistance, position[1] + 1000, position[2] + maxDistance);
+        vector vectorAABBMin = Vector(searchCenter[0] - searchRadius, searchCenter[1] - 1000, searchCenter[2] - searchRadius);
+        vector vectorAABBMax = Vector(searchCenter[0] + searchRadius, searchCenter[1] + 1000, searchCenter[2] + searchRadius);
         
         roadMngr.GetRoadsInAABB(vectorAABBMin, vectorAABBMax, Roads);
         
@@ -1343,7 +1361,7 @@ class IA_VehicleManager: GenericEntity
         if (waypoint)
         {
             // Set a very high priority to ensure this waypoint takes precedence
-            waypoint.SetPriorityLevel(2000);
+            waypoint.SetPriorityLevel(20);
             // Print(("[VEHICLE_DEBUG] Setting waypoint priority to 2000", LogLevel.NORMAL);
             
             aiGroup.AddWaypoint(waypoint);
@@ -1360,6 +1378,116 @@ class IA_VehicleManager: GenericEntity
     {
         //// Print(("[DEBUG] IA_VehicleManager.CreateWaypointForVehicle: This method is deprecated. Use CreateWaypointForVehicleUsingGroup instead", LogLevel.WARNING);
         return;
+    }
+    
+    // Check if a player can pilot a specific vehicle compartment (e.g. helicopter pilot seat)
+    static bool CanPlayerPilotVehicle(IEntity user, BaseCompartmentSlot compartment, out string reason)
+    {
+        reason = ""; // Default to no reason
+
+        // Check if it's a pilot seat
+        if (compartment.GetType() == ECompartmentType.PILOT)
+        {
+            IEntity vehicleEntity = SCR_EntityHelper.GetMainParent(compartment.GetOwner(), true);
+            if (vehicleEntity)
+            {
+                SCR_EditableVehicleComponent editableVehicle = SCR_EditableVehicleComponent.Cast(vehicleEntity.FindComponent(SCR_EditableVehicleComponent));
+                if (editableVehicle)
+                {
+                    SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+                    if (!factionManager)
+                    {
+                        Print("No Faction Manager Found in CanPlayerPilotVehicle!", LogLevel.ERROR);
+                        reason = "Internal error: Faction Manager not found.";
+                        return false; // Cannot proceed without faction manager
+                    }
+
+                    SCR_EntityCatalogEntry catalogEntry;
+                    array<Faction> arrayOfFactions = {};
+                    factionManager.GetFactionsList(arrayOfFactions);
+                    foreach(Faction thisFaction : arrayOfFactions)
+                    {
+                        SCR_Faction scrFaction = SCR_Faction.Cast(thisFaction);
+                        if(!scrFaction)
+                            continue;
+                        SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+                        catalogEntry = entityCatalog.GetEntryWithPrefab(editableVehicle.GetPrefab());
+                        if(catalogEntry)
+                        {
+                            break;
+                        }
+                    }
+                    
+                    if(!catalogEntry)
+                    {
+                        reason = "Internal error: Vehicle catalog entry not found.";
+                        return false; // Cannot proceed without catalog entry
+                    }
+                            
+                    array<EEditableEntityLabel> vehicleLabels = {}; 
+                    catalogEntry.GetEditableEntityLabels(vehicleLabels);
+                    bool isHelicopter = false;
+					bool isArmor = false;
+                    foreach (EEditableEntityLabel label : vehicleLabels)
+                    {
+                        if (label == EEditableEntityLabel.VEHICLE_HELICOPTER)
+                        {
+                            isHelicopter = true;
+                            break;
+                        } else if (label == EEditableEntityLabel.TRAIT_ARMOR || label == EEditableEntityLabel.VEHICLE_APC)
+                        {
+                            isArmor = true;
+                            break;
+                        }
+                    }
+
+                    if (isHelicopter || isArmor)
+                    {
+                        PlayerManager playerManager = GetGame().GetPlayerManager();
+                        if (!playerManager)
+                        {
+                            reason = "Internal error: Player Manager not found.";
+                            return false; // Should not happen
+                        }
+                            
+                        int playerId = playerManager.GetPlayerIdFromControlledEntity(user);
+                        if (playerId == 0) // PlayerID 0 is invalid
+                        {
+                            reason = "Internal error: Invalid Player ID.";
+                            return false; 
+                        }
+                            
+                        IA_RoleManager roleManager = IA_RoleManager.GetInstance();
+                        if (roleManager)
+                        {
+								                            IA_PlayerRole playerRole = roleManager.GetPlayerRole(playerId);
+
+							if(isHelicopter){
+	                            if (playerRole != IA_PlayerRole.PILOT)
+	                            {
+	                                reason = "Must be a Pilot to Fly!";
+	                                return false; // Not a pilot, cannot enter helicopter pilot seat
+	                            }
+							} else if(isArmor){
+	                            if (playerRole != IA_PlayerRole.CREWMAN)
+	                            {
+	                                reason = "Must be a Crewman to Drive Armored Vehicles!";
+	                                return false; // Not a pilot, cannot enter helicopter pilot seat
+	                            }
+							}
+                        }
+                        else
+                        {
+                            reason = "Internal error: Role Manager not found.";
+                            return false; // Cannot check role without role manager
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If all checks pass or don't apply
+        return true;
     }
 };
 

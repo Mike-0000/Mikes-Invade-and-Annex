@@ -65,7 +65,9 @@ class IA_AiGroup
     private const float GUNSHOT_AUDIBLE_DISTANCE = 500.0;
     private const float SUPPRESSED_AUDIBLE_DISTANCE = 100.0;
     private const float EXPLOSION_REACT_DISTANCE = 220.0;
-    
+    private const float VEHICLE_PRIORITY_MOVE_LEVEL = 200.0;
+	private const float CIVILIAN_VEHICLE_PRIORITY_MOVE_LEVEL = 400.0;
+
     // Logging and rate limiting
     private static const int BEHAVIOR_LOG_RATE_LIMIT_SECONDS = 3;
     private int m_lastDangerDetectLogTime = 0;
@@ -641,7 +643,7 @@ class IA_AiGroup
 		
         if (m_isDriving)
         {
-            w.SetPriorityLevel(40); // Keep vehicles as is
+            w.SetPriorityLevel(VEHICLE_PRIORITY_MOVE_LEVEL); // Keep vehicles as is
         }
         else
         {
@@ -846,56 +848,106 @@ class IA_AiGroup
     {
         if (IsSpawned())
         {
-            return false;
+            return true; // Already spawned, e.g., by CreateGroupForVehicle or CreateMilitaryGroupFromUnits
         }
-        m_isSpawned = true;
+        // m_isSpawned will be set to true at the end of successful spawning
 
-        // Skip the old prefab spawning logic for military groups since we're using CreateMilitaryGroupFromUnits
-        // which already creates and populates the group with individual units
-
-        // Only handle civilian groups or if the group was manually created without units
-        if (m_isCivilian || !m_group)
+        if (m_isCivilian)
         {
-            string resourceName;
-            if (m_isCivilian)
+            string resourceName = IA_RandomCivilianResourceName();
+            Resource charRes = Resource.Load(resourceName);
+            if (!charRes)
             {
-                resourceName = IA_RandomCivilianResourceName();
-                
-                Resource res = Resource.Load(resourceName);
-                if (!res)
-                {
-                    return false;
-                }
-                
-                IEntity entity = GetGame().SpawnEntityPrefab(res, null, IA_CreateSurfaceAdjustedSpawnParams(m_initialPosition));
-                
-                Resource groupRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
-                IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(m_initialPosition));
-                m_group = SCR_AIGroup.Cast(groupEnt);
-            }
-            
-            if (m_group)
-            {
-                vector groundPos = m_initialPosition;
-                float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-                groundPos[1] = groundY;
-                
-                m_group.SetOrigin(groundPos);
-                m_lastConfirmedPosition = groundPos;
-            }
-            
-            if (!m_group)
-            {
+                Print("[IA_AiGroup.PerformSpawn] Civilian character resource load failed: " + resourceName, LogLevel.ERROR);
                 return false;
             }
+            
+            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSurfaceAdjustedSpawnParams(m_initialPosition));
+            if (!charEntity)
+            {
+                Print("[IA_AiGroup.PerformSpawn] Civilian character entity spawn failed for: " + resourceName, LogLevel.ERROR);
+                return false;
+            }
+
+            Resource groupPrefabRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
+            if (!groupPrefabRes)
+            {
+                 Print("[IA_AiGroup.PerformSpawn] Civilian group prefab resource load failed.", LogLevel.ERROR);
+                 IA_Game.AddEntityToGc(charEntity); // Clean up character
+                 return false;
+            }
+            IEntity groupEntity = GetGame().SpawnEntityPrefab(groupPrefabRes, null, IA_CreateSimpleSpawnParams(m_initialPosition));
+            m_group = SCR_AIGroup.Cast(groupEntity);
+
+            if (!m_group)
+            {
+                Print("[IA_AiGroup.PerformSpawn] Civilian SCR_AIGroup entity spawn or cast failed.", LogLevel.ERROR);
+                IA_Game.AddEntityToGc(charEntity); // Clean up character
+                if (groupEntity) IA_Game.AddEntityToGc(groupEntity); // Clean up group entity if it was spawned
+                return false;
+            }
+            
+            // Add the spawned civilian character to the SCR_AIGroup
+            if (!m_group.AddAIEntityToGroup(charEntity))
+            {
+                Print("[IA_AiGroup.PerformSpawn] Failed to add civilian character to SCR_AIGroup.", LogLevel.ERROR);
+                IA_Game.AddEntityToGc(charEntity); // Clean up character
+                IA_Game.AddEntityToGc(m_group);    // Clean up the group as well since it's unusable
+                m_group = null;
+                return false;
+            }
+            // If successfully added, setup death listener for this specific unit
+            SetupDeathListenerForUnit(charEntity);
+        }
+        else // Military group
+        {
+            // This path assumes m_group was already created and populated by methods like CreateMilitaryGroupFromUnits
+            // or CreateGroupForVehicle, and PerformSpawn is called for common setup.
+            // If m_group is null for a military group here, it's an error in initialization flow.
+            if (!m_group) 
+            {
+                Print(string.Format("[IA_AiGroup.PerformSpawn] Military group %1 (Faction: %2) m_group is null. This indicates an issue in group initialization prior to calling PerformSpawn.", 
+                    this, m_faction), LogLevel.ERROR);
+                return false; 
+            }
+        }
+        
+        // Common setup for all successfully spawned/validated groups
+        if (!m_group) 
+        {
+            Print("[IA_AiGroup.PerformSpawn] m_group is null after specific spawn logic. Critical error.", LogLevel.ERROR);
+            return false;
         }
 
-        SetupDeathListener();
+        m_isSpawned = true; // Set spawned to true only after successful creation/validation of entities and group
+
+        vector groundPos;
+        if (m_initialPosition != vector.Zero) { 
+            groundPos = m_initialPosition;
+        } else { 
+            groundPos = m_group.GetOrigin(); // Fallback to m_group's current origin
+        }
+
+        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
+        groundPos[1] = groundY;
+        m_group.SetOrigin(groundPos);
+        m_lastConfirmedPosition = groundPos;
+            
+        // General SetupDeathListener call - for military this also schedules CheckDangerEvents.
+        // For civilians, their specific unit listener is already set.
+        SetupDeathListener(); 
         WaterCheck();
-        
         ScheduleNextStateEvaluation();
 
-        GetGame().GetCallqueue().CallLater(CheckDangerEvents, 250, true);
+        // The recurring CheckDangerEvents is mainly for military AI reactions.
+        // Civilians don't process danger events in the same way.
+        // This was previously in SetupDeathListener, moved here for clarity.
+        // Note: The one-time call to CheckDangerEvents in old SetupDeathListener is now covered by individual agent processing.
+        // The recurring one is below.
+        if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
+        {
+            GetGame().GetCallqueue().CallLater(CheckDangerEvents, 250, true); // Recurring for military
+        }
 
         return true;
     }
@@ -1887,32 +1939,40 @@ class IA_AiGroup
         int aliveCount = GetAliveCount();
         if (aliveCount <= 2)
         {
-            if (!m_isCivilian && m_faction != IA_Faction.CIV)
+            if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
             {
                 // Request tactical state for military units
                 RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
             }
-            else
+            else // Civilian Path for aliveCount <= 2
             {
-                // Direct orders for civilians
-                vector retreatDir = GetOrigin() - m_lastOrderPosition;
-                if (retreatDir.LengthSq() > 0.1)
-                    retreatDir = retreatDir.Normalized();
-                else
-                    retreatDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
-    
-                vector retreatPos = GetOrigin() + retreatDir * 50;
-                RemoveAllOrders();
-                AddOrder(retreatPos, IA_AiOrder.Patrol);
+                // Only issue new orders if not driving AND has no current orders
+                if (!m_isDriving && !HasOrders())
+                {
+                    // Direct orders for civilians
+                    vector retreatDir = GetOrigin() - m_lastOrderPosition;
+                    if (retreatDir.LengthSq() > 0.1)
+                        retreatDir = retreatDir.Normalized();
+                    else
+                        retreatDir = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1)).Normalized();
+        
+                    vector retreatPos = GetOrigin() + retreatDir * 50;
+                    // No need to call RemoveAllOrders() here because HasOrders() was false
+                    AddOrder(retreatPos, IA_AiOrder.Patrol);
+                }
             }
         }
         // Otherwise, maintain combat stance by defending for civilians
-        else if (m_isCivilian || m_faction == IA_Faction.CIV)
+        else if (m_isCivilian || m_faction == IA_Faction.CIV) // Civilian Path for aliveCount > 2
         {
-            // Only give direct orders for civilians
-            vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, GetOrigin());
-            RemoveAllOrders();
-            AddOrder(defendPos, IA_AiOrder.Defend);
+            // Only issue new orders if not driving AND has no current orders
+            if (!m_isDriving && !HasOrders())
+            {
+                // Only give direct orders for civilians
+                vector defendPos = IA_Game.rng.GenerateRandomPointInRadius(5, 20, GetOrigin());
+                // No need to call RemoveAllOrders() here because HasOrders() was false
+                AddOrder(defendPos, IA_AiOrder.Defend);
+            }
         }
     }
     
@@ -2116,19 +2176,13 @@ class IA_AiGroup
                     float radius = m_lastAssignedArea.GetRadius() * 0.75; // Stay within the area
                     
                     // Only generate a random patrol if we're not already close to the center
-                    if (vector.Distance(m_lastConfirmedPosition, areaOrigin) > 15)
-                    {
+                  
                         // Generate a random point to patrol to within the area
                         vector patrolPoint = IA_Game.rng.GenerateRandomPointInRadius(1, radius, areaOrigin);
                         
                         // Apply orders
-                        AddOrder(patrolPoint, IA_AiOrder.Move, false);
-                    }
-                    else
-                    {
-                        // We're at the center already, just defend this position
-                        AddOrder(m_lastConfirmedPosition, IA_AiOrder.Defend, false);
-                    }
+                        AddOrder(patrolPoint, IA_AiOrder.Patrol, false);
+
                 }
                 break;
             
@@ -2192,6 +2246,8 @@ class IA_AiGroup
             case IA_AiOrder.SearchAndDestroy:
                 priority += 40; // Combat orders highest priority
                 break;
+			case IA_AiOrder.VehicleMove:
+                return 0;
             case IA_AiOrder.Defend:
                 return 0;
             case IA_AiOrder.GetInVehicle:

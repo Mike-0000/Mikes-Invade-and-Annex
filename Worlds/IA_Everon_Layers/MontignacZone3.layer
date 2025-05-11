@@ -1,0 +1,25 @@
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ Montignac1 {
+  coords 4788.43 166.069 7064.656
+  m_areaGroup 3
+  m_fZoneRadius 200
+  m_areaName "Montignac"
+  m_radius 200
+ }
+ Montignac2 {
+  coords 4529.316 155.314 6854.839
+  m_areaGroup 3
+  m_fZoneRadius 35
+  m_areaName "Montignac Industrial"
+  m_areaType "Property"
+  m_radius 35
+ }
+ Montignac3 {
+  coords 5153.363 174.684 7048.921
+  m_areaGroup 3
+  m_fZoneRadius 65
+  m_areaName "Montignac Farm"
+  m_areaType "Property"
+  m_radius 65
+ }
+}

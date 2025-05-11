@@ -1,0 +1,226 @@
+$grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
+ Armor1 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     20
+    }
+    m_aExcludedTraitLabels {
+     51 50
+    }
+   }
+  }
+  coords 4885.194 28.711 11913.707
+  angleX -0.201
+  angleY -107.545
+  angleZ 0.039
+ }
+ APC2 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     53
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4884.834 28.707 11920.94
+  angleX -0.201
+  angleY -107.545
+  angleZ 0.039
+ }
+ APC3 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     53
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4884.988 28.658 11928.066
+  angleX -1.071
+  angleY -107.543
+  angleZ 0.25
+ }
+ Car1 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4884.631 28.422 11941.437
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Car2 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4884.493 28.305 11946.58
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Car3 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4884.665 28.14 11951.655
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Car4 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4884.496 27.832 11956.803
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Armor2 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     20
+    }
+    m_aExcludedTraitLabels {
+     51 50
+    }
+   }
+  }
+  coords 4884.894 28.681 11906.614
+  angleX -0.201
+  angleY -107.545
+  angleZ 0.039
+ }
+ Car6 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4873.694 28.493 11940.813
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Car7 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4873.542 28.392 11945.96
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Car8 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4873.716 28.286 11951.035
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Car9 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4873.548 28.106 11956.186
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Truck1 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     54 37
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4884.273 27.156 11968.758
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+ Truck2 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     54 37
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4884.256 27.403 11963.625
+  angleX -1.059
+  angleY -107.543
+  angleZ 0.295
+ }
+}

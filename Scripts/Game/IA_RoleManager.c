@@ -207,6 +207,14 @@ class IA_RoleManager
         return string.Format("%1/%2", count, limit);
     }
     
+    // Get the role for a specific player
+    IA_PlayerRole GetPlayerRole(int playerId)
+    {
+        if (m_PlayerRoles.Contains(playerId))
+            return m_PlayerRoles[playerId];
+        return IA_PlayerRole.NONE;
+    }
+    
     // Get human-readable name for a role
     static string GetRoleName(IA_PlayerRole role)
     {

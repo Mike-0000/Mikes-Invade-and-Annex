@@ -198,7 +198,7 @@ class IA_AreaInstance
 
 	    // Initialize scaling factor BEFORE generating AI
 	    float scaleFactor = IA_Game.GetAIScaleFactor();
-	    int playerCount = IA_Game.GetUSPlayerCount();
+	    int playerCount = IA_Game.GetPlayerCount();
 	    int maxVehicles = IA_Game.GetMaxVehiclesForPlayerCount(3);
 	    inst.UpdatePlayerScaling(playerCount, scaleFactor, maxVehicles);
 	    
@@ -268,7 +268,7 @@ class IA_AreaInstance
         }
         else
         {
-            Resource res = Resource.Load("{33DA4D098C409421}Prefabs/Tasks/CTF_TriggerTask_Capture.et");
+            Resource res = Resource.Load("{EE9A99488B40628B}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_SearchAndDestroy.et");
             IEntity taskEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(spawnOrigin));
             SCR_TriggerTask task = SCR_TriggerTask.Cast(taskEnt);
             task.SetTitle(title);
@@ -281,7 +281,7 @@ class IA_AreaInstance
     private void CreateTask(string title, string description, vector spawnOrigin)
     {
         //Print("[DEBUG] CreateTask called with title: " + title + ", spawnOrigin: " + spawnOrigin, LogLevel.NORMAL);
-        Resource res = Resource.Load("{33DA4D098C409421}Prefabs/Tasks/CTF_TriggerTask_Capture.et");
+        Resource res = Resource.Load("{33DA4D098C409421}Prefabs/Tasks/TriggerTask.et");
         IEntity taskEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(spawnOrigin));
         m_currentTaskEntity = SCR_TriggerTask.Cast(taskEnt);
         m_currentTaskEntity.SetTitle(title);

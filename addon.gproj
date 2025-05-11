@@ -1,8 +1,22 @@
 GameProject {
- ID "MikesInvadeandAnnex"
+ ID "MikesInvadeandAnnexDev"
  GUID "64F56A34F51B53BD"
- TITLE "Mikes Invade and Annex"
+ TITLE "Mikes Invade and Annex Dev Branch"
  Dependencies {
   "58D0FB3206B6F859"
+ }
+ Configurations {
+  GameProjectConfig PC {
+  }
+  GameProjectConfig XBOX_ONE {
+  }
+  GameProjectConfig XBOX_SERIES {
+  }
+  GameProjectConfig PS4 {
+  }
+  GameProjectConfig PS5 {
+  }
+  GameProjectConfig HEADLESS {
+  }
  }
 }

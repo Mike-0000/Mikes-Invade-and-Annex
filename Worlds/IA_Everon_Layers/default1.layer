@@ -1,0 +1,228 @@
+SCR_AIWorld : "{70CCCF16487C927F}Prefabs/AI/SCR_AIWorld_Eden.et" {
+ components {
+  NavmeshWorldComponent "{5584F30E67F617AD}" {
+   NavmeshSettings NavmeshWorld "{50FC63BEBE3973C5}" {
+    NavmeshFilesConfig BaseNavmeshFilesConfig "{60B8A297F9E52831}" {
+     NavmeshFile "{A07353FE17EB2C49}worlds/MP/Navmeshes/CTI_Campaign_Eden.nmn"
+    }
+   }
+  }
+  NavmeshWorldComponent "{5584F30EEFEE1223}" {
+   NavmeshSettings ChimeraNavmeshWorld "{50FC63BEBE3973C5}" {
+    NavmeshFilesConfig BaseNavmeshFilesConfig "{60B8A297F3B4EE8A}" {
+     NavmeshFile "{3D08F0F26F771347}worlds/MP/Navmeshes/CTI_Campaign_Eden_vehicles.nmn"
+    }
+   }
+  }
+ }
+ coords 9238.782 85.906 1546.516
+}
+PerceptionManager PerceptionManager : "{028DAEAD63E056BE}Prefabs/World/Game/PerceptionManager.et" {
+ coords 1891.659 11.438 1822.161
+}
+SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
+ components {
+  SCR_DebriefingScreenComponent "{65552AEEB5A2CE5E}" {
+   m_BaseLayout SCR_DebriefingScreenUnevenFourTiles "{65552AEF3C0B8B52}" {
+    m_sFourUnevenTilesLayout "{DFE8A23A8550514C}UI/layouts/Menus/DeployMenu/DebriefingScreenFourUnevenTiles.layout"
+    m_TopLeftTile SCR_DebriefingScreenBigImageContent "{5D349E30244A4792}" {
+     m_sContentImage "{62897631F4A6C7F3}UI/Textures/MissionLoadingScreens/Reforger_ConflictArt_UI.edds"
+    }
+    m_TopRightTile SCR_DebriefingScreenFinishedObjectivesContent "{5D349E305DB53338}" {
+     m_bIsInteractible 1
+     m_sTitleText "#AR-DebriefingScreen_Objectives"
+     m_sFinishedObjectivesTileLayout "{B3A6950DF2D34576}UI/layouts/Menus/DeployMenu/DebriefingScreenFinishedObjectivesTile.layout"
+    }
+    m_BottomLeftTile SCR_DebriefingScreenSummaryContent "{5D349E3056A9E455}" {
+     m_sTitleText "#AR-DebriefingScreen_Debriefing"
+     m_sSubtitleText "#AR-DebriefingScreen_Subtitle"
+     m_sSubtitleLostText "#AR-DebriefingScreen_Subtitle_Lost"
+    }
+    m_BottomRightTile SCR_DebriefingScreenStatisticsContent "{5D349E3049CC104E}" {
+     m_sTitleText "#AR-DebriefingScreen_Statistics"
+     m_aStatistics {
+      SCR_DebriefingScreenStatisticShotsFired "{5D349E306369C7B4}" {
+      }
+      SCR_DebriefingScreenStatisticKills "{5D349E30617925FA}" {
+      }
+      SCR_DebriefingScreenStatisticDeaths "{5D349E306543E543}" {
+      }
+      SCR_DebriefingScreenStatisticDistanceWalked "{5D349E309B4CDF81}" {
+      }
+      SCR_DebriefingScreenStatisticDistanceDriven "{5D349E3098F208B6}" {
+      }
+     }
+    }
+   }
+  }
+  SCR_EntityCatalogManagerComponent "{5C9AD18D91F9E87E}" {
+   m_aEntityCatalogs {
+    SCR_EntityCatalogMultiList "{5C9AD18D9D38E99E}" : "{AB06FC03FBA685C8}Configs/EntityCatalog/CIV/Characters_EntityCatalog_CIV.conf" {
+    }
+    SCR_EntityCatalogMultiList "{5C9AD18D9B68853E}" : "{7C53DF3E1349C5B8}Configs/EntityCatalog/CIV/Vehicles_EntityCatalog_CIV.conf" {
+    }
+    SCR_EntityCatalogMultiList "{61C8EED3993E46B7}" : "{45152C9ADA59EEEB}Configs/EntityCatalog/CIV/Groups_EntityCatalog_CIV.conf" {
+    }
+    SCR_EntityCatalogMultiList "{61C8EED39E8B0DC3}" : "{361D4401A7A7102A}Configs/EntityCatalog/CIV/WeaponTripod_EntityCatalog_CIV.conf" {
+    }
+    SCR_EntityCatalogMultiList "{5C9AD18D98F9181C}" : "{9D7E5804BB2E9B28}Configs/EntityCatalog/CIV/InventoryItems_EntityCatalog_CIV.conf" {
+     m_aMultiLists {
+      SCR_EntityCatalogMultiListEntry "{621AA63A70D132BF}" {
+       m_sIdentifier "UNKNOWN"
+      }
+     }
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F47DB28DC}" : "{B56E8B4D4B195559}Configs/EntityCatalog/US/Characters_EntityCatalog_US.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F45094FCE}" : "{3B679F1799D55F6F}Configs/EntityCatalog/USSR/Characters_EntityCatalog_USSR.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F4A4AABBC}" : "{4E70E7C4C2C17D4A}Configs/EntityCatalog/US/Groups_EntityCatalog_US.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F4B8D07FF}" : "{37D5B75AAC3E72EA}Configs/EntityCatalog/USSR/Groups_EntityCatalog_USSR.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F48FDFF98}" : "{5F7EC52FC40A03E2}Configs/EntityCatalog/US/InventoryItems_EntityCatalog_US.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F4D5A3A80}" : "{C53421647C3D0D2E}Configs/EntityCatalog/USSR/InventoryItems_EntityCatalog_USSR.conf" {
+    }
+    SCR_EntityCatalog "{654F7B2F524E62B1}" : "{0BF36EFF9FFAF92B}Configs/EntityCatalog/US/SupplyContainerItems_EntityCatalog_US.conf" {
+    }
+    SCR_EntityCatalog "{654F7B2F530F1446}" : "{B4CA6761AC935808}Configs/EntityCatalog/USSR/SupplyContainerItems_EntityCatalog_USSR.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F53C7C3AE}" : "{D83A5EFEEF6CBF61}Configs/EntityCatalog/US/Vehicles_EntityCatalog_US.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F50D555D9}" : "{09C2ED5F617A0390}Configs/EntityCatalog/USSR/Vehicles_EntityCatalog_USSR.conf" {
+    }
+    SCR_EntityCatalog "{654F7B2F51DA9B97}" : "{0E4B62F186F97C43}Configs/EntityCatalog/US/WeaponTripod_EntityCatalog_US.conf" {
+    }
+    SCR_EntityCatalog "{654F7B2F56E1FBBC}" : "{DDF17C8C140BD1F2}Configs/EntityCatalog/USSR/WeaponTripod_EntityCatalog_USSR.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F667FC3C6}" : "{6F6056A597C462CC}Configs/EntityCatalog/FIA/Characters_EntityCatalog_FIA.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F672E362B}" : "{2F785E9F5C561C50}Configs/EntityCatalog/FIA/Groups_EntityCatalog_FIA.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F67DECDD8}" : "{E908001749419691}Configs/EntityCatalog/FIA/InventoryItems_EntityCatalog_FIA.conf" {
+    }
+    SCR_EntityCatalog "{654F7B2F648AE98C}" : "{C9187BDF77D40F34}Configs/EntityCatalog/FIA/SupplyContainerItems_EntityCatalog_FIA.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F654C40E5}" : "{EBAEEC261D3849A6}Configs/EntityCatalog/FIA/Vehicles_EntityCatalog_FIA.conf" {
+    }
+    SCR_EntityCatalog "{654F7B2F6A7CFAA1}" : "{788ADC7B3D869324}Configs/EntityCatalog/FIA/WeaponTripod_EntityCatalog_FIA.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F71982749}" : "{EAD206A79A774696}Configs/EntityCatalog/FactionLess/Characters_EntityCatalog_Factionless.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F764CD8CB}" : "{2E8FFD9558E26113}Configs/EntityCatalog/FactionLess/Groups_EntityCatalog_Factionless.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F7713DC4C}" : "{BB12292052E2F5B8}Configs/EntityCatalog/FactionLess/InventoryItems_EntityCatalog_Factionless.conf" {
+    }
+    SCR_EntityCatalog "{654F7B2F745D6B46}" : "{B80293331FB7BFCF}Configs/EntityCatalog/FactionLess/SupplyContainerItems_EntityCatalog_Factionless.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F75978705}" : "{77243A71AF0E5A75}Configs/EntityCatalog/FactionLess/Vehicles_EntityCatalog_Factionless.conf" {
+    }
+    SCR_EntityCatalogMultiList "{654F7B2F7A82975D}" : "{0CC054C7DEDC766E}Configs/EntityCatalog/FactionLess/WeaponTripod_EntityCatalog_Factionless.conf" {
+    }
+   }
+  }
+  SCR_GameModeHealthSettings "{5A22E11F9ACBB1DF}" {
+   m_bPermitUnconsciousVON 1
+  }
+  SCR_RespawnBriefingComponent "{65552AF13AFD04B3}" {
+   m_sJournalConfigPath "{13438C835CFF21FB}Configs/Journal/Journal.conf"
+   m_Info SCR_UIInfo "{65552AF3152BD044}" {
+    Description "#AR-Campaign_GamemodeTutorial"
+   }
+   m_aGameModeHints {
+    SCR_UIInfo "{65552AF33BED1C68}" {
+     Name "#AR-BriefingCampaign_Hint_Name_01"
+     Description "#AR-BriefingCampaign_Hint_Description_01"
+     Icon "{324E923535DCACF8}UI/Textures/DeployMenu/Briefing/conflict_HintBanner_1_UI.edds"
+    }
+   }
+   m_aWinConditions {
+    SCR_BriefingVictoryCondition "{65552AF3E7A9A448}" {
+     victoryCondition SEIZE
+     name "Seize the Entire Island"
+    }
+   }
+  }
+  SCR_RespawnSystemComponent "{56B2B4793051E7C9}" {
+   m_SpawnLogic SCR_MenuSpawnLogic "{654F7B2E826DD03D}" {
+   }
+   m_fDeployMenuOpenDelay 3
+  }
+  SCR_WelcomeScreenComponent "{65552AF6586B943C}" {
+   m_sHeaderTitle "Welcome to Mike's Invade and Annex"
+   m_sHeaderSubtitle "Welcome to Mike's Invade and Annex"
+   m_BaseLayout SCR_WelcomeScreenThreeHorizontalColumns "{65552AF65DB4999B}" {
+    m_LeftColumn SCR_WelcomeScreenIntroductionContent "{65552AF67A42FB82}" {
+     m_sTitleText "Invade and Annex Introduction"
+     m_aIntroduction {
+      SCR_WelcomeScreenIntroduction "{65552AF7939A1BCE}" {
+       m_sContentTitleText "Introduction"
+       m_sContentDescriptionText "Invade and Annex is a Cooperative gamemode where the Players face off against a dynamically generated AI force. It is a Island Conquer mission similar to Conflict, but you only have a single AO to handle at once."
+      }
+     }
+    }
+    m_MiddleColumn SCR_WelcomeScreenIntroductionContent "{65552AF71902BF3E}" {
+     m_sTitleText "Development Progress"
+     m_aIntroduction {
+      SCR_WelcomeScreenIntroduction "{65552AF727D8778F}" {
+       m_sContentTitleText "Alpha Stage"
+       m_sContentDescriptionText "During Alpha the feature set will slowly be built up to match previous implementations of Invade and Annex while also including new gameplay components that leverage Reforrger's new functionality."
+      }
+     }
+    }
+    m_RightColumn SCR_WelcomeScreenIntroductionContent "{65552AF89C8C5544}" {
+     m_sTitleText "Discord Info"
+     m_aIntroduction {
+      SCR_WelcomeScreenIntroduction "{65552AF8A11A40FE}" {
+       m_sContentTitleText "Discord"
+       m_sContentDescriptionText "For more information or to provide suggestions access the Discord here: discord.gg/VXYxGFnpbm"
+      }
+     }
+    }
+   }
+  }
+ }
+ coords 1406.474 38 2902.029
+ m_aDisabledResourceTypes {
+  0
+ }
+ {
+  SCR_FactionManager FactionManager_Editor1 : "{4A188E44289B9A50}Prefabs/MP/Managers/Factions/FactionManager_Editor.et" {
+   coords 0 0 0
+   Factions {
+    SCR_Faction "{56DEAC40D2DBC8B1}" {
+     m_bIsPlayable 1
+    }
+    SCR_Faction "{56DEAC40D3C2E623}" {
+     m_bShowInWelcomeScreenIfNonPlayable 0
+    }
+    SCR_Faction "{56DEAC40D132400B}" {
+     m_bShowInWelcomeScreenIfNonPlayable 0
+    }
+   }
+  }
+  RadioManagerEntity : "{B8E09FAB91C4ECCD}Prefabs/Radio/RadioManager.et" {
+   coords 0 0 0
+  }
+  SCR_EditorSettingsEntity {
+   coords -1.323 0 1.368
+  }
+  SCR_BaseTaskManager : "{87208DAD6F3C0DE2}Prefabs/MP/Managers/Tasks/TaskManager_Editor.et" {
+   coords 0 0 0
+  }
+  SCR_LoadoutManager : "{B54D08AEA74A5354}Prefabs/MP/Managers/Loadouts/LoadoutManager_Editor.et" {
+   coords 0 0 0
+  }
+ }
+}
+IA_VehicleManager : "{07F25000A2274994}Components/VehicleManager.et" {
+ coords 9238.838 85.906 1546.349
+}
+IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
+ coords 4829.486 28.5 11737.061
+}
+IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
+ coords 4828.903 28.5 11735.593
+ m_numberOfGroups 9
+}

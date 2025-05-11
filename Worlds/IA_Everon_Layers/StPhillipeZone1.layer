@@ -1,0 +1,25 @@
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ StPhillipe1 {
+  coords 4471.31 13.145 10720.052
+  m_areaGroup 1
+  m_fZoneRadius 300
+  m_areaName "St Phillipe"
+  m_radius 300
+ }
+ StPhillipe2 {
+  coords 4437.092 1.625 11098.566
+  m_areaGroup 1
+  m_fZoneRadius 80
+  m_areaName "St Phillipe Docks"
+  m_areaType "Docks"
+  m_radius 80
+ }
+ StPhillipe3 {
+  coords 4550.358 16.094 10458.317
+  m_areaGroup 1
+  m_fZoneRadius 75
+  m_areaName "St Phillipe Factory"
+  m_areaType "Military"
+  m_radius 75
+ }
+}

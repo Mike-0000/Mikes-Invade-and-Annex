@@ -1,0 +1,42 @@
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ Levie3 {
+  coords 6351.554 5.549 9650.465
+  m_areaGroup 8
+  m_fZoneRadius 125
+  m_areaName "Kermovan"
+  m_areaType "Town"
+  m_radius 125
+ }
+ Levie7 {
+  coords 5838.187 4.594 9741.737
+  m_areaGroup 8
+  m_fZoneRadius 125
+  m_areaName "Kermovan Powerplant"
+  m_areaType "Military"
+  m_radius 125
+ }
+ Etoupe {
+  coords 5358.154 17.895 10007.355
+  m_areaGroup 8
+  m_fZoneRadius 60
+  m_areaName "Etoupe"
+  m_areaType "Town"
+  m_radius 60
+ }
+ Etoupe2 {
+  coords 4998.776 25.431 9948.156
+  m_areaGroup 8
+  m_fZoneRadius 90
+  m_areaName "Etoupe Farms"
+  m_areaType "Military"
+  m_radius 90
+ }
+ Etoupe3 {
+  coords 5385.445 45.782 10540.282
+  m_areaGroup 8
+  m_fZoneRadius 150
+  m_areaName "Etoupe Military"
+  m_areaType "Military"
+  m_radius 150
+ }
+}

@@ -6,7 +6,10 @@ enum IA_AiOrder
     SearchAndDestroy,
     GetInVehicle,
     GetOutOfVehicle,
-    PriorityMove
+    PriorityMove,
+	VehicleMove,
+	CivilianVehicleMove,
+
 };
 
 ResourceName IA_AiOrderResource(IA_AiOrder order)

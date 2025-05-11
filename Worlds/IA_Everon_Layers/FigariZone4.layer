@@ -1,0 +1,42 @@
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ Figari1 {
+  coords 5271.381 62.623 5356.041
+  m_areaGroup 4
+  m_fZoneRadius 90
+  m_areaName "Figari"
+  m_areaType "Town"
+  m_radius 90
+ }
+ Provins {
+  coords 5514.057 95.845 6082.166
+  m_areaGroup 4
+  m_fZoneRadius 50
+  m_areaName "Provins"
+  m_areaType "Military"
+  m_radius 50
+ }
+ Provins2 {
+  coords 5689.963 91.936 5891.127
+  m_areaGroup 4
+  m_fZoneRadius 25
+  m_areaName "Provins Power Station"
+  m_areaType "Property"
+  m_radius 25
+ }
+ Provins3 {
+  coords 5275.619 132.345 4590.467
+  m_areaGroup 4
+  m_fZoneRadius 60
+  m_areaName "Figari Lumber Yard"
+  m_areaType "SmallMilitary"
+  m_radius 60
+ }
+ Morton {
+  coords 5119.357 15.051 3990.188
+  m_areaGroup 4
+  m_fZoneRadius 150
+  m_areaName "Morton"
+  m_areaType "Town"
+  m_radius 150
+ }
+}

@@ -47,7 +47,15 @@ class IA_MissionInitializer : GenericEntity
 	    
 	    return groupsArray[m_currentIndex];
 	}
+	void FinishGame(){
 	
+		SCR_BaseGameMode scr_gm = SCR_BaseGameMode.Cast(GetGame().GetGameMode());
+		SCR_FactionManager factMan = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+		array<int> factIntArray = {factMan.GetFactionIndex(factMan.GetFactionByKey("US"))};
+		SCR_GameModeEndData gamemodeEndData = SCR_GameModeEndData.Create(EGameOverTypes.VICTORY, null, factIntArray);
+		scr_gm.EndGameMode(gamemodeEndData);
+	
+	}
 	void ProceedToNextZone()
 	{
 	    if (!groupsArray || groupsArray.IsEmpty())
@@ -58,7 +66,8 @@ class IA_MissionInitializer : GenericEntity
 	    
 	    if (m_currentIndex < 0 || m_currentIndex >= groupsArray.Count())
 	    {
-	        ////Print("[DEBUG_ZONE_GROUP] GAME FINISHED!!! All zone groups completed or invalid index.", LogLevel.WARNING);
+			Print("GAME FINISHED!!! Waiting 30 seconds and ending gamemode.", LogLevel.WARNING);
+	        GetGame().GetCallqueue().CallLater(FinishGame, 30000);
 	        return;
 	    }
 	    
@@ -227,92 +236,96 @@ class IA_MissionInitializer : GenericEntity
 		
 		// Debug info for markers in current group
 		
-		// First, find all markers for current group and their initial completion status
-		foreach(IA_AreaMarker marker : markers) {
-			if(!marker || marker.m_areaGroup != currentGroup)
+		// First, find all markers for current group, count them, and initialize their completion status tracking
+		int amountOfZones = 0;
+		foreach(IA_AreaMarker marker_counter : markers) { // Changed loop variable name for clarity
+			if(!marker_counter || marker_counter.m_areaGroup != currentGroup)
 				continue;
 				
-			// Add this zone to our tracking array
+			// Add this zone to our tracking array, initialized to false
 			zoneCompletionStatus.Insert(false);
+			amountOfZones++;
 		}
 		
 		////Print("Running CheckCurrentZoneComplete 2",LogLevel.NORMAL);
-		// If no markers found for this group, something is wrong
-		if(zoneCompletionStatus.Count() == 0) {
-			//Print("[ERROR] No markers found for group " + currentGroup, LogLevel.ERROR);
+		// If no markers found for this group, this is an issue based on original logic.
+		if(amountOfZones == 0) { // Consistent with original check on zoneCompletionStatus.Count()
+			//Print("[ERROR] No markers found for group " + currentGroup + ". Cannot check completion.", LogLevel.ERROR);
 			return;
 		}
 		
 		////Print("Running CheckCurrentZoneComplete 3",LogLevel.NORMAL);
 		// Now check each marker in the current group
-		int currentZoneIndex = 0;
-		int amountOfZones = 0;
-		int currentScore = 0;
+		int currentZoneIndex = 0; // This will be an index for m_currentAreaInstances and zoneCompletionStatus
+		int actualCompletedZones = 0; // Accurate count of zones currently meeting completion criteria
 		
-		foreach(IA_AreaMarker marker : markers) {
-			if(!marker || marker.m_areaGroup != currentGroup)
-				continue;
-			amountOfZones++;
-		}
-		
-		//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " has " + amountOfZones + " zones to complete", LogLevel.NORMAL);
+		////Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " has " + amountOfZones + " zones to complete.", LogLevel.NORMAL);
 		
 		foreach(IA_AreaMarker marker : markers) {
 			if(!marker || marker.m_areaGroup != currentGroup)
 				continue;
 			
-			////Print("Running CheckCurrentZoneComplete 3.5",LogLevel.NORMAL);
-			// Find corresponding area instance
-			if(currentZoneIndex >= m_currentAreaInstances.Count()) {
-				//Print("[ERROR] More markers than area instances for group " + currentGroup, LogLevel.ERROR);
-				return;
+			////Print("Running CheckCurrentZoneComplete 3.5 for marker: " + marker.GetAreaName(),LogLevel.NORMAL);
+			// Ensure currentZoneIndex is within bounds for both m_currentAreaInstances and zoneCompletionStatus
+			if(currentZoneIndex >= m_currentAreaInstances.Count() || currentZoneIndex >= zoneCompletionStatus.Count()) {
+				//Print("[ERROR] Index out of bounds. Marker/Instance/StatusArray desync for group " + currentGroup + " at index " + currentZoneIndex, LogLevel.ERROR);
+				return; // Stop processing to prevent crash
 			}
 			
 			////Print("Running CheckCurrentZoneComplete 3.75",LogLevel.NORMAL);
-			// Skip if no task entity
 			IA_AreaInstance instance = m_currentAreaInstances[currentZoneIndex];
-			if(!instance || !instance.GetCurrentTaskEntity()){
-				//Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " has no task entity, marking as complete", LogLevel.NORMAL);
-				currentScore++;
-				currentZoneIndex++;
-				continue;
+			if(!instance) {
+			    //Print("[WARNING] Null IA_AreaInstance at index " + currentZoneIndex + " for group " + currentGroup, LogLevel.WARNING);
+			    currentZoneIndex++; // Increment to process next marker correctly
+			    continue;
 			}
 				
 			// Get US faction score (now on 0-100 scale)
 			float factionScore = marker.GetFactionScore("US");
 			//Print("[DEBUG_ZONE_SCORE_DEBUG] Marker name: " + marker.GetAreaName() + ", US faction score: " + factionScore + "/100", LogLevel.WARNING);
 			
-			//Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " score is " + factionScore + "/100", LogLevel.NORMAL);
-			
-			// Mark this zone as complete if score threshold met (now 100)
 			if(factionScore >= 100) {
-				//Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " has reached completion threshold!", LogLevel.WARNING);
-				if (currentZoneIndex < zoneCompletionStatus.Count())
-					zoneCompletionStatus[currentZoneIndex] = true;
+				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " IS complete (Score: " + factionScore + ").", LogLevel.WARNING);
+				actualCompletedZones++;
+				zoneCompletionStatus[currentZoneIndex] = true; // Update status array
 					
-				if (instance && instance.GetCurrentTaskEntity())
+				// If there's an active task for this completed zone, finish it.
+				if (instance.GetCurrentTaskEntity()) {
+				    //Print("[DEBUG_ZONE_GROUP] Finishing task for completed zone: " + marker.GetAreaName(), LogLevel.NORMAL);
 					instance.GetCurrentTaskEntity().Finish();
-					
-				currentScore++;
+				}
 			}
-			else {
-				//Print("[DEBUG_ZONE_GROUP] Zone " + currentZoneIndex + " still needs " + (100 - factionScore) + " more points to complete", LogLevel.NORMAL);
+			else { // factionScore < 100
+				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " is NOT complete (Score: " + factionScore + ").", LogLevel.NORMAL);
+				zoneCompletionStatus[currentZoneIndex] = false; // Update status array
+				
+				// If score is low AND there's no active task (it might have been finished previously or never created),
+				// then (re)create the task.
+				if (instance.GetCurrentTaskEntity() == null) {
+				    //Print("[DEBUG_ZONE_GROUP] Score low for " + marker.GetAreaName() + " and no active task. (Re)creating task.", LogLevel.WARNING);
+				    vector pos = marker.GetOrigin();
+				    string areaName = marker.GetAreaName(); 
+				    string taskTitle = "Capture " + areaName;
+				    string taskDesc = "Eliminate enemy presence and secure " + areaName;
+				    instance.QueueTask(taskTitle, taskDesc, pos);
+				}
 			}
 			
 			currentZoneIndex++;
 		}
 		
-		//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " progress: " + currentScore + "/" + amountOfZones + " zones completed", LogLevel.WARNING);
+		//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " progress: " + actualCompletedZones + "/" + amountOfZones + " zones completed.", LogLevel.WARNING);
 		
-		if(currentScore >= amountOfZones){
-			//Print("[INFO] All zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
+		if(actualCompletedZones >= amountOfZones){ // Use the accurate count
+			//Print("[INFO] All " + amountOfZones + " zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
 			m_currentIndex++;
-			m_currentAreaInstances.Clear();
-			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
-			ProceedToNextZone();
+			if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
+			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Stop checking this group
+			ProceedToNextZone(); // Start next group
 		}
 		else {
-			//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " still needs " + (amountOfZones - currentScore) + " more zones to complete", LogLevel.NORMAL);
+			//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " still needs " + (amountOfZones - actualCompletedZones) + " more zones to complete. Will re-check.", LogLevel.NORMAL);
+			// Callqueue will call this method again.
 		}
 	}
 
@@ -354,59 +367,9 @@ class IA_MissionInitializer : GenericEntity
 		
       
 
-        ////Print("[IA_MissionInitializer] Dynamic areas/tasks set up. Initialization complete.", LogLevel.NORMAL);
 	
 	}
 	
-	
-	
-	/*
-void RandomizeMarkerGroups(int groupCount)
-    {
-        array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
-        if (markers.IsEmpty()) return;
-
-        // 1) Shuffle the markers with the same logic you currently use
-        array<IA_AreaMarker> shuffledMarkers = {};
-        while (!markers.IsEmpty())
-        {
-            int i = IA_Game.rng.RandInt(0, markers.Count());
-            shuffledMarkers.Insert(markers[i]);
-            markers.Remove(i);
-        }
-
-        // 2) Evenly distribute them among the desired groups
-        //    (so if you have 12 markers and 3 groups, each group gets 4).
-        int count       = shuffledMarkers.Count();
-        int chunkSize   = Math.Ceil(count / groupCount);
-        int currentGroup = 1;
-        int assignedCountInGroup = 0;
-
-        // Loop the shuffled markers in order and assign them to a group
-        for (int x = 0; x < shuffledMarkers.Count(); x++)
-        {
-            IA_AreaMarker marker = shuffledMarkers[x];
-            marker.m_areaGroup = currentGroup;
-            assignedCountInGroup++;
-
-            // If we've assigned enough in this group, move to the next
-            if (assignedCountInGroup >= chunkSize)
-            {
-                assignedCountInGroup = 0;
-                currentGroup++;
-
-                // Edge case: if we exceed groupCount, clamp to last group.
-                if (currentGroup > groupCount)
-                    currentGroup = groupCount;
-            }
-        }
-
-        // At this point, each marker has m_areaGroup 1..N
-        ////Print("[INFO] Randomized " + shuffledMarkers.Count() + " markers into " + groupCount + " groups.", LogLevel.NORMAL);
-    }
-	
-	
-	*/
 	
 	
 	
