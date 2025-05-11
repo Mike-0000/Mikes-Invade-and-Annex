@@ -224,3 +224,7 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
   angleZ 0.295
  }
 }
+GenericEntity : "{45C675ED3CFBBEC5}Prefabs/Props/Military/Compositions/US/ArsenalBox_US.et" {
+ coords 4931.652 28.775 11778.852
+ angleY 177.531
+}

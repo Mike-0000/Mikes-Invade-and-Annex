@@ -29,6 +29,7 @@ modded class SCR_SwitchSeatAction
 
     override bool CanBePerformedScript(IEntity user)
     {
+		Print("Replication Status = " + Replication.IsServer(),LogLevel.NORMAL);
         BaseCompartmentSlot compartment = GetCompartmentSlot();
         if (!compartment)
             return super.CanBePerformedScript(user); // Should be caught by base class, but good practice

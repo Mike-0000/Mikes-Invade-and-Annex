@@ -40,3 +40,15 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_radius 150
  }
 }
+GenericEntity : "{AD59EDEAA26CE792}Prefabs/Props/Military/Compositions/USSR/ArsenalBox_USSR.et" {
+ coords 4929.441 28.775 11778.766
+ angleY 172.346
+}
+GenericEntity : "{E83944C37C6FA465}PrefabsEditable/Auto/Props/Military/Compositions/FIA/E_ArsenalBox_FIA.et" {
+ coords 4927.27 28.775 11778.711
+ angleY 178.242
+}
+GenericEntity : "{F542F974956C255F}Prefabs/Props/Military/Compositions/CIV/ArsenalBox_CIV.et" {
+ coords 4925.023 28.775 11778.743
+ angleY 176.538
+}

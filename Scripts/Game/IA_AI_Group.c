@@ -334,7 +334,8 @@ class IA_AiGroup
         for (int i = 0; i < actualUnitsToSpawn; i++)
         {
 			string charPrefabPath = GetRandomUnitPrefab(faction);
-			
+			if(charPrefabPath == "")
+				continue;
 
             vector unitSpawnPos = groundPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
             Resource charRes = Resource.Load(charPrefabPath);
@@ -410,7 +411,7 @@ class IA_AiGroup
         for (int i = 0; i < unitCount; i++)
         {
             string charPrefabPath = GetRandomUnitPrefab(faction);
-            if (charPrefabPath.IsEmpty())
+            if (charPrefabPath == "")
             {
                  continue;
             }

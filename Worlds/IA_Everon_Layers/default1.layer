@@ -149,6 +149,8 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
    }
    m_fDeployMenuOpenDelay 3
   }
+  SCR_RestoreEditorModesComponent "{655645CDA43F46EB}" {
+  }
   SCR_WelcomeScreenComponent "{65552AF6586B943C}" {
    m_sHeaderTitle "Welcome to Mike's Invade and Annex"
    m_sHeaderSubtitle "Welcome to Mike's Invade and Annex"
@@ -216,11 +218,21 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   }
  }
 }
+ScriptedChatEntity : "{F69BC912AC8236F9}Prefabs/MP/ScriptedChatEntity.et" {
+ coords 1510.078 0 2870.772
+}
 IA_VehicleManager : "{07F25000A2274994}Components/VehicleManager.et" {
  coords 9238.838 85.906 1546.349
 }
 IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
  coords 4829.486 28.5 11737.061
+}
+SCR_SpawnPoint : "{5A2220DD0C16958B}Prefabs/MP/Spawning/SpawnPoint_US.et" {
+ coords 4937.396 28.775 11763.429
+ angleY 91.248
+ m_Info SCR_UIInfo "{56B4CC4ECACA2C37}" {
+  Name "HQ"
+ }
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
  coords 4828.903 28.5 11735.593

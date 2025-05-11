@@ -51,16 +51,16 @@ class IA_RoleManager
         // Set default role limits
         // These can be adjusted based on game balance needs
         m_RoleLimits[IA_PlayerRole.NONE] = 999; // No limit for default/none role
-        m_RoleLimits[IA_PlayerRole.RIFLEMAN] = 999; // No practical limit for riflemen
-        m_RoleLimits[IA_PlayerRole.MACHINEGUNNER] = 4; // Example: Limit to 4 machine gunners
-        m_RoleLimits[IA_PlayerRole.GRENADIER] = 4;
-        m_RoleLimits[IA_PlayerRole.MARKSMAN] = 4;
-        m_RoleLimits[IA_PlayerRole.MEDIC] = 6;
-        m_RoleLimits[IA_PlayerRole.ANTITANK_LIGHT] = 6;
-        m_RoleLimits[IA_PlayerRole.ANTITANK_HEAVY] = 2; // More restricted for balance
+        m_RoleLimits[IA_PlayerRole.RIFLEMAN] = 128; // No practical limit for riflemen
+        m_RoleLimits[IA_PlayerRole.MACHINEGUNNER] = 8; // Example: Limit to 4 machine gunners
+        m_RoleLimits[IA_PlayerRole.GRENADIER] = 8;
+        m_RoleLimits[IA_PlayerRole.MARKSMAN] = 5;
+        m_RoleLimits[IA_PlayerRole.MEDIC] = 10;
+        m_RoleLimits[IA_PlayerRole.ANTITANK_LIGHT] = 12;
+        m_RoleLimits[IA_PlayerRole.ANTITANK_HEAVY] = 4; // More restricted for balance
         m_RoleLimits[IA_PlayerRole.TEAMLEADER] = 12;
-        m_RoleLimits[IA_PlayerRole.PILOT] = 8;
-        m_RoleLimits[IA_PlayerRole.CREWMAN] = 12;
+        m_RoleLimits[IA_PlayerRole.PILOT] = 4;
+        m_RoleLimits[IA_PlayerRole.CREWMAN] = 5;
         
         Print("IA_RoleManager initialized", LogLevel.NORMAL);
     }

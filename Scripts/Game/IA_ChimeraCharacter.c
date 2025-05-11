@@ -1,7 +1,7 @@
 modded class SCR_ChimeraCharacter{
 	
 	[RplProp(onRplName: "OnRoleChanged")]
-	private IA_PlayerRole m_eReplicatedRole;
+	IA_PlayerRole m_eReplicatedRole;
 	
 	private IA_PlayerRole m_eCurrentRole;
 	

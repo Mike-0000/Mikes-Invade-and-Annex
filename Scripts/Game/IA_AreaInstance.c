@@ -69,8 +69,8 @@ class IA_AreaInstance
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
     private int m_reinforcementGroupsSpawned = 0;     // Groups spawned in this attack cycle
     private int m_reinforcementWaveDelayTimer = 0;    // Ticks until next wave
-    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = 15;
-    private const int REINFORCEMENT_WAVE_DELAY_TICKS = 15;   
+    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = 4;
+    private const int REINFORCEMENT_WAVE_DELAY_TICKS = 5;   
     // --- END ADDED ---
 
     // --- Vehicle Reinforcement System ---

@@ -1384,7 +1384,7 @@ class IA_VehicleManager: GenericEntity
     static bool CanPlayerPilotVehicle(IEntity user, BaseCompartmentSlot compartment, out string reason)
     {
         reason = ""; // Default to no reason
-
+		SCR_ChimeraCharacter chimeraCharacter = SCR_ChimeraCharacter.Cast(user);
         // Check if it's a pilot seat
         if (compartment.GetType() == ECompartmentType.PILOT)
         {
@@ -1460,7 +1460,7 @@ class IA_VehicleManager: GenericEntity
                         IA_RoleManager roleManager = IA_RoleManager.GetInstance();
                         if (roleManager)
                         {
-								                            IA_PlayerRole playerRole = roleManager.GetPlayerRole(playerId);
+							IA_PlayerRole playerRole = chimeraCharacter.m_eReplicatedRole;
 
 							if(isHelicopter){
 	                            if (playerRole != IA_PlayerRole.PILOT)
