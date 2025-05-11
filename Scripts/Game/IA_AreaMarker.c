@@ -249,14 +249,24 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    {
 	        // US has majority - increase score
 	        int advantage = usCount - ussrCount;
-	        scoreChange = advantage * 2.0; // Adjust multiplier for desired rate of increase
+	        float multiplier = 6.0; // Normal multiplier
+	        if (usCount < 5) // If US (majority) count is less than 5
+	        {
+	            multiplier = 15.0; // Use faster multiplier
+	        }
+	        scoreChange = advantage * multiplier;
 	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - US majority (+" + scoreChange + " points)", LogLevel.NORMAL);
 	    }
 	    else if (ussrCount > usCount)
 	    {
 	        // USSR has majority - decrease score
 	        int advantage = ussrCount - usCount;
-	        scoreChange = -advantage * 2.0; // Adjust multiplier for desired rate of decrease
+	        float multiplier = 3.0; // Normal multiplier
+	        if (ussrCount < 5) // If USSR (majority) count is less than 5
+	        {
+	            multiplier = 5.0; // Use faster multiplier
+	        }
+	        scoreChange = -advantage * multiplier;
 	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - USSR majority (" + scoreChange + " points)", LogLevel.NORMAL);
 	    }
 	    else if (usCount > 0 && usCount == ussrCount)
@@ -269,9 +279,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    // Calculate new score
 	    float newScore = currentScore + scoreChange;
 	    
-	    // Clamp score between 0-100
+	    // Clamp score between 0-1000
 	    if (newScore < 0) newScore = 0;
-	    if (newScore > 100) newScore = 100;
+	    if (newScore > 1000) newScore = 1000;
 	    
 	    // Update USFactionScore for backward compatibility
 	    USFactionScore = newScore;
@@ -280,14 +290,13 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    m_FactionScores.Set("US", newScore);
 	    
 	    // Log score changes
-	    // Print(("[INFO] Score updated for area=" + m_areaName + " US:" + usCount + " USSR:" + ussrCount + " Score:" + newScore + "/100 (change: " + scoreChange + ")", LogLevel.NORMAL);
 	    
 	    // Add threshold warnings
-	    if (newScore >= 90 && newScore < 100)
+	    if (newScore >= 900 && newScore < 1000)
 	    {
 	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - APPROACHING COMPLETION THRESHOLD! Current score: " + newScore + "/100", LogLevel.WARNING);
 	    }
-	    else if (newScore >= 100)
+	    else if (newScore >= 1000)
 	    {
 	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - COMPLETION THRESHOLD REACHED! Score: " + newScore + "/100", LogLevel.WARNING);
 	    }

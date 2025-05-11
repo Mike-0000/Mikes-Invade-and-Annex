@@ -280,11 +280,11 @@ class IA_MissionInitializer : GenericEntity
 			    continue;
 			}
 				
-			// Get US faction score (now on 0-100 scale)
+			// Get US faction score (now on 0-1000 scale)
 			float factionScore = marker.GetFactionScore("US");
 			//Print("[DEBUG_ZONE_SCORE_DEBUG] Marker name: " + marker.GetAreaName() + ", US faction score: " + factionScore + "/100", LogLevel.WARNING);
 			
-			if(factionScore >= 100) {
+			if(factionScore >= 1000) {
 				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " IS complete (Score: " + factionScore + ").", LogLevel.WARNING);
 				actualCompletedZones++;
 				zoneCompletionStatus[currentZoneIndex] = true; // Update status array
@@ -295,7 +295,7 @@ class IA_MissionInitializer : GenericEntity
 					instance.GetCurrentTaskEntity().Finish();
 				}
 			}
-			else { // factionScore < 100
+			else { // factionScore < 1000
 				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " is NOT complete (Score: " + factionScore + ").", LogLevel.NORMAL);
 				zoneCompletionStatus[currentZoneIndex] = false; // Update status array
 				

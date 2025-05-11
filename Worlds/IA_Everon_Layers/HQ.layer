@@ -228,3 +228,51 @@ GenericEntity : "{45C675ED3CFBBEC5}Prefabs/Props/Military/Compositions/US/Arsena
  coords 4931.652 28.775 11778.852
  angleY 177.531
 }
+GenericEntity : "{64454FA087931713}PrefabsEditable/SupportStationSystems/E_SupportStationSystem_Repair.et" {
+ components {
+  SCR_MapDescriptorComponent "{6557083564D23416}" {
+   DisplayName "Vehicle Repair"
+   MainType "Name Generic"
+  }
+  SCR_RepairSupportStationComponent "{5E1CF31185E317FE}" {
+   m_fRange 28.1
+  }
+  SCR_ResourceComponent "{5DACF52CF6D4A1C9}" {
+   m_aDisabledResourceTypes {
+    0
+   }
+  }
+  SCR_SupportStationAreaMeshComponent "{5B2AD5B869A9C26D}" {
+   m_fRadius 24.3
+  }
+ }
+ coords 4817.763 28.5 11726.571
+}
+GenericEntity : "{AD59EDEAA26CE792}Prefabs/Props/Military/Compositions/USSR/ArsenalBox_USSR.et" {
+ coords 4929.441 28.775 11778.766
+ angleY 172.346
+}
+GenericEntity : "{C75F144AD8ED67F5}Prefabs/Props/Military/Compositions/US/FuelService_US.et" {
+ components {
+  MapDescriptorComponent "{655708344F2C78C1}" {
+   DisplayName "Fuel Depot"
+   MainType "Name Generic"
+  }
+  SCR_FuelSupportStationComponent "{5EA8A5EFA3C1923E}" {
+   m_fRange 29.6
+  }
+ }
+ coords 4869.383 28.501 11714.926
+ angleY -8.605
+}
+GenericEntity : "{E83944C37C6FA465}PrefabsEditable/Auto/Props/Military/Compositions/FIA/E_ArsenalBox_FIA.et" {
+ coords 4927.27 28.775 11778.711
+ angleY 178.242
+}
+GenericEntity : "{F4B7F1D4D3ADE456}Prefabs/Structures/Signs/Military/Sign_VehicleRepair_US_01.et" {
+ coords 4817.968 28.5 11715.172
+}
+GenericEntity : "{F542F974956C255F}Prefabs/Props/Military/Compositions/CIV/ArsenalBox_CIV.et" {
+ coords 4925.023 28.775 11778.743
+ angleY 176.538
+}
