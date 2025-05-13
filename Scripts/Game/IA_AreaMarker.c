@@ -25,6 +25,14 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     int m_areaGroup;
     [Attribute(defvalue: "10.0", UIWidgets.EditBox, "Radius of sphere query", category: "Zone", params: "0.1 99999")]
     protected float m_fZoneRadius;
+    
+    // -- Radio Tower specific attributes
+    [Attribute("", UIWidgets.ResourceNamePicker, "Prefab to spawn for Radio Tower area type", category: "Radio Tower", params: "et")]
+    protected ResourceName m_prefabToSpawn;
+    
+    protected IEntity m_spawnedEntity;
+    protected bool m_isDestroyed = false;
+    protected bool m_prefabSpawned = false; // Flag to track if prefab has been spawned
 
     // -- For authority/proxy check
     protected RplComponent m_RplComponent;
@@ -198,14 +206,44 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        //// Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " (group " + m_areaGroup + ") - Not in active group (" + activeGroup + "), skipping score update", LogLevel.NORMAL);
 	        return;
 	    }
-	
+	    
+	    // Spawn Radio Tower prefab if it's the active group, not yet spawned, and not already destroyed
+	    if (GetAreaType() == IA_AreaType.RadioTower && !m_prefabSpawned && !m_isDestroyed)
+	    {
+	        SpawnPrefabEntity();
+	        if (m_spawnedEntity) // Check if spawning was successful
+	        {
+	            m_prefabSpawned = true;
+	            // Print("[INFO] Radio Tower prefab " + m_prefabToSpawn + " spawned for active group " + m_areaGroup + " at " + m_origin, LogLevel.NORMAL);
+	        }
+	        else
+	        {
+	            // Print("[WARNING] Failed to spawn Radio Tower prefab " + m_prefabToSpawn + " for active group " + m_areaGroup + " in EOnFrame. Will retry next frame.", LogLevel.WARNING);
+	        }
+	    }
+	    
+	    // Special handling for Radio Tower
+	    if (GetAreaType() == IA_AreaType.RadioTower)
+	    {
+	        // For Radio Tower, we only care if the prefab is destroyed
+	        if (m_isDestroyed)
+	        {
+                // Keep score at max if already destroyed
+                if (!m_FactionScores.Contains("US") || m_FactionScores.Get("US") < 1000)
+                {
+                    m_FactionScores.Set("US", 1000);
+                    USFactionScore = 1000;
+                    Print("[DEBUG_ZONE_SCORE] Radio Tower " + m_areaName + " - DESTROYED! Score set to 1000", LogLevel.WARNING);
+                }
+	        }
+	        return; // Skip standard scoring for Radio Tower
+	    }
+
 	    // Get all entities within radius
 	    array<IEntity> entities = {};
 	    MIKE_QueryCallback callback = new MIKE_QueryCallback(entities);
 	    GetGame().GetWorld().QueryEntitiesBySphere(m_origin, m_radius, callback.OnEntityFound, FilterPlayerAndAI, EQueryEntitiesFlags.DYNAMIC);
 		
-		
-
 	    // Count entities by faction
 	    IA_DictStringInt factionCounts = new IA_DictStringInt();
 	    for (int i = 0; i < entities.Count(); i++)
@@ -257,6 +295,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        scoreChange = advantage * multiplier;
 	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - US majority (+" + scoreChange + " points)", LogLevel.NORMAL);
 	    }
+	    /* Commented out to prevent score decreases
 	    else if (ussrCount > usCount)
 	    {
 	        // USSR has majority - decrease score
@@ -269,12 +308,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        scoreChange = -advantage * multiplier;
 	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - USSR majority (" + scoreChange + " points)", LogLevel.NORMAL);
 	    }
-	    else if (usCount > 0 && usCount == ussrCount)
-	    {
-	        // Both factions have equal presence - small decrease
-	        scoreChange = -1.0;
-	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - Equal presence (slight USSR advantage, -1 point)", LogLevel.NORMAL);
-	    }
+
+	    */
 	    
 	    // Calculate new score
 	    float newScore = currentScore + scoreChange;
@@ -342,6 +377,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                 s_areaMarkers.Insert(this);
 				super.EOnInit(owner);
 				// Print(("[DEBUG] IA_AreaMarker added to static list: " + m_areaName + " at " + m_origin + " (Total markers: " + s_areaMarkers.Count() + ")", LogLevel.NORMAL);
+				
+				// Spawn prefab entity if this is a Radio Tower
+				// SpawnPrefabEntity(); // Removed from here
 			}
 			else
 			{
@@ -442,6 +480,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             return IA_AreaType.Docks;
         else if (m_areaType == "Military")
             return IA_AreaType.Military;
+        else if (m_areaType == "SmallMilitary")
+            return IA_AreaType.SmallMilitary;
+        else if (m_areaType == "RadioTower")
+            return IA_AreaType.RadioTower;
         return IA_AreaType.Property; // Fallback
     }
     
@@ -605,6 +647,64 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         }
         
         return null;
+    }
+
+    // Method to spawn the prefab entity for Radio Tower areas
+    protected void SpawnPrefabEntity()
+    {
+        // Skip if not a radio tower or no prefab specified
+        if (GetAreaType() != IA_AreaType.RadioTower || m_prefabToSpawn == "")
+            return;
+            
+        // Only spawn on server
+        if (!Replication.IsServer())
+            return;
+            
+        // Create the entity from the prefab
+        EntitySpawnParams params = new EntitySpawnParams();
+        params.Transform[3] = m_origin; // Set position to marker origin
+        
+        // Try to spawn the entity
+        Resource res = Resource.Load(m_prefabToSpawn);
+        if (!res)
+        {
+            Print("[ERROR] Failed to load Radio Tower prefab resource: " + m_prefabToSpawn, LogLevel.ERROR);
+            return;
+        }
+        
+        m_spawnedEntity = GetGame().SpawnEntityPrefab(res, null, params);
+        if (!m_spawnedEntity)
+        {
+            Print("[ERROR] Failed to spawn Radio Tower prefab: " + m_prefabToSpawn, LogLevel.ERROR);
+            return;
+        }
+        
+        // Set up damage event handlers for the spawned entity
+        SCR_DestructibleBuildingComponent destructionComp = SCR_DestructibleBuildingComponent.Cast(m_spawnedEntity.FindComponent(SCR_DestructibleBuildingComponent));
+        if (destructionComp)
+        {
+            // Register for the OnDestroyed event using a member function
+            destructionComp.GetOnDamageStateChanged().Insert(OnPrefabDestroyed);
+            Print("[INFO] Radio Tower prefab spawned with destruction tracking at " + m_origin, LogLevel.NORMAL);
+        }
+        else
+        {
+            Print("[WARNING] Radio Tower prefab does not have a destruction component: " + m_prefabToSpawn, LogLevel.WARNING);
+        }
+    }
+    
+    // Event handler for when the prefab is destroyed
+    protected void OnPrefabDestroyed(EDamageState state)
+    {
+        if (state != EDamageState.DESTROYED)
+            return;
+            
+        Print("[INFO] Radio Tower prefab has been destroyed!", LogLevel.NORMAL);
+        m_isDestroyed = true;
+        
+        // Set the US faction score to 1000 (maximum) to indicate completion
+        m_FactionScores.Set("US", 1000);
+        USFactionScore = 1000;
     }
 };
 

@@ -106,7 +106,7 @@ class IA_AreaInstance
         m_aiScaleFactor = aiScaleFactor;
         m_maxVehicles = maxVehicles;
         
-        //Print("[PLAYER_SCALING] Area " + m_area.GetName() + " updated: AI Scale=" + m_aiScaleFactor + ", Max Vehicles=" + m_maxVehicles, LogLevel.NORMAL);
+        //////Print("[PLAYER_SCALING] Area " + m_area.GetName() + " updated: AI Scale=" + m_aiScaleFactor + ", Max Vehicles=" + m_maxVehicles, LogLevel.NORMAL);
         
         // If this is a significant scale change (more than 30% difference), adjust military units
         if (m_military && !m_military.IsEmpty() && previousScaleFactor > 0) 
@@ -115,7 +115,7 @@ class IA_AreaInstance
             
             if (scaleDifference > 0.3) // 30% change threshold
             {
-                //Print("[PLAYER_SCALING] Significant scale change detected (" + scaleDifference*100 + "%). Adjusting military units.", LogLevel.NORMAL);
+                //////Print("[PLAYER_SCALING] Significant scale change detected (" + scaleDifference*100 + "%). Adjusting military units.", LogLevel.NORMAL);
                 
                 // For scale increase: add additional groups
                 if (m_aiScaleFactor > previousScaleFactor && m_area) 
@@ -124,7 +124,7 @@ class IA_AreaInstance
                     int additionalGroups = Math.Round((m_aiScaleFactor / previousScaleFactor) - 1.0);
                     if (additionalGroups > 0) 
                     {
-                        //Print("[PLAYER_SCALING] Adding " + additionalGroups + " additional military groups", LogLevel.NORMAL);
+                        //////Print("[PLAYER_SCALING] Adding " + additionalGroups + " additional military groups", LogLevel.NORMAL);
                         GenerateRandomAiGroups(additionalGroups, true);
                     }
                 }
@@ -140,7 +140,7 @@ class IA_AreaInstance
                         
                     if (groupsToRemove > 0)
                     {
-                        //Print("[PLAYER_SCALING] Removing " + groupsToRemove + " military groups", LogLevel.NORMAL);
+                        //////Print("[PLAYER_SCALING] Removing " + groupsToRemove + " military groups", LogLevel.NORMAL);
                         
                         // Remove groups from the end of the array
                         for (int i = 0; i < groupsToRemove; i++)
@@ -175,10 +175,12 @@ class IA_AreaInstance
 
 	
 	
-	static IA_AreaInstance Create(IA_Area area, IA_Faction faction, int startStrength = 0)
+	// --- BEGIN MODIFIED: Create ---
+	static IA_AreaInstance Create(IA_Area area, IA_Faction faction, int startStrength = 0, int groupID = -1)
+	// --- END MODIFIED ---
 	{
 		if(!area){
-			//Print("[DEBUG] area is NULL! ", LogLevel.NORMAL);
+			//////Print("[DEBUG] area is NULL! ", LogLevel.NORMAL);
 			return null;
 		}
 	    IA_AreaInstance inst = new IA_AreaInstance();  // uses implicit no-arg constructor
@@ -186,14 +188,18 @@ class IA_AreaInstance
 	    inst.m_area = area;
 	    inst.m_faction = faction;
 	    inst.m_strength = startStrength;
+		
+		// --- BEGIN ADDED: Store Group ID ---
+		inst.m_areaGroup = groupID;
+		// --- END ADDED ---
 	
-	    //Print("[DEBUG] IA_AreaInstance.Create: Initialized with area = " + area.GetName(), LogLevel.NORMAL);
+	    //////Print("[DEBUG] IA_AreaInstance.Create: Initialized with area = " + area.GetName(), LogLevel.NORMAL);
 	
 	    inst.m_area.SetInstantiated(true);
 	    
 	    // --- BEGIN ADDED: Initialize Reinforcement Quota ---
 	    inst.m_totalReinforcementQuota = area.GetReinforcementGroupQuota();
-	    Print(string.Format("[AreaInstance.Create] Area %1 initialized with reinforcement quota: %2", area.GetName(), inst.m_totalReinforcementQuota), LogLevel.NORMAL);
+	    //Print(string.Format("[AreaInstance.Create] Area %1 initialized with reinforcement quota: %2", area.GetName(), inst.m_totalReinforcementQuota), LogLevel.NORMAL);
 	    // --- END ADDED ---
 
 	    // Initialize scaling factor BEFORE generating AI
@@ -202,7 +208,7 @@ class IA_AreaInstance
 	    int maxVehicles = IA_Game.GetMaxVehiclesForPlayerCount(3);
 	    inst.UpdatePlayerScaling(playerCount, scaleFactor, maxVehicles);
 	    
-	    //Print("[PLAYER_SCALING] New area created with scale factor: " + scaleFactor + ", player count: " + playerCount, LogLevel.NORMAL);
+	    //////Print("[PLAYER_SCALING] New area created with scale factor: " + scaleFactor + ", player count: " + playerCount, LogLevel.NORMAL);
 	
 	    int groupCount = area.GetMilitaryAiGroupCount();
 	    inst.GenerateRandomAiGroups(groupCount, true);
@@ -244,7 +250,7 @@ class IA_AreaInstance
     // Constructor
     void IA_AreaInstance(IA_Area area, IA_Faction faction, int startStrength = 0)
     {
-        //Print("[DEBUG] IA_AreaInstance constructor called for area: " + area.GetName() + ", faction: " + faction + ", startStrength: " + startStrength, LogLevel.NORMAL);
+        //////Print("[DEBUG] IA_AreaInstance constructor called for area: " + area.GetName() + ", faction: " + faction + ", startStrength: " + startStrength, LogLevel.NORMAL);
         m_area     = area;
         m_faction  = faction;
         m_strength = startStrength;
@@ -261,7 +267,7 @@ class IA_AreaInstance
     // --- Task Queue Methods ---
     void QueueTask(string title, string description, vector spawnOrigin)
     {
-        //Print("[DEBUG] QueueTask called with title: " + title + ", description: " + description + ", spawnOrigin: " + spawnOrigin, LogLevel.NORMAL);
+        //////Print("[DEBUG] QueueTask called with title: " + title + ", description: " + description + ", spawnOrigin: " + spawnOrigin, LogLevel.NORMAL);
         if (!m_currentTaskEntity)
         {
             CreateTask(title, description, spawnOrigin);
@@ -274,25 +280,25 @@ class IA_AreaInstance
             task.SetTitle(title);
             task.SetDescription(description);
             m_taskQueue.Insert(task);
-            //Print("[DEBUG] Task queued. Queue length: " + m_taskQueue.Count(), LogLevel.NORMAL);
+            //////Print("[DEBUG] Task queued. Queue length: " + m_taskQueue.Count(), LogLevel.NORMAL);
         }
     }
 
     private void CreateTask(string title, string description, vector spawnOrigin)
     {
-        //Print("[DEBUG] CreateTask called with title: " + title + ", spawnOrigin: " + spawnOrigin, LogLevel.NORMAL);
+        //////Print("[DEBUG] CreateTask called with title: " + title + ", spawnOrigin: " + spawnOrigin, LogLevel.NORMAL);
         Resource res = Resource.Load("{33DA4D098C409421}Prefabs/Tasks/TriggerTask.et");
         IEntity taskEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(spawnOrigin));
         m_currentTaskEntity = SCR_TriggerTask.Cast(taskEnt);
         m_currentTaskEntity.SetTitle(title);
         m_currentTaskEntity.SetDescription(description);
         m_currentTaskEntity.Create(false);
-        //Print("[DEBUG] Task created and activated.", LogLevel.NORMAL);
+        //////Print("[DEBUG] Task created and activated.", LogLevel.NORMAL);
     }
 
     void CompleteCurrentTask()
     {
-        //Print("[DEBUG] CompleteCurrentTask called.", LogLevel.NORMAL);
+        //////Print("[DEBUG] CompleteCurrentTask called.", LogLevel.NORMAL);
         if (m_currentTaskEntity)
         {
             m_currentTaskEntity.Finish();
@@ -303,7 +309,7 @@ class IA_AreaInstance
             m_currentTaskEntity = m_taskQueue[0];
             m_taskQueue.Remove(0);
             m_currentTaskEntity.Create(false);
-            //Print("[DEBUG] Next queued task activated.", LogLevel.NORMAL);
+            //////Print("[DEBUG] Next queued task activated.", LogLevel.NORMAL);
         }
     }
 
@@ -383,8 +389,8 @@ class IA_AreaInstance
             m_assignedGroupStates.Insert(group, initialState);
             // Enforce this initial state immediately (might be redundant if group handles it)
             group.SetTacticalState(initialState, group.GetOrigin(), null, true); // Added true for fromAuthority parameter
-            Print(string.Format("[AreaInstance.AddMilitaryGroup] Assigned initial state %1 to group at %2", 
-                typename.EnumToString(IA_GroupTacticalState, initialState), group.GetOrigin().ToString()), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.AddMilitaryGroup] Assigned initial state %1 to group at %2", 
+//                typename.EnumToString(IA_GroupTacticalState, initialState), group.GetOrigin().ToString()), LogLevel.NORMAL);
             // --- END ADDED ---
         }
     }
@@ -449,7 +455,7 @@ class IA_AreaInstance
         if (newVal > m_maxHistoricalStrength)
         {
             m_maxHistoricalStrength = newVal;
-            Print(string.Format("[AreaInstance.OnStrengthChange] new maximum strength: %1", m_maxHistoricalStrength), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.OnStrengthChange] new maximum strength: %1", m_maxHistoricalStrength), LogLevel.NORMAL);
         }
         // --- END ADDED ---
         
@@ -461,7 +467,7 @@ class IA_AreaInstance
     // --- BEGIN ADDED: Reinforcement Reset Helper ---
     private void ResetReinforcementState()
     {
-        Print(string.Format("[AreaInstance.ResetReinforcementState] Area %1 resetting reinforcement state.", m_area.GetName()), LogLevel.NORMAL);
+        //Print(string.Format("[AreaInstance.ResetReinforcementState] Area %1 resetting reinforcement state.", m_area.GetName()), LogLevel.NORMAL);
         m_reinforcements = IA_ReinforcementState.NotDone;
         m_reinforcementTimer = 0;
         m_reinforcementGroupsSpawned = 0;
@@ -496,12 +502,12 @@ class IA_AreaInstance
         if (m_reinforcements == IA_ReinforcementState.Countdown)
         {
             m_reinforcementTimer++;
-			Print("Timer: " + m_reinforcementTimer + " Requirement: " + INITIAL_REINFORCEMENT_DELAY_TICKS,LogLevel.ERROR);
+			////Print("Timer: " + m_reinforcementTimer + " Requirement: " + INITIAL_REINFORCEMENT_DELAY_TICKS,LogLevel.ERROR);
             if (m_reinforcementTimer > INITIAL_REINFORCEMENT_DELAY_TICKS)
             {
-				Print("LOG 5",LogLevel.ERROR);
-                Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 initial delay (%2 ticks) complete. Attempting first wave (scaled groups: %3).",
-                    m_area.GetName(), INITIAL_REINFORCEMENT_DELAY_TICKS, scaledGroupsToAttempt), LogLevel.NORMAL);
+				////Print("LOG 5",LogLevel.ERROR);
+                //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 initial delay (%2 ticks) complete. Attempting first wave (scaled groups: %3).",
+//                    m_area.GetName(), INITIAL_REINFORCEMENT_DELAY_TICKS, scaledGroupsToAttempt), LogLevel.NORMAL);
 
                 bool initialWaveSpawned = SpawnReinforcementWave(scaledGroupsToAttempt); // Use scaled value
 
@@ -516,8 +522,8 @@ class IA_AreaInstance
                      // Initial wave failed (e.g., no safe spot).
                      // DO NOT set state to Done. Transition to SpawningWaves state
                      // and set the timer to retry after the standard wave delay.
-                     Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 failed to spawn INITIAL wave (e.g., no safe spot). Will retry after delay (%2 ticks).",
-                         m_area.GetName(), REINFORCEMENT_WAVE_DELAY_TICKS), LogLevel.WARNING);
+                     //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 failed to spawn INITIAL wave (e.g., no safe spot). Will retry after delay (%2 ticks).",
+//                         m_area.GetName(), REINFORCEMENT_WAVE_DELAY_TICKS), LogLevel.WARNING);
                      m_reinforcements = IA_ReinforcementState.SpawningWaves; // Still transition state
                      m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS; // Set timer to retry
                 }
@@ -533,35 +539,35 @@ class IA_AreaInstance
                 // Check quota BEFORE attempting to spawn
                 if (m_reinforcementGroupsSpawned >= m_totalReinforcementQuota)
                 {
-                    Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 quota met (%2/%3) before spawning next wave. Reinforcements Done.",
-                         m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 quota met (%2/%3) before spawning next wave. Reinforcements Done.",
+//                         m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
                     m_reinforcements = IA_ReinforcementState.Done;
                 }
                 else // Quota is not yet met, attempt to spawn
                 {
-                    Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 attempting subsequent wave (scaled groups: %2).",
-                        m_area.GetName(), scaledGroupsToAttempt), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 attempting subsequent wave (scaled groups: %2).",
+//                        m_area.GetName(), scaledGroupsToAttempt), LogLevel.NORMAL);
                     
                     bool waveSpawnedSuccessfully = SpawnReinforcementWave(scaledGroupsToAttempt); // Use scaled value
 
                     if (waveSpawnedSuccessfully)
                     {
-                         Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 successfully spawned reinforcement wave. Groups spawned: %2/%3. Resetting delay (%4 ticks).",
-                             m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota, REINFORCEMENT_WAVE_DELAY_TICKS), LogLevel.NORMAL);
+                         //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 successfully spawned reinforcement wave. Groups spawned: %2/%3. Resetting delay (%4 ticks).",
+//                             m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota, REINFORCEMENT_WAVE_DELAY_TICKS), LogLevel.NORMAL);
                          m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS; // Reset delay for the *next* wave
                     }
                     else
                     {
                          // SpawnReinforcementWave returned false. This means no group was spawned in this attempt (e.g., safe spot not found).
                          // DO NOT set state to Done here. Just reset the timer to try again later.
-                         Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 failed to spawn group in current wave (e.g., no safe spot). Groups spawned: %2/%3. Resetting delay (%4 ticks) to retry.",
+                        Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 failed to spawn group in current wave (e.g., no safe spot). Groups spawned: %2/%3. Resetting delay (%4 ticks) to retry.",
                              m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota, REINFORCEMENT_WAVE_DELAY_TICKS), LogLevel.WARNING);
                          m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS; // Reset delay to try again later
 
                          // An edge case: if quota was *just* met by the failed spawn attempt (shouldn't happen with current logic, but for safety)
                          if (m_reinforcementGroupsSpawned >= m_totalReinforcementQuota) {
-                             Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 quota met (%2/%3) after failed spawn attempt. Reinforcements Done.",
-                                 m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+                             //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 quota met (%2/%3) after failed spawn attempt. Reinforcements Done.",
+//                                 m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
                              m_reinforcements = IA_ReinforcementState.Done;
                          }
                     }
@@ -639,12 +645,12 @@ class IA_AreaInstance
                     transitionType = "EXITING";
                 }
                 
-                Print(string.Format("[AreaInstance.StrengthUpdateTask] Area '%1' %2 CRITICAL STATE: Current=%3, Max=%4, Attrition=%5",
-                    m_area.GetName(),
-                    transitionType,
-                    totalCount,
-                    m_maxHistoricalStrength,
-                    attritionRatio), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.StrengthUpdateTask] Area '%1' %2 CRITICAL STATE: Current=%3, Max=%4, Attrition=%5",
+//                    m_area.GetName(),
+//                    transitionType,
+//                    totalCount,
+//                    m_maxHistoricalStrength,
+ //                   attritionRatio), LogLevel.NORMAL);
             }
         }
         // --- END ADDED ---
@@ -738,11 +744,11 @@ class IA_AreaInstance
             {
                 primaryThreatLocation = dangerSum / dangerCount;
                 validThreatLocation = true; // Position calculated from recent data
-                Print(string.Format("[AreaInstance.MilitaryTask] Threat assessed from recent group danger near: %1 (Latest event: %2s ago)",
-                    primaryThreatLocation.ToString(), System.GetUnixTime() - latestDangerTime), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] Threat assessed from recent group danger near: %1 (Latest event: %2s ago)",
+//                    primaryThreatLocation.ToString(), System.GetUnixTime() - latestDangerTime), LogLevel.NORMAL);
             } else {
-                 Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. No RECENT (<%2s) threat location found via danger events, using origin as fallback.",
-                    m_area.GetName(), MAX_THREAT_STALENESS_SECONDS), LogLevel.NORMAL);
+                 //Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. No RECENT (<%2s) threat location found via danger events, using origin as fallback.",
+//                    m_area.GetName(), MAX_THREAT_STALENESS_SECONDS), LogLevel.NORMAL);
                  primaryThreatLocation = m_area.GetOrigin(); // Fallback to origin
                  validThreatLocation = false; // Mark as invalid since it's stale/fallback
             }
@@ -761,8 +767,8 @@ class IA_AreaInstance
             }
             if ((globalThreatLevel > dangerThreshold) && (attritionRatio >= m_unitLossThreshold)) {
                 m_forceDefend = true;
-                Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL THREAT LEVEL (%1): Area '%2' is forcing defensive posture (Critical: %3) - THREAT OVERDRIVE ACTIVE",
-                    globalThreatLevel, m_area.GetName(), m_criticalState), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL THREAT LEVEL (%1): Area '%2' is forcing defensive posture (Critical: %3) - THREAT OVERDRIVE ACTIVE",
+//                    globalThreatLevel, m_area.GetName(), m_criticalState), LogLevel.NORMAL);
             } else {
                 m_forceDefend = false;
             }
@@ -786,22 +792,22 @@ class IA_AreaInstance
             // Only restrict flanking in extreme critical situations (very high threat + force defend active)
             if (m_forceDefend && globalThreatLevel > 1.5) {
                 m_allowFlankingOperations = false;
-                Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL: Flanking operations disabled due to extreme threat (%1)", globalThreatLevel), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL: Flanking operations disabled due to extreme threat (%1)", globalThreatLevel), LogLevel.NORMAL);
             } else {
                 m_allowFlankingOperations = true;
-                Print(string.Format("[AreaInstance.MilitaryTask] Flanking operations allowed (Threat: %1, ForceDefend: %2)", globalThreatLevel, m_forceDefend), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] Flanking operations allowed (Threat: %1, ForceDefend: %2)", globalThreatLevel, m_forceDefend), LogLevel.NORMAL);
             }
             // --- END MODIFIED ---
             
             if (dangerCount > 0) {
                 primaryThreatLocation = dangerSum / dangerCount;
                 validThreatLocation = true;
-                Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. Threat assessed from own groups near: %2", m_area.GetName(), primaryThreatLocation.ToString()), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. Threat assessed from own groups near: %2", m_area.GetName(), primaryThreatLocation.ToString()), LogLevel.NORMAL);
             } else {
-                 Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. No specific threat location found, using origin.", m_area.GetName()), LogLevel.NORMAL);
+                 //Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. No specific threat location found, using origin.", m_area.GetName()), LogLevel.NORMAL);
             }
         } else {
-             Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' SECURE.", m_area.GetName()), LogLevel.NORMAL);
+             //Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' SECURE.", m_area.GetName()), LogLevel.NORMAL);
              m_forceDefend = false;
              m_allowFlankingOperations = true;
         }
@@ -821,7 +827,7 @@ class IA_AreaInstance
             localTargetDefenders = totalMilitaryGroups; // All patrol or 0
             localTargetAttackers = 0;
             localTargetFlankers = 0;
-             Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (Secure/Empty): Default State: DefendPatrol. Def=%1", localTargetDefenders), LogLevel.NORMAL);
+             //Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (Secure/Empty): Default State: DefendPatrol. Def=%1", localTargetDefenders), LogLevel.NORMAL);
         }
         else if (m_forceDefend)
         {
@@ -840,9 +846,9 @@ class IA_AreaInstance
             // --- Use renamed local variables ---
             localTargetAttackers = totalMilitaryGroups - localTargetDefenders;
             localTargetFlankers = 0; // No flanking in emergency mode
-            Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (EMERGENCY): Def=%1, Att=%2, Flk=0, Critical=%3",
+            //Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (EMERGENCY): Def=%1, Att=%2, Flk=0, Critical=%3",
                 // --- Use renamed local variables ---
-                localTargetDefenders, localTargetAttackers, m_criticalState), LogLevel.NORMAL);
+//                localTargetDefenders, localTargetAttackers, m_criticalState), LogLevel.NORMAL);
         }
         else // This block handles standard "under attack" (not emergency forceDefend)
         {
@@ -895,18 +901,18 @@ class IA_AreaInstance
                     // --- Use renamed local variables ---
                     attackerToFlankerRatio = Math.Round(localTargetAttackers / localTargetFlankers);
                 }
-                Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (Under Attack - Offensive): Off=%1 -> Flank=%2, Attack=%3 (1:%4 ratio), Critical=%5",
+                //Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (Under Attack - Offensive): Off=%1 -> Flank=%2, Attack=%3 (1:%4 ratio), Critical=%5",
                     // --- Use renamed local variables ---
-                    offensiveGroups, localTargetFlankers, localTargetAttackers, attackerToFlankerRatio, m_criticalState), LogLevel.NORMAL);
+//                    offensiveGroups, localTargetFlankers, localTargetAttackers, attackerToFlankerRatio, m_criticalState), LogLevel.NORMAL);
             }
             else // Not enough offensive groups or no valid threat location for flanking
             {
                 // --- Use renamed local variables ---
                 localTargetFlankers = 0;
                 localTargetAttackers = offensiveGroups; // Assign all remaining as attackers (could be 0)
-                Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (Under Attack - No Flank): Off=%1 -> Flank=0, Attack=%2 (ThreatValid=%3)",
+                //Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (Under Attack - No Flank): Off=%1 -> Flank=0, Attack=%2 (ThreatValid=%3)",
                     // --- Use renamed local variables ---
-                    offensiveGroups, localTargetAttackers, validThreatLocation), LogLevel.NORMAL);
+//                    offensiveGroups, localTargetAttackers, validThreatLocation), LogLevel.NORMAL);
             }
             // --- Use renamed local variables ---
             if (localTargetDefenders + localTargetAttackers + localTargetFlankers != totalMilitaryGroups) {
@@ -916,9 +922,9 @@ class IA_AreaInstance
                  // --- Use renamed local variables ---
                  localTargetAttackers = totalMilitaryGroups - localTargetDefenders - localTargetFlankers;
             }
-            Print(string.Format("[AreaInstance.MilitaryTask] Role Calc Final (Under Attack): Total=%1, Def=%2, Flank=%3, Attack=%4, Critical=%5",
+            //Print(string.Format("[AreaInstance.MilitaryTask] Role Calc Final (Under Attack): Total=%1, Def=%2, Flank=%3, Attack=%4, Critical=%5",
                 // --- Use renamed local variables ---
-                totalMilitaryGroups, localTargetDefenders, localTargetFlankers, localTargetAttackers, m_criticalState), LogLevel.NORMAL);
+       //         totalMilitaryGroups, localTargetDefenders, localTargetFlankers, localTargetAttackers, m_criticalState), LogLevel.NORMAL);
         }
 
         // --- BEGIN ADDED: Update defender state when under attack ---
@@ -939,8 +945,8 @@ class IA_AreaInstance
                     if (currentState == IA_GroupTacticalState.DefendPatrol)
                     {
                         m_assignedGroupStates.Set(g, IA_GroupTacticalState.Defending);
-                        Print(string.Format("[AreaInstance.MilitaryTask] AREA UNDER ATTACK: Converting defender from patrol to defensive stance at %1", 
-                            g.GetOrigin().ToString()), LogLevel.NORMAL);
+                        //Print(string.Format("[AreaInstance.MilitaryTask] AREA UNDER ATTACK: Converting defender from patrol to defensive stance at %1", 
+//                            g.GetOrigin().ToString()), LogLevel.NORMAL);
                     }
                 }
             }
@@ -977,10 +983,10 @@ class IA_AreaInstance
                     (requestedState == IA_GroupTacticalState.Defending && 
                     (currentState == IA_GroupTacticalState.Attacking || currentState == IA_GroupTacticalState.Flanking)))
                 {
-                    Print(string.Format("[AreaInstance.MilitaryTask] Processing CRITICAL state change request from Group %1: %2 -> %3",
-                        g.GetOrigin().ToString(),
-                        typename.EnumToString(IA_GroupTacticalState, currentState),
-                        typename.EnumToString(IA_GroupTacticalState, requestedState)), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] Processing CRITICAL state change request from Group %1: %2 -> %3",
+//                        g.GetOrigin().ToString(),
+//                        typename.EnumToString(IA_GroupTacticalState, currentState),
+ //                       typename.EnumToString(IA_GroupTacticalState, requestedState)), LogLevel.NORMAL);
                         
                     // Critical requests are always approved
                     ProcessAndApproveStateChange(g, requestedState, requestedPosition, requestedEntity, currentState, currentTime, true);
@@ -1017,7 +1023,7 @@ class IA_AreaInstance
             canPerformGlobalReassignment = true;
             m_lastGlobalStateAuthority = currentTime;
             m_reassignmentCooldown = 3; // Set cooldown for 3 cycles
-            Print(string.Format("[AreaInstance.MilitaryTask] GLOBAL AUTHORITY CHECK: Authorizing potential reassignments", m_area.GetName()), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.MilitaryTask] GLOBAL AUTHORITY CHECK: Authorizing potential reassignments", m_area.GetName()), LogLevel.NORMAL);
         }
         
         // --- Stage 4: Pre-computation & Peril Checks ---
@@ -1041,9 +1047,9 @@ class IA_AreaInstance
                 m_stateStability.Insert(g, 0); // New state, so stability is 0
                 m_stateStartTimes.Insert(g, currentTime); // Record state start time
                 needsRoleUpdate.Insert(g, true);
-                Print(string.Format("[AreaInstance.MilitaryTask] NORMAL: Group %1 not in map, assigned %2.",
-                    g.GetOrigin().ToString(), 
-                    typename.EnumToString(IA_GroupTacticalState, currentAssignedState)), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] NORMAL: Group %1 not in map, assigned %2.",
+//                    g.GetOrigin().ToString(), 
+ //                   typename.EnumToString(IA_GroupTacticalState, currentAssignedState)), LogLevel.NORMAL);
             }
             else
             {
@@ -1068,8 +1074,8 @@ class IA_AreaInstance
                 if (stateTimeLocked && !needsRoleUpdate.Contains(g))
                 {
                     int remainingLockTime = MINIMUM_STATE_DURATION - stateDuration;
-                    Print(string.Format("[AreaInstance.MilitaryTask] Group %1 state LOCKED for %2 more seconds", 
-                        g.GetOrigin().ToString(), remainingLockTime), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] Group %1 state LOCKED for %2 more seconds", 
+                   //     g.GetOrigin().ToString(), remainingLockTime), LogLevel.NORMAL);
                 }
             }
             
@@ -1092,7 +1098,7 @@ class IA_AreaInstance
                 {
                     perilDetected = true;
                     stateAfterPeril = IA_GroupTacticalState.Defending; // Force defend near origin
-                    Print(string.Format("[AreaInstance.MilitaryTask] PERIL (Defender): Group %1 (Danger: %2, Health: %3). Forcing Defend at Origin.", g.GetOrigin().ToString(), danger, healthPercent), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] PERIL (Defender): Group %1 (Danger: %2, Health: %3). Forcing Defend at Origin.", g.GetOrigin().ToString(), danger, healthPercent), LogLevel.NORMAL);
                 }
             }
             // Attacker/Flanker Peril Check: Critically low members?
@@ -1103,7 +1109,7 @@ class IA_AreaInstance
                 {
                      perilDetected = true;
                      stateAfterPeril = IA_GroupTacticalState.Defending; // Force defend near origin
-                     Print(string.Format("[AreaInstance.MilitaryTask] PERIL (Attacker/Flanker): Group %1 (Units: %2). Forcing Defend at Origin.", g.GetOrigin().ToString(), g.GetAliveCount()), LogLevel.NORMAL);
+                     //Print(string.Format("[AreaInstance.MilitaryTask] PERIL (Attacker/Flanker): Group %1 (Units: %2). Forcing Defend at Origin.", g.GetOrigin().ToString(), g.GetAliveCount()), LogLevel.NORMAL);
                 }
             }
 
@@ -1112,8 +1118,8 @@ class IA_AreaInstance
             {
                 perilDetected = true;
                 stateAfterPeril = IA_GroupTacticalState.Defending;
-                Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY MODE: Converting Flanking Group %1 to Defender", 
-                    g.GetOrigin().ToString()), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY MODE: Converting Flanking Group %1 to Defender", 
+//                    g.GetOrigin().ToString()), LogLevel.NORMAL);
             }
 
             if (perilDetected)
@@ -1257,8 +1263,8 @@ class IA_AreaInstance
             // If offensive percentage is too low, adjust target distribution
             if (offensiveUnitPercentage < MIN_OFFENSIVE_PERCENTAGE)
             {
-                Print(string.Format("[AreaInstance.MilitaryTask] FORCE BALANCE NORMAL: Offensive units (%1) too low (%2% of total %3). Adjusting targets.", 
-                    offensiveAliveUnits, Math.Round(offensiveUnitPercentage * 100), totalAliveUnits), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] FORCE BALANCE NORMAL: Offensive units (%1) too low (%2% of total %3). Adjusting targets.", 
+//                    offensiveAliveUnits, Math.Round(offensiveUnitPercentage * 100), totalAliveUnits), LogLevel.NORMAL);
                 
                 // Original targets before adjustment
                 int originalDefenders = localTargetDefenders;
@@ -1299,9 +1305,9 @@ class IA_AreaInstance
                     localTargetAttackers += additionalAttackers;
                     localTargetFlankers += additionalFlankers;
                     
-                    Print(string.Format("[AreaInstance.MilitaryTask] FORCE REBALANCE: Adjusting targets from Def:%1/Att:%2/Flk:%3 to Def:%4/Att:%5/Flk:%6", 
-                        originalDefenders, originalAttackers, originalFlankers, 
-                        localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] FORCE REBALANCE: Adjusting targets from Def:%1/Att:%2/Flk:%3 to Def:%4/Att:%5/Flk:%6", 
+//                        originalDefenders, originalAttackers, originalFlankers, 
+//                        localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
                 }
             }
         }
@@ -1313,8 +1319,8 @@ class IA_AreaInstance
 
         if (totalOffensiveTarget > maxAllowedOffensive && totalMilitaryGroups > 1) // Apply cap if needed and more than 1 group exists
         {
-            Print(string.Format("[AreaInstance.MilitaryTask] OFFENSIVE CAP APPLIED: Target Offensive (%1) exceeds max allowed (%2). Capping...",
-                totalOffensiveTarget, maxAllowedOffensive), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.MilitaryTask] OFFENSIVE CAP APPLIED: Target Offensive (%1) exceeds max allowed (%2). Capping...",
+//                totalOffensiveTarget, maxAllowedOffensive), LogLevel.NORMAL);
 
             // Calculate desired ratio (0.4-0.6 ratio of flankers to attackers)
             const float flankerRatio = Math.RandomFloat(0.3, 0.6); 
@@ -1343,9 +1349,9 @@ class IA_AreaInstance
             // Increase defenders by the reduced amount
             localTargetDefenders = totalMilitaryGroups - localTargetAttackers - localTargetFlankers;
 
-            Print(string.Format("[AreaInstance.MilitaryTask] OFFENSIVE CAP RESULT: New targets Def:%1/Att:%2/Flk:%3 (Maintaining %4/%5 ratio)",
-                localTargetDefenders, localTargetAttackers, localTargetFlankers, 
-                (1.0 - flankerRatio), flankerRatio), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.MilitaryTask] OFFENSIVE CAP RESULT: New targets Def:%1/Att:%2/Flk:%3 (Maintaining %4/%5 ratio)",
+  //              localTargetDefenders, localTargetAttackers, localTargetFlankers, 
+//                (1.0 - flankerRatio), flankerRatio), LogLevel.NORMAL);
         }
         // --- END ADDED ---
         
@@ -1358,10 +1364,10 @@ class IA_AreaInstance
         int currentAttackersAfterCap = currentAttackers;
         int currentFlankersAfterCap = currentFlankers;
         
-        Print(string.Format("[AreaInstance.MilitaryTask] After Cap - Role Counts: Def=%1/%2, Att=%3/%4, Flk=%5/%6",
-            currentDefendersAfterCap, finalTargetDefenders,
-            currentAttackersAfterCap, finalTargetAttackers,
-            currentFlankersAfterCap, finalTargetFlankers), LogLevel.NORMAL);
+        //Print(string.Format("[AreaInstance.MilitaryTask] After Cap - Role Counts: Def=%1/%2, Att=%3/%4, Flk=%5/%6",
+  //          currentDefendersAfterCap, finalTargetDefenders,
+ //           currentAttackersAfterCap, finalTargetAttackers,
+//            currentFlankersAfterCap, finalTargetFlankers), LogLevel.NORMAL);
         
         // Now process standard state change requests using the FINAL target values
         foreach (IA_PendingStateRequest request : m_pendingStateRequests)
@@ -1380,10 +1386,10 @@ class IA_AreaInstance
             IEntity requestedEntity = request.requestedEntity;
             IA_GroupTacticalState currentState = g.GetTacticalState(); // Get actual current state from group
                 
-            Print(string.Format("[AreaInstance.MilitaryTask] Processing state change request from Group %1: %2 -> %3",
-                g.GetOrigin().ToString(),
-                typename.EnumToString(IA_GroupTacticalState, currentState), // Log actual current state
-                typename.EnumToString(IA_GroupTacticalState, requestedState)), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.MilitaryTask] Processing state change request from Group %1: %2 -> %3",
+//                g.GetOrigin().ToString(),
+//                typename.EnumToString(IA_GroupTacticalState, currentState), // Log actual current state
+//                typename.EnumToString(IA_GroupTacticalState, requestedState)), LogLevel.NORMAL);
 
             bool approveRequest = false;
             string reason = "";
@@ -1407,16 +1413,16 @@ class IA_AreaInstance
                     {
                         approvalProbability = 0.9;
                         reason = "Critical attacker shortage - high priority approval";
-                        Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL ATTACKER SHORTAGE (0 attackers). Prioritizing approval for Group %1", 
-                            g.GetOrigin().ToString()), LogLevel.NORMAL);
+                        //Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL ATTACKER SHORTAGE (0 attackers). Prioritizing approval for Group %1", 
+//                            g.GetOrigin().ToString()), LogLevel.NORMAL);
                     }
                     // If we're well below target, increase chance (75%)
                     else if (currentAttackersAfterCap < finalTargetAttackers * 0.5)
                     {
                         approvalProbability = 0.75;
                         reason = "Significant attacker shortage - increased approval chance";
-                        Print(string.Format("[AreaInstance.MilitaryTask] ATTACKER SHORTAGE (%1/%2). Increasing approval chance for Group %3", 
-                            currentAttackersAfterCap, finalTargetAttackers, g.GetOrigin().ToString()), LogLevel.NORMAL);
+                        //Print(string.Format("[AreaInstance.MilitaryTask] ATTACKER SHORTAGE (%1/%2). Increasing approval chance for Group %3", 
+//                            currentAttackersAfterCap, finalTargetAttackers, g.GetOrigin().ToString()), LogLevel.NORMAL);
                     }
                     // --- END ENHANCED ---
                     // Approve based on the calculated probability
@@ -1458,8 +1464,8 @@ class IA_AreaInstance
                 else
                 {
                     // --- BEGIN ADDED: Log defender check values ---
-                    Print(string.Format("[DEFENDER CHECK (Flanking)] Request from %1: currentDefendersAfterCap=%2, finalTargetDefenders=%3",
-                        g.GetOrigin().ToString(), currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
+                    //Print(string.Format("[DEFENDER CHECK (Flanking)] Request from %1: currentDefendersAfterCap=%2, finalTargetDefenders=%3",
+//                        g.GetOrigin().ToString(), currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
                     // --- END ADDED ---
 
                     // NEW CHECK: Prevent defender count from going too low
@@ -1472,8 +1478,8 @@ class IA_AreaInstance
                             approveRequest = false;
                             reason = string.Format("Cannot reduce defender count below minimum (%1/%2)",
                                 currentDefendersAfterCap, finalTargetDefenders);
-                            Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL DEFENDER CHECK: Prevented change to Flanking. Defenders: %1/%2",
-                                currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
+                            //Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL DEFENDER CHECK: Prevented change to Flanking. Defenders: %1/%2",
+//                                currentDefendersAfterCap, finalTargetDefenders), LogLevel.NORMAL);
                        
                     }
                     else
@@ -1525,28 +1531,21 @@ class IA_AreaInstance
 
             if (approveRequest)
             {
-                 Print(string.Format("[AreaInstance.MilitaryTask] APPROVED standard state change to %1 for Group %2 (Post-Cap Counts: Def=%3/%4, Att=%5/%6, Flk=%7/%8)",
-                     typename.EnumToString(IA_GroupTacticalState, requestedState),
-                     g.GetOrigin().ToString(),
-                     currentDefendersAfterCap, finalTargetDefenders,
-                     currentAttackersAfterCap, finalTargetAttackers,
-                     currentFlankersAfterCap, finalTargetFlankers), LogLevel.NORMAL);
-
                 ProcessAndApproveStateChange(g, requestedState, requestedPosition, requestedEntity, currentState, currentTime, false);
             }
             else
             {
                 if (reason != "")
                 {
-                    Print(string.Format("[AreaInstance.MilitaryTask] DENIED state change to %1 for Group %2 - %3",
-                        typename.EnumToString(IA_GroupTacticalState, requestedState),
-                        g.GetOrigin().ToString(), reason), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] DENIED state change to %1 for Group %2 - %3",
+  //                      typename.EnumToString(IA_GroupTacticalState, requestedState),
+  //                      g.GetOrigin().ToString(), reason), LogLevel.NORMAL);
                 }
                 else
                 {
-                    Print(string.Format("[AreaInstance.MilitaryTask] DENIED standard state change to %1 for Group %2 - baseline probability failed",
-                        typename.EnumToString(IA_GroupTacticalState, requestedState),
-                        g.GetOrigin().ToString()), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] DENIED standard state change to %1 for Group %2 - baseline probability failed",
+   //                     typename.EnumToString(IA_GroupTacticalState, requestedState),
+     //                   g.GetOrigin().ToString()), LogLevel.NORMAL);
                 }
             }
 
@@ -1573,16 +1572,24 @@ class IA_AreaInstance
                 else postReassignmentOther++;
             } else postReassignmentOther++; // Should not happen
         }
-        Print(string.Format("[AreaInstance.MilitaryTask] Post-Reassignment State Map: Def=%1, Att=%2, Flk=%3, Other=%4 (Targets: Def=%5, Att=%6, Flk=%7)",
-            postReassignmentDefenders, postReassignmentAttackers, postReassignmentFlankers, postReassignmentOther,
-            localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
+        //Print(string.Format("[AreaInstance.MilitaryTask] Post-Reassignment State Map: Def=%1, Att=%2, Flk=%3, Other=%4 (Targets: Def=%5, Att=%6, Flk=%7)",
+ //           postReassignmentDefenders, postReassignmentAttackers, postReassignmentFlankers, postReassignmentOther,
+//            localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
         // --- END ADDED ---
 
         // --- Stage 7: Enforcement & Idle Handling ---
         foreach (IA_AiGroup g : m_military)
         {
              if (!g || g.GetAliveCount() == 0) continue;
-             if (g.IsDriving()) continue; // Already handled
+             // if (g.IsDriving()) continue; // This is the OLD line
+             
+             // --- PROPOSED CHANGE START ---
+             if (g.IsDriving())
+             {
+                 g.UpdateVehicleOrders(); // Ensure driving groups get their orders updated
+                 continue; // Still skip the subsequent role assignment and idle logic for driving groups
+             }
+             // --- PROPOSED CHANGE END ---
 
             IA_GroupTacticalState finalAssignedState = m_assignedGroupStates.Get(g); // Get final role for this cycle
             IA_GroupTacticalState actualState = g.GetTacticalState();
@@ -1612,8 +1619,8 @@ class IA_AreaInstance
                 {
                     finalAssignedState = IA_GroupTacticalState.Attacking;
                     m_assignedGroupStates.Set(g, finalAssignedState);
-                    Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY ATTACKER ASSIGNMENT: No active attackers! Group %1 assigned attacker role.",
-                        g.GetOrigin().ToString()), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY ATTACKER ASSIGNMENT: No active attackers! Group %1 assigned attacker role.",
+//                        g.GetOrigin().ToString()), LogLevel.NORMAL);
                 }
             }
             // --- END ADDED ---
@@ -1677,9 +1684,9 @@ class IA_AreaInstance
                         if (actualState == IA_GroupTacticalState.Attacking)
                         {
                             // Issue direct attack orders to new threat position
-                            Print(string.Format("[AreaInstance.MilitaryTask] UPDATING ATTACKER TARGET: Group %1 redirected to new threat at %2 (moved %3m)", 
-                                g.GetOrigin().ToString(), primaryThreatLocation.ToString(), 
-                                vector.Distance(currentAssignedThreat, primaryThreatLocation)), LogLevel.NORMAL);
+                            //Print(string.Format("[AreaInstance.MilitaryTask] UPDATING ATTACKER TARGET: Group %1 redirected to new threat at %2 (moved %3m)", 
+//                                g.GetOrigin().ToString(), primaryThreatLocation.ToString(), 
+//                               vector.Distance(currentAssignedThreat, primaryThreatLocation)), LogLevel.NORMAL);
                             
                             g.RemoveAllOrders();
                             g.AddOrder(primaryThreatLocation, IA_AiOrder.SearchAndDestroy, true);
@@ -1689,8 +1696,8 @@ class IA_AreaInstance
                             // Calculate new flanking position for the updated threat
                             vector newFlankPos = g.CalculateFlankingPosition(primaryThreatLocation, g.GetOrigin());
                             
-                            Print(string.Format("[AreaInstance.MilitaryTask] UPDATING FLANKER TARGET: Group %1 redirected to flank new threat at %2", 
-                                g.GetOrigin().ToString(), primaryThreatLocation.ToString()), LogLevel.NORMAL);
+                            //Print(string.Format("[AreaInstance.MilitaryTask] UPDATING FLANKER TARGET: Group %1 redirected to flank new threat at %2", 
+//                                g.GetOrigin().ToString(), primaryThreatLocation.ToString()), LogLevel.NORMAL);
                             
                             g.RemoveAllOrders();
                             g.AddOrder(newFlankPos, IA_AiOrder.Move, true);
@@ -1729,7 +1736,7 @@ class IA_AreaInstance
                 // If peril forced defend, use group origin for defenders converting from other roles
                 if(needsRoleUpdate.Contains(g) && (actualState == IA_GroupTacticalState.Attacking || actualState == IA_GroupTacticalState.Flanking)){
                     targetForState = g.GetOrigin(); // Retreating attacker/flanker defends where they are initially
-                    Print(string.Format("[AreaInstance.MilitaryTask] Group %1 Peril Defend Target OVERRIDE to Group Origin.", g.GetOrigin().ToString()), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] Group %1 Peril Defend Target OVERRIDE to Group Origin.", g.GetOrigin().ToString()), LogLevel.NORMAL);
                 }
             }
             else if (finalAssignedState == IA_GroupTacticalState.Flanking && !validThreatLocation)
@@ -1737,7 +1744,7 @@ class IA_AreaInstance
                 // Fallback if assigned Flank but threat is gone: Attack towards origin
                 finalAssignedState = IA_GroupTacticalState.Attacking;
                 targetForState = m_area.GetOrigin();
-                Print(string.Format("[AreaInstance.MilitaryTask] Group %1 fallback Flank -> Attack Origin", g.GetOrigin().ToString()), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] Group %1 fallback Flank -> Attack Origin", g.GetOrigin().ToString()), LogLevel.NORMAL);
                 m_assignedGroupStates.Set(g, finalAssignedState); // Correct map assignment
                 needsRoleUpdate.Insert(g, true); // Mark as needing enforcement
             }
@@ -1754,12 +1761,12 @@ class IA_AreaInstance
             if (needsEnforcement)
             {
                  // --- BEGIN MODIFIED --- Added Logging
-                 Print(string.Format("[AreaInstance.MilitaryTask] State ENFORCEMENT for Group %1: Assigned=%2, Actual=%3 -> NeedsUpdate=%4. Setting state to %2 with target %5",
-                     g.GetOrigin().ToString(),
-                     typename.EnumToString(IA_GroupTacticalState, finalAssignedState),
-                     needsRoleUpdate.Contains(g),
-                     typename.EnumToString(IA_GroupTacticalState, actualState),
-                     targetForState.ToString()), LogLevel.NORMAL);
+                 //Print(string.Format("[AreaInstance.MilitaryTask] State ENFORCEMENT for Group %1: Assigned=%2, Actual=%3 -> NeedsUpdate=%4. Setting state to %2 with target %5",
+//                     g.GetOrigin().ToString(),
+//                     typename.EnumToString(IA_GroupTacticalState, finalAssignedState),
+//                     needsRoleUpdate.Contains(g),
+//                     typename.EnumToString(IA_GroupTacticalState, actualState),
+//                     targetForState.ToString()), LogLevel.NORMAL);
 
                 // When setting to attack or flank, register this as start of investigation
                 if (finalAssignedState == IA_GroupTacticalState.Attacking || finalAssignedState == IA_GroupTacticalState.Flanking)
@@ -1767,8 +1774,8 @@ class IA_AreaInstance
                     m_hasInvestigatedThreat.Set(g, false);
                     m_assignedThreatPosition.Set(g, targetForState);
                     m_investigationProgress.Set(g, 0.0);
-                    Print(string.Format("[AreaInstance.MilitaryTask] Group %1 starting threat investigation at %2", 
-                        g.GetOrigin().ToString(), targetForState.ToString()), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] Group %1 starting threat investigation at %2", 
+//                        g.GetOrigin().ToString(), targetForState.ToString()), LogLevel.NORMAL);
                 }
 
                 g.SetAssignedArea(m_area); // Set the assigned area
@@ -1822,8 +1829,8 @@ class IA_AreaInstance
                     if (reachedThreat || (progress > 0.7 && timeSpentInvestigating >= MINIMUM_INVESTIGATION_TIME))
                     {
                         m_hasInvestigatedThreat.Set(g, true); // Mark investigation as complete
-                        Print(string.Format("[AreaInstance.MilitaryTask] Group %1 has completed investigation at %2 (Reached: %3, Progress: %4, Time: %5s)",
-                            g.GetOrigin().ToString(), threatPosition.ToString(), reachedThreat, progress, timeSpentInvestigating), LogLevel.NORMAL);
+                        //Print(string.Format("[AreaInstance.MilitaryTask] Group %1 has completed investigation at %2 (Reached: %3, Progress: %4, Time: %5s)",
+//                            g.GetOrigin().ToString(), threatPosition.ToString(), reachedThreat, progress, timeSpentInvestigating), LogLevel.NORMAL);
                     }
                 }
             }
@@ -1854,8 +1861,8 @@ class IA_AreaInstance
                     if (hasInvestigated)
                     {
                         allowAutonomousChange = true;
-                        Print(string.Format("[AreaInstance.MilitaryTask] Allowing state change to Defending for Group %1 - investigation complete",
-                            g.GetOrigin().ToString()), LogLevel.NORMAL);
+                        //Print(string.Format("[AreaInstance.MilitaryTask] Allowing state change to Defending for Group %1 - investigation complete",
+//                            g.GetOrigin().ToString()), LogLevel.NORMAL);
                     }
                 }
 
@@ -1863,12 +1870,12 @@ class IA_AreaInstance
                 if (stateDurationMet || allowAutonomousChange)
                 {
                     // If the state has been active long enough, accept the autonomous change
-                    Print(string.Format("[AreaInstance.MilitaryTask] ACCEPTING autonomous state change for Group %1: Assigned=%2 -> Actual=%3 (Duration %4s >= %5s OR Change Allowed %6)",
-                        g.GetOrigin().ToString(),
-                        typename.EnumToString(IA_GroupTacticalState, finalAssignedState),
-                        typename.EnumToString(IA_GroupTacticalState, actualState),
-                        stateDuration, MINIMUM_STATE_DURATION, allowAutonomousChange), LogLevel.NORMAL);
-                        
+                    //Print(string.Format("[AreaInstance.MilitaryTask] ACCEPTING autonomous state change for Group %1: Assigned=%2 -> Actual=%3 (Duration %4s >= %5s OR Change Allowed %6)",
+//                        g.GetOrigin().ToString(),
+ //                       typename.EnumToString(IA_GroupTacticalState, finalAssignedState),
+ //                       typename.EnumToString(IA_GroupTacticalState, actualState),
+ //                       stateDuration, MINIMUM_STATE_DURATION, allowAutonomousChange), LogLevel.NORMAL);
+                     
                     // Update our records to match the new reality
                     m_assignedGroupStates.Set(g, actualState);
                     m_stateStartTimes.Set(g, currentTime);
@@ -1907,9 +1914,9 @@ class IA_AreaInstance
                         if (dangerLevel > 0.85 && g.GetAliveCount() <= 3)
                         {
                             // Accept the change if unit in severe danger
-                            Print(string.Format("[AreaInstance.MilitaryTask] ACCEPTING Attacker->Other change for Group %1: Assigned=%2 -> Actual=%3 due to SEVERE DANGER (Lvl: %4, Units: %5)",
-                                g.GetOrigin().ToString(), typename.EnumToString(IA_GroupTacticalState, finalAssignedState), typename.EnumToString(IA_GroupTacticalState, actualState),
-                                dangerLevel, g.GetAliveCount()), LogLevel.NORMAL);
+                            //Print(string.Format("[AreaInstance.MilitaryTask] ACCEPTING Attacker->Other change for Group %1: Assigned=%2 -> Actual=%3 due to SEVERE DANGER (Lvl: %4, Units: %5)",
+//                                g.GetOrigin().ToString(), typename.EnumToString(IA_GroupTacticalState, finalAssignedState), typename.EnumToString(IA_GroupTacticalState, actualState),
+//                                dangerLevel, g.GetAliveCount()), LogLevel.NORMAL);
 
                             m_assignedGroupStates.Set(g, actualState);
                             m_stateStartTimes.Set(g, currentTime);
@@ -1922,8 +1929,8 @@ class IA_AreaInstance
                         if (criticalAttackerShortage && dangerLevel < 0.75)
                         {
                             // --- BEGIN MODIFIED --- Added Logging
-                            Print(string.Format("[AreaInstance.MilitaryTask] CORRECTING UNAUTHORIZED CHANGE (Attacker Shortage): Group %1 changed Assigned=%2 -> Actual=%3. Enforcing %2.",
-                                g.GetOrigin().ToString(), typename.EnumToString(IA_GroupTacticalState, finalAssignedState), typename.EnumToString(IA_GroupTacticalState, actualState)), LogLevel.NORMAL);
+                            //Print(string.Format("[AreaInstance.MilitaryTask] CORRECTING UNAUTHORIZED CHANGE (Attacker Shortage): Group %1 changed Assigned=%2 -> Actual=%3. Enforcing %2.",
+//                                g.GetOrigin().ToString(), typename.EnumToString(IA_GroupTacticalState, finalAssignedState), typename.EnumToString(IA_GroupTacticalState, actualState)), LogLevel.NORMAL);
                             // --- END MODIFIED ---
 
                             g.SetTacticalState(finalAssignedState, targetForState, null, true);
@@ -1933,10 +1940,10 @@ class IA_AreaInstance
                     }
                     
                     // Default case - enforce the original state with authority flag
-                    Print(string.Format("[AreaInstance.MilitaryTask] CORRECTING UNAUTHORIZED STATE CHANGE (Default): Group %1 changed Assigned=%2 -> Actual=%3 WITHOUT AUTHORITY. Enforcing %2.",
-                        g.GetOrigin().ToString(),
-                        typename.EnumToString(IA_GroupTacticalState, finalAssignedState),
-                        typename.EnumToString(IA_GroupTacticalState, actualState)), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] CORRECTING UNAUTHORIZED STATE CHANGE (Default): Group %1 changed Assigned=%2 -> Actual=%3 WITHOUT AUTHORITY. Enforcing %2.",
+//                        g.GetOrigin().ToString(),
+//                        typename.EnumToString(IA_GroupTacticalState, finalAssignedState),
+ //                       typename.EnumToString(IA_GroupTacticalState, actualState)), LogLevel.NORMAL);
 
                     g.SetTacticalState(finalAssignedState, targetForState, null, true);
                     needsEnforcement = true; // Mark that we enforced state this cycle
@@ -1972,8 +1979,8 @@ class IA_AreaInstance
             
             // If we've lost most of our attacking force, this is critical
             if (missingAttackers >= 2 || (localTargetAttackers > 0 && currentAttackers == 0)) {
-                Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL ATTACKER LOSS DETECTED: %1/%2 attackers remaining. Forcing attacker replacement.", 
-                    currentAttackers, localTargetAttackers), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL ATTACKER LOSS DETECTED: %1/%2 attackers remaining. Forcing attacker replacement.", 
+//                    currentAttackers, localTargetAttackers), LogLevel.NORMAL);
                 
                 // Find suitable defenders to convert
                 int defendersToConvert = Math.Min(missingAttackers, Math.Max(1, currentDefenders - 1));
@@ -2004,8 +2011,8 @@ class IA_AreaInstance
                             m_stateStartTimes.Set(g, currentTime);
                             m_stateStability.Set(g, 0);
                             
-                            Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY CONVERSION: Group %1 converted from defender to attacker", 
-                                g.GetOrigin().ToString()), LogLevel.NORMAL);
+                            //Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY CONVERSION: Group %1 converted from defender to attacker", 
+//                                g.GetOrigin().ToString()), LogLevel.NORMAL);
                                 
                             convertCount++;
                             currentAttackers++;
@@ -2057,11 +2064,11 @@ class IA_AreaInstance
                 // If it's been too long without contact for this group, convert to defending
                 if (timeSinceContact > timeoutToUse)
                 {
-                    Print(string.Format("[AreaInstance.MilitaryTask] INDIVIDUAL CONTACT TIMEOUT: Group %1 in %2 state for %3s without contact (max %4s). Converting to defender.", 
-                        g.GetOrigin().ToString(), 
-                        typename.EnumToString(IA_GroupTacticalState, currentGrpState),
-                        timeSinceContact,
-                        timeoutToUse), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.MilitaryTask] INDIVIDUAL CONTACT TIMEOUT: Group %1 in %2 state for %3s without contact (max %4s). Converting to defender.", 
+//                        g.GetOrigin().ToString(), 
+//                        typename.EnumToString(IA_GroupTacticalState, currentGrpState),
+ //                       timeSinceContact,
+ //                       timeoutToUse), LogLevel.NORMAL);
                     
                     // Update to Defending state
                     m_assignedGroupStates.Set(g, IA_GroupTacticalState.Defending);
@@ -2088,8 +2095,8 @@ class IA_AreaInstance
             // Area-wide check to return to patrol mode (remains inside the condition)
             if (!areaHasRecentContact)
             {
-                Print(string.Format("[AreaInstance.MilitaryTask] AREA PACIFICATION: Area '%1' has been peaceful for %2 seconds. Converting defenders to patrol state.", 
-                    m_area.GetName(), currentTime - m_areaLastUnderFireTime), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.MilitaryTask] AREA PACIFICATION: Area '%1' has been peaceful for %2 seconds. Converting defenders to patrol state.", 
+//                    m_area.GetName(), currentTime - m_areaLastUnderFireTime), LogLevel.NORMAL);
                 
                 foreach (IA_AiGroup g : m_military)
                 {
@@ -2156,14 +2163,14 @@ class IA_AreaInstance
         int scaledNumber = Math.Round(number * m_aiScaleFactor);
         if (scaledNumber < 1) scaledNumber = 1; // Ensure at least one group
         
-        //Print("[PLAYER_SCALING] GenerateRandomAiGroups: Original=" + number + ", Scaled=" + scaledNumber + " (scale factor: " + m_aiScaleFactor + ")", LogLevel.NORMAL);
+        //////Print("[PLAYER_SCALING] GenerateRandomAiGroups: Original=" + number + ", Scaled=" + scaledNumber + " (scale factor: " + m_aiScaleFactor + ")", LogLevel.NORMAL);
         
         int strCounter = m_strength;
         for (int i = 0; i < scaledNumber; i = i + 1)
         {
             if (!m_area)
             {
-                //Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR);
+                //////Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR);
                 return;
             }
             IA_SquadType st = IA_GetRandomSquadType();
@@ -2182,14 +2189,14 @@ class IA_AreaInstance
             
             if (scaledUnitCount <= 0) 
             {
-                //Print("[IA_AreaInstance.GenerateRandomAiGroups] Invalid unit count (" + scaledUnitCount + ") for squad type " + st + ", skipping group.", LogLevel.NORMAL);
+                //////Print("[IA_AreaInstance.GenerateRandomAiGroups] Invalid unit count (" + scaledUnitCount + ") for squad type " + st + ", skipping group.", LogLevel.NORMAL);
                 continue;
             }
             
             IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, m_faction, scaledUnitCount);
             if (!grp)
             {
-                //Print("[IA_AreaInstance.GenerateRandomAiGroups] Failed to create military group from units.", LogLevel.NORMAL);
+                //////Print("[IA_AreaInstance.GenerateRandomAiGroups] Failed to create military group from units.", LogLevel.NORMAL);
                 continue;
             }
             
@@ -2258,6 +2265,8 @@ class IA_AreaInstance
     // Request priority vehicle reinforcements (used during combat situations)
     void RequestPriorityVehicleReinforcement()
     {
+        return; // Prevent priority vehicle reinforcements
+            
         // Only process for active military factions
         if (m_faction == IA_Faction.NONE || m_faction == IA_Faction.CIV)
             return;
@@ -2287,20 +2296,19 @@ class IA_AreaInstance
     
     void SpawnVehicleReinforcements()
     {
+        return; // Prevent scheduled vehicle reinforcements
+            
         if (!m_area)
             return;
             
-        if (m_faction == IA_Faction.NONE || m_faction == IA_Faction.CIV)
-            return;
-            
-        //Print("[DEBUG] IA_AreaInstance.SpawnVehicleReinforcements: Spawning vehicle reinforcements for area " + m_area.GetName(), LogLevel.NORMAL);
+        //////Print("[DEBUG] IA_AreaInstance.SpawnVehicleReinforcements: Spawning vehicle reinforcements for area " + m_area.GetName(), LogLevel.NORMAL);
         
         // Get number of vehicles to spawn (1-2), scaled with player count
         int baseVehiclesToSpawn = IA_Game.rng.RandInt(1, 3);
         int playerScaledVehicles = Math.Round(baseVehiclesToSpawn * m_aiScaleFactor);
         if (playerScaledVehicles < 1) playerScaledVehicles = 1;
         
-       //Print("[PLAYER_SCALING] SpawnVehicleReinforcements: Base vehicles=" + baseVehiclesToSpawn + 
+       //////Print("[PLAYER_SCALING] SpawnVehicleReinforcements: Base vehicles=" + baseVehiclesToSpawn + 
 //              ", Scaled=" + playerScaledVehicles + " (scale factor: " + m_aiScaleFactor + 
 //              ", player count: " + m_currentPlayerCount + ")", LogLevel.NORMAL);
         
@@ -2326,7 +2334,7 @@ class IA_AreaInstance
             // Check if we're under max vehicle limit
             if (m_areaVehicles.Count() >= m_maxVehicles)
             {
-                //Print("[DEBUG] IA_AreaInstance.SpawnVehicleReinforcements: At vehicle limit. Removing oldest vehicle.", LogLevel.NORMAL);
+                //////Print("[DEBUG] IA_AreaInstance.SpawnVehicleReinforcements: At vehicle limit. Removing oldest vehicle.", LogLevel.NORMAL);
                 if (!m_areaVehicles.IsEmpty())
                 {
                     Vehicle oldVehicle = m_areaVehicles[0];
@@ -2358,12 +2366,12 @@ class IA_AreaInstance
             if (roadPos != vector.Zero)
             {
                 spawnPos = roadPos;
-                //Print("[DEBUG] SpawnVehicleReinforcements: Found road location near perimeter at " + spawnPos, LogLevel.NORMAL);
+                //////Print("[DEBUG] SpawnVehicleReinforcements: Found road location near perimeter at " + spawnPos, LogLevel.NORMAL);
             }
             else
             {
                 spawnPos = perimeterPoint;
-                //Print("[DEBUG] SpawnVehicleReinforcements: No road found, using perimeter position at " + spawnPos, LogLevel.NORMAL);
+                //////Print("[DEBUG] SpawnVehicleReinforcements: No road found, using perimeter position at " + spawnPos, LogLevel.NORMAL);
             }
             
             // Use military vehicles only
@@ -2371,7 +2379,7 @@ class IA_AreaInstance
             
             if (spawnedVehicle)
             {
-                //Print("[DEBUG] IA_AreaInstance.SpawnVehicleReinforcements: Spawned vehicle at " + spawnPos, LogLevel.NORMAL);
+                //////Print("[DEBUG] IA_AreaInstance.SpawnVehicleReinforcements: Spawned vehicle at " + spawnPos, LogLevel.NORMAL);
                 m_areaVehicles.Insert(spawnedVehicle);
                 
                 // Create AI units and place them in the vehicle
@@ -2379,7 +2387,7 @@ class IA_AreaInstance
             }
             else
             {
-                //Print("[DEBUG] IA_AreaInstance.SpawnVehicleReinforcements: Failed to spawn vehicle", LogLevel.NORMAL);
+                //////Print("[DEBUG] IA_AreaInstance.SpawnVehicleReinforcements: Failed to spawn vehicle", LogLevel.NORMAL);
             }
         }
     }
@@ -2431,7 +2439,7 @@ class IA_AreaInstance
         if (!vehicle)
             return;
             
-        //Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Processing destroyed vehicle in area " + m_area.GetName(), LogLevel.NORMAL);
+        //////Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Processing destroyed vehicle in area " + m_area.GetName(), LogLevel.NORMAL);
         
         // Update the last vehicle lost time
         m_lastVehicleLostTime = System.GetUnixTime();
@@ -2457,7 +2465,7 @@ class IA_AreaInstance
         // If we found a group using this vehicle, give them new orders
         if (vehicleGroup)
         {
-            //Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Found AI group using the destroyed vehicle", LogLevel.NORMAL);
+            //////Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Found AI group using the destroyed vehicle", LogLevel.NORMAL);
             
             // Clear the vehicle reference and issue new orders
             vehicleGroup.ClearVehicleReference();
@@ -2471,23 +2479,23 @@ class IA_AreaInstance
                 // Use tactical state system instead of direct orders
                 vehicleGroup.SetTacticalState(IA_GroupTacticalState.Defending, groupPos);
                 
-                //Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Issued defend orders to surviving group members", LogLevel.NORMAL);
+                //////Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Issued defend orders to surviving group members", LogLevel.NORMAL);
             }
         }
         
         // Check if we've already reached the max number of pending replacements
         if (m_replacementsPending >= 2)
         {
-            //Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Already have " + m_replacementsPending + " replacements pending, skipping", LogLevel.NORMAL);
+            //////Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Already have " + m_replacementsPending + " replacements pending, skipping", LogLevel.NORMAL);
             return;
         }
         
         // Schedule a replacement vehicle with a delay
         int randomDelay = 30000 + IA_Game.rng.RandInt(0, 30000); // 30-60 second delay
         m_replacementsPending++;
-        GetGame().GetCallqueue().CallLater(ScheduleVehicleReplacement, randomDelay, false);
+        // GetGame().GetCallqueue().CallLater(ScheduleVehicleReplacement, randomDelay, false);
         
-        //Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Scheduled replacement vehicle in " + (randomDelay/1000) + " seconds", LogLevel.NORMAL);
+        //////Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Scheduled replacement vehicle in " + (randomDelay/1000) + " seconds", LogLevel.NORMAL);
     }
     
     // Schedule a replacement vehicle to be spawned
@@ -2504,7 +2512,7 @@ class IA_AreaInstance
         if (m_areaVehicles.Count() >= m_maxVehicles)
             return;
             
-        //Print("[DEBUG] IA_AreaInstance.ScheduleVehicleReplacement: Spawning replacement vehicle for area " + m_area.GetName(), LogLevel.NORMAL);
+        //////Print("[DEBUG] IA_AreaInstance.ScheduleVehicleReplacement: Spawning replacement vehicle for area " + m_area.GetName(), LogLevel.NORMAL);
         
         // Get active group from area markers
         int activeGroup = -1;
@@ -2541,12 +2549,12 @@ class IA_AreaInstance
         if (roadPos != vector.Zero)
         {
             spawnPos = roadPos;
-            //Print("[DEBUG] ScheduleVehicleReplacement: Found road location near perimeter at " + spawnPos, LogLevel.NORMAL);
+            //////Print("[DEBUG] ScheduleVehicleReplacement: Found road location near perimeter at " + spawnPos, LogLevel.NORMAL);
         }
         else
         {
             spawnPos = perimeterPoint;
-            //Print("[DEBUG] ScheduleVehicleReplacement: No road found, using perimeter position at " + spawnPos, LogLevel.NORMAL);
+            //////Print("[DEBUG] ScheduleVehicleReplacement: No road found, using perimeter position at " + spawnPos, LogLevel.NORMAL);
         }
         
         // Spawn a new military vehicle
@@ -2554,7 +2562,7 @@ class IA_AreaInstance
         
         if (replacementVehicle)
         {
-            //Print("[DEBUG] IA_AreaInstance.ScheduleVehicleReplacement: Spawned replacement vehicle at " + spawnPos, LogLevel.NORMAL);
+            //////Print("[DEBUG] IA_AreaInstance.ScheduleVehicleReplacement: Spawned replacement vehicle at " + spawnPos, LogLevel.NORMAL);
             m_areaVehicles.Insert(replacementVehicle);
             
             // Place units in the vehicle
@@ -2562,7 +2570,7 @@ class IA_AreaInstance
         }
         else
         {
-            //Print("[DEBUG] IA_AreaInstance.ScheduleVehicleReplacement: Failed to spawn replacement vehicle", LogLevel.NORMAL);
+            //////Print("[DEBUG] IA_AreaInstance.ScheduleVehicleReplacement: Failed to spawn replacement vehicle", LogLevel.NORMAL);
         }
     }
     
@@ -2629,7 +2637,7 @@ class IA_AreaInstance
         int scaledVehicles = Math.Round(baseVehicles * m_aiScaleFactor);
         if (scaledVehicles < 1) scaledVehicles = 1;
         
-       //Print("[PLAYER_SCALING] SpawnInitialVehicles: Base vehicles=" + baseVehicles + 
+       //////Print("[PLAYER_SCALING] SpawnInitialVehicles: Base vehicles=" + baseVehicles + 
 //              ", Scaled=" + scaledVehicles + " (scale factor: " + m_aiScaleFactor + ")", LogLevel.NORMAL);
               
         // Get active group from area markers
@@ -2658,13 +2666,13 @@ class IA_AreaInstance
             if (roadPos != vector.Zero)
             {
                 spawnPos = roadPos;
-                //Print("[DEBUG] SpawnInitialVehicles: Found road location at " + spawnPos, LogLevel.NORMAL);
+                //////Print("[DEBUG] SpawnInitialVehicles: Found road location at " + spawnPos, LogLevel.NORMAL);
             }
             else
             {
                 // Fallback to random position if no road found
                 spawnPos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() * 0.7, m_area.GetOrigin());
-                //Print("[DEBUG] SpawnInitialVehicles: No road found, using random position at " + spawnPos, LogLevel.NORMAL);
+                //////Print("[DEBUG] SpawnInitialVehicles: No road found, using random position at " + spawnPos, LogLevel.NORMAL);
             }
             
             // Spawn the vehicle (with military-only vehicles)
@@ -2684,12 +2692,12 @@ class IA_AreaInstance
     {
         if (!m_area)
         {
-            //Print("[ERROR] IA_AreaInstance.GenerateCivilians: m_area is null!", LogLevel.ERROR);
+            //////Print("[ERROR] IA_AreaInstance.GenerateCivilians: m_area is null!", LogLevel.ERROR);
             return;
         }
         
         // Don't apply player scaling to civilians - they're always spawned at the original count
-        //Print("[PLAYER_SCALING] Civilians not affected by scaling - using original count: " + number, LogLevel.NORMAL);
+        //////Print("[PLAYER_SCALING] Civilians not affected by scaling - using original count: " + number, LogLevel.NORMAL);
         
         m_civilians.Clear();
         for (int i = 0; i < number; i = i + 1)
@@ -2739,7 +2747,7 @@ class IA_AreaInstance
                 // 5% chance to remove each cycle
                 if (IA_Game.rng.RandInt(0, 100) < 5)
                 {
-                    //Print("[DEBUG] ManageCivilianVehicles: Removing abandoned civilian vehicle", LogLevel.NORMAL);
+                    //////Print("[DEBUG] ManageCivilianVehicles: Removing abandoned civilian vehicle", LogLevel.NORMAL);
                     IA_VehicleManager.DespawnVehicle(vehicle);
                     m_areaCivVehicles.Remove(i);
                     i--;
@@ -2769,6 +2777,10 @@ class IA_AreaInstance
                     shouldHaveCivVehicles = false;
                     break;
                     
+                case IA_AreaType.SmallMilitary: // Added SmallMilitary
+                    shouldHaveCivVehicles = false; // No civilian vehicles for SmallMilitary
+                    break;
+                    
                 default:
                     shouldHaveCivVehicles = true;
             }
@@ -2791,7 +2803,7 @@ class IA_AreaInstance
         if (!m_area)
             return;
             
-        //Print("[DEBUG] IA_AreaInstance.SpawnCivilianVehicle: Spawning civilian vehicle in area " + m_area.GetName(), LogLevel.NORMAL);
+        //////Print("[DEBUG] IA_AreaInstance.SpawnCivilianVehicle: Spawning civilian vehicle in area " + m_area.GetName(), LogLevel.NORMAL);
         
         // Get active group from area markers
         int activeGroup = -1;
@@ -2817,13 +2829,13 @@ class IA_AreaInstance
         if (roadPos != vector.Zero)
         {
             spawnPos = roadPos;
-            //Print("[DEBUG] SpawnCivilianVehicle: Found road location at " + spawnPos, LogLevel.NORMAL);
+            //////Print("[DEBUG] SpawnCivilianVehicle: Found road location at " + spawnPos, LogLevel.NORMAL);
         }
         else
         {
             // Fallback to random position if no road found
             spawnPos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() * 0.7, m_area.GetOrigin());
-            //Print("[DEBUG] SpawnCivilianVehicle: No road found, using random position at " + spawnPos, LogLevel.NORMAL);
+            //////Print("[DEBUG] SpawnCivilianVehicle: No road found, using random position at " + spawnPos, LogLevel.NORMAL);
         }
         
         // Spawn the civilian vehicle (using IA_Faction.CIV and civilian-only flag)
@@ -2845,14 +2857,14 @@ class IA_AreaInstance
                 m_areaCivVehicles.Insert(vehicle);
             }
             
-            //Print("[DEBUG] SpawnCivilianVehicle: Spawned civilian vehicle at " + spawnPos, LogLevel.NORMAL);
+            //////Print("[DEBUG] SpawnCivilianVehicle: Spawned civilian vehicle at " + spawnPos, LogLevel.NORMAL);
         }
     }
     
     // Spawn initial civilian vehicles when the area is created
     void SpawnInitialCivVehicles()
     {
-       //Print("[DEBUG_CIV_VEHICLES] SpawnInitialCivVehicles started for area: " + m_area.GetName(), LogLevel.NORMAL);
+       //////Print("[DEBUG_CIV_VEHICLES] SpawnInitialCivVehicles started for area: " + m_area.GetName(), LogLevel.NORMAL);
         
         if (!m_area)
             return;
@@ -2887,6 +2899,10 @@ class IA_AreaInstance
                 m_maxCivVehicles = 0; // 1 vehicle at properties
                 break;
                 
+            case IA_AreaType.SmallMilitary: // Added SmallMilitary
+                m_maxCivVehicles = 0; // No civilian vehicles for SmallMilitary
+                break;
+                
             default:
                 m_maxCivVehicles = 1 + IA_Game.rng.RandInt(0, 2); // Default fallback
         }
@@ -2894,12 +2910,12 @@ class IA_AreaInstance
         // Apply player scaling to max vehicle count
         m_maxCivVehicles = Math.Round(m_maxCivVehicles * m_aiScaleFactor);
         
-       //Print("[DEBUG_CIV_VEHICLES] Area type: " + areaType + ", Max civilian vehicles: " + m_maxCivVehicles, LogLevel.NORMAL);
+       //////Print("[DEBUG_CIV_VEHICLES] Area type: " + areaType + ", Max civilian vehicles: " + m_maxCivVehicles, LogLevel.NORMAL);
         
         // If there are no vehicles to spawn, exit early
         if (m_maxCivVehicles <= 0)
         {
-           //Print("[DEBUG_CIV_VEHICLES] No civilian vehicles will spawn in this area type", LogLevel.NORMAL);
+           //////Print("[DEBUG_CIV_VEHICLES] No civilian vehicles will spawn in this area type", LogLevel.NORMAL);
             return;
         }
         
@@ -2907,7 +2923,7 @@ class IA_AreaInstance
         int initialCivVehicles = Math.Round(m_maxCivVehicles * 0.7);
         if (initialCivVehicles < 1) initialCivVehicles = 1;
         
-       //Print("[DEBUG_CIV_VEHICLES] Attempting to spawn " + initialCivVehicles + " initial civilian vehicles", LogLevel.NORMAL);
+       //////Print("[DEBUG_CIV_VEHICLES] Attempting to spawn " + initialCivVehicles + " initial civilian vehicles", LogLevel.NORMAL);
         
         int successfulSpawns = 0;
         
@@ -2927,7 +2943,7 @@ class IA_AreaInstance
             activeGroup = IA_VehicleManager.GetActiveGroup();
         }
         
-       //Print("[DEBUG_CIV_VEHICLES] Using area group: " + activeGroup + " for vehicle spawning", LogLevel.NORMAL);
+       //////Print("[DEBUG_CIV_VEHICLES] Using area group: " + activeGroup + " for vehicle spawning", LogLevel.NORMAL);
         
         for (int i = 0; i < initialCivVehicles; i++)
         {
@@ -2939,22 +2955,22 @@ class IA_AreaInstance
             if (roadPos != vector.Zero)
             {
                 spawnPos = roadPos;
-               //Print("[DEBUG_CIV_VEHICLES] Found road location at " + spawnPos + " for vehicle " + (i+1), LogLevel.NORMAL);
+               //////Print("[DEBUG_CIV_VEHICLES] Found road location at " + spawnPos + " for vehicle " + (i+1), LogLevel.NORMAL);
             }
             else
             {
                 // Fallback to random position if no road found
                 spawnPos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() * 0.7, m_area.GetOrigin());
-               //Print("[DEBUG_CIV_VEHICLES] No road found, using random position at " + spawnPos + " for vehicle " + (i+1), LogLevel.NORMAL);
+               //////Print("[DEBUG_CIV_VEHICLES] No road found, using random position at " + spawnPos + " for vehicle " + (i+1), LogLevel.NORMAL);
             }
             
             // Spawn the civilian vehicle (using IA_Faction.CIV and civilian-only flag)
-           //Print("[DEBUG_CIV_VEHICLES] Attempting to spawn civilian vehicle " + (i+1) + " at position: " + spawnPos, LogLevel.NORMAL);
+           //////Print("[DEBUG_CIV_VEHICLES] Attempting to spawn civilian vehicle " + (i+1) + " at position: " + spawnPos, LogLevel.NORMAL);
             Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicle(IA_Faction.CIV, true, false, spawnPos);
             
             if (vehicle)
             {
-               //Print("[DEBUG_CIV_VEHICLES] Successfully spawned civilian vehicle at " + vehicle.GetOrigin().ToString(), LogLevel.NORMAL);
+               //////Print("[DEBUG_CIV_VEHICLES] Successfully spawned civilian vehicle at " + vehicle.GetOrigin().ToString(), LogLevel.NORMAL);
                 successfulSpawns++;
                 
                 // Create AI units and place them in the vehicle
@@ -2963,23 +2979,23 @@ class IA_AreaInstance
                 // Register the vehicle and group with our civilian tracking
                 if (civGroup)
                 {
-                   //Print("[DEBUG_CIV_VEHICLES] Created civilian AI group for vehicle, registering vehicle with group", LogLevel.NORMAL);
+                   //////Print("[DEBUG_CIV_VEHICLES] Created civilian AI group for vehicle, registering vehicle with group", LogLevel.NORMAL);
                     RegisterCivilianVehicle(vehicle, civGroup);
                 }
                 else
                 {
                     // If no group was created, just track the vehicle
-                   //Print("[DEBUG_CIV_VEHICLES] No civilian AI group created for vehicle, tracking vehicle only", LogLevel.NORMAL);
+                   //////Print("[DEBUG_CIV_VEHICLES] No civilian AI group created for vehicle, tracking vehicle only", LogLevel.NORMAL);
                     m_areaCivVehicles.Insert(vehicle);
                 }
             }
             else
             {
-               //Print("[DEBUG_CIV_VEHICLES] Failed to spawn civilian vehicle at position: " + spawnPos, LogLevel.NORMAL);
+               //////Print("[DEBUG_CIV_VEHICLES] Failed to spawn civilian vehicle at position: " + spawnPos, LogLevel.NORMAL);
             }
         }
         
-       //Print("[DEBUG_CIV_VEHICLES] SpawnInitialCivVehicles completed - Successfully spawned " + successfulSpawns + " of " + initialCivVehicles + " civilian vehicles", LogLevel.NORMAL);
+       //////Print("[DEBUG_CIV_VEHICLES] SpawnInitialCivVehicles completed - Successfully spawned " + successfulSpawns + " of " + initialCivVehicles + " civilian vehicles", LogLevel.NORMAL);
     }
 
 
@@ -3002,7 +3018,7 @@ class IA_AreaInstance
         {
             areaName = "unknown";
         }
-        Print(string.Format("[AreaInstance.AIReactionsTask] Processing reactions for Area %1", areaName), LogLevel.NORMAL);
+        //Print(string.Format("[AreaInstance.AIReactionsTask] Processing reactions for Area %1", areaName), LogLevel.NORMAL);
         
         // Clear any existing reactions in the central manager
         m_centralReactionManager.ClearAllReactions(); // Use ClearAllReactions instead of Clear
@@ -3046,8 +3062,8 @@ class IA_AreaInstance
             
             // Skip very stable groups that already have orders, let them continue their current behavior
             if (isStableState && group.HasOrders()) {
-                Print(string.Format("[AreaInstance.AIReactionsTask] Group at %1 - SKIPPING (stable state for %2 seconds)", 
-                    group.GetOrigin().ToString(), timeSinceLastChange), LogLevel.NORMAL);
+                ////Print(string.Format("[AreaInstance.AIReactionsTask] Group at %1 - SKIPPING (stable state for %2 seconds)", 
+                //   group.GetOrigin().ToString(), timeSinceLastChange), LogLevel.NORMAL);
                 processedGroups.Insert(group, true);
                 continue;
             }
@@ -3068,8 +3084,8 @@ class IA_AreaInstance
             // Apply reactions based on danger level
             if (dangerLevel > underFireThreshold)
             {
-                Print(string.Format("[AreaInstance.AIReactionsTask] Group at %1 - HIGH danger (%2) - triggering UnderFire reaction", 
-                    group.GetOrigin().ToString(), dangerLevel), LogLevel.NORMAL);
+                ////Print(string.Format("[AreaInstance.AIReactionsTask] Group at %1 - HIGH danger (%2) - triggering UnderFire reaction", 
+                //    group.GetOrigin().ToString(), dangerLevel), LogLevel.NORMAL);
                     
                 // Add to central reaction manager for later group-wide processing
                 m_centralReactionManager.TriggerReaction(IA_AIReactionType.UnderFire, dangerLevel, group.GetOrigin()); // Use TriggerReaction
@@ -3079,8 +3095,8 @@ class IA_AreaInstance
             }
             else if (dangerLevel > enemySpottedThreshold)
             {
-                Print(string.Format("[AreaInstance.AIReactionsTask] Group at %1 - MEDIUM danger (%2) - triggering EnemySpotted reaction", 
-                    group.GetOrigin().ToString(), dangerLevel), LogLevel.NORMAL);
+               // //Print(string.Format("[AreaInstance.AIReactionsTask] Group at %1 - MEDIUM danger (%2) - triggering EnemySpotted reaction", 
+               //     group.GetOrigin().ToString(), dangerLevel), LogLevel.NORMAL);
                     
                 // Only process individual EnemySpotted if the group isn't already part of a UnderFire reaction
                 if (!processedGroups.Contains(group))
@@ -3104,8 +3120,8 @@ class IA_AreaInstance
             vector reactionPos = currentCentralReaction.GetSourcePosition();
             float reactionIntensity = currentCentralReaction.GetIntensity();
 
-            Print(string.Format("[AreaInstance.AIReactionsTask] Processing CENTRAL reaction: Type=%1, Intensity=%2, SourcePos=%3", 
-                typename.EnumToString(IA_AIReactionType, reactionType), reactionIntensity, reactionPos.ToString()), LogLevel.NORMAL);
+           // //Print(string.Format("[AreaInstance.AIReactionsTask] Processing CENTRAL reaction: Type=%1, Intensity=%2, SourcePos=%3", 
+           //     typename.EnumToString(IA_AIReactionType, reactionType), reactionIntensity, reactionPos.ToString()), LogLevel.NORMAL);
                 
             // Apply the current central reaction to all groups that weren't already processed
             foreach (IA_AiGroup group : allGroups)
@@ -3170,8 +3186,8 @@ class IA_AreaInstance
         m_lastUnderFireTime.Set(group, currentTime);
         // Update the area's last under fire time
         m_areaLastUnderFireTime = currentTime;
-        Print(string.Format("[ApplyUnderFireReactionToGroup] UNDER FIRE timestamp updated for Group %1: %2", 
-            group.GetOrigin().ToString(), currentTime), LogLevel.NORMAL);
+       // //Print(string.Format("[ApplyUnderFireReactionToGroup] UNDER FIRE timestamp updated for Group %1: %2", 
+       //     group.GetOrigin().ToString(), currentTime), LogLevel.NORMAL);
         // --- END ADDED ---
         
         // Skip if group is driving
@@ -3186,8 +3202,8 @@ class IA_AreaInstance
         bool isAssignedFlanker = (currentState == IA_GroupTacticalState.Flanking);
         
         // Debug logging
-        Print(string.Format("[ApplyUnderFireReactionToGroup] Group %1 | Threat Pos: %2 | Intensity: %3 | Alive: %4 | Distance: %5m", 
-            group, sourcePos.ToString(), intensity, aliveCount, vector.Distance(sourcePos, group.GetOrigin())), LogLevel.NORMAL);
+        ////Print(string.Format("[ApplyUnderFireReactionToGroup] Group %1 | Threat Pos: %2 | Intensity: %3 | Alive: %4 | Distance: %5m", 
+       //     group, sourcePos.ToString(), intensity, aliveCount, vector.Distance(sourcePos, group.GetOrigin())), LogLevel.NORMAL);
         
         // If the group already has waypoints and is in an appropriate state, don't change anything
         bool hasAppropriateState = false;
@@ -3505,8 +3521,8 @@ class IA_AreaInstance
                 {
                     // Apply the requested state with authority flag
                     g.SetTacticalState(requestedState, requestedPosition, null, true);
-                    Print(string.Format("[AreaInstance.CivilianOrderTask] APPROVED state change to %1 for civilian group", 
-                        typename.EnumToString(IA_GroupTacticalState, requestedState)), LogLevel.NORMAL);
+                  //  //Print(string.Format("[AreaInstance.CivilianOrderTask] APPROVED state change to %1 for civilian group", 
+                  //      typename.EnumToString(IA_GroupTacticalState, requestedState)), LogLevel.NORMAL);
                 }
                 
                 // Clear the request whether approved or denied
@@ -3604,8 +3620,8 @@ class IA_AreaInstance
                 m_hasInvestigatedThreat.Set(g, false);
                 m_investigationProgress.Set(g, 0.0);
                 
-                Print(string.Format("[AreaInstance.ProcessAndApproveStateChange] THREAT TRACKING: Group %1 assigned target at %2", 
-                    g.GetOrigin().ToString(), requestedPosition.ToString()), LogLevel.NORMAL);
+               // //Print(string.Format("[AreaInstance.ProcessAndApproveStateChange] THREAT TRACKING: Group %1 assigned target at %2", 
+              //      g.GetOrigin().ToString(), requestedPosition.ToString()), LogLevel.NORMAL);
             }
         }
         // --- END ADDED ---
@@ -3613,11 +3629,11 @@ class IA_AreaInstance
         // Execute the actual state change on the group
         g.SetTacticalState(requestedState, requestedPosition, requestedEntity, true); // Use authority flag
         
-        Print(string.Format("[AreaInstance.ProcessAndApproveStateChange] Changed group %1 state from %2 to %3 (critical: %4)",
-            g.GetOrigin().ToString(),
-            typename.EnumToString(IA_GroupTacticalState, currentState),
-            typename.EnumToString(IA_GroupTacticalState, requestedState),
-            critical), LogLevel.NORMAL);
+        //Print(string.Format("[AreaInstance.ProcessAndApproveStateChange] Changed group %1 state from %2 to %3 (critical: %4)",
+//            g.GetOrigin().ToString(),
+//            typename.EnumToString(IA_GroupTacticalState, currentState),
+//            typename.EnumToString(IA_GroupTacticalState, requestedState),
+ //           critical), LogLevel.NORMAL);
     }
 
     // Add this function near the end of the class, before the closing bracket
@@ -3682,11 +3698,11 @@ class IA_AreaInstance
         {
             primaryThreatLocation = dangerSum / dangerCount;
             validThreatLocation = true;
-            Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] Threat location calculated: %1", primaryThreatLocation.ToString()), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] Threat location calculated: %1", primaryThreatLocation.ToString()), LogLevel.NORMAL);
         }
         else
         {
-             Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] No specific threat location found, will use area origin as fallback."), LogLevel.NORMAL);
+             //Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] No specific threat location found, will use area origin as fallback."), LogLevel.NORMAL);
         }
         // --- END ADDED ---
         
@@ -3729,8 +3745,8 @@ class IA_AreaInstance
 
         if (totalOffensiveTarget > maxAllowedOffensive && totalAvailableGroups > 1)
         {
-            Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] OFFENSIVE CAP APPLIED (Internal): Target Offensive (%1) exceeds max (%2). Capping...",
-                totalOffensiveTarget, maxAllowedOffensive), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] OFFENSIVE CAP APPLIED (Internal): Target Offensive (%1) exceeds max (%2). Capping...",
+//                totalOffensiveTarget, maxAllowedOffensive), LogLevel.NORMAL);
 
 
             int newFlankers = Math.Round(maxAllowedOffensive * flankerRatio);
@@ -3743,8 +3759,8 @@ class IA_AreaInstance
             cappedTargetAttackers = newAttackers;
             cappedTargetDefenders = totalAvailableGroups - cappedTargetAttackers - cappedTargetFlankers;
 
-            Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] OFFENSIVE CAP RESULT (Internal): New targets Def:%1/Att:%2/Flk:%3",
-                cappedTargetDefenders, cappedTargetAttackers, cappedTargetFlankers), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] OFFENSIVE CAP RESULT (Internal): New targets Def:%1/Att:%2/Flk:%3",
+    //            cappedTargetDefenders, cappedTargetAttackers, cappedTargetFlankers), LogLevel.NORMAL);
         }
         // --- END ADDED ---
 
@@ -3754,8 +3770,8 @@ class IA_AreaInstance
         if (currentAttackers < cappedTargetAttackers && (currentAttackers == 0 || currentAttackers < cappedTargetAttackers * 0.5))
         {
             // --- MODIFIED: Log using capped target ---
-            Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] CRITICAL ATTACKER DEPLETION: %1/%2 attackers (Capped Target). Forcing reassignment.",
-                currentAttackers, cappedTargetAttackers), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] CRITICAL ATTACKER DEPLETION: %1/%2 attackers (Capped Target). Forcing reassignment.",
+        //        currentAttackers, cappedTargetAttackers), LogLevel.NORMAL);
 
             // Find suitable defenders to convert (up to the number needed)
             // --- MODIFIED: Use cappedTargetAttackers and currentDefenders for calculation ---
@@ -3784,8 +3800,8 @@ class IA_AreaInstance
                     // Apply the change immediately using the calculated threat location
                     g.SetTacticalState(IA_GroupTacticalState.Attacking, primaryThreatLocation, null, true); // Use primaryThreatLocation
                     
-                    Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] EMERGENCY CONVERSION: Group %1 converted to attacker, targeting %2 (ValidThreat: %3)", 
-                        g.GetOrigin().ToString(), primaryThreatLocation.ToString(), validThreatLocation), LogLevel.NORMAL);
+                    //Print(string.Format("[AreaInstance.PrioritizeAttackerReplacement] EMERGENCY CONVERSION: Group %1 converted to attacker, targeting %2 (ValidThreat: %3)", 
+//                        g.GetOrigin().ToString(), primaryThreatLocation.ToString(), validThreatLocation), LogLevel.NORMAL);
                         
                     convertCount++;
                 }
@@ -3798,20 +3814,20 @@ class IA_AreaInstance
     {
         if (m_reinforcementGroupsSpawned >= m_totalReinforcementQuota)
         {
-            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Quota met (%2/%3).", 
-                m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Quota met (%2/%3).", 
+    //            m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
             return false; // Quota already met
         }
 
         int actualSpawnCount = Math.Min(groupsToSpawn, m_totalReinforcementQuota - m_reinforcementGroupsSpawned);
         if (actualSpawnCount <= 0) 
         {
-            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Calculated spawn count is zero or negative.", m_area.GetName()), LogLevel.NORMAL);
+            //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Calculated spawn count is zero or negative.", m_area.GetName()), LogLevel.NORMAL);
             return false; // Should not happen if initial check passed, but safety first
         }
         
-        Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
-            m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+        //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
+//            m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
 
         bool spawnedAny = false;
         const int MAX_SPAWN_ATTEMPTS = 10; // Max tries to find a safe spot
@@ -3829,7 +3845,7 @@ class IA_AreaInstance
 
             for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)
             {
-                // Print(string.Format("[SpawnReinforcementWave] Attempt %1/%2 to find safe spawn location...", attempt + 1, MAX_SPAWN_ATTEMPTS), LogLevel.NORMAL);
+                // //Print(string.Format("[SpawnReinforcementWave] Attempt %1/%2 to find safe spawn location...", attempt + 1, MAX_SPAWN_ATTEMPTS), LogLevel.NORMAL);
                 
                 // 1. Calculate potential Spawn Position (inside attempt loop)
                 float spawnMinRadius = 200;
@@ -3859,7 +3875,7 @@ class IA_AreaInstance
                         // Normalize angle to be within 0..2PI
                         while (angle < 0) angle += Math.PI2;
                         while (angle >= Math.PI2) angle -= Math.PI2;
-                        //Print(string.Format("[SpawnReinforcementWave Attempt %1] Biasing angle away from %2 towards %3 (final: %4)", attempt + 1, unsafeAngle * Math.RAD2DEG, targetAngle * Math.RAD2DEG, angle * Math.RAD2DEG), LogLevel.NORMAL);
+                        ////Print(string.Format("[SpawnReinforcementWave Attempt %1] Biasing angle away from %2 towards %3 (final: %4)", attempt + 1, unsafeAngle * Math.RAD2DEG, targetAngle * Math.RAD2DEG, angle * Math.RAD2DEG), LogLevel.NORMAL);
                         // unsafeAngle = -1.0; // REMOVED: Do not reset bias until a safe spot is found or max attempts reached
                     }
                     else
@@ -3874,7 +3890,7 @@ class IA_AreaInstance
                     spawnPos[1] = GetGame().GetWorld().GetSurfaceY(spawnPos[0], spawnPos[2]);
                 }
 
-                Print(string.Format("[SpawnReinforcementWave Attempt %1] Candidate spawnPos: %2", attempt + 1, spawnPos.ToString()), LogLevel.NORMAL);
+                //Print(string.Format("[SpawnReinforcementWave Attempt %1] Candidate spawnPos: %2", attempt + 1, spawnPos.ToString()), LogLevel.NORMAL);
 
                 // 2. Check distance to players
                 bool isSafe = true;
@@ -3890,8 +3906,8 @@ class IA_AreaInstance
                         while (unsafeAngle < 0) unsafeAngle += Math.PI2;
                         while (unsafeAngle >= Math.PI2) unsafeAngle -= Math.PI2; 
                         
-                        Print(string.Format("[SpawnReinforcementWave Attempt %1] UNSAFE: Spawn candidate %2 is too close to player at %3 (DistSq < %4). Will bias next attempt away from angle %5 deg.", 
-                            attempt + 1, spawnPos.ToString(), playerPos.ToString(), SAFE_SPAWN_RADIUS_SQ, unsafeAngle * Math.RAD2DEG), LogLevel.NORMAL);
+                        //Print(string.Format("[SpawnReinforcementWave Attempt %1] UNSAFE: Spawn candidate %2 is too close to player at %3 (DistSq < %4). Will bias next attempt away from angle %5 deg.", 
+//                            attempt + 1, spawnPos.ToString(), playerPos.ToString(), SAFE_SPAWN_RADIUS_SQ, unsafeAngle * Math.RAD2DEG), LogLevel.NORMAL);
                         break; // No need to check other players for this spot
                     }
                 }
@@ -3899,7 +3915,7 @@ class IA_AreaInstance
                 // 3. If safe, proceed and break attempt loop
                 if (isSafe)
                 {
-                    //Print(string.Format("[SpawnReinforcementWave Attempt %1] SAFE: Found safe spawn location at %2.", attempt + 1, spawnPos.ToString()), LogLevel.NORMAL);
+                    ////Print(string.Format("[SpawnReinforcementWave Attempt %1] SAFE: Found safe spawn location at %2.", attempt + 1, spawnPos.ToString()), LogLevel.NORMAL);
                     safeSpawnFound = true;
                     break; // Found a safe spot, exit attempt loop
                 }
@@ -3907,7 +3923,7 @@ class IA_AreaInstance
                 // If last attempt failed, log it
                 if (attempt == MAX_SPAWN_ATTEMPTS - 1)
                 {
-                    Print(string.Format("[SpawnReinforcementWave] Failed to find safe spawn location near %1 after %2 attempts. Skipping group.", spawnPos.ToString(), MAX_SPAWN_ATTEMPTS), LogLevel.WARNING);
+                    //Print(string.Format("[SpawnReinforcementWave] Failed to find safe spawn location near %1 after %2 attempts. Skipping group.", spawnPos.ToString(), MAX_SPAWN_ATTEMPTS), LogLevel.WARNING);
                 }
             } // End of attempt loop
 
@@ -3940,12 +3956,12 @@ class IA_AreaInstance
                 // It might be better to let the standard MilitaryOrderTask handle specific targeting once they integrate.
                 grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true); // Send them towards the fight
                 
-                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Spawned reinforcement group (%1 units) at %2. Total spawned: %3/%4.",
-                    scaledUnitCount, spawnPos.ToString(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+                //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Spawned reinforcement group (%1 units) at %2. Total spawned: %3/%4.",
+//                    scaledUnitCount, spawnPos.ToString(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
             }
             else
             {
-                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Failed to create reinforcement group of type %1 at %2.", st, spawnPos.ToString()), LogLevel.WARNING);
+                //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Failed to create reinforcement group of type %1 at %2.", st, spawnPos.ToString()), LogLevel.WARNING);
             }
         }
         
@@ -3972,6 +3988,144 @@ class IA_AreaInstance
                 playerPositions.Insert(playerEntity.GetOrigin());
             }
         }
+    }
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Civilian Cleanup Logic ---
+
+    // Public method to be called when this area is no longer active
+    void ScheduleCivilianCleanup(int delayMilliseconds)
+    {
+        if (!m_area) return; // Safety check
+
+        //Print(string.Format("[AreaInstance %1] Scheduling civilian cleanup in %2 ms for %3 civilian groups.", 
+//            m_area.GetName(), delayMilliseconds, m_civilians.Count()), LogLevel.NORMAL);
+
+        if (m_civilians.IsEmpty())
+        {
+            return;
+        }
+
+        // Create a copy of the current civilian groups to pass to the delayed call.
+        // This is important because m_civilians might change before the cleanup executes.
+        array<ref IA_AiGroup> civiliansSnapshot = {};
+        foreach (IA_AiGroup civGroup : m_civilians)
+        {
+            civiliansSnapshot.Insert(civGroup);
+        }
+
+        // Schedule the static cleanup method
+        GetGame().GetCallqueue().CallLater(IA_AreaInstance._SM_PerformCivilianCleanup, delayMilliseconds, false, this, civiliansSnapshot);
+    }
+
+    // Static method to be called by CallLater
+    private static void _SM_PerformCivilianCleanup(IA_AreaInstance instance, array<ref IA_AiGroup> civiliansToDespawn)
+    {
+        if (!instance) 
+        {
+            // The AreaInstance might have been destroyed in the meantime.
+            // We can still try to despawn the groups from the snapshot if they are global entities.
+            //Print("[_SM_PerformCivilianCleanup] AreaInstance is null. Attempting to despawn groups from snapshot.", LogLevel.WARNING);
+            foreach (IA_AiGroup civGroup : civiliansToDespawn)
+            {
+                if (civGroup && civGroup.IsSpawned())
+                {
+                    civGroup.Despawn();
+                }
+            }
+            civiliansToDespawn.Clear(); // Clear the snapshot array
+            return;
+        }
+        
+        // Call the internal instance method
+        instance._PerformCivilianCleanup_Internal(civiliansToDespawn);
+    }
+
+    // Internal instance method to perform the actual cleanup
+    private void _PerformCivilianCleanup_Internal(array<ref IA_AiGroup> civiliansSnapshot)
+    {
+        if (!m_area) // Safety check on the instance itself
+        {
+            //Print("[_PerformCivilianCleanup_Internal] m_area is null, cannot perform cleanup.", LogLevel.WARNING);
+            // Still try to despawn from snapshot as a best effort
+            foreach (IA_AiGroup civGroup : civiliansSnapshot)
+            {
+                if (civGroup && civGroup.IsSpawned())
+                {
+                    civGroup.Despawn();
+                }
+            }
+            // civiliansSnapshot.Clear(); // Not strictly needed
+            return;
+        }
+
+        //Print(string.Format("[AreaInstance %1] Performing delayed civilian cleanup. Snapshot size: %2, Current m_civilians size: %3, Current m_areaCivVehicles: %4", 
+//            m_area.GetName(), civiliansSnapshot.Count(), m_civilians.Count(), m_areaCivVehicles.Count()), LogLevel.NORMAL);
+
+        foreach (IA_AiGroup civGroupToDespawn : civiliansSnapshot) // Iterate over the snapshot
+        {
+            if (civGroupToDespawn)
+            {
+                // Handle associated vehicle if any
+                Vehicle associatedVehicle = null;
+                // A civilian group might be driving its own vehicle, stored as its referenced entity.
+                if (civGroupToDespawn.IsDriving() && civGroupToDespawn.GetReferencedEntity()) 
+                {
+                    associatedVehicle = Vehicle.Cast(civGroupToDespawn.GetReferencedEntity());
+                }
+
+                if (associatedVehicle)
+                {
+                    //Print(string.Format("[AreaInstance %1] Civilian group %2 is associated with vehicle %3. Cleaning up vehicle.", 
+//                        m_area.GetName(), civGroupToDespawn, associatedVehicle), LogLevel.DEBUG);
+
+                    // Release reservation first (if any)
+                    IA_VehicleManager.ReleaseVehicleReservation(associatedVehicle);
+                    // Despawn the vehicle (this adds to GC and removes from IA_VehicleManager.m_vehicles)
+                    IA_VehicleManager.DespawnVehicle(associatedVehicle);
+
+                    // Remove this vehicle from this AreaInstance's civilian vehicle tracking list
+                    int vehIdx = m_areaCivVehicles.Find(associatedVehicle);
+                    if (vehIdx != -1)
+                    {
+                        m_areaCivVehicles.Remove(vehIdx);
+                        //Print(string.Format("[AreaInstance %1] Removed vehicle %2 from m_areaCivVehicles.", m_area.GetName(), associatedVehicle), LogLevel.DEBUG);
+                    }
+                }
+
+                // Despawn the c/ivilian group (units and the group object itself via delayed delete)
+                // Check if it's actually spawned before trying to despawn, as it might have been cleaned up by other means.
+                if (civGroupToDespawn.IsSpawned()) 
+                {
+                    //Print(string.Format("[AreaInstance %1] Despawning civilian group: %2", m_area.GetName(), civGroupToDespawn), LogLevel.DEBUG);
+                    civGroupToDespawn.Despawn(); 
+                }
+
+                // Remove the group from the AreaInstance's m_civilians list.
+                // This is crucial to prevent the instance from holding onto a "dead" group reference.
+                int idxInCurrentList = m_civilians.Find(civGroupToDespawn);
+                if (idxInCurrentList != -1)
+                {
+                    m_civilians.Remove(idxInCurrentList);
+                    //Print(string.Format("[AreaInstance %1] Removed civilian group %2 from m_civilians.", m_area.GetName(), civGroupToDespawn), LogLevel.DEBUG);
+                }
+            }
+        }
+        // civiliansSnapshot.Clear(); // Not strictly needed, snapshot goes out of scope.
+
+        //Print(string.Format("[AreaInstance %1] Civilian cleanup complete. Final m_civilians size: %2, m_areaCivVehicles size: %3", 
+//            m_area.GetName(), m_civilians.Count(), m_areaCivVehicles.Count()), LogLevel.NORMAL);
+    }
+    // --- END ADDED: Civilian Cleanup Logic ---
+
+    // --- BEGIN ADDED: Area Group ID ---
+    private int m_areaGroup = -1;
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Get Area Group ---
+    int GetAreaGroup()
+    {
+        return m_areaGroup;
     }
     // --- END ADDED ---
 }

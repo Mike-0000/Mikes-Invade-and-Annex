@@ -1,12 +1,4 @@
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
- Laruns {
-  coords 7580.667 81.622 5516.958
-  m_areaGroup 7
-  m_fZoneRadius 75
-  m_areaName "Laruns"
-  m_areaType "Town"
-  m_radius 75
- }
  Chotain {
   coords 7065.329 118.474 6019.82
   m_areaGroup 7
@@ -17,10 +9,10 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  Chotain2 {
   coords 6633.385 111.41 5909.413
   m_areaGroup 7
-  m_fZoneRadius 60
+  m_fZoneRadius 70
   m_areaName "Chotain Farms"
   m_areaType "Town"
-  m_radius 60
+  m_radius 7
  }
  LaValette {
   coords 6737.408 89.419 5657.512

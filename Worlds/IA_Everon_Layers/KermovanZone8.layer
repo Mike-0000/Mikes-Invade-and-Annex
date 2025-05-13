@@ -1,3 +1,9 @@
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+ coords 5756.253 8.757 9766.367
+ angleY 0
+ m_areaGroup 8
+ m_areaName "Factory Radio Tower"
+}
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  Levie3 {
   coords 6351.554 5.549 9650.465

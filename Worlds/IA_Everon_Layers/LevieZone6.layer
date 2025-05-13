@@ -1,3 +1,9 @@
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+ coords 7834.358 254.739 4031.96
+ angleY 146.791
+ m_areaGroup 6
+ m_areaName "Levie Radio Tower"
+}
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  Levie2 {
   coords 7504.875 165.75 4287.524
@@ -30,14 +36,6 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaName "Levie Homestead East"
   m_areaType "Property"
   m_radius 25
- }
- Levie6 {
-  coords 8831.691 197.776 3932.662
-  m_areaGroup 6
-  m_fZoneRadius 140
-  m_areaName "Levie Quarry"
-  m_areaType "Military"
-  m_radius 140
  }
 }
 IA_VehicleSpawnPoint Vehicle1 : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {

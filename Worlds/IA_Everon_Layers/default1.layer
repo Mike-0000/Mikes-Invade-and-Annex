@@ -125,6 +125,12 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   SCR_GameModeHealthSettings "{5A22E11F9ACBB1DF}" {
    m_bPermitUnconsciousVON 1
   }
+  SCR_PlayerSpawnPointManagerComponent "{655A185827789972}" {
+   m_SpawnPointPrefab "{F6CAD21EDD2D1964}Prefabs/MP/Spawning/PlayerSpawnPoint.et"
+   m_bRadioVehicleSpawningEnabled 1
+   m_eDeployableSpawnPointBudgetType NONE
+   m_iDeployableSpawnPointTicketAmount 0
+  }
   SCR_RespawnBriefingComponent "{65552AF13AFD04B3}" {
    m_sJournalConfigPath "{13438C835CFF21FB}Configs/Journal/Journal.conf"
    m_Info SCR_UIInfo "{65552AF3152BD044}" {
@@ -150,6 +156,10 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
    m_fDeployMenuOpenDelay 3
   }
   SCR_RestoreEditorModesComponent "{655645CDA43F46EB}" {
+  }
+  SCR_SpawnProtectionComponent "{655A18587681A104}" {
+   m_fProtectionTime 10
+   m_bAllowPlayerSpawnpoints 1
   }
   SCR_WelcomeScreenComponent "{65552AF6586B943C}" {
    m_sHeaderTitle "Welcome to Mike's Invade and Annex"
@@ -209,6 +219,9 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   }
   SCR_EditorSettingsEntity {
    coords -1.323 0 1.368
+   m_SkipStreamingRules {
+    2
+   }
   }
   SCR_BaseTaskManager : "{87208DAD6F3C0DE2}Prefabs/MP/Managers/Tasks/TaskManager_Editor.et" {
    coords 0 0 0
@@ -236,5 +249,5 @@ SCR_SpawnPoint : "{5A2220DD0C16958B}Prefabs/MP/Spawning/SpawnPoint_US.et" {
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
  coords 4828.903 28.5 11735.593
- m_numberOfGroups 9
+ m_numberOfGroups 11
 }

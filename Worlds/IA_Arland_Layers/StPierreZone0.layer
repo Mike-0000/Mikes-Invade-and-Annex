@@ -2,6 +2,7 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  StPierre {
   coords 3165.069 11.577 2799.28
   m_fZoneRadius 250
+  m_areaType "Town"
   m_radius 250
  }
  StPierreHarbor {
@@ -32,6 +33,14 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_fZoneRadius 50
   m_areaType "Property"
   m_radius 10
+ }
+ StPierre4 {
+  coords 3260.375 41.074 2490.962
+  m_fZoneRadius 50
+  m_prefabToSpawn "{DBCDEC45DB834E8A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01.et"
+  m_areaName "StPierre Radio Tower"
+  m_areaType "RadioTower"
+  m_radius 50
  }
 }
 $grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {

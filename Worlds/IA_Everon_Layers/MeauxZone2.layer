@@ -1,3 +1,9 @@
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+ coords 4653.82 23.649 9569.023
+ angleY 0
+ m_areaGroup 2
+ m_areaName "Meaux Radio Tower"
+}
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  Meaux1 {
   coords 4511.915 14.056 9477.685

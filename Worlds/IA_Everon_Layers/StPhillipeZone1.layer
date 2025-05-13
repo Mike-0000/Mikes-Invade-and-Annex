@@ -1,3 +1,9 @@
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+ coords 4546.507 16.156 10606.07
+ angleY -9.876
+ m_areaGroup 1
+ m_areaName "St Phillipe Radio Tower"
+}
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  StPhillipe1 {
   coords 4471.31 13.145 10720.052

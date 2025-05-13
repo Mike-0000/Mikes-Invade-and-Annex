@@ -77,6 +77,10 @@ class IA_MissionInitializer : GenericEntity
 	    // Update the active group in the vehicle manager
 	    IA_VehicleManager.SetActiveGroup(currentGroup);
 	    
+	    // --- BEGIN ADDED: Set Active Group in IA_Game ---
+	    IA_Game.SetActiveGroupID(currentGroup);
+	    // --- END ADDED ---
+	    
 	    m_currentAreaInstances.Clear();
 	    array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
 	    
@@ -98,14 +102,24 @@ class IA_MissionInitializer : GenericEntity
 	        ////Print("[DEBUG_ZONE_GROUP] Initializing zone: " + name + " in group " + currentGroup, LogLevel.NORMAL);
 	        
 	        IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
-	        IA_AreaInstance m_currentAreaInstance = IA_Game.Instantiate().AddArea(area, IA_Faction.USSR, 0);
+	        IA_AreaInstance m_currentAreaInstance = IA_Game.Instantiate().AddArea(area, IA_Faction.USSR, 0, currentGroup);
 	        m_currentAreaInstances.Insert(m_currentAreaInstance);
 	        
 	        // Set the current area instance in IA_Game before spawning vehicles
 	        IA_Game.SetCurrentAreaInstance(m_currentAreaInstance);
 	    
-	        string taskTitle = "Capture " + area.GetName();
-	        string taskDesc = "Eliminate enemy presence and secure " + area.GetName();
+	        string taskTitle;
+	        string taskDesc;
+	        if (area.GetAreaType() == IA_AreaType.RadioTower)
+	        {
+	            taskTitle = "Destroy " + area.GetName();
+	            taskDesc = "Destroy the " + area.GetName() + " to disrupt enemy communications.";
+	        }
+	        else
+	        {
+	            taskTitle = "Capture " + area.GetName();
+	            taskDesc = "Eliminate enemy presence and secure " + area.GetName();
+	        }
 	        m_currentAreaInstance.QueueTask(taskTitle, taskDesc, pos);
 	    
 	        ////Print("[DEBUG_ZONE_GROUP] Initialized area: " + name + " with task: " + taskTitle, LogLevel.NORMAL);
@@ -307,6 +321,16 @@ class IA_MissionInitializer : GenericEntity
 				    string areaName = marker.GetAreaName(); 
 				    string taskTitle = "Capture " + areaName;
 				    string taskDesc = "Eliminate enemy presence and secure " + areaName;
+				    
+				    // --- BEGIN MODIFIED: Check Area Type for Task Title ---
+				    IA_AreaType areaType = marker.GetAreaType(); // Assuming marker has GetAreaType()
+				    if (areaType == IA_AreaType.RadioTower)
+				    {
+				        taskTitle = "Destroy " + areaName;
+				        taskDesc = "Destroy the " + areaName + " to disrupt enemy communications.";
+				    }
+				    // --- END MODIFIED ---
+				    
 				    instance.QueueTask(taskTitle, taskDesc, pos);
 				}
 			}
@@ -318,6 +342,22 @@ class IA_MissionInitializer : GenericEntity
 		
 		if(actualCompletedZones >= amountOfZones){ // Use the accurate count
 			//Print("[INFO] All " + amountOfZones + " zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
+
+			// --- BEGIN ADDED: Schedule civilian cleanup for completed zone instances ---
+			if (m_currentAreaInstances)
+			{
+				Print(string.Format("[IA_MissionInitializer.CheckCurrentZoneComplete] Group %1 completed. Scheduling civilian cleanup for %2 area instances.", 
+					currentGroup, m_currentAreaInstances.Count()), LogLevel.NORMAL);
+				foreach (IA_AreaInstance oldInstance : m_currentAreaInstances)
+				{
+					if (oldInstance)
+					{
+						oldInstance.ScheduleCivilianCleanup(60000); // 60 seconds delay
+					}
+				}
+			}
+			// --- END ADDED ---
+
 			m_currentIndex++;
 			if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
 			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Stop checking this group

@@ -1,0 +1,17 @@
+IA_AreaMarker QuarryRadioTower : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+ coords 8999.551 264.912 4158.574
+ angleY 52.387
+ m_areaGroup 10
+ m_fZoneRadius 30
+ m_prefabToSpawn "{DBCDEC45DB834E8A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01.et"
+ m_areaName "Quarry Radio Tower"
+ m_areaType "RadioTower"
+ m_radius 30
+}
+IA_AreaMarker Levie6 : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ coords 8831.691 197.776 3932.662
+ m_areaGroup 10
+ m_fZoneRadius 140
+ m_areaName "Levie Quarry"
+ m_radius 140
+}

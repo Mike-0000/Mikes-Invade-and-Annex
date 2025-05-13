@@ -8,7 +8,9 @@ enum IA_AreaType
     Property,
     Airport,
     Docks,
-    Military
+    Military,
+    SmallMilitary,
+    RadioTower
 };
 
 ///////////////////////////////////////////////////////////////////////
@@ -81,9 +83,13 @@ static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
         else if (m_type == IA_AreaType.Airport)
             return 6;
         else if (m_type == IA_AreaType.Military)
-            return 3;
+            return 4;
+        else if (m_type == IA_AreaType.SmallMilitary)
+            return 2;
         else if (m_type == IA_AreaType.Property)
             return 1;
+        else if (m_type == IA_AreaType.RadioTower)
+            return 3; // Medium security for radio tower
         return 0;
     }
 
@@ -92,12 +98,14 @@ static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
         // Define total reinforcement groups per area type
         switch (m_type)
         {
-            case IA_AreaType.City:       return 8;
-            case IA_AreaType.Town:       return 6;
-            case IA_AreaType.Military:   return 6;
-            case IA_AreaType.Airport:    return 5;
-            case IA_AreaType.Docks:      return 4;
-            case IA_AreaType.Property:   return 3;
+            case IA_AreaType.City:       return 6;
+            case IA_AreaType.Town:       return 4;
+            case IA_AreaType.Military:   return 4;
+            case IA_AreaType.SmallMilitary: return 2;
+            case IA_AreaType.Airport:    return 4;
+            case IA_AreaType.Docks:      return 3;
+            case IA_AreaType.Property:   return 1;
+            case IA_AreaType.RadioTower: return 2; // Moderate reinforcements for radio tower
             default:                     return 4; // Default fallback
         }
         return 0; // Should not be reached
@@ -110,9 +118,13 @@ static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
         else if (m_type == IA_AreaType.City)
             return 12;
         else if (m_type == IA_AreaType.Docks)
-            return 3;
+            return 2;
+        else if (m_type == IA_AreaType.SmallMilitary)
+            return 0;
         else if (m_type == IA_AreaType.Property)
             return 2;
+        else if (m_type == IA_AreaType.RadioTower)
+            return 0; // No civilians at radio tower
         return 0;
     }
 };

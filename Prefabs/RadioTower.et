@@ -1,0 +1,11 @@
+IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ ID "64F935A1015AFBEE"
+ coords 8999.551 264.912 4158.574
+ angleY 52.387
+ m_areaGroup 9
+ m_fZoneRadius 50
+ m_prefabToSpawn "{DBCDEC45DB834E8A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01.et"
+ m_areaName "Laruns Radio Tower"
+ m_areaType "RadioTower"
+ m_radius 50
+}

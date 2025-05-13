@@ -1,3 +1,9 @@
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+ coords 9551.438 30.566 1674.103
+ angleY -50.851
+ m_areaGroup 0
+ m_areaName "St Pierre Radio Tower"
+}
 $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  StPierre1 {
   coords 9683.567 13.835 1551.374
@@ -18,8 +24,9 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaType "Town"
   m_radius 75
  }
- StPierre4 {
+ StPierre4OFF {
   coords 9342.281 197.117 1149.776
+  m_areaGroup 101
   m_fZoneRadius 90
   m_areaName "Montfort Castle"
   m_areaType "Military"

@@ -357,8 +357,6 @@ class IA_AiGroup
 
         grp.m_isSpawned = true;
 
-        grp.WaterCheck();
-
         // Initialize tactical state and schedule evaluation
         grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, groundPos);
         grp.ScheduleNextStateEvaluation();
@@ -395,7 +393,19 @@ class IA_AiGroup
             return null;
         }
 
-        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(initialPos));
+        // Find a road near the initial position - NEW CODE
+        vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(initialPos, 100, IA_VehicleManager.GetActiveGroup());
+        vector spawnPos;
+        
+        // Use road position if found, otherwise use the initial position
+        if (roadPos != vector.Zero) {
+            spawnPos = roadPos;
+        } else {
+            spawnPos = initialPos;
+        }
+        // END NEW CODE
+
+        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
         grp.m_group = SCR_AIGroup.Cast(groupEnt);
 
         if (!grp.m_group) {
@@ -403,7 +413,7 @@ class IA_AiGroup
             return null;
         }
 
-        vector groundPos = initialPos;
+        vector groundPos = spawnPos;
         float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
         groundPos[1] = groundY;
         grp.m_group.SetOrigin(groundPos);
@@ -416,6 +426,7 @@ class IA_AiGroup
                  continue;
             }
 
+            // Modified to spawn units close to the road position
             vector unitSpawnPos = groundPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
             Resource charRes = Resource.Load(charPrefabPath);
             if (!charRes) {
@@ -438,9 +449,9 @@ class IA_AiGroup
         grp.PerformSpawn();
         
         // Explicitly set a default tactical state for the new group
-        if (initialPos != vector.Zero)
+        if (spawnPos != vector.Zero)
         {
-            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, initialPos, null, true); // Added authority flag
+            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, spawnPos, null, true); // Added authority flag
         }
         else
         {
@@ -484,13 +495,13 @@ class IA_AiGroup
             }
         }
         
-        //Print("[IA_NEW_DEBUG] IsEngagedWithEnemy called. Group faction: " + m_faction + ", Result: " + result, LogLevel.WARNING);
+        //////Print("[IA_NEW_DEBUG] IsEngagedWithEnemy called. Group faction: " + m_faction + ", Result: " + result, LogLevel.WARNING);
         return result;
     }
 
     void MarkAsUnengaged()
     {
-        ////Print("[DEBUG] MarkAsUnengaged called. Resetting engaged enemy faction.", LogLevel.NORMAL);
+        ////////Print("[DEBUG] MarkAsUnengaged called. Resetting engaged enemy faction.", LogLevel.NORMAL);
         m_engagedEnemyFaction = IA_Faction.NONE;
     }
 
@@ -583,6 +594,19 @@ class IA_AiGroup
         float y = GetGame().GetWorld().GetSurfaceY(origin[0], origin[2]);
         origin[1] = y + 0.5;
 
+        // --- BEGIN WATER CHECK ---
+        if (WaterCheck(origin))
+        {
+            Print(string.Format("[IA_AiGroup.AddOrder] Proposed waypoint at %1 for order %2 is in water. Requesting state re-evaluation to find a new target.", 
+                origin.ToString(), typename.EnumToString(IA_AiOrder, order)), LogLevel.WARNING);
+            
+            // Request a neutral state at current group position to trigger re-evaluation by authority or self.
+            // This is how the group "requests a new waypoint" - by asking for a new task.
+            RequestTacticalStateChange(IA_GroupTacticalState.Neutral, GetOrigin());
+            return; // Do not add this order.
+        }
+        // --- END WATER CHECK ---
+
         // For vehicle orders, snap to nearest road - EXCEPT GetInVehicle orders which should go directly to the vehicle
         if (m_isDriving && order != IA_AiOrder.GetInVehicle)
         {
@@ -601,8 +625,8 @@ class IA_AiGroup
         if (order == IA_AiOrder.Defend) 
         {
             // --- BEGIN ADDED: Debug logging for direct defend orders ---
-            Print(string.Format("[IA_AiGroup.AddOrder] DIRECT DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Current Pos: %4 | Target: %5 | ScriptLine: 330", 
-                this, typename.EnumToString(IA_Faction, m_faction), GetAliveCount(), GetOrigin().ToString(), origin.ToString()), LogLevel.NORMAL);
+            //Print(string.Format("[IA_AiGroup.AddOrder] DIRECT DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Current Pos: %4 | Target: %5 | ScriptLine: 330", 
+//                this, typename.EnumToString(IA_Faction, m_faction), GetAliveCount(), GetOrigin().ToString(), origin.ToString()), LogLevel.NORMAL);
             // --- END ADDED ---
             
             rname = "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
@@ -613,15 +637,15 @@ class IA_AiGroup
         }
         
         // --- BEGIN ADDED LOGGING ---
-        Print(string.Format("[IA_Waypoint DEBUG AddOrder] Group %1 | Order: %2 | Waypoint Resource: %3 | Target: %4", 
-            m_group, typename.EnumToString(IA_AiOrder, order), rname, origin), LogLevel.DEBUG);
+        ////Print(string.Format("[IA_Waypoint DEBUG AddOrder] Group %1 | Order: %2 | Waypoint Resource: %3 | Target: %4", 
+        //    m_group, typename.EnumToString(IA_AiOrder, order), rname, origin), LogLevel.DEBUG);
         // --- END ADDED LOGGING ---
         
         Resource res = Resource.Load(rname);
         if (!res)
         {
             // --- BEGIN ADDED LOGGING ---
-            Print(string.Format("[IA_Waypoint] Failed to load waypoint resource: %1 for Group %2", rname, m_group), LogLevel.ERROR);
+            //Print(string.Format("[IA_Waypoint] Failed to load waypoint resource: %1 for Group %2", rname, m_group), LogLevel.ERROR);
             // --- END ADDED LOGGING ---
             return;
         }
@@ -635,7 +659,7 @@ class IA_AiGroup
             string entStr = "null";
             if (waypointEnt)
                 entStr = waypointEnt.ToString();
-            Print(string.Format("[IA_Waypoint] Failed to cast spawned entity to SCR_AIWaypoint. Resource: %1, Origin: %2, Entity: %3 for Group %4", rname, origin, entStr, m_group), LogLevel.ERROR);
+            //Print(string.Format("[IA_Waypoint] Failed to cast spawned entity to SCR_AIWaypoint. Resource: %1, Origin: %2, Entity: %3 for Group %4", rname, origin, entStr, m_group), LogLevel.ERROR);
             // --- END MODIFIED LOGGING ---
             if (waypointEnt)
                 IA_Game.AddEntityToGc(waypointEnt);
@@ -656,21 +680,21 @@ class IA_AiGroup
         // --- BEGIN ADDED: Additional logging before adding waypoint to group ---
         if (order == IA_AiOrder.Defend)
         {
-            Print(string.Format("[IA_Waypoint] PRE-ADD DEFEND WAYPOINT: Group %1 | Waypoint %2 | Position %3 | Priority %4", 
-                m_group, w, w.GetOrigin().ToString(), w.GetPriorityLevel()), LogLevel.NORMAL);
+          //  //Print(string.Format("[IA_Waypoint] PRE-ADD DEFEND WAYPOINT: Group %1 | Waypoint %2 | Position %3 | Priority %4", 
+         //       m_group, w, w.GetOrigin().ToString(), w.GetPriorityLevel()), LogLevel.NORMAL);
             
             // Add additional group state info
             array<AIWaypoint> existingWaypoints = {};
             m_group.GetWaypoints(existingWaypoints);
-            Print(string.Format("[IA_Waypoint] GROUP STATE BEFORE DEFEND: Existing Waypoints: %1", 
-                existingWaypoints.Count()), LogLevel.NORMAL);
+          //  //Print(string.Format("[IA_Waypoint] GROUP STATE BEFORE DEFEND: Existing Waypoints: %1", 
+          //      existingWaypoints.Count()), LogLevel.NORMAL);
         }
         // --- END ADDED ---
 
         m_group.AddWaypoint(w);
         
         // --- BEGIN ADDED LOGGING ---
-        Print(string.Format("[IA_Waypoint] Added Order: %1 at %2 for Group %3", typename.EnumToString(IA_AiOrder, order), origin, m_group), LogLevel.WARNING);
+        //Print(string.Format("[IA_Waypoint] Added Order: %1 at %2 for Group %3", typename.EnumToString(IA_AiOrder, order), origin, m_group), LogLevel.WARNING);
         // --- END ADDED LOGGING ---
     }
 
@@ -717,7 +741,7 @@ class IA_AiGroup
         // Reset flanking phase state when all orders are removed
         if (m_isInFlankingPhase)
         {
-            Print(string.Format("[RemoveAllOrders] Resetting flanking state for Group %1", m_group), LogLevel.NORMAL);
+         //   //Print(string.Format("[RemoveAllOrders] Resetting flanking state for Group %1", m_group), LogLevel.NORMAL);
             m_isInFlankingPhase = false;
         }
         
@@ -855,34 +879,45 @@ class IA_AiGroup
 
         if (m_isCivilian)
         {
+            // For civilians, try to find a road position
+            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(m_initialPosition, 300, IA_VehicleManager.GetActiveGroup());
+            vector spawnPos;
+            
+            // Use road position if found, otherwise use the initial position
+            if (roadPos != vector.Zero) {
+                spawnPos = roadPos;
+            } else {
+                spawnPos = m_initialPosition;
+            }
+            
             string resourceName = IA_RandomCivilianResourceName();
             Resource charRes = Resource.Load(resourceName);
             if (!charRes)
             {
-                Print("[IA_AiGroup.PerformSpawn] Civilian character resource load failed: " + resourceName, LogLevel.ERROR);
+                ////Print("[IA_AiGroup.PerformSpawn] Civilian character resource load failed: " + resourceName, LogLevel.ERROR);
                 return false;
             }
             
-            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSurfaceAdjustedSpawnParams(m_initialPosition));
+            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSurfaceAdjustedSpawnParams(spawnPos));
             if (!charEntity)
             {
-                Print("[IA_AiGroup.PerformSpawn] Civilian character entity spawn failed for: " + resourceName, LogLevel.ERROR);
+                ////Print("[IA_AiGroup.PerformSpawn] Civilian character entity spawn failed for: " + resourceName, LogLevel.ERROR);
                 return false;
             }
 
             Resource groupPrefabRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
             if (!groupPrefabRes)
             {
-                 Print("[IA_AiGroup.PerformSpawn] Civilian group prefab resource load failed.", LogLevel.ERROR);
+                 ////Print("[IA_AiGroup.PerformSpawn] Civilian group prefab resource load failed.", LogLevel.ERROR);
                  IA_Game.AddEntityToGc(charEntity); // Clean up character
                  return false;
             }
-            IEntity groupEntity = GetGame().SpawnEntityPrefab(groupPrefabRes, null, IA_CreateSimpleSpawnParams(m_initialPosition));
+            IEntity groupEntity = GetGame().SpawnEntityPrefab(groupPrefabRes, null, IA_CreateSimpleSpawnParams(spawnPos));
             m_group = SCR_AIGroup.Cast(groupEntity);
 
             if (!m_group)
             {
-                Print("[IA_AiGroup.PerformSpawn] Civilian SCR_AIGroup entity spawn or cast failed.", LogLevel.ERROR);
+                ////Print("[IA_AiGroup.PerformSpawn] Civilian SCR_AIGroup entity spawn or cast failed.", LogLevel.ERROR);
                 IA_Game.AddEntityToGc(charEntity); // Clean up character
                 if (groupEntity) IA_Game.AddEntityToGc(groupEntity); // Clean up group entity if it was spawned
                 return false;
@@ -891,7 +926,7 @@ class IA_AiGroup
             // Add the spawned civilian character to the SCR_AIGroup
             if (!m_group.AddAIEntityToGroup(charEntity))
             {
-                Print("[IA_AiGroup.PerformSpawn] Failed to add civilian character to SCR_AIGroup.", LogLevel.ERROR);
+                ////Print("[IA_AiGroup.PerformSpawn] Failed to add civilian character to SCR_AIGroup.", LogLevel.ERROR);
                 IA_Game.AddEntityToGc(charEntity); // Clean up character
                 IA_Game.AddEntityToGc(m_group);    // Clean up the group as well since it's unusable
                 m_group = null;
@@ -916,7 +951,7 @@ class IA_AiGroup
         // Common setup for all successfully spawned/validated groups
         if (!m_group) 
         {
-            Print("[IA_AiGroup.PerformSpawn] m_group is null after specific spawn logic. Critical error.", LogLevel.ERROR);
+            ////Print("[IA_AiGroup.PerformSpawn] m_group is null after specific spawn logic. Critical error.", LogLevel.ERROR);
             return false;
         }
 
@@ -937,7 +972,6 @@ class IA_AiGroup
         // General SetupDeathListener call - for military this also schedules CheckDangerEvents.
         // For civilians, their specific unit listener is already set.
         SetupDeathListener(); 
-        WaterCheck();
         ScheduleNextStateEvaluation();
 
         // The recurring CheckDangerEvents is mainly for military AI reactions.
@@ -1016,8 +1050,8 @@ class IA_AiGroup
         // No need to store detailed events or update danger level for vehicles for now.
         if (m_isDriving)
         {
-            Print(string.Format("[IA_AiGroup.ProcessDangerEvent] Vehicle Group %1 recorded danger event from %2 at %3. LastDangerTime: %4", 
-                this, sourceFaction, position.ToString(), m_lastDangerEventTime), LogLevel.DEBUG);
+           // //Print(string.Format("[IA_AiGroup.ProcessDangerEvent] Vehicle Group %1 recorded danger event from %2 at %3. LastDangerTime: %4", 
+           //     this, sourceFaction, position.ToString(), m_lastDangerEventTime), LogLevel.DEBUG);
             return; // Exit early for vehicles after updating timestamp
         }
         // --- END ADDED ---
@@ -1183,7 +1217,7 @@ class IA_AiGroup
 
          SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
          if (!ccc) {
-             ////Print("[IA_AiGroup.SetupDeathListenerForUnit] Missing SCR_CharacterControllerComponent in AI", LogLevel.WARNING);
+             ////////Print("[IA_AiGroup.SetupDeathListenerForUnit] Missing SCR_CharacterControllerComponent in AI", LogLevel.WARNING);
              return;
          }
          ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
@@ -1412,36 +1446,41 @@ class IA_AiGroup
         }
     }
 
-    private void WaterCheck()
+    private bool WaterCheck(vector requestedLocation)
     {
-
+		float oceanHeight = GetGame().GetWorld().GetOceanBaseHeight();
+		return requestedLocation[1] <= oceanHeight; // True if at or below ocean level
     }
     
     void UpdateVehicleOrders()
     {
         if (!m_isDriving || !m_referencedEntity)
         {
-            return;
+            // If we are not supposed to be driving, or have no vehicle entity, nothing to do.
+            // However, if we have a driving target but m_isDriving is false or m_referencedEntity is null,
+            // this might be a state we can recover from.
+            if (m_drivingTarget != vector.Zero && m_referencedEntity) // Still have a target and an entity reference
+            {
+                ////Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] WARNING: Group %1 m_isDriving is false but has drivingTarget %2 and referencedEntity. Attempting recovery.", 
+                //    this, m_drivingTarget.ToString()), LogLevel.WARNING);
+                m_isDriving = true; // Force driving state back
+                // Proceed to waypoint update logic
+            }
+            else if (m_drivingTarget != vector.Zero && !m_referencedEntity) // Still have a target but lost entity reference
+            {
+                Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] CRITICAL: Group %1 lost referencedEntity but still has drivingTarget %2. Cannot recover without entity.",
+                    this, m_drivingTarget.ToString()), LogLevel.ERROR);
+                ClearVehicleReference(); // Cannot recover without an entity reference.
+                return;
+            }
+            else
+            {
+                return; // No driving target, or no entity and no driving flag.
+            }
         }
             
         int currentTime = System.GetUnixTime();
-
-        // --- BEGIN ADDED: Vehicle Danger Reaction ---
-        // Check if the vehicle experienced danger recently
-        if (m_lastDangerEventTime > 0 && currentTime - m_lastDangerEventTime < 60)
-        {
-            // Danger within the last 60 seconds - remove orders and let base game take over
-            if (HasActiveWaypoint()) // Only remove if orders exist
-            {
-                Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Vehicle Group %1 under recent danger (last %2s ago). Removing orders.", 
-                    this, currentTime - m_lastDangerEventTime), LogLevel.DEBUG);
-                RemoveAllOrders(false); // Clear waypoints, don't reset internal order timer
-            }
-            // Skip the rest of the logic for this cycle to allow base game reactions
-            return; 
-        }
-        // --- END ADDED ---
-            
+    
         if (currentTime - m_lastVehicleOrderTime < VEHICLE_ORDER_UPDATE_INTERVAL)
         {
             return;
@@ -1452,9 +1491,31 @@ class IA_AiGroup
         Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
         if (!vehicle)
         {
-            // Vehicle is gone, clear reference and stop driving state
-            ClearVehicleReference();
-            return;
+            // --- BEGIN MODIFICATION FOR RESILIENCE ---
+            if (m_drivingTarget != vector.Zero)
+            {
+                Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] WARNING: Group %1 Vehicle.Cast(m_referencedEntity) failed but m_drivingTarget (%2) exists. Attempting to continue.", 
+                    this, m_drivingTarget.ToString()), LogLevel.WARNING);
+                
+                // We assume m_referencedEntity still holds the intended vehicle, even if cast failed temporarily.
+                // Try to update waypoint directly. If m_referencedEntity is truly invalid, UpdateVehicleWaypoint should handle it.
+                // We need a valid Vehicle reference for UpdateVehicleWaypoint. If it cannot be cast, we cannot proceed.
+                // This path implies a more serious issue if the entity can no longer be cast to Vehicle.
+                // For now, we'll log it and proceed to ClearVehicleReference as the original code did,
+                // as forcing it without a valid castable Vehicle might lead to further errors.
+                // A more robust solution might involve trying to re-acquire the vehicle if m_referencedEntity is stale.
+                ////Print("Vehicle Gone or uncastable, removing from sync service", LogLevel.WARNING);
+                ClearVehicleReference();
+                return;
+            }
+            else
+            {
+                // No driving target, so it's safe to clear.
+                ////Print("Vehicle Gone (or uncastable) and no driving target, removing from sync service",LogLevel.WARNING);
+                ClearVehicleReference();
+                return;
+            }
+            // --- END MODIFICATION FOR RESILIENCE ---
         }
         
         array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
@@ -1479,7 +1540,7 @@ class IA_AiGroup
         if (anyOutside)
         {
             // Someone is outside, order them back in
-            Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 members outside vehicle. Ordering GetInVehicle.", this), LogLevel.DEBUG);
+            ////Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 members outside vehicle. Ordering GetInVehicle.", this), LogLevel.DEBUG);
             RemoveAllOrders();
             
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
@@ -1495,17 +1556,20 @@ class IA_AiGroup
         {
             // Check if we need a new waypoint (don't have one or reached destination)
             bool hasActiveWP = HasActiveWaypoint();
+            // If vehicle is null here (e.g. from a failed cast earlier that we tried to recover from),
+            // HasVehicleReachedDestination might behave unexpectedly or error.
+            // However, the check 'if(!vehicle)' above should prevent reaching here with a null vehicle.
             bool vehicleReachedDest = IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget);
             
-            // Debug print for waypoint status
-            // Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle waypoint check: HasActiveWP=%1, ReachedDest=%2", this, hasActiveWP, vehicleReachedDest), LogLevel.DEBUG);
+            // Debug //Print for waypoint status
+            // //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle waypoint check: HasActiveWP=%1, ReachedDest=%2", this, hasActiveWP, vehicleReachedDest), LogLevel.DEBUG);
                   
             if (!hasActiveWP || vehicleReachedDest)
             {
                 // Need a new waypoint
-                Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle needs new waypoint to %2.", this, m_drivingTarget.ToString()), LogLevel.DEBUG);
-                // Ensure driving state is set
-                m_isDriving = true;
+                //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle needs new waypoint to %2.", this, m_drivingTarget.ToString()), LogLevel.DEBUG);
+                // Ensure driving state is set (might have been unset if we tried to recover at the start)
+                m_isDriving = true; 
                 
                 IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
             }
@@ -1514,7 +1578,7 @@ class IA_AiGroup
         {
             // Vehicle group has no destination - perhaps assign a patrol or hold?
             // For now, do nothing, let it idle or follow base game logic.
-            // Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle has no driving target.", this), LogLevel.DEBUG);
+            // //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle has no driving target.", this), LogLevel.DEBUG);
         }
     }
 
@@ -1522,6 +1586,9 @@ class IA_AiGroup
     void ClearVehicleReference()
     {
         
+        //Print(string.Format("[IA_AiGroup.ClearVehicleReference] Group %1 clearing vehicle reference. Was driving: %2, Entity: %3, Target: %4",
+//            this, m_isDriving, m_referencedEntity, m_drivingTarget.ToString()), LogLevel.DEBUG);
+
         if (m_referencedEntity)
         {
             Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
@@ -1693,8 +1760,8 @@ class IA_AiGroup
                     m_tacticalState == IA_GroupTacticalState.Flanking ||
                     m_tacticalState == IA_GroupTacticalState.LastStand)
                 {
-                    Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Reapplying authority-managed state %1 for group %2", 
-                        typename.EnumToString(IA_GroupTacticalState, m_tacticalState), this), LogLevel.DEBUG);
+                    //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Reapplying authority-managed state %1 for group %2", 
+//                        typename.EnumToString(IA_GroupTacticalState, m_tacticalState), this), LogLevel.DEBUG);
                     ApplyTacticalStateOrders();
                 }
             }
@@ -1709,8 +1776,8 @@ class IA_AiGroup
                 aliveCount == 1 && initialCount > 2)
             {
                 // Request retreat to preserve the last unit
-                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] CRITICAL CONDITION: Attacking/Flanking group %1 down to last unit - requesting retreat", 
-                    this), LogLevel.WARNING);
+                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] CRITICAL CONDITION: Attacking/Flanking group %1 down to last unit - requesting retreat", 
+//                    this), LogLevel.WARNING);
                     
                 // Request state change rather than making it directly
                 RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
@@ -1727,8 +1794,8 @@ class IA_AiGroup
                 } else {
                     survivingRatio = 0;
                 }
-                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] SEVERE LOSSES: Attacking/Flanking group %1 at %2% strength - requesting role reassessment", 
-                    this, Math.Round(survivingRatio * 100)), LogLevel.WARNING);
+                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] SEVERE LOSSES: Attacking/Flanking group %1 at %2% strength - requesting role reassessment", 
+//                    this, Math.Round(survivingRatio * 100)), LogLevel.WARNING);
                     
                 // High danger - request retreat or defend based on current danger level
                 if (m_currentDangerLevel > 0.7)
@@ -1749,8 +1816,8 @@ class IA_AiGroup
                 int timeSinceLastDanger = System.GetUnixTime() - m_lastDangerEventTime;
                 if (timeSinceLastDanger < 10) // Very recent danger (last 10 seconds)
                 {
-                    Print(string.Format("[IA_AiGroup.EvaluateTacticalState] IMMEDIATE THREAT: Group %1 under high danger (%2) - requesting appropriate response",
-                        this, m_currentDangerLevel), LogLevel.WARNING);
+                    //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] IMMEDIATE THREAT: Group %1 under high danger (%2) - requesting appropriate response",
+//                        this, m_currentDangerLevel), LogLevel.WARNING);
 
                     // Request appropriate response based on current state and strength
                     if (aliveCount <= 2)
@@ -1773,12 +1840,12 @@ class IA_AiGroup
                             if (threatFarEnoughForFlank && Math.RandomFloat01() < 0.35)
                             {
                                 RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition);
-                                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Assigned Attacker, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG);
+                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Assigned Attacker, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG);
                             }
                             else
                             {
                                 RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition); // Continue attacking
-                                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Assigned Attacker, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.DEBUG);
+                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Assigned Attacker, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.DEBUG);
                             }
                         }
                         // If already assigned Flanking, continue flanking (don't request Attacking)
@@ -1788,7 +1855,7 @@ class IA_AiGroup
                              // For now, just don't request a change to attacking. Maybe request Flanking again?
                              // Let's request Flanking again to potentially update the target position if needed by AreaInstance logic.
                              // RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition); // REMOVED: Don't re-request flank if already flanking.
-                             Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Maintaining FLANKING (Already Flanking, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG); // MODIFIED Log message
+                             //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Maintaining FLANKING (Already Flanking, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG); // MODIFIED Log message
                         }
                         else // Not currently assigned an offensive role by authority
                         {
@@ -1796,14 +1863,14 @@ class IA_AiGroup
                             if (threatFarEnoughForFlank && Math.RandomFloat01() < 0.50)
                             {
                                 RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition);
-                                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Not Assigned Offense, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG);
+                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Not Assigned Offense, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG);
                             }
                             else
                             {
                                 // Default response: request attack towards the source of the danger
                                 // This case implies the current state is not Attacking or Flanking
                                 RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition);
-                                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Not Assigned Offense, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.DEBUG);
+                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Not Assigned Offense, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.DEBUG);
                             }
                         }
                     }
@@ -1911,7 +1978,7 @@ class IA_AiGroup
                     // Request appropriate state based on strength
                     if (aliveCount <= 2 || strengthRatio < 0.3)
                     {
-                        Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Group %1 unit strength too low for attack/flank - requesting Defend", this), LogLevel.DEBUG);
+                        //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Group %1 unit strength too low for attack/flank - requesting Defend", this), LogLevel.DEBUG);
                         RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
                     }
                     else if (aliveCount >= 3 && strengthRatio >= 0.6 && Math.RandomFloat(0, 1) < 0.35)
@@ -2030,17 +2097,19 @@ class IA_AiGroup
         
         m_referencedEntity = vehicle;
         m_isDriving = true;
-        m_drivingTarget = destination;
+        m_drivingTarget = destination; // Keep this to store the ultimate destination
         
         m_lastOrderPosition = vehicle.GetOrigin();
         m_lastOrderTime = System.GetUnixTime();
         
-        RemoveAllOrders();
+        // Set the tactical state to InVehicle. This will call RemoveAllOrders internally.
+        // Pass 'destination' as the target position for the InVehicle state.
+        // Pass 'vehicle' as the target entity for the state.
+        // Mark this as an authoritative state change.
+        SetTacticalState(IA_GroupTacticalState.InVehicle, destination, vehicle, true);
         
-        if (destination != vector.Zero) 
-        {
-            IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, destination);
-        }
+        // The call to IA_VehicleManager.UpdateVehicleWaypoint previously here is now handled
+        // by the updated SetTacticalState logic for IA_GroupTacticalState.InVehicle.
     }
 
     void Despawn()
@@ -2073,8 +2142,8 @@ class IA_AiGroup
         // Add logging to show the state change
         if (m_tacticalState != newState)
         {
-            Print(string.Format("[IA_AiGroup.SetTacticalState] Group %1 changing state: %2 -> %3", 
-                this, m_tacticalState, newState), LogLevel.DEBUG);
+            //Print(string.Format("[IA_AiGroup.SetTacticalState] Group %1 changing state: %2 -> %3", 
+//                this, m_tacticalState, newState), LogLevel.DEBUG);
                 
             // Record the time when the state changed
             m_tacticalStateStartTime = System.GetUnixTime();
@@ -2127,8 +2196,8 @@ class IA_AiGroup
                 }
                 
                 // Log Defend State Info
-                Print(string.Format("[IA_AiGroup.SetTacticalState] DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Position: %4 | Target: %5", 
-                    this, m_faction, GetAliveCount(), m_lastConfirmedPosition.ToString(), defendPos.ToString()), LogLevel.NORMAL);
+                //Print(string.Format("[IA_AiGroup.SetTacticalState] DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Position: %4 | Target: %5", 
+                //    this, m_faction, GetAliveCount(), m_lastConfirmedPosition.ToString(), defendPos.ToString()), LogLevel.NORMAL);
                 
                 // Add some vertical offset to avoid waypoints in ground
                 if (defendPos[1] < 5)
@@ -2156,8 +2225,8 @@ class IA_AiGroup
                     m_isInFlankingPhase = true;
                     
                     // Log the flanking maneuver
-                    Print(string.Format("[IA_AiGroup.SetTacticalState] FLANKING MANEUVER: Group %1 flanking from %2 around enemy at %3 to position %4", 
-                        this, groupPos.ToString(), enemyPos.ToString(), flankPos.ToString()), LogLevel.NORMAL);
+                    //Print(string.Format("[IA_AiGroup.SetTacticalState] FLANKING MANEUVER: Group %1 flanking from %2 around enemy at %3 to position %4", 
+//                        this, groupPos.ToString(), enemyPos.ToString(), flankPos.ToString()), LogLevel.NORMAL);
                     
                     // Add the order to move to the flanking position first
                     AddOrder(flankPos, IA_AiOrder.Move, true);
@@ -2189,6 +2258,19 @@ class IA_AiGroup
             
             case IA_GroupTacticalState.InVehicle:
                 // For groups in vehicles - maybe handled at a higher level
+                // If m_isDriving is true, m_referencedEntity is valid, and a targetPos (destination) is provided,
+                // ensure the vehicle waypoint is re-established.
+                // This is crucial because RemoveAllOrders() was called at the start of SetTacticalState.
+                if (m_isDriving && m_referencedEntity && targetPos != vector.Zero)
+                {
+                    Vehicle veh = Vehicle.Cast(m_referencedEntity);
+                    // It's also good practice to ensure targetEntity (if provided for InVehicle state) matches m_referencedEntity
+                    // or is the vehicle itself.
+                    if (veh) // && (targetEntity == null || targetEntity == veh))
+                    {
+                        IA_VehicleManager.UpdateVehicleWaypoint(veh, this, targetPos); 
+                    }
+                }
                 break;
                 
             default:
@@ -2351,18 +2433,18 @@ class IA_AiGroup
         if (distSqToLeft <= distSqToRight)
         {
             flankPos = leftFlankPos;
-            Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Group %1 choosing LEFT flank (Closer: %.1fm vs %.1fm)", 
-                this, Math.Sqrt(distSqToLeft), Math.Sqrt(distSqToRight)), LogLevel.DEBUG);
+            //Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Group %1 choosing LEFT flank (Closer: %.1fm vs %.1fm)", 
+//                this, Math.Sqrt(distSqToLeft), Math.Sqrt(distSqToRight)), LogLevel.DEBUG);
         }
         else
         {
             flankPos = rightFlankPos;
-            Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Group %1 choosing RIGHT flank (Closer: %.1fm vs %.1fm)", 
-                this, Math.Sqrt(distSqToRight), Math.Sqrt(distSqToLeft)), LogLevel.DEBUG);
+            //Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Group %1 choosing RIGHT flank (Closer: %.1fm vs %.1fm)", 
+            //    this, Math.Sqrt(distSqToRight), Math.Sqrt(distSqToLeft)), LogLevel.DEBUG);
         }
         
-        Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Calculated flank position at %1 (distance=%.1fm)", 
-            flankPos.ToString(), flankDistance), LogLevel.DEBUG);
+        //Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Calculated flank position at %1 (distance=%.1fm)", 
+//            flankPos.ToString(), flankDistance), LogLevel.DEBUG);
         // --- END MODIFIED FLANKING LOGIC ---
         
         return flankPos;
@@ -2414,9 +2496,9 @@ class IA_AiGroup
             return;
             
         // Log the request
-        Print(string.Format("[IA_AiGroup.RequestTacticalStateChange] Group %1 requesting state change from %2 to %3", 
-            this, typename.EnumToString(IA_GroupTacticalState, m_tacticalState), 
-            typename.EnumToString(IA_GroupTacticalState, newState)), LogLevel.DEBUG);
+        //Print(string.Format("[IA_AiGroup.RequestTacticalStateChange] Group %1 requesting state change from %2 to %3", 
+//            this, typename.EnumToString(IA_GroupTacticalState, m_tacticalState), 
+//            typename.EnumToString(IA_GroupTacticalState, newState)), LogLevel.DEBUG);
             
         // Set pending request data
         m_hasPendingStateRequest = true;

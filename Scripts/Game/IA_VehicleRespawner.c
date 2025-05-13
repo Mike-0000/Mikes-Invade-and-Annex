@@ -93,7 +93,10 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 		// This also handles cases where an entity might be deleted from the world, making the 'vehicle' reference stale (effectively null).
 		return true; 
 	}
+	void DelayedVehicleDeletion(IEntity vic){
+		IA_Game.AddEntityToGc(vic);
 	
+	}
 	//------------------------------------------------------------------------------------------------
 	//! PerformSpawn is overridden to use the specific m_sVehiclePrefab and handle wreck cleanup.
 	override void PerformSpawn()
@@ -122,7 +125,9 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			RplComponent rpl = RplComponent.Cast(m_RespawnerSpawnedVehicle.FindComponent(RplComponent));
 			if (rpl && rpl.IsMaster()) // Ensure server (master) is deleting its own entities
 			{
-				IA_Game.AddEntityToGc(m_RespawnerSpawnedVehicle); // Use IA_Game's garbage collection
+				IEntity vic1 = m_RespawnerSpawnedVehicle;
+				GetGame().GetCallqueue().CallLater(DelayedVehicleDeletion, 120000, false, vic1);
+				 // Use IA_Game's garbage collection
 			}
 			m_RespawnerSpawnedVehicle = null; // Clear the reference as it's now deleted or scheduled for deletion.
 		}

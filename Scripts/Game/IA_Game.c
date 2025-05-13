@@ -20,6 +20,10 @@ class IA_Game
     // Static reference to the currently active area instance
     static IA_AreaInstance CurrentAreaInstance = null;
 
+    // --- BEGIN ADDED: Active Group ID ---
+    static private int s_activeGroupID = -1;
+    // --- END ADDED ---
+
     private bool m_hasInit = false;
 
     // Player scaling system
@@ -253,32 +257,45 @@ class IA_Game
 	    
 	    foreach (IA_AreaInstance areaInst : m_areas)
 	    {
-				if(!areaInst.m_area){
+				// --- BEGIN ADDED: Filter by Active Group ID ---
+				if (areaInst && areaInst.GetAreaGroup() != s_activeGroupID)
+				{
+					// Print(string.Format("[IA_Game.PeriodicalTask] Skipping Area '%1' (Group %2) - Active Group is %3", 
+					// 	areaInst.m_area.GetName(), areaInst.GetAreaGroup(), s_activeGroupID), LogLevel.DEBUG);
+					continue;
+				}
+				// --- END ADDED ---
+				
+				if(!areaInst || !areaInst.m_area){
 					//Print("areaInst.m_area is Null!!!",LogLevel.WARNING);
-					return;
+					continue; // Use continue instead of return to process other areas
 				}else{
 					//Print("areaInst.m_area "+ areaInst.m_area.GetName() +"is NOT Null",LogLevel.NORMAL);
-				areaInst.RunNextTask();
+					areaInst.RunNextTask();
 				}
 	        
 	    }
 	}
 	
 
-    IA_AreaInstance AddArea(IA_Area area, IA_Faction fac, int strength = 0)
+    IA_AreaInstance AddArea(IA_Area area, IA_Faction fac, int strength = 0, int groupID = -1)
     {
-		IA_AreaInstance inst = IA_AreaInstance.Create(area, fac, strength);
-		if(!inst.m_area){
-			//Print("IA_AreaInstance inst.m_area is NULL!", LogLevel.ERROR);
-		}
-		//Print("Adding Area " + area.GetName(), LogLevel.WARNING);
+        IA_AreaInstance inst = IA_AreaInstance.Create(area, fac, strength, groupID);
+        
+        if(!inst || !inst.m_area){
+            Print("IA_Game.AddArea: Failed to create or received null IA_AreaInstance or area!", LogLevel.ERROR);
+            return null;
+        }
+
+        Print(string.Format("[IA_Game.AddArea] Adding Area '%1' (Group %2) to m_areas.", area.GetName(), groupID), LogLevel.WARNING);
         m_areas.Insert(inst);
-		//Print("m_areas.Count() = " + m_areas.Count(), LogLevel.WARNING);
+        Print(string.Format("[IA_Game.AddArea] m_areas.Count() = %1 after adding %2", m_areas.Count(), area.GetName()), LogLevel.WARNING);
+
         IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
         if (rep){
-            //Print("Adding Area in Replication " + area.GetName(), LogLevel.WARNING);
-			rep.AddArea(inst);
-		}
+            // Print("Adding Area to ReplicationWorkaround: " + area.GetName(), LogLevel.WARNING);
+            rep.AddArea(inst); // Add to replication system
+        }
         return inst;
     }
 
@@ -291,4 +308,12 @@ class IA_Game
         }
         return null;
     }
+
+    // --- BEGIN ADDED: Set Active Group ID ---
+    static void SetActiveGroupID(int groupID)
+    {
+        s_activeGroupID = groupID;
+        // Print(string.Format("[IA_Game] Active group ID set to: %1", s_activeGroupID), LogLevel.NORMAL);
+    }
+    // --- END ADDED ---
 };
