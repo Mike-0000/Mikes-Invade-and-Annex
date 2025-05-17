@@ -1,0 +1,48 @@
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+ coords 5337.261 43.496 10533.86
+ angleY -19.696
+ m_areaGroup 12
+ m_fZoneRadius 25
+ m_areaName "Military Radio Tower"
+ m_radius 25
+}
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ Etoupe {
+  coords 5358.154 17.895 10007.355
+  m_areaGroup 12
+  m_fZoneRadius 60
+  m_areaName "Etoupe"
+  m_areaType "Town"
+  m_radius 60
+ }
+ Etoupe2 {
+  coords 4998.776 25.431 9948.156
+  m_areaGroup 12
+  m_fZoneRadius 90
+  m_areaName "Etoupe Farms"
+  m_areaType "Military"
+  m_radius 90
+ }
+ Etoupe3 {
+  coords 5385.482 44.932 10541.359
+  m_areaGroup 12
+  m_fZoneRadius 80
+  m_areaName "Etoupe Military"
+  m_areaType "Military"
+  m_radius 80
+ }
+ Etoupe4 {
+  coords 5198.622 39.968 10475.623
+  m_areaGroup 12
+  m_fZoneRadius 50
+  m_areaName "Etoupe Military Entrance"
+  m_areaType "Military"
+  m_radius 50
+ }
+}
+IA_VehicleSpawnPoint Vehicle3 : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
+ coords 5160.812 41.228 10491.387
+ angleY 158.802
+ m_areaGroup 12
+ m_allowCivilian 0
+}

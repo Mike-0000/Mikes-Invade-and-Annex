@@ -19,7 +19,7 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaGroup 5
   m_fZoneRadius 45
   m_areaName "Lamentin North Docks"
-  m_areaType "SmallMilitary"
+  m_areaType "Docks"
   m_radius 45
  }
  Lamentin3 {
@@ -33,9 +33,9 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  Lamentin4 {
   coords 895.6 2.75 6069.214
   m_areaGroup 5
-  m_fZoneRadius 50
+  m_fZoneRadius 35
   m_areaName "Lamentin South Docks"
-  m_areaType "Docks"
-  m_radius 50
+  m_areaType "SmallMilitary"
+  m_radius 35
  }
 }

@@ -7,10 +7,20 @@ IA_AreaMarker QuarryRadioTower : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
  m_areaType "RadioTower"
  m_radius 30
 }
-IA_AreaMarker Levie6 : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
- coords 8831.691 197.776 3932.662
- m_areaGroup 10
- m_fZoneRadius 140
- m_areaName "Levie Quarry"
- m_radius 140
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ Levie6 {
+  coords 8831.691 197.776 3932.662
+  m_areaGroup 10
+  m_fZoneRadius 140
+  m_areaName "Levie Quarry"
+  m_radius 140
+ }
+ Levie8 {
+  coords 8769.812 194.833 3849.819
+  m_areaGroup 10
+  m_fZoneRadius 25
+  m_areaName "Quarry Checkpoint"
+  m_areaType "SmallMilitary"
+  m_radius 25
+ }
 }

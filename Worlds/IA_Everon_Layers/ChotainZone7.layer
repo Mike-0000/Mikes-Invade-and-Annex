@@ -9,25 +9,25 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  Chotain2 {
   coords 6633.385 111.41 5909.413
   m_areaGroup 7
-  m_fZoneRadius 70
+  m_fZoneRadius 55
   m_areaName "Chotain Farms"
   m_areaType "Town"
-  m_radius 7
- }
- LaValette {
-  coords 6737.408 89.419 5657.512
-  m_areaGroup 7
-  m_fZoneRadius 20
-  m_areaName "LaValette"
-  m_areaType "Property"
-  m_radius 20
+  m_radius 55
  }
  LaValette2 {
   coords 6461.451 161.979 6486.095
   m_areaGroup 7
-  m_fZoneRadius 90
+  m_fZoneRadius 70
   m_areaName "Chotain Industrial"
+  m_areaType "Military"
+  m_radius 70
+ }
+ Chotain3 {
+  coords 7116.779 119.063 6036.238
+  m_areaGroup 7
+  m_fZoneRadius 25
+  m_areaName "Chotain Church"
   m_areaType "SmallMilitary"
-  m_radius 90
+  m_radius 25
  }
 }

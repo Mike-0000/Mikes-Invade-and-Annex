@@ -8,10 +8,9 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  Meaux1 {
   coords 4511.915 14.056 9477.685
   m_areaGroup 2
-  m_fZoneRadius 175
+  m_fZoneRadius 140
   m_areaName "Meaux"
-  m_areaType "Town"
-  m_radius 175
+  m_radius 140
  }
  Meaux2 {
   coords 4749.274 20.304 9309.813
@@ -29,12 +28,12 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaType "Docks"
   m_radius 60
  }
- Tyrone {
-  coords 4927.159 36.034 9095.807
+ Meaux4 {
+  coords 4443.834 15.094 9585.896
   m_areaGroup 2
-  m_fZoneRadius 90
-  m_areaName "Tyrone"
-  m_areaType "Town"
-  m_radius 90
+  m_fZoneRadius 40
+  m_areaName "Meaux Industrial"
+  m_areaType "SmallMilitary"
+  m_radius 40
  }
 }

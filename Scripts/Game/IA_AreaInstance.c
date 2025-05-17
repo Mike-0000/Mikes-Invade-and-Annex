@@ -59,8 +59,6 @@ class IA_AreaInstance
     // --- END ADDED ---
 
     // --- BEGIN ADDED: Delay for AI group spawning within an area ---
-    [Attribute(defvalue: "200", desc: "Delay in milliseconds between spawning each AI group within this area instance")]
-    int m_aiGroupSpawnDelayMs;
     // --- END ADDED ---
 
     private ref IA_AreaAttackers m_aiAttackers = null;
@@ -2205,7 +2203,8 @@ class IA_AreaInstance
             ////Print(string.Format("[IA_AreaInstance.GenerateRandomAiGroups] Area %1: Scheduled group %2/%3 spawn. Pos: %4, Units: %5. Delay: %6ms",
             //    m_area.GetName(), i + 1, scaledNumberOfGroupsToSpawn, pos.ToString(), scaledUnitCountForThisGroup, accumulatedDelay), LogLevel.DEBUG);
             
-            accumulatedDelay += m_aiGroupSpawnDelayMs;
+            accumulatedDelay += Math.RandomInt(600, 5000);
+
         }
         
         // OnStrengthChange(strCounter); // Removed: Strength is updated incrementally by _SpawnSingleAiGroupAndAddToArea

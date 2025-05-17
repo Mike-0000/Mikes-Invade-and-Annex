@@ -24,22 +24,31 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  Levie4 {
   coords 7815.696 144.704 4739.819
   m_areaGroup 6
-  m_fZoneRadius 40
+  m_fZoneRadius 35
   m_areaName "Levie Homestead West"
   m_areaType "SmallMilitary"
-  m_radius 40
+  m_radius 35
  }
  Levie5 {
-  coords 8229.667 219.938 4357.917
+  coords 7410.93 136.409 4723.136
   m_areaGroup 6
-  m_fZoneRadius 25
-  m_areaName "Levie Homestead East"
-  m_areaType "Property"
-  m_radius 25
+  m_fZoneRadius 20
+  m_areaName "Levie - Mayor's House"
+  m_areaType "SmallMilitary"
+  m_radius 20
  }
 }
-IA_VehicleSpawnPoint Vehicle1 : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
- coords 7575.101 166.157 4245.537
- angleY -75.474
- m_areaGroup 6
+$grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
+ Vehicle1 {
+  coords 7575.101 166.157 4245.537
+  angleY -75.474
+  m_areaGroup 6
+  m_allowCivilian 0
+ }
+ Vehicle2 {
+  coords 7545.942 166.844 4199.837
+  angleY -75.474
+  m_areaGroup 6
+  m_allowCivilian 0
+ }
 }
