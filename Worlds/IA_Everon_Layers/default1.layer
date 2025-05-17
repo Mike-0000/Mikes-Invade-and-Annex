@@ -25,6 +25,9 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   GarbageSystemConfigComponent "{655C2771087BBC31}" {
    Config "{829121DACA5887BC}Configs/Systems/GarbageSystem/IA_GarbageCollection.conf"
   }
+  SCR_CommandingManagerComponent "{6562F69023FBDF1C}" {
+   m_iMaxAIPerGroup 16
+  }
   SCR_DebriefingScreenComponent "{65552AEEB5A2CE5E}" {
    m_BaseLayout SCR_DebriefingScreenUnevenFourTiles "{65552AEF3C0B8B52}" {
     m_sFourUnevenTilesLayout "{DFE8A23A8550514C}UI/layouts/Menus/DeployMenu/DebriefingScreenFourUnevenTiles.layout"
@@ -126,13 +129,24 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
    }
   }
   SCR_GameModeHealthSettings "{5A22E11F9ACBB1DF}" {
+   m_fDOTScale 0.7
+   m_fRegenScale 1.25
    m_bPermitUnconsciousVON 1
+   m_fCompartmentRegenerationRateMultiplier 2
+   m_fRegenerationScale 1.25
+  }
+  SCR_GroupsManagerComponent "{5706EC99934496F5}" {
+   m_aGroupFlags {
+   }
   }
   SCR_NametagConfigComponent "{571AA9E54FC9210D}" {
-   m_sConfigPath "{DB53C99497C2DDBA}Configs/NameTags/NametagSingle.conf"
+   m_sConfigPath "{6DFE39B14A35786A}Configs/NameTags/IA_NametagSingle.conf"
+  }
+  SCR_NotificationSenderComponent "{56FA84B04BE7D4C0}" {
+   m_iReceiveKillFeedType SAME_FACTION_ONLY
   }
   SCR_PlayerSpawnPointManagerComponent "{655A185827789972}" {
-   m_SpawnPointPrefab "{F6CAD21EDD2D1964}Prefabs/MP/Spawning/PlayerSpawnPoint.et"
+   m_SpawnPointPrefab "{456EFDDA59DD6EB2}Prefabs/MP/PlayerRadioSpawnPoint.et"
    m_bRadioVehicleSpawningEnabled 1
    m_eDeployableSpawnPointBudgetType NONE
    m_iDeployableSpawnPointTicketAmount 0
@@ -161,11 +175,20 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
    }
    m_fDeployMenuOpenDelay 3
   }
-  SCR_RestoreEditorModesComponent "{655645CDA43F46EB}" {
-  }
   SCR_SpawnProtectionComponent "{655A18587681A104}" {
    m_fProtectionTime 10
    m_bAllowPlayerSpawnpoints 1
+  }
+  SCR_TimeAndWeatherHandlerComponent "{6562F6960C02A014}" {
+   m_iStartingHours 13
+   m_bRandomStartingDaytime 1
+   m_bRandomStartingDaytimeRange 1
+   m_iRangeHoursStart 10
+   m_iRangeHoursEnd 16
+   m_fDayTimeAcceleration 4
+   m_fNightTimeAcceleration 6
+   m_bRandomStartingWeather 1
+   m_bRandomWeatherChanges 1
   }
   SCR_WelcomeScreenComponent "{65552AF6586B943C}" {
    m_sHeaderTitle "Welcome to Mike's Invade and Annex"
@@ -201,7 +224,8 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
    }
   }
  }
- coords 1406.474 38 2902.029
+ coords 5000 80.875 5000
+ m_fAutoReloadTime 10
  m_aDisabledResourceTypes {
   0
  }
@@ -225,25 +249,28 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   }
   GenericEntity RadioCoverage {
    components {
-    SCR_CoverageRadioComponent "{655C27679976C690}" {
+    BaseRadioComponent "{6562F6970372AABC}" {
      "Turned on" 1
      Transceivers {
-      RelayTransceiver "{655C2767A359ED4F}" {
+      RelayTransceiver "{6562F697056BB5C7}" {
+       "Transmitting Range" 100000
+      }
+      RadioTransceiver "{6562F6971774BF2E}" {
        "Transmitting Range" 100000
       }
      }
-     m_bIsSource 1
     }
     RplComponent "{655C27679699B519}" {
+     "Rpl State Override" Runtime
     }
    }
    coords 4994.487 116.017 3430.437
   }
   SCR_EditorSettingsEntity {
    coords -1.323 0 1.368
-  }
-  SCR_BaseTaskManager : "{87208DAD6F3C0DE2}Prefabs/MP/Managers/Tasks/TaskManager_Editor.et" {
-   coords 0 0 0
+   m_SkipStreamingRules {
+    2
+   }
   }
   SCR_LoadoutManager : "{B54D08AEA74A5354}Prefabs/MP/Managers/Loadouts/LoadoutManager_Editor.et" {
    coords 0 0 0
@@ -264,6 +291,20 @@ SCR_SpawnPoint : "{5A2220DD0C16958B}Prefabs/MP/Spawning/SpawnPoint_US.et" {
  angleY 91.248
  m_Info SCR_UIInfo "{56B4CC4ECACA2C37}" {
   Name "HQ"
+ }
+}
+SCR_BaseTaskManager : "{87208DAD6F3C0DE2}Prefabs/MP/Managers/Tasks/TaskManager_Editor.et" {
+ coords 1406.474 38 2902.029
+ {
+  SCR_BaseTaskSupportEntity {
+   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
+  }
+  SCR_EditorTaskSupportEntity {
+   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
+  }
+  SCR_TriggerTaskSupportEntity {
+   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
+  }
  }
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {

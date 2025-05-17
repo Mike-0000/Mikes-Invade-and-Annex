@@ -24,6 +24,10 @@ class IA_Game
     static private int s_activeGroupID = -1;
     // --- END ADDED ---
 
+    // --- BEGIN ADDED: Flag for initial objective scaling ---
+    static bool s_isInitialObjectiveSpawning = false;
+    // --- END ADDED ---
+
     private bool m_hasInit = false;
 
     // Player scaling system
@@ -123,6 +127,14 @@ class IA_Game
     // Get current US player count in the game
     static int GetPlayerCount()
     {
+        // --- BEGIN MODIFIED: Check for initial objective scaling override ---
+        if (s_isInitialObjectiveSpawning)
+        {
+            Print("[PLAYER_SCALING] GetPlayerCount: Initial objective scaling active, returning BASELINE_PLAYER_COUNT: " + BASELINE_PLAYER_COUNT, LogLevel.DEBUG);
+            return BASELINE_PLAYER_COUNT;
+        }
+        // --- END MODIFIED ---
+
         int playerCount = 0;
         PlayerManager playerManager = GetGame().GetPlayerManager();
         
@@ -314,6 +326,59 @@ class IA_Game
     {
         s_activeGroupID = groupID;
         // Print(string.Format("[IA_Game] Active group ID set to: %1", s_activeGroupID), LogLevel.NORMAL);
+    }
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Clear All Areas ---
+    void ClearAllAreas()
+    {
+        if (m_areas)
+        {
+            //Print(string.Format("[IA_Game.ClearAllAreas] Clearing %1 existing area instances.", m_areas.Count()), LogLevel.NORMAL);
+            foreach (IA_AreaInstance areaInst : m_areas)
+            {
+                if (areaInst && areaInst.m_area)
+                {
+                    Print(string.Format("[IA_Game.ClearAllAreas] Removing area instance: %1", areaInst.m_area.GetName()), LogLevel.DEBUG);
+                }
+            }
+            m_areas.Clear();
+        }
+        else
+        {
+            //Print("[IA_Game.ClearAllAreas] m_areas was null, initializing.", LogLevel.DEBUG);
+            m_areas = new array<IA_AreaInstance>();
+        }
+    }
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Clear All Area Definitions ---
+    static void ClearAllAreaDefinitions()
+    {
+        if (s_allAreas)
+        {
+            //Print(string.Format("[IA_Game.ClearAllAreaDefinitions] Clearing %1 existing area definitions.", s_allAreas.Count()), LogLevel.NORMAL);
+            s_allAreas.Clear();
+        }
+        else
+        {
+            //Print("[IA_Game.ClearAllAreaDefinitions] s_allAreas was null, initializing.", LogLevel.DEBUG);
+            s_allAreas = new array<ref IA_Area>();
+        }
+    }
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Methods to control initial objective scaling ---
+    static void EnableInitialObjectiveScaling()
+    {
+        s_isInitialObjectiveSpawning = true;
+        Print("[PLAYER_SCALING] Initial objective scaling ENABLED. Using BASELINE_PLAYER_COUNT for upcoming spawns.", LogLevel.NORMAL);
+    }
+
+    static void DisableInitialObjectiveScaling()
+    {
+        s_isInitialObjectiveSpawning = false;
+        Print("[PLAYER_SCALING] Initial objective scaling DISABLED. Reverting to actual player count.", LogLevel.NORMAL);
     }
     // --- END ADDED ---
 };

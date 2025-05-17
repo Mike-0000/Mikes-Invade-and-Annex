@@ -36,7 +36,7 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
     }
    }
   }
-  coords 4899.713 28.679 11831.768
+  coords 4899.713 28.594 11831.768
   angleX 0.036
   angleY 179.938
   angleZ 0.202
@@ -48,11 +48,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      53
     }
     m_aExcludedTraitLabels {
-     51
+     51 50
     }
    }
   }
-  coords 4906.729 28.876 11842.621
+  coords 4906.729 28.594 11842.62
   angleX 0.036
   angleY 179.938
   angleZ 0.202
@@ -64,11 +64,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      53
     }
     m_aExcludedTraitLabels {
-     51
+     51 50
     }
    }
   }
-  coords 4899.604 28.855 11842.893
+  coords 4899.604 28.594 11842.893
   angleX -0.834
   angleY 179.935
   angleZ 0.413
@@ -80,11 +80,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      50
     }
     m_aExcludedTraitLabels {
-     51
+     51 26
     }
    }
   }
-  coords 4905.343 28.697 11821.118
+  coords 4905.343 28.594 11821.117
   angleX 0.248
   angleY -178.449
   angleZ 1.071
@@ -96,11 +96,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      50
     }
     m_aExcludedTraitLabels {
-     51
+     51 26
     }
    }
   }
-  coords 4900.873 28.709 11821.134
+  coords 4900.873 28.594 11821.134
   angleX 0.261
   angleY -179.158
   angleZ 1.068
@@ -112,11 +112,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      50
     }
     m_aExcludedTraitLabels {
-     51
+     51 26
     }
    }
   }
-  coords 4905.451 28.711 11804.28
+  coords 4905.451 28.594 11804.28
   angleX 0.245
   angleY -178.287
   angleZ 1.072
@@ -128,11 +128,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      50
     }
     m_aExcludedTraitLabels {
-     51
+     51 26
     }
    }
   }
-  coords 4900.897 28.722 11804.277
+  coords 4900.896 28.594 11804.277
   angleX 0.258
   angleY -178.995
   angleZ 1.069
@@ -148,7 +148,7 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
     }
    }
   }
-  coords 4906.8 28.701 11831.352
+  coords 4906.8 28.594 11831.352
   angleX 0.036
   angleY 179.938
   angleZ 0.202
@@ -160,11 +160,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      50
     }
     m_aExcludedTraitLabels {
-     51
+     51 26
     }
    }
   }
-  coords 4905.539 28.676 11812.489
+  coords 4905.539 28.594 11812.489
   angleX 0.248
   angleY -178.449
   angleZ 1.071
@@ -176,11 +176,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      50
     }
     m_aExcludedTraitLabels {
-     51
+     51 26
     }
    }
   }
-  coords 4900.888 28.685 11812.493
+  coords 4900.888 28.594 11812.493
   angleX 0.261
   angleY -179.158
   angleZ 1.068
@@ -192,11 +192,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      50
     }
     m_aExcludedTraitLabels {
-     51
+     51 26
     }
    }
   }
-  coords 4905.627 28.69 11796.312
+  coords 4905.627 28.594 11796.312
   angleX 0.245
   angleY -178.287
   angleZ 1.072
@@ -208,11 +208,11 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
      50
     }
     m_aExcludedTraitLabels {
-     51
+     51 26
     }
    }
   }
-  coords 4901.174 28.7 11796.313
+  coords 4901.174 28.594 11796.313
   angleX 0.258
   angleY -178.995
   angleZ 1.069
@@ -228,7 +228,7 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
     }
    }
   }
-  coords 4900.161 29.257 11861.914
+  coords 4900.161 28.594 11861.914
   angleX 0.299
   angleY 178.782
   angleZ 1.058
@@ -244,10 +244,42 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
     }
    }
   }
-  coords 4905.292 29.328 11861.916
+  coords 4905.292 28.594 11861.916
   angleX 0.299
   angleY 178.782
   angleZ 1.058
+ }
+ MedicalCar5 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     50 24
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4892.633 28.594 11795.097
+  angleX 0.258
+  angleY -178.995
+  angleZ 1.069
+ }
+ Medical2 {
+  components {
+   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+    m_aIncludedTraitLabels {
+     24
+    }
+    m_aExcludedTraitLabels {
+     51
+    }
+   }
+  }
+  coords 4892.531 28.594 11805.325
+  angleX 0.258
+  angleY -178.995
+  angleZ 1.069
  }
 }
 GenericEntity : "{45C675ED3CFBBEC5}Prefabs/Props/Military/Compositions/US/ArsenalBox_US.et" {
@@ -350,6 +382,16 @@ GenericEntity : "{AD59EDEAA26CE792}Prefabs/Props/Military/Compositions/USSR/Arse
  }
  coords 4929.441 28.775 11778.766
  angleY 172.346
+}
+$grp GenericEntity : "{C1ADC7F69BB42C76}Prefabs/RoleSwitcher.et" {
+ {
+  coords 4941.655 28.775 11763.389
+  angleY -90.728
+ }
+ {
+  coords 4910.64 28.594 11784.52
+  angleY -119.382
+ }
 }
 GenericEntity : "{E83944C37C6FA465}PrefabsEditable/Auto/Props/Military/Compositions/FIA/E_ArsenalBox_FIA.et" {
  components {

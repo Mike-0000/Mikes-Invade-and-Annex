@@ -406,15 +406,24 @@ class IA_AiGroup
         }
 
         // Find a road near the initial position - NEW CODE
-        vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(initialPos, 100, IA_VehicleManager.GetActiveGroup());
+		int searchDistance = 50;
+        vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(initialPos, searchDistance, IA_VehicleManager.GetActiveGroup());
         vector spawnPos;
         
         // Use road position if found, otherwise use the initial position
         if (roadPos != vector.Zero) {
             spawnPos = roadPos;
-        } else {
-            spawnPos = initialPos;
-        }
+        } 
+		else{
+			roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(initialPos, searchDistance*4, IA_VehicleManager.GetActiveGroup()); // Expand Search Radius
+		
+			if (roadPos != vector.Zero) {
+	            spawnPos = roadPos;
+	        } 
+			else {
+	            spawnPos = initialPos;
+	        }
+		}
         // END NEW CODE
 
         IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
@@ -1029,9 +1038,10 @@ class IA_AiGroup
         // This was previously in SetupDeathListener, moved here for clarity.
         // Note: The one-time call to CheckDangerEvents in old SetupDeathListener is now covered by individual agent processing.
         // The recurring one is below.
+		
         if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
         {
-            GetGame().GetCallqueue().CallLater(CheckDangerEvents, 250, true); // Recurring for military
+            GetGame().GetCallqueue().CallLater(CheckDangerEvents, Math.RandomInt(250, 750), true); // Recurring for military
         }
 
         return true;

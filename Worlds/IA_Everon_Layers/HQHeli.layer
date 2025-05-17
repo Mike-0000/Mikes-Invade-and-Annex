@@ -47,13 +47,3 @@ $grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
   angleY -132.254
  }
 }
-$grp GenericEntity : "{C1ADC7F69BB42C76}Prefabs/RoleSwitcher.et" {
- {
-  coords 4941.655 28.775 11763.389
-  angleY -90.728
- }
- {
-  coords 4910.64 28.594 11784.52
-  angleY -119.382
- }
-}

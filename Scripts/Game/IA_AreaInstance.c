@@ -58,6 +58,11 @@ class IA_AreaInstance
     private ref array<ref IA_PendingStateRequest> m_pendingStateRequests = {};
     // --- END ADDED ---
 
+    // --- BEGIN ADDED: Delay for AI group spawning within an area ---
+    [Attribute(defvalue: "200", desc: "Delay in milliseconds between spawning each AI group within this area instance")]
+    int m_aiGroupSpawnDelayMs;
+    // --- END ADDED ---
+
     private ref IA_AreaAttackers m_aiAttackers = null;
 
     private IA_ReinforcementState m_reinforcements = IA_ReinforcementState.NotDone;
@@ -440,6 +445,13 @@ class IA_AreaInstance
 
     void OnStrengthChange(int newVal)
     {
+        // If this is the very first time strength is becoming positive for this area instance
+        if (m_initialTotalUnits == 0 && m_strength == 0 && newVal > 0)
+        {
+            m_initialTotalUnits = newVal;
+            ////Print(string.Format("[AreaInstance.OnStrengthChange] Area %1: Initial total units set to %2", m_area.GetName(), newVal), LogLevel.DEBUG);
+        }
+
         m_strength = newVal;
         
         
@@ -447,7 +459,7 @@ class IA_AreaInstance
         if (newVal > m_maxHistoricalStrength)
         {
             m_maxHistoricalStrength = newVal;
-            //Print(string.Format("[AreaInstance.OnStrengthChange] new maximum strength: %1", m_maxHistoricalStrength), LogLevel.NORMAL);
+            ////Print(string.Format("[AreaInstance.OnStrengthChange] new maximum strength: %1", m_maxHistoricalStrength), LogLevel.NORMAL);
         }
         // --- END ADDED ---
         
@@ -2152,77 +2164,55 @@ class IA_AreaInstance
     void GenerateRandomAiGroups(int number, bool insideArea, Faction AreaFaction)
     {
         // Apply player scaling to number of groups
-        int scaledNumber = Math.Round(number * m_aiScaleFactor);
-        if (scaledNumber < 1) scaledNumber = 1; // Ensure at least one group
+        int scaledNumberOfGroupsToSpawn = Math.Round(number * m_aiScaleFactor);
+        if (scaledNumberOfGroupsToSpawn < 1 && number > 0) scaledNumberOfGroupsToSpawn = 1; // Ensure at least one group if original number > 0
+        else if (scaledNumberOfGroupsToSpawn < 0) scaledNumberOfGroupsToSpawn = 0;
+
+
+        ////Print(string.Format("[PLAYER_SCALING] GenerateRandomAiGroups for Area %1: Original=%2, ScaledGroupsToSpawn=%3 (scale factor: %4)", 
+        //    m_area.GetName(), number, scaledNumberOfGroupsToSpawn, m_aiScaleFactor), LogLevel.NORMAL);
         
-        //////Print("[PLAYER_SCALING] GenerateRandomAiGroups: Original=" + number + ", Scaled=" + scaledNumber + " (scale factor: " + m_aiScaleFactor + ")", LogLevel.NORMAL);
-        
-        int strCounter = m_strength;
-        for (int i = 0; i < scaledNumber; i = i + 1)
+        // int strCounter = m_strength; // Strength is now updated incrementally
+        int accumulatedDelay = 0;
+
+        for (int i = 0; i < scaledNumberOfGroupsToSpawn; i = i + 1)
         {
             if (!m_area)
             {
-                //////Print("[ERROR] IA_AreaInstance.MilitaryOrderTask: m_area is null!", LogLevel.ERROR);
-                return;
+                Print("[ERROR] IA_AreaInstance.GenerateRandomAiGroups: m_area is null during loop!", LogLevel.ERROR);
+                return; 
             }
+            
             IA_SquadType st = IA_GetRandomSquadType();
             vector pos = vector.Zero;
             if (insideArea)
-                pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() / 3, m_area.GetOrigin());
+                pos = IA_Game.rng.GenerateRandomPointInRadius(2, m_area.GetRadius() / 8, m_area.GetOrigin());
             else
-                pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.05, m_area.GetOrigin());
+                pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.25, m_area.GetOrigin());
             
-            // --- BEGIN NEW LOGIC ---
-            int unitCount = IA_SquadCount(st, m_faction); // Determine unit count based on squad type
-            
-            // Apply scaling to unit count
-            int scaledUnitCount = Math.Round(unitCount * m_aiScaleFactor);
-            if (scaledUnitCount < 1) scaledUnitCount = 1; // Ensure at least one unit
-            
-            if (scaledUnitCount <= 0) 
+            int unitCountBasedOnSquadType = IA_SquadCount(st, m_faction); 
+            int scaledUnitCountForThisGroup = Math.Round(unitCountBasedOnSquadType * m_aiScaleFactor); // Apply scaling to unit count of *this* group
+            if (scaledUnitCountForThisGroup < 1 && unitCountBasedOnSquadType > 0) scaledUnitCountForThisGroup = 1; // Ensure at least one unit if squad type had units
+            else if (scaledUnitCountForThisGroup < 0) scaledUnitCountForThisGroup = 0;
+
+            if (scaledUnitCountForThisGroup <= 0) 
             {
-                //////Print("[IA_AreaInstance.GenerateRandomAiGroups] Invalid unit count (" + scaledUnitCount + ") for squad type " + st + ", skipping group.", LogLevel.NORMAL);
+                ////Print("[IA_AreaInstance.GenerateRandomAiGroups] Invalid scaled unit count (" + scaledUnitCountForThisGroup + ") for squad type " + st + ", skipping group scheduling.", LogLevel.DEBUG);
                 continue;
             }
             
-            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, m_faction, scaledUnitCount, AreaFaction);
-            if (!grp)
-            {
-                //////Print("[IA_AreaInstance.GenerateRandomAiGroups] Failed to create military group from units.", LogLevel.NORMAL);
-                continue;
-            }
+            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction);
+            ////Print(string.Format("[IA_AreaInstance.GenerateRandomAiGroups] Area %1: Scheduled group %2/%3 spawn. Pos: %4, Units: %5. Delay: %6ms",
+            //    m_area.GetName(), i + 1, scaledNumberOfGroupsToSpawn, pos.ToString(), scaledUnitCountForThisGroup, accumulatedDelay), LogLevel.DEBUG);
             
-            // Make sure the group has a tactical state
-            if (grp.IsSpawned())
-            {
-                // Default state based on area status
-                IA_GroupTacticalState defaultState;
-                if (IsUnderAttack())
-                    defaultState = IA_GroupTacticalState.Attacking;
-                else
-                    defaultState = IA_GroupTacticalState.DefendPatrol;
-                    
-                // Set tactical state explicitly
-                grp.SetTacticalState(defaultState, pos, null, true); // Added fromAuthority parameter
-            }
-            
-            // Add the group to the military list (will also assign initial state)
-            AddMilitaryGroup(grp);
-            
-            // Update strength counter
-            strCounter = strCounter + grp.GetAliveCount();
+            accumulatedDelay += m_aiGroupSpawnDelayMs;
         }
         
-        // Update overall strength
-        OnStrengthChange(strCounter);
+        // OnStrengthChange(strCounter); // Removed: Strength is updated incrementally by _SpawnSingleAiGroupAndAddToArea
         
-        // --- BEGIN ADDED: Update max historical strength if this is the initial spawn ---
-        if (m_initialTotalUnits == 0)
-        {
-            m_initialTotalUnits = strCounter;
-            m_maxHistoricalStrength = strCounter;
-        }
-        // --- END ADDED ---
+        // m_initialTotalUnits and m_maxHistoricalStrength are now handled/updated within OnStrengthChange.
+        // The first call to OnStrengthChange that makes m_strength > 0 will set m_initialTotalUnits.
+        // m_maxHistoricalStrength is updated by every OnStrengthChange call if newVal is greater.
     }
 
     private void VehicleReinforcementsTask()
@@ -4122,6 +4112,39 @@ class IA_AreaInstance
     int GetAreaGroup()
     {
         return m_areaGroup;
+    }
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Helper to spawn a single AI group with delay and add it ---
+    private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask)
+    {
+        if (!m_area) // Ensure area instance is still valid
+        {
+            Print("[IA_AreaInstance._SpawnSingleAiGroupAndAddToArea] m_area is null, cannot spawn group.", LogLevel.ERROR);
+            return;
+        }
+
+        // Note: m_faction (the area's owning faction) and m_aiScaleFactor are members of IA_AreaInstance (this)
+        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, m_faction, unitCountForGroup, areaFactionForGroupTask);
+        if (!grp)
+        {
+            Print("[IA_AreaInstance._SpawnSingleAiGroupAndAddToArea] Failed to create military group from units with params: " + spawnPos + " fac: " + m_faction + " units: " + unitCountForGroup + " areaFac: " + areaFactionForGroupTask, LogLevel.WARNING);
+            return;
+        }
+
+        // AddMilitaryGroup will also assign initial state (e.g., DefendPatrol or Attacking if area is under attack)
+        AddMilitaryGroup(grp);
+
+        // Update strength for this newly added group
+        // OnStrengthChange will update m_strength and m_maxHistoricalStrength
+        if (grp.IsSpawned()) // Ensure group was actually spawned and has units
+        {
+            OnStrengthChange(m_strength + grp.GetAliveCount());
+        }
+        else
+        {
+             Print("[IA_AreaInstance._SpawnSingleAiGroupAndAddToArea] Group not properly spawned, skipping strength update for this group.", LogLevel.DEBUG);
+        }
     }
     // --- END ADDED ---
 }

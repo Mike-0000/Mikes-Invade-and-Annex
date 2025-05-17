@@ -15,12 +15,16 @@ class IA_MissionInitializer : GenericEntity
 	[Attribute(defvalue: "2", desc: "How many groups to assign randomly.")]
     int m_numberOfGroups;
 
-	ref array<int> groupsArray;
+	[Attribute(defvalue: "1000", desc: "Delay in milliseconds between spawning each area instance")]
+    int m_spawnDelayMs;
+
+	private ref array<int> groupsArray;
     // Simple flag to ensure we only run once.
     protected bool m_bInitialized = false;
 	//ref array<IA_AreaMarker> m_shuffledMarkers = {};
-	int m_currentIndex = 0;
-	ref array<IA_AreaInstance> m_currentAreaInstances = null;
+	private int m_currentIndex = -1;
+	private ref array<IA_AreaInstance> m_currentAreaInstances; 
+	private bool m_runOnce = false;
 
 	int GetCurrentIndex(){
 		return m_currentIndex;
@@ -107,6 +111,19 @@ class IA_MissionInitializer : GenericEntity
 	        ////Print("[ERROR] IA_MissionInitializer.ProceedToNextZone: groupsArray is null or empty!", LogLevel.ERROR);
 	        return;
 	    }
+
+        // --- BEGIN ADDED: Clear existing areas from IA_Game ---    
+        IA_Game gameInstance = IA_Game.Instantiate();
+        if (gameInstance)
+        {
+            //Print("[IA_MissionInitializer.ProceedToNextZone] Clearing existing game areas before initializing new zone group.", LogLevel.NORMAL);
+            gameInstance.ClearAllAreas();
+        }
+        else
+        {
+            Print("[IA_MissionInitializer.ProceedToNextZone] Failed to get IA_Game instance, cannot clear areas.", LogLevel.ERROR);
+        }
+        // --- END ADDED ---
 	    
 	    if (m_currentIndex < 0 || m_currentIndex >= groupsArray.Count())
 	    {
@@ -127,65 +144,65 @@ class IA_MissionInitializer : GenericEntity
 	    IA_Game.SetActiveGroupID(currentGroup);
 	    // --- END ADDED ---
 	    
-	    m_currentAreaInstances.Clear();
-	    array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+	    // --- BEGIN ADDED: Handle initial objective scaling ---
+	    bool isFirstObjectiveGroup = (m_currentIndex == 0);
+	    if (isFirstObjectiveGroup)
+	    {
+	        IA_Game.EnableInitialObjectiveScaling();
+	    }
+	    // --- END ADDED ---
 	    
-	    int zonesInGroup = 0;
-	    foreach(IA_AreaMarker marker : markers){
+	    m_currentAreaInstances.Clear(); // Clear for the new zone group
+	    array<IA_AreaMarker> markersInGroup = {};
+        array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
+        foreach(IA_AreaMarker marker : allMarkers)
+        {
+            if (marker && marker.m_areaGroup == currentGroup)
+            {
+                markersInGroup.Insert(marker);
+            }
+        }
+	    
+	    int accumulatedDelay = 0;
+        int markerIndex = 0;
+	    foreach(IA_AreaMarker marker : markersInGroup)
+        {
 	        if (!marker)
 	        {
 	            continue;
 	        }
 	        
-	        if(marker.m_areaGroup != currentGroup)
-	            continue;
-	            
-	        zonesInGroup++;
-	        vector pos = marker.GetOrigin();
-	        string name = marker.GetAreaName();
-	        float radius = marker.GetRadius();
-	        
-	        ////Print("[DEBUG_ZONE_GROUP] Initializing zone: " + name + " in group " + currentGroup, LogLevel.NORMAL);
-	        
-	        IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
-	        IA_AreaInstance m_currentAreaInstance = IA_Game.Instantiate().AddArea(area, IA_Faction.USSR, nextAreaFaction,0, currentGroup);
-	        m_currentAreaInstances.Insert(m_currentAreaInstance);
-	        
-	        // Set the current area instance in IA_Game before spawning vehicles
-	        IA_Game.SetCurrentAreaInstance(m_currentAreaInstance);
-	    
-	        string taskTitle;
-	        string taskDesc;
-	        if (area.GetAreaType() == IA_AreaType.RadioTower)
-	        {
-	            taskTitle = "Destroy " + area.GetName();
-	            taskDesc = "Destroy the " + area.GetName() + " to disrupt enemy communications.";
-	        }
-	        else
-	        {
-	            taskTitle = "Capture " + area.GetName();
-	            taskDesc = "Eliminate enemy presence and secure " + area.GetName();
-	        }
-	        m_currentAreaInstance.QueueTask(taskTitle, taskDesc, pos);
-	    
-	        ////Print("[DEBUG_ZONE_GROUP] Initialized area: " + name + " with task: " + taskTitle, LogLevel.NORMAL);
+            // Schedule the area instance creation and AI spawning
+            GetGame().GetCallqueue().CallLater(this._SpawnAreaInstanceWithDelay, accumulatedDelay, false, marker, nextAreaFaction, currentGroup);
+            ////Print("[DEBUG_ZONE_GROUP] Scheduled initialization for zone: " + marker.GetAreaName() + " in group " + currentGroup + " with delay " + accumulatedDelay + "ms", LogLevel.NORMAL);
+            accumulatedDelay += m_spawnDelayMs;
+            markerIndex++;
 	    }
+	    
+	    // --- BEGIN ADDED: Disable initial objective scaling after first group setup ---
+	    // This should be scheduled after all areas in the first group might have started their setup
+	    if (isFirstObjectiveGroup)
+	    {
+	        GetGame().GetCallqueue().CallLater(IA_Game.DisableInitialObjectiveScaling, accumulatedDelay + 60000, false); // Wait 60s after last area spawn scheduled
+	    }
+	    // --- END ADDED ---
 	    
 	    ////Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " contains " + zonesInGroup + " zones to capture", LogLevel.WARNING);
+        Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " contains " + markersInGroup.Count() + " zones to capture. Scheduled over " + accumulatedDelay + "ms", LogLevel.WARNING);
 	    
-	    // Ensure CurrentAreaInstance is valid before spawning vehicles (it should be the last one from the loop)
-	    if (IA_Game.CurrentAreaInstance)
-	    {
-	        IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR, nextAreaFaction);
-	        ////Print("[DEBUG_ZONE_GROUP] Spawned vehicles for zone group " + currentGroup, LogLevel.NORMAL);
-	    }
-	    else
-	    {
-	        ////Print("[WARNING] No current area instance set after processing markers for group " + currentGroup + ". Cannot spawn vehicles.", LogLevel.WARNING);
-	    }
-
-	    GetGame().GetCallqueue().CallLater(CheckCurrentZoneComplete, 5000, true);
-	    ////Print("[DEBUG_ZONE_GROUP] Started monitoring completion for group " + currentGroup, LogLevel.NORMAL);
+	    // Schedule the spawning of additional group vehicles after all area instances have been scheduled
+        if (!markersInGroup.IsEmpty()) // Only if there are areas to spawn
+        {
+            GetGame().GetCallqueue().CallLater(this._SpawnGroupVehiclesWithDelay, accumulatedDelay, false, nextAreaFaction);
+            ////Print("[DEBUG_ZONE_GROUP] Scheduled SpawnVehiclesAtAllSpawnPoints for zone group " + currentGroup + " after " + accumulatedDelay + "ms", LogLevel.NORMAL);
+        }
+	    
+        // CheckCurrentZoneComplete needs m_currentAreaInstances to be populated.
+        // Since population is now delayed, this initial call might run on an empty/partially empty list.
+        // Consider scheduling this after all areas are expected to be created, or make CheckCurrentZoneComplete robust to this.
+        // For now, keeping original timing, but this is a potential point of failure if it expects synchronous population.
+	    GetGame().GetCallqueue().CallLater(CheckCurrentZoneComplete, accumulatedDelay + 5000, true); // Start checking 5s after last area is scheduled
+	    ////Print("[DEBUG_ZONE_GROUP] Started monitoring completion for group " + currentGroup + " (check starts in " + (accumulatedDelay + 5000) + "ms)", LogLevel.NORMAL);
 	}
     void Shuffle(array<int> arr)
     {
@@ -201,6 +218,11 @@ class IA_MissionInitializer : GenericEntity
 	
 	void InitializeNow()
 {
+    // --- BEGIN ADDED: Clear all area definitions at mission start ---
+    IA_Game.ClearAllAreaDefinitions();
+    //Print("[IA_MissionInitializer.InitializeNow] Cleared all area definitions from IA_Game.s_allAreas.", LogLevel.NORMAL);
+    // --- END ADDED ---
+
     ////Print("[DEBUG] IA_MissionInitializer: InitializeNow started.", LogLevel.NORMAL);
 	groupsArray = new array<int>;
 	m_currentAreaInstances = new array<IA_AreaInstance>;
@@ -466,5 +488,72 @@ class IA_MissionInitializer : GenericEntity
         
     }
 
+    private void _SpawnAreaInstanceWithDelay(IA_AreaMarker marker, Faction nextAreaFaction, int currentGroup)
+    {
+        if (!marker)
+        {
+            Print("[ERROR] IA_MissionInitializer._SpawnAreaInstanceWithDelay: marker is null!", LogLevel.ERROR);
+            return;
+        }
 
+        vector pos = marker.GetOrigin();
+        string name = marker.GetAreaName();
+        float radius = marker.GetRadius();
+
+        Print("[DEBUG_ZONE_GROUP_DELAYED] Initializing zone: " + name + " in group " + currentGroup, LogLevel.NORMAL);
+
+        IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
+        IA_Game game = IA_Game.Instantiate();
+        if (!game)
+        {
+            Print("[ERROR] IA_MissionInitializer._SpawnAreaInstanceWithDelay: Failed to get IA_Game instance for area " + name, LogLevel.ERROR);
+            return;
+        }
+        
+        IA_AreaInstance currentAreaInstance = game.AddArea(area, IA_Faction.USSR, nextAreaFaction, 0, currentGroup);
+        
+        if (currentAreaInstance)
+        {
+            // Add to the main list for tracking
+            if (m_currentAreaInstances.Find(currentAreaInstance) == -1)
+            {
+                 m_currentAreaInstances.Insert(currentAreaInstance);
+            }
+
+            // The IA_AreaInstance.Create method already handles its own initial vehicle and AI spawning.
+            // So, IA_Game.SetCurrentAreaInstance(currentAreaInstance); might not be strictly needed here if it was for that purpose.
+            // If other systems rely on it being set during this phase, it needs careful consideration.
+            // For now, assuming IA_AreaInstance.Create is self-contained for its immediate needs.
+
+            string taskTitle;
+            string taskDesc;
+            if (area.GetAreaType() == IA_AreaType.RadioTower)
+            {
+                taskTitle = "Destroy " + area.GetName();
+                taskDesc = "Destroy the " + area.GetName() + " to disrupt enemy communications.";
+            }
+            else
+            {
+                taskTitle = "Capture " + area.GetName();
+                taskDesc = "Eliminate enemy presence and secure " + area.GetName();
+            }
+            currentAreaInstance.QueueTask(taskTitle, taskDesc, pos);
+            Print("[DEBUG_ZONE_GROUP_DELAYED] Initialized area: " + name + " with task: " + taskTitle, LogLevel.NORMAL);
+        }
+        else
+        {
+            Print("[ERROR] IA_MissionInitializer._SpawnAreaInstanceWithDelay: Failed to create AreaInstance for " + name, LogLevel.ERROR);
+        }
+    }
+
+    private void _SpawnGroupVehiclesWithDelay(Faction nextAreaFaction)
+    {
+        // Ensure CurrentAreaInstance is valid or IA_VehicleManager can work without it for group spawns
+        // IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints uses IA_VehicleManager.GetActiveGroup()
+        // which is set at the beginning of ProceedToNextZone.
+        // So, IA_Game.CurrentAreaInstance might not be directly needed for this specific call.
+        
+        //Print("[DEBUG_ZONE_GROUP_DELAYED] Calling IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints for faction " + nextAreaFaction.GetFactionKey() + " in active group: " + IA_VehicleManager.GetActiveGroup(), LogLevel.NORMAL);
+        IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR, nextAreaFaction);
+    }
 }
