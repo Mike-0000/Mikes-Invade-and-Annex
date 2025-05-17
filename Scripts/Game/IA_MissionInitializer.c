@@ -56,6 +56,50 @@ class IA_MissionInitializer : GenericEntity
 		scr_gm.EndGameMode(gamemodeEndData);
 	
 	}
+	
+	Faction GetRandomEnemyFaction(){
+		SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+        if (!factionManager) {
+            return null;
+        }
+		
+		
+		
+		
+		
+		
+		Faction USFaction = factionManager.GetFactionByKey("US");
+        array<Faction> actualFactions = {};
+		array<Faction> factionGet = {};
+        factionManager.GetFactionsList(factionGet);
+		foreach (Faction currentFaction : factionGet){
+			
+			
+			
+			SCR_EntityCatalog entityCatalog;
+			SCR_Faction scrFaction = SCR_Faction.Cast(currentFaction);
+			entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
+			if (!scrFaction)
+	            continue;
+			if (!entityCatalog)
+				continue;
+			array<EEditableEntityLabel> excludedLabels = {};
+			array<EEditableEntityLabel> includedLabels = {};
+			array<SCR_EntityCatalogEntry> characterEntries = {};
+			entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
+				
+			
+			
+			if(USFaction.IsFactionEnemy(currentFaction) && currentFaction != factionManager.GetFactionByKey("FIA") && characterEntries.Count() >= 4)
+				actualFactions.Insert(currentFaction); // Build List of Enemy Factions
+		}
+		if(actualFactions.Count() > 1){ // If modded content
+			if(Math.RandomInt(0,20) > 1) // 95% chance to use a modded faction
+				actualFactions.Remove(actualFactions.Find(factionManager.GetFactionByKey("USSR")));
+		}
+		return actualFactions[Math.RandomInt(0, actualFactions.Count()-1)];
+	}
+	
 	void ProceedToNextZone()
 	{
 	    if (!groupsArray || groupsArray.IsEmpty())
@@ -70,7 +114,9 @@ class IA_MissionInitializer : GenericEntity
 	        GetGame().GetCallqueue().CallLater(FinishGame, 30000);
 	        return;
 	    }
-	    
+		
+	    Faction nextAreaFaction = GetRandomEnemyFaction();
+		Print("Next Faction is = " +nextAreaFaction.GetFactionName(), LogLevel.NORMAL);
 	    int currentGroup = groupsArray[m_currentIndex];
 	    ////Print("[DEBUG_ZONE_GROUP] Proceeding to zone group " + currentGroup + " (index " + m_currentIndex + " of " + groupsArray.Count() + ")", LogLevel.WARNING);
 	    
@@ -102,7 +148,7 @@ class IA_MissionInitializer : GenericEntity
 	        ////Print("[DEBUG_ZONE_GROUP] Initializing zone: " + name + " in group " + currentGroup, LogLevel.NORMAL);
 	        
 	        IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
-	        IA_AreaInstance m_currentAreaInstance = IA_Game.Instantiate().AddArea(area, IA_Faction.USSR, 0, currentGroup);
+	        IA_AreaInstance m_currentAreaInstance = IA_Game.Instantiate().AddArea(area, IA_Faction.USSR, nextAreaFaction,0, currentGroup);
 	        m_currentAreaInstances.Insert(m_currentAreaInstance);
 	        
 	        // Set the current area instance in IA_Game before spawning vehicles
@@ -130,7 +176,7 @@ class IA_MissionInitializer : GenericEntity
 	    // Ensure CurrentAreaInstance is valid before spawning vehicles (it should be the last one from the loop)
 	    if (IA_Game.CurrentAreaInstance)
 	    {
-	        IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR);
+	        IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR, nextAreaFaction);
 	        ////Print("[DEBUG_ZONE_GROUP] Spawned vehicles for zone group " + currentGroup, LogLevel.NORMAL);
 	    }
 	    else

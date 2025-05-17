@@ -22,6 +22,9 @@ PerceptionManager PerceptionManager : "{028DAEAD63E056BE}Prefabs/World/Game/Perc
 }
 SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
  components {
+  GarbageSystemConfigComponent "{655C2771087BBC31}" {
+   Config "{829121DACA5887BC}Configs/Systems/GarbageSystem/IA_GarbageCollection.conf"
+  }
   SCR_DebriefingScreenComponent "{65552AEEB5A2CE5E}" {
    m_BaseLayout SCR_DebriefingScreenUnevenFourTiles "{65552AEF3C0B8B52}" {
     m_sFourUnevenTilesLayout "{DFE8A23A8550514C}UI/layouts/Menus/DeployMenu/DebriefingScreenFourUnevenTiles.layout"
@@ -125,6 +128,9 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   SCR_GameModeHealthSettings "{5A22E11F9ACBB1DF}" {
    m_bPermitUnconsciousVON 1
   }
+  SCR_NametagConfigComponent "{571AA9E54FC9210D}" {
+   m_sConfigPath "{DB53C99497C2DDBA}Configs/NameTags/NametagSingle.conf"
+  }
   SCR_PlayerSpawnPointManagerComponent "{655A185827789972}" {
    m_SpawnPointPrefab "{F6CAD21EDD2D1964}Prefabs/MP/Spawning/PlayerSpawnPoint.et"
    m_bRadioVehicleSpawningEnabled 1
@@ -217,11 +223,24 @@ SCR_BaseGameMode GameMode_Base1 : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_B
   RadioManagerEntity : "{B8E09FAB91C4ECCD}Prefabs/Radio/RadioManager.et" {
    coords 0 0 0
   }
+  GenericEntity RadioCoverage {
+   components {
+    SCR_CoverageRadioComponent "{655C27679976C690}" {
+     "Turned on" 1
+     Transceivers {
+      RelayTransceiver "{655C2767A359ED4F}" {
+       "Transmitting Range" 100000
+      }
+     }
+     m_bIsSource 1
+    }
+    RplComponent "{655C27679699B519}" {
+    }
+   }
+   coords 4994.487 116.017 3430.437
+  }
   SCR_EditorSettingsEntity {
    coords -1.323 0 1.368
-   m_SkipStreamingRules {
-    2
-   }
   }
   SCR_BaseTaskManager : "{87208DAD6F3C0DE2}Prefabs/MP/Managers/Tasks/TaskManager_Editor.et" {
    coords 0 0 0

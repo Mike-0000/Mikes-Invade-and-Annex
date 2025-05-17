@@ -27,7 +27,7 @@ class IA_AreaAttackers
         return m_initializing;
     }
 
-    void SpawnNextGroup(vector origin)
+    void SpawnNextGroup(vector origin, Faction AreaFaction)
     {
         //Print("[DEBUG] SpawnNextGroup called with origin: " + origin, LogLevel.NORMAL);
         if (m_groups.Count() == m_groupCount)
@@ -40,7 +40,7 @@ class IA_AreaAttackers
         int unitCount = IA_SquadCount(st, m_faction);
         
         // Use CreateMilitaryGroupFromUnits instead of CreateMilitaryGroup
-        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(origin, m_faction, unitCount);
+        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(origin, m_faction, unitCount, AreaFaction);
         
         m_groups.Insert(grp);
         //Print("[DEBUG] New military group created and inserted.", LogLevel.NORMAL);

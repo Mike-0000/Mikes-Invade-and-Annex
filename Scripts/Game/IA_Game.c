@@ -37,9 +37,9 @@ class IA_Game
     private const float MAX_PLAYER_COUNT = 100;
     
     // Scale caps
-    private const float MIN_SCALE_FACTOR = 1.0;      // Minimum scaling for solo players
-    private const float BASELINE_SCALE_FACTOR = 1.3; // Baseline scaling (at BASELINE_PLAYER_COUNT)
-    private const float MAX_SCALE_FACTOR = 1.9;      // Maximum scaling cap for high player counts
+    private const float MIN_SCALE_FACTOR = 0.8;      // Minimum scaling for solo players
+    private const float BASELINE_SCALE_FACTOR = 1.2; // Baseline scaling (at BASELINE_PLAYER_COUNT)
+    private const float MAX_SCALE_FACTOR = 1.7;      // Maximum scaling cap for high player counts
 
     // Static method to set the current area instance
     static void SetCurrentAreaInstance(IA_AreaInstance instance)
@@ -278,9 +278,9 @@ class IA_Game
 	}
 	
 
-    IA_AreaInstance AddArea(IA_Area area, IA_Faction fac, int strength = 0, int groupID = -1)
+    IA_AreaInstance AddArea(IA_Area area, IA_Faction fac, Faction AreaFaction, int strength = 0, int groupID = -1)
     {
-        IA_AreaInstance inst = IA_AreaInstance.Create(area, fac, strength, groupID);
+        IA_AreaInstance inst = IA_AreaInstance.Create(area, fac, AreaFaction, strength, groupID);
         
         if(!inst || !inst.m_area){
             Print("IA_Game.AddArea: Failed to create or received null IA_AreaInstance or area!", LogLevel.ERROR);

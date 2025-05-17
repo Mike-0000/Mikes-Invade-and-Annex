@@ -63,7 +63,7 @@ class IA_AiGroup
     private const float BULLET_IMPACT_DISTANCE_MAX = 10.0;
     private const float PROJECTILE_FLYBY_RADIUS = 13.0;
     private const float GUNSHOT_AUDIBLE_DISTANCE = 500.0;
-    private const float SUPPRESSED_AUDIBLE_DISTANCE = 100.0;
+    private const float SUPPRESSED_AUDIBLE_DISTANCE = 90.0;
     private const float EXPLOSION_REACT_DISTANCE = 220.0;
     private const float VEHICLE_PRIORITY_MOVE_LEVEL = 200.0;
 	private const float CIVILIAN_VEHICLE_PRIORITY_MOVE_LEVEL = 400.0;
@@ -111,6 +111,8 @@ class IA_AiGroup
     private vector m_requestedStatePosition = vector.Zero;
     private IEntity m_requestedStateEntity = null;
 
+	Faction m_groupFaction;
+	
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount)
     {
         m_initialPosition = initialPos;
@@ -119,48 +121,46 @@ class IA_AiGroup
         m_initialUnitCount = unitCount; // Store initial count passed as argument
     }
 
-	static IA_AiGroup CreateMilitaryGroup(vector initialPos, IA_SquadType squadType, IA_Faction faction)
+	static IA_AiGroup CreateMilitaryGroup(vector initialPos, IA_SquadType squadType, IA_Faction faction, Faction AreaFaction)
 	{
         // Redirect to CreateMilitaryGroupFromUnits instead of using prefabs
         // Calculate unit count based on squad type
         int unitCount = IA_SquadCount(squadType, faction);
         
         // Create group using the new unit-based approach
-        return CreateMilitaryGroupFromUnits(initialPos, faction, unitCount);
+        return CreateMilitaryGroupFromUnits(initialPos, faction, unitCount, AreaFaction);
 	}
 
-	static string GetRandomUnitPrefab(IA_Faction faction){
+	static string GetRandomUnitPrefab(IA_Faction faction, Faction DesiredFaction){
 
-         SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+		/*
+        SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
         if (!factionManager) {
             return "";
         }
-
-        Faction actualFaction;
+		Faction USFaction = factionManager.GetFactionByKey("US");
+        array<Faction> actualFactions = {};
+		array<Faction> factionGet = {};
         if (faction == IA_Faction.US)
-            actualFaction = factionManager.GetFactionByKey("US");
-        else if (faction == IA_Faction.USSR)
-            actualFaction = factionManager.GetFactionByKey("USSR");
+            actualFactions.Insert(USFaction);
+        else if (faction == IA_Faction.USSR){
+			factionManager.GetFactionsList(factionGet);
+			foreach (Faction currentFaction : factionGet){
+				if(USFaction.IsFactionEnemy(currentFaction))
+					actualFactions.Insert(currentFaction); // Build List of Enemy Factions
+			}
+		}
         else {
             return "";
         }
+		*/
+		int randInt = Math.RandomInt(0,11);
 
-        SCR_Faction scrFaction = SCR_Faction.Cast(actualFaction);
-        if (!scrFaction) {
-            return "";
-        }
-
-        SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
-        if (!entityCatalog) {
-            return "";
-        }
-
-        array<SCR_EntityCatalogEntry> characterEntries = {};
 		array<EEditableEntityLabel> includedLabels = {};
-		int randInt = Math.RandomInt(0,10);
-		
-		if(faction == IA_Faction.USSR){
+
+		/*if(faction == IA_Faction.USSR){
 			switch(randInt){
+				case 11:
 				case 0: // ROLE_ANTITANK
 					includedLabels = {EEditableEntityLabel.ROLE_ANTITANK};
 					break;
@@ -200,6 +200,7 @@ class IA_AiGroup
 		    // Similar role distribution for US faction
 		    switch(randInt)
 		    {
+				case 10:
 		        case 0: includedLabels = {EEditableEntityLabel.ROLE_ANTITANK}; break;
 		        case 1: includedLabels = {EEditableEntityLabel.ROLE_GRENADIER}; break;
 		        case 2: includedLabels = {EEditableEntityLabel.ROLE_LEADER}; break;
@@ -213,21 +214,32 @@ class IA_AiGroup
 		        case 9: includedLabels = {EEditableEntityLabel.ROLE_SCOUT}; break;       // Assuming US has scouts
 		    }
 		}
-
 		else if (faction == IA_Faction.FIA)
 		{
 
 		    includedLabels = {EEditableEntityLabel.ROLE_RIFLEMAN};
 
-		}
-
+		}*/
+		SCR_EntityCatalog entityCatalog;
+		SCR_Faction scrFaction = SCR_Faction.Cast(DesiredFaction);
+		entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
+		if (!scrFaction)
+            return "";
+		if (!entityCatalog)
+			return "";
 		array<EEditableEntityLabel> excludedLabels = {};
-        entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
-        if (characterEntries.IsEmpty()) {
+		
+		array<SCR_EntityCatalogEntry> characterEntries = {};
+		entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
+		if (characterEntries.IsEmpty()) {
             return "";
         }
-
-
+		
+		
+		
+		if (characterEntries.IsEmpty())
+			return "";
+		
         return characterEntries[Math.RandomInt(1, characterEntries.Count())].GetPrefab();
 
 
@@ -262,7 +274,7 @@ class IA_AiGroup
         return grp;
     }
 
-    static IA_AiGroup CreateGroupForVehicle(Vehicle vehicle, IA_Faction faction, int unitCount)
+    static IA_AiGroup CreateGroupForVehicle(Vehicle vehicle, IA_Faction faction, int unitCount, Faction AreaFaction)
     {
         if (!vehicle || unitCount <= 0)
             return null;
@@ -333,7 +345,7 @@ class IA_AiGroup
 
         for (int i = 0; i < actualUnitsToSpawn; i++)
         {
-			string charPrefabPath = GetRandomUnitPrefab(faction);
+			string charPrefabPath = GetRandomUnitPrefab(faction, AreaFaction);
 			if(charPrefabPath == "")
 				continue;
 
@@ -365,7 +377,7 @@ class IA_AiGroup
         return grp;
     }
 
-    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount)
+    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction)
     {
         if (unitCount <= 0)
             return null;
@@ -420,7 +432,7 @@ class IA_AiGroup
 
         for (int i = 0; i < unitCount; i++)
         {
-            string charPrefabPath = GetRandomUnitPrefab(faction);
+            string charPrefabPath = GetRandomUnitPrefab(faction, AreaFaction);
             if (charPrefabPath == "")
             {
                  continue;
@@ -589,7 +601,6 @@ class IA_AiGroup
             }
 
         }
-
         // Adjust spawn height based on terrain
         float y = GetGame().GetWorld().GetSurfaceY(origin[0], origin[2]);
         origin[1] = y + 0.5;
@@ -622,14 +633,19 @@ class IA_AiGroup
 
         ResourceName rname;
         // Special handling for Defend orders to prevent errors
+        //Print("IA_AiOrder is = " + typename.EnumToString(IA_AiOrder, order));
         if (order == IA_AiOrder.Defend) 
         {
             // --- BEGIN ADDED: Debug logging for direct defend orders ---
-            //Print(string.Format("[IA_AiGroup.AddOrder] DIRECT DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Current Pos: %4 | Target: %5 | ScriptLine: 330", 
-//                this, typename.EnumToString(IA_Faction, m_faction), GetAliveCount(), GetOrigin().ToString(), origin.ToString()), LogLevel.NORMAL);
+           // Print(string.Format("[IA_AiGroup.AddOrder] DIRECT DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Current Pos: %4 | Target: %5 | ScriptLine: 330", 
+           //     this, typename.EnumToString(IA_Faction, m_faction), GetAliveCount(), GetOrigin().ToString(), origin.ToString()), LogLevel.NORMAL);
             // --- END ADDED ---
             
             rname = "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
+        }
+        else if (order == IA_AiOrder.SearchAndDestroy) // Added condition for SearchAndDestroy
+        {
+            rname = "{EE9A99488B40628B}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_SearchAndDestroy.et";
         }
         else
         {
@@ -637,7 +653,7 @@ class IA_AiGroup
         }
         
         // --- BEGIN ADDED LOGGING ---
-        ////Print(string.Format("[IA_Waypoint DEBUG AddOrder] Group %1 | Order: %2 | Waypoint Resource: %3 | Target: %4", 
+        //Print(string.Format("[IA_Waypoint DEBUG AddOrder] Group %1 | Order: %2 | Waypoint Resource: %3 | Target: %4", 
         //    m_group, typename.EnumToString(IA_AiOrder, order), rname, origin), LogLevel.DEBUG);
         // --- END ADDED LOGGING ---
         
@@ -651,21 +667,55 @@ class IA_AiGroup
         }
 
         IEntity waypointEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(origin));
-        SCR_AIWaypoint w = SCR_AIWaypoint.Cast(waypointEnt);
-		
-        if (!w)
+        SCR_AIWaypoint w = null; // Initialize w to null
+
+        if (order == IA_AiOrder.Defend)
         {
-            // --- BEGIN MODIFIED LOGGING ---
-            string entStr = "null";
-            if (waypointEnt)
-                entStr = waypointEnt.ToString();
-            //Print(string.Format("[IA_Waypoint] Failed to cast spawned entity to SCR_AIWaypoint. Resource: %1, Origin: %2, Entity: %3 for Group %4", rname, origin, entStr, m_group), LogLevel.ERROR);
-            // --- END MODIFIED LOGGING ---
-            if (waypointEnt)
-                IA_Game.AddEntityToGc(waypointEnt);
+            SCR_DefendWaypoint defendW = SCR_DefendWaypoint.Cast(waypointEnt);
+            if (defendW)
+            {
+                // If specific SCR_DefendWaypoint methods were needed, they could be called on 'defendW' here.
+                w = defendW; // Assign to the SCR_AIWaypoint variable for common operations
+            }
+            else
+            {
+                // Handle failed cast to SCR_DefendWaypoint
+                string entStr = "null"; if (waypointEnt) entStr = waypointEnt.ToString();
+                Print(string.Format("[IA_Waypoint] Failed to cast spawned entity to SCR_DefendWaypoint. Resource: %1, Origin: %2, Entity: %3 for Group %4", rname, origin, entStr, m_group), LogLevel.ERROR);
+            }
+        }
+        else if (order == IA_AiOrder.SearchAndDestroy) // Added condition for SearchAndDestroy
+        {
+            SCR_SearchAndDestroyWaypoint sadW = SCR_SearchAndDestroyWaypoint.Cast(waypointEnt);
+            if (sadW)
+            {
+                // If specific SCR_SearchAndDestroyWaypoint methods were needed, they could be called on 'sadW' here.
+                w = sadW; // Assign to the SCR_AIWaypoint variable for common operations
+            }
+            else
+            {
+                // Handle failed cast to SCR_SearchAndDestroyWaypoint
+                string entStr = "null"; if (waypointEnt) entStr = waypointEnt.ToString();
+                Print(string.Format("[IA_Waypoint] Failed to cast spawned entity to SCR_SearchAndDestroyWaypoint. Resource: %1, Origin: %2, Entity: %3 for Group %4", rname, origin, entStr, m_group), LogLevel.ERROR);
+            }
+        }
+        else
+        {
+            w = SCR_AIWaypoint.Cast(waypointEnt);
+            if (!w)
+            {
+                 // Handle failed cast to SCR_AIWaypoint for non-defend orders
+                string entStr = "null"; if (waypointEnt) entStr = waypointEnt.ToString();
+                Print(string.Format("[IA_Waypoint] Failed to cast spawned entity to SCR_AIWaypoint. Resource: %1, Origin: %2, Entity: %3 for Group %4", rname, origin, entStr, m_group), LogLevel.ERROR);
+            }
+        }
+
+        if (!w) // This single check now covers failure from either cast, or if waypointEnt itself was null (though SpawnEntityPrefab usually handles that)
+        {
+            if (waypointEnt) IA_Game.AddEntityToGc(waypointEnt); // Ensure waypointEnt is GC'd if it was created but cast failed
             return;
         }
-		
+
         if (m_isDriving)
         {
             w.SetPriorityLevel(VEHICLE_PRIORITY_MOVE_LEVEL); // Keep vehicles as is
@@ -1264,7 +1314,11 @@ class IA_AiGroup
             {
                 continue;
             }
-                
+            EAISkill aiSkill = EAISkill.EXPERT;
+			SCR_AICombatComponent combatComponent = SCR_AICombatComponent.Cast(agent.FindComponent(SCR_AICombatComponent));
+			if (combatComponent)
+				combatComponent.SetAISkill(aiSkill);
+			
             ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
             
             // Set up danger event processing for this agent
@@ -1829,7 +1883,7 @@ class IA_AiGroup
                         // --- BEGIN ADDED: Distance check for flanking --- 
                         vector currentPos = GetOrigin();
                         float distanceSqToThreat = vector.DistanceSq(currentPos, m_lastDangerPosition);
-                        bool threatFarEnoughForFlank = distanceSqToThreat >= (100 * 100); // 100 meters squared
+                        bool threatFarEnoughForFlank = distanceSqToThreat >= (80 * 80); // 80 meters squared
                         // --- END ADDED --- 
                         
                         // If already assigned an offensive role by authority, maintain offense
@@ -1959,7 +2013,8 @@ class IA_AiGroup
                 
                 return;
             }
-            
+            SCR_AIWorld aiWorld = SCR_AIWorld.Cast(GetGame().GetAIWorld());
+			
             // Even if no recent danger, maintain combat readiness if already engaged
             if (IsEngagedWithEnemy() && GetAliveCount() > 0 && timeSinceLastOrder > 30)
             {
@@ -2327,7 +2382,7 @@ class IA_AiGroup
         switch (order)
         {
             case IA_AiOrder.SearchAndDestroy:
-                priority += 40; // Combat orders highest priority
+                priority += 25; 
                 break;
 			case IA_AiOrder.VehicleMove:
                 return 0;
@@ -2339,10 +2394,10 @@ class IA_AiGroup
             case IA_AiOrder.PriorityMove:
                 return 100;  // High priority movement
             case IA_AiOrder.Move:
-                priority += 30;  // Move orders medium priority (between combat and patrol)
+                priority += 20;  // Move orders medium priority (between combat and patrol)
                 break;
             case IA_AiOrder.Patrol:
-                priority += 0;  // Patrol orders lowest priority
+                priority += 1;  // Patrol orders lowest priority
                 break;
         }
         

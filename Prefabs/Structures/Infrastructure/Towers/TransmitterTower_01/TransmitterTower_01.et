@@ -1,0 +1,17 @@
+StaticModelEntity : "{68CA807F237FFB7A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01_base.et" {
+ ID "50D67C36F435260A"
+ components {
+  SCR_DestructibleBuildingComponent "{5DA867E872E096D8}" {
+   "Additional hit zones" {
+    SCR_HitZone Default {
+     MaxHealth 6000
+     "Explosive multiplier" 15
+    }
+   }
+   m_fDelay 0.1
+   m_CameraShakeCurve {
+    0 1 0.195 0.425 0.427 0.194 1 0.01
+   }
+  }
+ }
+}

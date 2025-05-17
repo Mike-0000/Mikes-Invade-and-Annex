@@ -3,7 +3,6 @@ IA_AreaMarker QuarryRadioTower : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
  angleY 52.387
  m_areaGroup 10
  m_fZoneRadius 30
- m_prefabToSpawn "{DBCDEC45DB834E8A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01.et"
  m_areaName "Quarry Radio Tower"
  m_areaType "RadioTower"
  m_radius 30

@@ -51,12 +51,12 @@ class IA_VehicleSpawnPoint: GenericEntity
         return !m_spawnedVehicle && !m_isOccupied;
     }
     
-    Vehicle SpawnVehicle(IA_Faction faction)
+    Vehicle SpawnVehicle(IA_Faction faction, Faction AreaFaction)
     {
         if (!CanSpawnVehicle())
             return null;
             
-        m_spawnedVehicle = IA_VehicleManager.SpawnVehicle(faction, GetOrigin());
+        m_spawnedVehicle = IA_VehicleManager.SpawnVehicle(faction, GetOrigin(), AreaFaction);
         return m_spawnedVehicle;
     }
     

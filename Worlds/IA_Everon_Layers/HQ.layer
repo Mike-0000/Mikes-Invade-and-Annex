@@ -278,6 +278,9 @@ GameEntity : "{82A575F7D83C3231}Prefabs/Props/Military/Compositions/US/HeliWeapo
   MeshObject "{5872F0EB7FA40561}" {
    Enabled 0
   }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   Enabled 0
+  }
   SCR_MapDescriptorComponent "{655A1852470352E4}" {
    DisplayName "Vehicle Full Service"
    MainType "Name Town"
@@ -298,6 +301,9 @@ GameEntity : "{82A575F7D83C3231}Prefabs/Props/Military/Compositions/US/HeliWeapo
     MeshObject "{5872F0EB7FA40561}" {
      Enabled 0
     }
+    RigidBody "{5872F0EB7DFB5A9D}" {
+     Enabled 0
+    }
     Hierarchy "{6324C08A97C978E4}" {
     }
    }
@@ -308,6 +314,9 @@ GameEntity : "{82A575F7D83C3231}Prefabs/Props/Military/Compositions/US/HeliWeapo
    ID "631B64AA897A2786"
    components {
     MeshObject "{5872F0EB7FA40561}" {
+     Enabled 0
+    }
+    RigidBody "{5872F0EB7DFB5A9D}" {
      Enabled 0
     }
    }
@@ -326,6 +335,12 @@ GameEntity : "{82A575F7D83C3231}Prefabs/Props/Military/Compositions/US/HeliWeapo
    coords -0.935 0 -2.901
   }
  }
+}
+GenericEntity : "{A13F6A7F82DF031B}Prefabs/Compositions/Slotted/SlotFlatLarge/Helipad_L_US_01.et" {
+ coords 4815.712 28.214 11787.743
+ angleX -0.811
+ angleY 2.67
+ angleZ -1.829
 }
 GenericEntity : "{AD59EDEAA26CE792}Prefabs/Props/Military/Compositions/USSR/ArsenalBox_USSR.et" {
  components {

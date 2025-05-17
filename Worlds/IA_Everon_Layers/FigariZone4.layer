@@ -1,5 +1,5 @@
 IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
- coords 5486.418 109.869 6165.043
+ coords 5486.417 97.692 6165.043
  angleY -17.415
  m_areaGroup 4
 }
@@ -13,7 +13,7 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_radius 90
  }
  Provins {
-  coords 5514.057 95.845 6082.166
+  coords 5514.057 95.562 6082.166
   m_areaGroup 4
   m_fZoneRadius 50
   m_areaName "Provins"

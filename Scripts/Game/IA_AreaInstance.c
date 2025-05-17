@@ -33,7 +33,7 @@ class IA_AreaInstance
     private ref array<ref IA_AiGroup> m_military  = {};
     private ref array<ref IA_AiGroup> m_civilians = {};
     private ref array<IA_Faction>     m_attackingFactions = {};
-
+	static Faction m_AreaFaction;
     // Target role counts for military groups
     private int targetDefenders = 0;
     private int targetAttackers = 0;
@@ -69,8 +69,8 @@ class IA_AreaInstance
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
     private int m_reinforcementGroupsSpawned = 0;     // Groups spawned in this attack cycle
     private int m_reinforcementWaveDelayTimer = 0;    // Ticks until next wave
-    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = 4;
-    private const int REINFORCEMENT_WAVE_DELAY_TICKS = 5;   
+    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = 3;
+    private const int REINFORCEMENT_WAVE_DELAY_TICKS = 4;   
     // --- END ADDED ---
 
     // --- Vehicle Reinforcement System ---
@@ -125,7 +125,7 @@ class IA_AreaInstance
                     if (additionalGroups > 0) 
                     {
                         //////Print("[PLAYER_SCALING] Adding " + additionalGroups + " additional military groups", LogLevel.NORMAL);
-                        GenerateRandomAiGroups(additionalGroups, true);
+                        GenerateRandomAiGroups(additionalGroups, true, m_AreaFaction);
                     }
                 }
                 // For scale decrease: remove some groups (but never below 1)
@@ -175,12 +175,10 @@ class IA_AreaInstance
 
 	
 	
-	// --- BEGIN MODIFIED: Create ---
-	static IA_AreaInstance Create(IA_Area area, IA_Faction faction, int startStrength = 0, int groupID = -1)
-	// --- END MODIFIED ---
+	static IA_AreaInstance Create(IA_Area area, IA_Faction faction, Faction AreaFaction, int startStrength = 0, int groupID = -1)
 	{
 		if(!area){
-			//////Print("[DEBUG] area is NULL! ", LogLevel.NORMAL);
+			// Print("[DEBUG] area is NULL! ", LogLevel.NORMAL);
 			return null;
 		}
 	    IA_AreaInstance inst = new IA_AreaInstance();  // uses implicit no-arg constructor
@@ -188,20 +186,14 @@ class IA_AreaInstance
 	    inst.m_area = area;
 	    inst.m_faction = faction;
 	    inst.m_strength = startStrength;
-		
-		// --- BEGIN ADDED: Store Group ID ---
 		inst.m_areaGroup = groupID;
-		// --- END ADDED ---
-	
-	    //////Print("[DEBUG] IA_AreaInstance.Create: Initialized with area = " + area.GetName(), LogLevel.NORMAL);
-	
+		m_AreaFaction = AreaFaction;
+		
+			
 	    inst.m_area.SetInstantiated(true);
 	    
-	    // --- BEGIN ADDED: Initialize Reinforcement Quota ---
 	    inst.m_totalReinforcementQuota = area.GetReinforcementGroupQuota();
 	    //Print(string.Format("[AreaInstance.Create] Area %1 initialized with reinforcement quota: %2", area.GetName(), inst.m_totalReinforcementQuota), LogLevel.NORMAL);
-	    // --- END ADDED ---
-
 	    // Initialize scaling factor BEFORE generating AI
 	    float scaleFactor = IA_Game.GetAIScaleFactor();
 	    int playerCount = IA_Game.GetPlayerCount();
@@ -211,7 +203,7 @@ class IA_AreaInstance
 	    //////Print("[PLAYER_SCALING] New area created with scale factor: " + scaleFactor + ", player count: " + playerCount, LogLevel.NORMAL);
 	
 	    int groupCount = area.GetMilitaryAiGroupCount();
-	    inst.GenerateRandomAiGroups(groupCount, true);
+	    inst.GenerateRandomAiGroups(groupCount, true, m_AreaFaction);
 	
 	    int civCount = area.GetCivilianCount();
 	    inst.GenerateCivilians(civCount);
@@ -509,7 +501,7 @@ class IA_AreaInstance
                 //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 initial delay (%2 ticks) complete. Attempting first wave (scaled groups: %3).",
 //                    m_area.GetName(), INITIAL_REINFORCEMENT_DELAY_TICKS, scaledGroupsToAttempt), LogLevel.NORMAL);
 
-                bool initialWaveSpawned = SpawnReinforcementWave(scaledGroupsToAttempt); // Use scaled value
+                bool initialWaveSpawned = SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction); // Use scaled value
 
                 if (initialWaveSpawned)
                 {
@@ -548,7 +540,7 @@ class IA_AreaInstance
                     //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 attempting subsequent wave (scaled groups: %2).",
 //                        m_area.GetName(), scaledGroupsToAttempt), LogLevel.NORMAL);
                     
-                    bool waveSpawnedSuccessfully = SpawnReinforcementWave(scaledGroupsToAttempt); // Use scaled value
+                    bool waveSpawnedSuccessfully = SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction); // Use scaled value
 
                     if (waveSpawnedSuccessfully)
                     {
@@ -1357,9 +1349,9 @@ class IA_AreaInstance
         
         // --- MOVED: Now process the non-critical state change requests using the FINAL capped targets ---
         // Track current role counts (after applying the caps) for request decisions
-        int finalTargetDefenders = localTargetDefenders/1.4;
-        int finalTargetAttackers = localTargetAttackers;
-        int finalTargetFlankers = localTargetFlankers;
+        int finalTargetDefenders = localTargetDefenders/2.2;
+        int finalTargetAttackers = localTargetAttackers*1.5;
+        int finalTargetFlankers = localTargetFlankers*2.8;
         int currentDefendersAfterCap = currentDefenders;
         int currentAttackersAfterCap = currentAttackers;
         int currentFlankersAfterCap = currentFlankers;
@@ -1572,9 +1564,9 @@ class IA_AreaInstance
                 else postReassignmentOther++;
             } else postReassignmentOther++; // Should not happen
         }
-        //Print(string.Format("[AreaInstance.MilitaryTask] Post-Reassignment State Map: Def=%1, Att=%2, Flk=%3, Other=%4 (Targets: Def=%5, Att=%6, Flk=%7)",
- //           postReassignmentDefenders, postReassignmentAttackers, postReassignmentFlankers, postReassignmentOther,
-//            localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
+        Print(string.Format("[AreaInstance.MilitaryTask] Post-Reassignment State Map: Def=%1, Att=%2, Flk=%3, Other=%4 (Targets: Def=%5, Att=%6, Flk=%7)",
+            postReassignmentDefenders, postReassignmentAttackers, postReassignmentFlankers, postReassignmentOther,
+            localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
         // --- END ADDED ---
 
         // --- Stage 7: Enforcement & Idle Handling ---
@@ -2137,7 +2129,7 @@ class IA_AreaInstance
             if (IA_Game.rng.RandInt(0, 100) < 60) // 60% chance to process on any given cycle
             {
                 vector pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 1.2, m_area.GetRadius() * 1.3, m_area.GetOrigin());
-                m_aiAttackers.SpawnNextGroup(pos);
+                m_aiAttackers.SpawnNextGroup(pos, m_AreaFaction);
             }
             return;
         }
@@ -2157,7 +2149,7 @@ class IA_AreaInstance
         }
     }
 
-    void GenerateRandomAiGroups(int number, bool insideArea)
+    void GenerateRandomAiGroups(int number, bool insideArea, Faction AreaFaction)
     {
         // Apply player scaling to number of groups
         int scaledNumber = Math.Round(number * m_aiScaleFactor);
@@ -2193,7 +2185,7 @@ class IA_AreaInstance
                 continue;
             }
             
-            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, m_faction, scaledUnitCount);
+            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, m_faction, scaledUnitCount, AreaFaction);
             if (!grp)
             {
                 //////Print("[IA_AreaInstance.GenerateRandomAiGroups] Failed to create military group from units.", LogLevel.NORMAL);
@@ -2383,7 +2375,7 @@ class IA_AreaInstance
                 m_areaVehicles.Insert(spawnedVehicle);
                 
                 // Create AI units and place them in the vehicle
-                IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(spawnedVehicle, m_faction, m_area.GetOrigin(), this);
+                IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(spawnedVehicle, m_faction, m_area.GetOrigin(), this, m_AreaFaction);
             }
             else
             {
@@ -2566,7 +2558,7 @@ class IA_AreaInstance
             m_areaVehicles.Insert(replacementVehicle);
             
             // Place units in the vehicle
-            IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(replacementVehicle, m_faction, m_area.GetOrigin(), this);
+            IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(replacementVehicle, m_faction, m_area.GetOrigin(), this, m_AreaFaction);
         }
         else
         {
@@ -2683,7 +2675,7 @@ class IA_AreaInstance
                 m_areaVehicles.Insert(vehicle);
                 
                 // Create AI units and place them in the vehicle
-                IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(vehicle, m_faction, m_area.GetOrigin(), this);
+                IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(vehicle, m_faction, m_area.GetOrigin(), this, m_AreaFaction);
             }
         }
     }
@@ -2844,7 +2836,7 @@ class IA_AreaInstance
         if (vehicle)
         {
             // Create AI units and place them in the vehicle
-            IA_AiGroup civGroup = IA_VehicleManager.PlaceUnitsInVehicle(vehicle, IA_Faction.CIV, m_area.GetOrigin(), this);
+            IA_AiGroup civGroup = IA_VehicleManager.PlaceUnitsInVehicle(vehicle, IA_Faction.CIV, m_area.GetOrigin(), this, m_AreaFaction);
             
             // Register the vehicle and group with our civilian tracking
             if (civGroup)
@@ -2974,7 +2966,7 @@ class IA_AreaInstance
                 successfulSpawns++;
                 
                 // Create AI units and place them in the vehicle
-                IA_AiGroup civGroup = IA_VehicleManager.PlaceUnitsInVehicle(vehicle, IA_Faction.CIV, m_area.GetOrigin(), this);
+                IA_AiGroup civGroup = IA_VehicleManager.PlaceUnitsInVehicle(vehicle, IA_Faction.CIV, m_area.GetOrigin(), this, m_AreaFaction);
                 
                 // Register the vehicle and group with our civilian tracking
                 if (civGroup)
@@ -3003,6 +2995,8 @@ class IA_AreaInstance
     // New task for processing AI reactions
     private void AIReactionsTask()
     {
+		if(!Replication.IsServer())
+			return;
         // Only process reactions at the defined interval
         int currentTime = System.GetUnixTime();
         if (currentTime - m_lastReactionProcessTime < REACTION_PROCESS_INTERVAL)
@@ -3156,6 +3150,7 @@ class IA_AreaInstance
     // --- Add these helper methods for reaction processing ---
     private void ApplyUnderFireReactionToGroup(IA_AiGroup group, vector sourcePos, float intensity)
     {
+		
         if (!group)
             return;
         
@@ -3231,7 +3226,7 @@ class IA_AreaInstance
         if (isAssignedAttacker)
         {
             // Even attackers should maintain some distance from big threats
-            if (intensity > 0.8 && distanceToSource < 50 && aliveCount < 4)
+            if (intensity >= 0.8 && distanceToSource < 50 && aliveCount < 3)
             {
                 // Hold position if too close with small numbers
                 group.SetTacticalState(IA_GroupTacticalState.Defending, group.GetOrigin());
@@ -3810,15 +3805,16 @@ class IA_AreaInstance
     }
 
     // --- BEGIN ADDED: Spawn Reinforcement Wave Logic ---
-    private bool SpawnReinforcementWave(int groupsToSpawn)
+    private bool SpawnReinforcementWave(int groupsToSpawn, Faction AreaFaction)
     {
+		Print("SpawnReinforcementWave called for area " + m_area.GetName(),LogLevel.NORMAL);
         if (m_reinforcementGroupsSpawned >= m_totalReinforcementQuota)
         {
             //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Quota met (%2/%3).", 
     //            m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
             return false; // Quota already met
         }
-
+		
         int actualSpawnCount = Math.Min(groupsToSpawn, m_totalReinforcementQuota - m_reinforcementGroupsSpawned);
         if (actualSpawnCount <= 0) 
         {
@@ -3848,8 +3844,8 @@ class IA_AreaInstance
                 // //Print(string.Format("[SpawnReinforcementWave] Attempt %1/%2 to find safe spawn location...", attempt + 1, MAX_SPAWN_ATTEMPTS), LogLevel.NORMAL);
                 
                 // 1. Calculate potential Spawn Position (inside attempt loop)
-                float spawnMinRadius = 200;
-                float spawnMaxRadius = 500;
+                float spawnMinRadius = 100;
+                float spawnMaxRadius = 350;
                 vector center = m_area.GetOrigin();
                 
                 // Try finding a road nearby first 
@@ -3939,7 +3935,7 @@ class IA_AreaInstance
             int scaledUnitCount = Math.Round(unitCount * m_aiScaleFactor); // Use current scale factor
             if (scaledUnitCount < 1) scaledUnitCount = 1; 
 
-            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, m_faction, scaledUnitCount);
+            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, m_faction, scaledUnitCount, AreaFaction);
 
             // 5. Spawn and Integrate
             if (grp)

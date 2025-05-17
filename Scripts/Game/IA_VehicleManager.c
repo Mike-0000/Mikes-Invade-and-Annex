@@ -249,7 +249,7 @@ class IA_VehicleManager: GenericEntity
     }
     
     // Spawn a vehicle at the specified position
-    static Vehicle SpawnVehicle(IA_Faction faction, vector position)
+    static Vehicle SpawnVehicle(IA_Faction faction, vector position, Faction AreaFaction)
     {
         //// Print(("[DEBUG] IA_VehicleManager.SpawnVehicle called with faction " + faction, LogLevel.NORMAL);
         
@@ -320,7 +320,7 @@ class IA_VehicleManager: GenericEntity
                 }
                 
                 // Create AI and assign to vehicle
-                PlaceUnitsInVehicle(vehicle, faction, destination, IA_Game.CurrentAreaInstance);
+                PlaceUnitsInVehicle(vehicle, faction, destination, IA_Game.CurrentAreaInstance, AreaFaction);
             }
         }
         else
@@ -392,7 +392,7 @@ class IA_VehicleManager: GenericEntity
     }
     
     // Spawn a vehicle randomly within the area group's bounds
-    static Vehicle SpawnVehicleInAreaGroup(IA_Faction faction, int groupNumber)
+    static Vehicle SpawnVehicleInAreaGroup(IA_Faction faction, int groupNumber, Faction AreaFaction)
     {
         // Calculate a position within the area group
         vector centerPoint = IA_AreaMarker.CalculateGroupCenterPoint(groupNumber);
@@ -409,11 +409,11 @@ class IA_VehicleManager: GenericEntity
         spawnPos[1] = y + 0.5; // Slightly above ground
         
         // Spawn the vehicle
-        return SpawnVehicle(faction, spawnPos);
+        return SpawnVehicle(faction, spawnPos, AreaFaction);
     }
     
     // Spawn a random vehicle within the area group's bounds
-    static Vehicle SpawnRandomVehicleInAreaGroup(IA_Faction faction, bool allowCivilian, bool allowMilitary, int groupNumber)
+    static Vehicle SpawnRandomVehicleInAreaGroup(IA_Faction faction, bool allowCivilian, bool allowMilitary, int groupNumber, Faction AreaFaction)
     {
         //// Print(("[DEBUG] IA_VehicleManager.SpawnRandomVehicleInAreaGroup called with faction " + faction + ", civilian=" + allowCivilian + ", military=" + allowMilitary + ", group=" + groupNumber, LogLevel.NORMAL);
         
@@ -785,33 +785,33 @@ class IA_VehicleManager: GenericEntity
     // Helper methods to spawn specific vehicle types
     
     // Spawn a civilian car
-    static Vehicle SpawnCivilianCar(IA_Faction faction, vector position)
+    static Vehicle SpawnCivilianCar(IA_Faction faction, vector position, Faction civFaction)
     {
-        return SpawnVehicle(faction, position);
+        return SpawnVehicle(faction, position, civFaction);
     }
     
     // Spawn a civilian truck
-    static Vehicle SpawnCivilianTruck(IA_Faction faction, vector position)
+    static Vehicle SpawnCivilianTruck(IA_Faction faction, vector position, Faction civFaction)
     {
-        return SpawnVehicle(faction, position);
+        return SpawnVehicle(faction, position, civFaction);
     }
     
     // Spawn a military transport vehicle
-    static Vehicle SpawnMilitaryTransport(IA_Faction faction, vector position)
+    static Vehicle SpawnMilitaryTransport(IA_Faction faction, vector position, Faction AreaFaction)
     {
-        return SpawnVehicle(faction, position);
+        return SpawnVehicle(faction, position, AreaFaction);
     }
     
     // Spawn a military patrol vehicle
-    static Vehicle SpawnMilitaryPatrol(IA_Faction faction, vector position)
+    static Vehicle SpawnMilitaryPatrol(IA_Faction faction, vector position, Faction AreaFaction)
     {
-        return SpawnVehicle(faction, position);
+        return SpawnVehicle(faction, position, AreaFaction);
     }
     
     // Spawn a military APC
-    static Vehicle SpawnMilitaryAPC(IA_Faction faction, vector position)
+    static Vehicle SpawnMilitaryAPC(IA_Faction faction, vector position, Faction AreaFaction)
     {
-        return SpawnVehicle(faction, position);
+        return SpawnVehicle(faction, position, AreaFaction);
     }
     
     // Spawn a random civilian vehicle (car or truck)
@@ -827,7 +827,7 @@ class IA_VehicleManager: GenericEntity
     }
     
     // Spawn vehicles at all available spawn points for the active group with occupants
-    static void SpawnVehiclesAtAllSpawnPoints(IA_Faction faction)
+    static void SpawnVehiclesAtAllSpawnPoints(IA_Faction faction, Faction AreaFaction)
     {
         //// Print(("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: Spawning vehicles for faction " + faction, LogLevel.NORMAL);
         
@@ -862,12 +862,12 @@ class IA_VehicleManager: GenericEntity
             float areaRadius = IA_AreaMarker.CalculateGroupRadius(m_currentActiveGroup);
             
             // Directly place units inside the vehicle and set them in motion
-            PlaceUnitsInVehicle(vehicle, faction, areaCenter, IA_Game.CurrentAreaInstance);
+            PlaceUnitsInVehicle(vehicle, faction, areaCenter, IA_Game.CurrentAreaInstance, AreaFaction);
         }
     }
     
     // Add units to a vehicle and assign orders
-    static IA_AiGroup PlaceUnitsInVehicle(Vehicle vehicle, IA_Faction faction, vector destination, IA_AreaInstance areaInstance)
+    static IA_AiGroup PlaceUnitsInVehicle(Vehicle vehicle, IA_Faction faction, vector destination, IA_AreaInstance areaInstance, Faction AreaFaction)
     {
        //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle called for vehicle: " + vehicle + ", faction: " + faction, LogLevel.NORMAL);
         
@@ -932,7 +932,7 @@ class IA_VehicleManager: GenericEntity
         else
         {
             // For military, use standard approach
-            group = IA_AiGroup.CreateGroupForVehicle(vehicle, faction, scaledCompartmentCount);
+            group = IA_AiGroup.CreateGroupForVehicle(vehicle, faction, scaledCompartmentCount, AreaFaction);
         }
         
         if (!group)
