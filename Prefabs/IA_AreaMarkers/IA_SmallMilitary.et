@@ -1,0 +1,9 @@
+IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ ID "64F935A1015AFBEE"
+ coords 7815.696 144.704 4739.819
+ m_areaGroup 6
+ m_fZoneRadius 35
+ m_areaName "Levie Homestead West"
+ m_areaType "SmallMilitary"
+ m_radius 35
+}

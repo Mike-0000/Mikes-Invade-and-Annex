@@ -1,0 +1,8 @@
+IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ ID "64F935A1015AFBEE"
+ coords 7580.667 81.622 5516.958
+ m_areaGroup 9
+ m_fZoneRadius 115
+ m_areaName "Laruns"
+ m_radius 115
+}

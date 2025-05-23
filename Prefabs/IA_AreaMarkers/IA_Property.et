@@ -1,0 +1,7 @@
+IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ ID "64F935A1015AFBEE"
+ coords 7233.61 34.094 1448.232
+ m_fZoneRadius 25
+ m_areaType "Property"
+ m_radius 25
+}

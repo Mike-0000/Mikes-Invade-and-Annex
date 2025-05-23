@@ -1,0 +1,9 @@
+IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ ID "64F935A1015AFBEE"
+ coords 7504.875 165.75 4287.524
+ m_areaGroup 6
+ m_fZoneRadius 125
+ m_areaName "Levie Military Depot"
+ m_areaType "Military"
+ m_radius 125
+}

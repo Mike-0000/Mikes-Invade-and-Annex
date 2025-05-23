@@ -35,15 +35,15 @@ class IA_Game
     private int m_playerCheckTimer = 0;
     
     // Scaling factors for different player counts
-    private const float BASELINE_PLAYER_COUNT = 10;  // AI count reaches 1.0 at this player count
-    private const float MEDIUM_PLAYER_COUNT = 30;
+    private const float BASELINE_PLAYER_COUNT = 7;
+    private const float MEDIUM_PLAYER_COUNT = 18;
     private const float HIGH_PLAYER_COUNT = 50;
-    private const float MAX_PLAYER_COUNT = 100;
+    private const float MAX_PLAYER_COUNT = 80;
     
     // Scale caps
     private const float MIN_SCALE_FACTOR = 0.8;      // Minimum scaling for solo players
-    private const float BASELINE_SCALE_FACTOR = 1.2; // Baseline scaling (at BASELINE_PLAYER_COUNT)
-    private const float MAX_SCALE_FACTOR = 1.7;      // Maximum scaling cap for high player counts
+    private const float BASELINE_SCALE_FACTOR = 1.07; // Baseline scaling (at BASELINE_PLAYER_COUNT)
+    private const float MAX_SCALE_FACTOR = 1.8;      // Maximum scaling cap for high player counts
 
     // Static method to set the current area instance
     static void SetCurrentAreaInstance(IA_AreaInstance instance)
@@ -58,6 +58,12 @@ class IA_Game
         if (m_hasInit)
             return;
 
+        // --- BEGIN MODIFIED: Enable initial objective scaling earlier ---
+        // Enable scaling as soon as IA_Game is initialized for the first time.
+        // This ensures it's active before any mission logic that might depend on player count
+        // prior to the first objective group's explicit setup.
+        EnableInitialObjectiveScaling();
+        // --- END MODIFIED ---
         m_hasInit = true;
         ActivatePeriodicTask();
     }
@@ -201,7 +207,7 @@ class IA_Game
     }
     
     // Calculate max vehicles based on player count (also using a more gentle scaling curve)
-    static int GetMaxVehiclesForPlayerCount(int baseMaxVehicles = 3)
+    static int GetMaxVehiclesForPlayerCount(int baseMaxVehicles = 5)
     {
         int playerCount = GetPlayerCount();
         Print("Base Max Vehicle = " + baseMaxVehicles, LogLevel.NORMAL);
@@ -209,18 +215,18 @@ class IA_Game
         // Base 0-15 players: baseline vehicles
         if (playerCount <= BASELINE_PLAYER_COUNT)
             return baseMaxVehicles;
-        // 16-30 players: +1 vehicle
+        // 6-20 players: +1 vehicle
         else if (playerCount <= MEDIUM_PLAYER_COUNT)
-            return baseMaxVehicles + 1;
-        // 31-50 players: +2 vehicles
-        else if (playerCount <= HIGH_PLAYER_COUNT)
             return baseMaxVehicles + 2;
-        // 51-100 players: +3 vehicles
-        else if (playerCount <= MAX_PLAYER_COUNT)
-            return baseMaxVehicles + 3;
-        // 100+ players: +4 vehicles (absolute maximum)
-        else
+        // 20-50 players: +2 vehicles
+        else if (playerCount <= HIGH_PLAYER_COUNT)
             return baseMaxVehicles + 4;
+        // 51-80 players: +3 vehicles
+        else if (playerCount <= MAX_PLAYER_COUNT)
+            return baseMaxVehicles + 5;
+        // 80+ players: +4 vehicles (absolute maximum)
+        else
+            return baseMaxVehicles + 6;
     }
     
     // Update player count and log changes

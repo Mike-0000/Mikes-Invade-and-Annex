@@ -144,14 +144,43 @@ class IA_MissionInitializer : GenericEntity
 	    IA_Game.SetActiveGroupID(currentGroup);
 	    // --- END ADDED ---
 	    
-	    // --- BEGIN ADDED: Handle initial objective scaling ---
+	    // m_currentAreaInstances.Clear(); // Clear for the new zone group - MOVED LATER
+	    // array<IA_AreaMarker> markersInGroup = {}; - MOVED LATER
+        // array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers(); - MOVED LATER
+        // foreach(IA_AreaMarker marker : allMarkers) - MOVED LATER
+        // { - MOVED LATER
+        //     if (marker && marker.m_areaGroup == currentGroup) - MOVED LATER
+        //     { - MOVED LATER
+        //         markersInGroup.Insert(marker); - MOVED LATER
+        //     } - MOVED LATER
+        // } - MOVED LATER
+	    
+	    // int accumulatedDelay = 0; - MOVED LATER
+        // int markerIndex = 0; - MOVED LATER
+	    // foreach(IA_AreaMarker marker : markersInGroup) - MOVED LATER
+        // { - MOVED LATER
+	    //     if (!marker) - MOVED LATER
+	    //     { - MOVED LATER
+	    //         continue; - MOVED LATER
+	    //     } - MOVED LATER
+	    //     
+        //     // Schedule the area instance creation and AI spawning - MOVED LATER
+        //     GetGame().GetCallqueue().CallLater(this._SpawnAreaInstanceWithDelay, accumulatedDelay, false, marker, nextAreaFaction, currentGroup); - MOVED LATER
+        //     ////Print("[DEBUG_ZONE_GROUP] Scheduled initialization for zone: " + marker.GetAreaName() + " in group " + currentGroup + " with delay " + accumulatedDelay + "ms", LogLevel.NORMAL); - MOVED LATER
+        //     accumulatedDelay += m_spawnDelayMs; - MOVED LATER
+        //     markerIndex++; - MOVED LATER
+	    // } - MOVED LATER
+
+	    // --- BEGIN REORDERED CODE FOR INITIAL SCALING --- 
 	    bool isFirstObjectiveGroup = (m_currentIndex == 0);
+	    // Disabling logic is now placed before area spawning for the first group.
+	    // The EnableInitialObjectiveScaling() is now in IA_Game.Init()
 	    if (isFirstObjectiveGroup)
 	    {
-	        IA_Game.EnableInitialObjectiveScaling();
+	        // The accumulatedDelay for disabling scaling will be calculated after scheduling areas.
+	        // For now, we just note it's the first group.
 	    }
-	    // --- END ADDED ---
-	    
+
 	    m_currentAreaInstances.Clear(); // Clear for the new zone group
 	    array<IA_AreaMarker> markersInGroup = {};
         array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
@@ -178,10 +207,11 @@ class IA_MissionInitializer : GenericEntity
             accumulatedDelay += m_spawnDelayMs;
             markerIndex++;
 	    }
+	    // --- END REORDERED CODE FOR INITIAL SCALING --- 
 	    
 	    // --- BEGIN ADDED: Disable initial objective scaling after first group setup ---
 	    // This should be scheduled after all areas in the first group might have started their setup
-	    if (isFirstObjectiveGroup)
+	    if (isFirstObjectiveGroup) // Check again if it was the first group
 	    {
 	        GetGame().GetCallqueue().CallLater(IA_Game.DisableInitialObjectiveScaling, accumulatedDelay + 60000, false); // Wait 60s after last area spawn scheduled
 	    }

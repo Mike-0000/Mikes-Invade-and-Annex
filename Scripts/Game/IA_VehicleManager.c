@@ -13,6 +13,7 @@ class IA_VehicleManager: GenericEntity
 {
     static private ref array<IEntity> m_vehicles = {};
     static private IA_VehicleManager m_instance;
+    static private const float DEFAULT_INITIAL_ROAD_SEARCH_RADIUS = 100.0;
     
     // Group-specific vehicles
     static private ref array<ref array<IEntity>> m_groupVehicles = {};
@@ -159,10 +160,10 @@ class IA_VehicleManager: GenericEntity
         // Print(("[VEHICLE_DEBUG] Inactive group cleanup complete", LogLevel.NORMAL);
     }
     
-    static string GetVehicleResourceName(IA_Faction faction)
+    static string GetVehicleResourceName(IA_Faction faction, Faction AreaFaction)
     {
 		// Print(("GetVehicleResourceName Called", LogLevel.NORMAL);
-        string resourceName = IA_VehicleCatalog.GetRandomVehiclePrefab(faction);
+        string resourceName = IA_VehicleCatalog.GetRandomVehiclePrefab(faction, AreaFaction);
 		// Print(("resourceName Received as " + resourceName, LogLevel.NORMAL);
         if (resourceName.IsEmpty())
         {
@@ -173,18 +174,18 @@ class IA_VehicleManager: GenericEntity
     }
     
     // Get list of all vehicles that match specific filter criteria
-    static array<string> GetVehiclePrefabsByFilter(IA_Faction faction, bool allowCivilian, bool allowMilitary)
+    static array<string> GetVehiclePrefabsByFilter(IA_Faction faction, bool allowCivilian, bool allowMilitary, Faction AreaFaction)
     {
-        return IA_VehicleCatalog.GetVehiclesByFilter(faction, allowCivilian, allowMilitary);
+        return IA_VehicleCatalog.GetVehiclesByFilter(faction, allowCivilian, allowMilitary, AreaFaction);
     }
     
     // Spawn a random vehicle that matches filter criteria at the specified position
-    static Vehicle SpawnRandomVehicle(IA_Faction faction, bool allowCivilian, bool allowMilitary, vector position)
+    static Vehicle SpawnRandomVehicle(IA_Faction faction, bool allowCivilian, bool allowMilitary, vector position, Faction AreaFaction)
     {
        //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle called with faction " + faction + ", civilian=" + allowCivilian + ", military=" + allowMilitary, LogLevel.NORMAL);
         
         // Get catalog entries matching the filter
-        array<SCR_EntityCatalogEntry> entries = IA_VehicleCatalog.GetVehicleEntriesByFilter(faction, allowCivilian, allowMilitary);
+        array<SCR_EntityCatalogEntry> entries = IA_VehicleCatalog.GetVehicleEntriesByFilter(faction, allowCivilian, allowMilitary, AreaFaction);
         if (entries.IsEmpty())
         {
            //// Print(("[DEBUG_VEHICLE_SPAWN] SpawnRandomVehicle: No matching entries found in catalog", LogLevel.WARNING);
@@ -254,7 +255,7 @@ class IA_VehicleManager: GenericEntity
         //// Print(("[DEBUG] IA_VehicleManager.SpawnVehicle called with faction " + faction, LogLevel.NORMAL);
         
         // Get vehicle resource name using our helper method
-        string resourceName = GetVehicleResourceName(faction);
+        string resourceName = GetVehicleResourceName(faction, AreaFaction);
         if (resourceName.IsEmpty())
         {
            //// Print(("[IA_VehicleManager.SpawnVehicle] Couldn't find any vehicles for faction " + faction, LogLevel.ERROR);
@@ -308,7 +309,7 @@ class IA_VehicleManager: GenericEntity
                     radiusToUse = IA_Game.CurrentAreaInstance.m_area.GetRadius() * 0.8;
                 
                 // Directly find a random road entity in the area
-                vector roadPos = FindRandomRoadEntityInZone(originPoint, radiusToUse, m_currentActiveGroup); 
+                vector roadPos = FindRandomRoadPointForVehiclePatrol(originPoint, radiusToUse, m_currentActiveGroup); 
                 
                 // If a valid road is found, use it as destination
                 if (roadPos != vector.Zero)
@@ -437,7 +438,7 @@ class IA_VehicleManager: GenericEntity
         //// Print(("[DEBUG] IA_VehicleManager.SpawnRandomVehicleInAreaGroup: Generated position " + spawnPos.ToString(), LogLevel.NORMAL);
         
         // Spawn the random vehicle
-        return SpawnRandomVehicle(faction, allowCivilian, allowMilitary, spawnPos);
+        return SpawnRandomVehicle(faction, allowCivilian, allowMilitary, spawnPos, AreaFaction);
     }
     
     // Get all active vehicles in a specific area group
@@ -731,7 +732,7 @@ class IA_VehicleManager: GenericEntity
                     //Print("[VEHICLE_DEBUG] Searching for road near destination with radius " + searchRadius, LogLevel.NORMAL);
                     
                     // Find a road near the destination
-                    vector roadDestination = FindRandomRoadEntityInZone(destination, searchRadius, m_currentActiveGroup);
+                    vector roadDestination = FindRandomRoadPointForVehiclePatrol(destination, searchRadius, m_currentActiveGroup);
                     
                     // If we found a valid road position, use it
                     if (roadDestination != vector.Zero)
@@ -815,15 +816,15 @@ class IA_VehicleManager: GenericEntity
     }
     
     // Spawn a random civilian vehicle (car or truck)
-    static Vehicle SpawnRandomCivilianVehicle(IA_Faction faction, vector position)
+    static Vehicle SpawnRandomCivilianVehicle(IA_Faction faction, vector position, Faction AreaFaction)
     {
-        return SpawnRandomVehicle(faction, true, false, position);
+        return SpawnRandomVehicle(faction, true, false, position, AreaFaction);
     }
     
     // Spawn a random military vehicle (transport, patrol, or APC)
-    static Vehicle SpawnRandomMilitaryVehicle(IA_Faction faction, vector position)
+    static Vehicle SpawnRandomMilitaryVehicle(IA_Faction faction, vector position, Faction AreaFaction)
     {
-        return SpawnRandomVehicle(faction, false, true, position);
+        return SpawnRandomVehicle(faction, false, true, position, AreaFaction);
     }
     
     // Spawn vehicles at all available spawn points for the active group with occupants
@@ -851,7 +852,7 @@ class IA_VehicleManager: GenericEntity
                 continue;
                 
             // Spawn a random vehicle
-            Vehicle vehicle = spawnPoint.SpawnRandomVehicle(faction);
+            Vehicle vehicle = spawnPoint.SpawnRandomVehicle(faction, AreaFaction);
             if (!vehicle)
                 continue;
                 
@@ -970,124 +971,143 @@ class IA_VehicleManager: GenericEntity
     }
     
     // Find a random road entity in the zone around the given position
-    static vector FindRandomRoadEntityInZone(vector position, float maxDistance = 300, int groupNumber = -1)
+    static vector FindRandomRoadEntityInZone(vector position, float maxDistance = DEFAULT_INITIAL_ROAD_SEARCH_RADIUS, int groupNumber = -1, float minSearchRadius = 20.0)
     {
-        // Print(('[VEHICLE_DEBUG] FindRandomRoadEntityInZone called with position: " + position + ", maxDist: " + maxDistance + ", groupNum: " + groupNumber, LogLevel.NORMAL);
+        // Print(('[VEHICLE_DEBUG] FindRandomRoadEntityInZone called with position: " + position + ", maxDist: " + maxDistance + ", groupNum: " + groupNumber + ", minRadius: " + minSearchRadius, LogLevel.NORMAL);
         
+        vector originalPosition = position; 
+        float initialMaxDistance = maxDistance; 
+
         if (position == vector.Zero)
         {
-            //Print("[VEHICLE_DEBUG] FindRandomRoadEntityInZone - Input position is vector.Zero! Attempting to use groupNumber or fallback.", LogLevel.WARNING);
             if (groupNumber >= 0)
             {
                 vector groupCenter = IA_AreaMarker.CalculateGroupCenterPoint(groupNumber);
                 if (groupCenter != vector.Zero)
                 {
-                    //Print("[VEHICLE_DEBUG] FindRandomRoadEntityInZone - Using groupNumber " + groupNumber + " center for Zero input position: " + groupCenter, LogLevel.DEBUG);
-                    position = groupCenter; // Use group center as position
-                    // maxDistance will use the default or what was passed; groupRadius could be used here if desired
+                    position = groupCenter; 
                 }
                 else
                 {
-                    //Print("[VEHICLE_DEBUG] FindRandomRoadEntityInZone - groupNumber " + groupNumber + " center is also Zero. Cannot find road.", LogLevel.ERROR);
-                    return vector.Zero; // Cannot proceed if both position and group center are zero
+                    return FindFallbackNavigationPoint(originalPosition, initialMaxDistance, groupNumber);
                 }
             }
             else
             {
-                 //Print("[VEHICLE_DEBUG] FindRandomRoadEntityInZone - Input position is Zero and no valid groupNumber. Cannot find road.", LogLevel.ERROR);
-                return vector.Zero; // No valid position to search around
+                return FindFallbackNavigationPoint(originalPosition, initialMaxDistance, groupNumber);
             }
         }
         
-        // Initialize searchCenter with the (potentially recovered) position and searchRadius with input maxDistance
         vector searchCenter = position;
-        float searchRadius = maxDistance;
-        
-        // --- MODIFIED LOGIC for search parameters ---
-        // groupNumber and area under attack can influence searchRadius, but searchCenter remains anchored to 'position'
-        // unless 'position' was initially zero and recovered via groupCenter.
+        if (searchCenter != vector.Zero) 
+        {
+            vector randomOffset = IA_Game.rng.GenerateRandomPointInRadius(1, 20.0, vector.Zero); 
+            searchCenter[0] = searchCenter[0] + randomOffset[0];
+            searchCenter[2] = searchCenter[2] + randomOffset[2];
+        }
 
+        float currentSearchRadius = initialMaxDistance; 
+        currentSearchRadius = Math.Max(currentSearchRadius, minSearchRadius); // Ensure initial radius respects minSearchRadius
+        
+        // Adjust initial searchRadius based on groupNumber and attack status (existing logic)
         if (groupNumber >= 0)
         {
             float groupRadiusCalc = IA_AreaMarker.CalculateGroupRadius(groupNumber);
             if (groupRadiusCalc > 0)
             {
-                // If the original maxDistance is very small or default, consider using groupRadius
-                // This helps ensure a reasonable search area if a specific small maxDistance wasn't intended with a group context
-                if (searchRadius <= 10 || maxDistance == 300) // 300 is default for maxDistance
+                // Check against DEFAULT_INITIAL_ROAD_SEARCH_RADIUS to see if maxDistance was the default
+                if (initialMaxDistance == DEFAULT_INITIAL_ROAD_SEARCH_RADIUS || currentSearchRadius <= 10) 
                 {
-                    searchRadius = Math.Max(searchRadius, groupRadiusCalc * 0.8); // Use at least 80% of group radius
-                    Print(string.Format("[VEHICLE_DEBUG] FindRandomRoadEntityInZone - Adjusted searchRadius to %.1f based on group %d radius.", searchRadius, groupNumber), LogLevel.DEBUG);
+                    currentSearchRadius = Math.Max(currentSearchRadius, groupRadiusCalc * 0.8);
                 }
             }
         }
-        
-        // If the current area instance is under attack, potentially restrict search radius further
-        // but keep searchCenter as the target 'position'.
         if (IA_Game.CurrentAreaInstance && IA_Game.CurrentAreaInstance.IsUnderAttack())
         {
             vector areaOrigin = IA_Game.CurrentAreaInstance.m_area.GetOrigin();
-            if (areaOrigin != vector.Zero) // Ensure areaOrigin is valid
+            if (areaOrigin != vector.Zero) 
             {
-                float defensiveRadius = IA_Game.CurrentAreaInstance.m_area.GetRadius() * 0.5; // 50% of area radius
-                if (defensiveRadius < 100) defensiveRadius = 100; // Ensure a minimum radius of 100m
-                
-                // If the target 'position' is far outside the defensive area, this logic might still be an issue.
-                // For now, we will use the smaller of the current searchRadius and the defensiveRadius,
-                // effectively shrinking the search around 'position' if it's an attack scenario.
-                if (defensiveRadius < searchRadius) 
+                float defensiveRadius = IA_Game.CurrentAreaInstance.m_area.GetRadius() * 0.5; 
+                if (defensiveRadius < 100) defensiveRadius = 100; 
+                if (defensiveRadius < currentSearchRadius) 
                 {
-                    searchRadius = defensiveRadius;
-                    Print(string.Format("[VEHICLE_DEBUG] FindRandomRoadEntityInZone - Area under attack! Search radius around target position %1 restricted to %.1f.", position.ToString(), searchRadius), LogLevel.DEBUG);
+                    currentSearchRadius = defensiveRadius;
                 }
             }
         }
-        // --- END MODIFIED LOGIC ---
-        
-        Print(string.Format("[VEHICLE_DEBUG] Searching for roads with final searchCenter: %1, searchRadius: %.1f", searchCenter.ToString(), searchRadius), LogLevel.DEBUG);
-        
-        // Generate a random point within the radius around the center position
-        vector randomVector = IA_Game.rng.GenerateRandomPointInRadius(1, searchRadius, searchCenter);
-        // Print(("[VEHICLE_DEBUG] Generated random point at " + randomVector.ToString(), LogLevel.NORMAL);
-        
-        // Create callback to collect road entities
-        array<IEntity> roadEntities = {};
-        RoadEntitiesCallback callback = new RoadEntitiesCallback(roadEntities);
-        AIWorld aiWorld = GetGame().GetAIWorld();
-        SCR_AIWorld scr_aiWorld = SCR_AIWorld.Cast(aiWorld);
-        RoadNetworkManager roadMngr = scr_aiWorld.GetRoadNetworkManager();
-        array<BaseRoad> Roads = {};
-        
-        // Calculate AABB min and max vectors with large vertical range to account for mountains and valleys
-        // Use a vertical range of ±1000 meters to ensure we capture roads at different elevations
-        vector vectorAABBMin = Vector(searchCenter[0] - searchRadius, searchCenter[1] - 1000, searchCenter[2] - searchRadius);
-        vector vectorAABBMax = Vector(searchCenter[0] + searchRadius, searchCenter[1] + 1000, searchCenter[2] + searchRadius);
-        
-        roadMngr.GetRoadsInAABB(vectorAABBMin, vectorAABBMax, Roads);
-        
-        if (Roads.IsEmpty()){
-            // Print(("[VEHICLE_DEBUG] No Roads Found In AABB!!", LogLevel.WARNING);
-            return FindFallbackNavigationPoint(position, maxDistance, groupNumber);
+        currentSearchRadius = Math.Max(currentSearchRadius, minSearchRadius); // Re-ensure minSearchRadius after adjustments
+
+        int maxRetries = 3; 
+        float radiusIncrement = 150; 
+        float absoluteMaxSearchRadius = 1200;
+
+        // Print(string.Format("[VEHICLE_DEBUG] Initial attempt to find road with searchCenter: %1, initial adjusted radius: %.1f (min requested: %.1f)", searchCenter.ToString(), currentSearchRadius, minSearchRadius), LogLevel.DEBUG);
+
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            if (attempt > 0) 
+            {
+                currentSearchRadius += radiusIncrement;
+                currentSearchRadius = Math.Max(currentSearchRadius, minSearchRadius); // Ensure incremented radius also respects min
+                if (currentSearchRadius > absoluteMaxSearchRadius)
+                {
+                    break; 
+                }
+            }
+            
+            AIWorld aiWorld = GetGame().GetAIWorld();
+            SCR_AIWorld scr_aiWorld = SCR_AIWorld.Cast(aiWorld);
+            if (!scr_aiWorld) {
+                 if (attempt == maxRetries) break; 
+                 continue;
+            }
+            RoadNetworkManager roadMngr = scr_aiWorld.GetRoadNetworkManager();
+            if (!roadMngr) {
+                if (attempt == maxRetries) break; 
+                continue;
+            }
+            
+            array<BaseRoad> Roads = {};
+            vector vectorAABBMin = Vector(searchCenter[0] - currentSearchRadius, searchCenter[1] - 1000, searchCenter[2] - currentSearchRadius);
+            vector vectorAABBMax = Vector(searchCenter[0] + currentSearchRadius, searchCenter[1] + 1000, searchCenter[2] + currentSearchRadius);
+            roadMngr.GetRoadsInAABB(vectorAABBMin, vectorAABBMax, Roads);
+            
+            if (Roads.IsEmpty()){
+                if (attempt == maxRetries) break; 
+                continue; 
+            }
+            
+            array<vector> validPoints = {};
+            array<vector> pointsOnCurrentRoad = {};
+
+            foreach (BaseRoad road : Roads)
+            {
+                pointsOnCurrentRoad.Clear();
+                road.GetPoints(pointsOnCurrentRoad);
+                
+                if (pointsOnCurrentRoad.IsEmpty())
+                    continue;
+
+                foreach (vector point : pointsOnCurrentRoad)
+                {
+                    float distSq = vector.DistanceSq(searchCenter, point);
+                    float currentRadiusSq = currentSearchRadius * currentSearchRadius;
+                    if (distSq <= currentRadiusSq) 
+                    {
+                        validPoints.Insert(point);
+                    }
+                }
+            }
+
+            if (!validPoints.IsEmpty())
+            {
+                int randomIndex = Math.RandomInt(0, validPoints.Count() - 1);
+                vector selectedPoint = validPoints[randomIndex];
+                return selectedPoint;
+            }
+            if (attempt == maxRetries) break; 
         }
-        
-        int randomRoadIndex = Math.RandomInt(0, Roads.Count() - 1);
-        array<vector> arrayOfVectors = {};
-        BaseRoad randomRoad = Roads[randomRoadIndex];
-        randomRoad.GetPoints(arrayOfVectors);
-        
-        // Get the road position
-        vector roadPosition;
-        if (arrayOfVectors.IsEmpty()) {
-            // Print(("[VEHICLE_DEBUG] Selected road has no points!", LogLevel.WARNING);
-            return FindFallbackNavigationPoint(position, maxDistance, groupNumber);
-        } else {
-            // Pick a random point on the road
-            int randomPointIndex = Math.RandomInt(0, arrayOfVectors.Count() - 1);
-            roadPosition = arrayOfVectors[randomPointIndex];
-            // Print(("[VEHICLE_DEBUG] Selected random road point at " + roadPosition.ToString(), LogLevel.NORMAL);
-        }
-        
-        return roadPosition;
+        return FindFallbackNavigationPoint(originalPosition, initialMaxDistance, groupNumber);
     }
     
     // Filter function for road entities
@@ -1341,7 +1361,7 @@ class IA_VehicleManager: GenericEntity
             searchRadius = 100;
         
         // Find a road near the destination
-        vector roadDestination = FindRandomRoadEntityInZone(destination, searchRadius, IA_VehicleManager.GetActiveGroup());
+        vector roadDestination = FindRandomRoadPointForVehiclePatrol(destination, searchRadius, IA_VehicleManager.GetActiveGroup());
         
         // If we found a valid road position, use it instead of the original destination
         if (roadDestination != vector.Zero)
@@ -1510,6 +1530,139 @@ class IA_VehicleManager: GenericEntity
         
         // If all checks pass or don't apply
         return true;
+    }
+
+    // Find a random road point specifically for vehicle patrols (duplicates FindRandomRoadEntityInZone initially)
+    static vector FindRandomRoadPointForVehiclePatrol(vector position, float maxDistance = DEFAULT_INITIAL_ROAD_SEARCH_RADIUS, int groupNumber = -1)
+    {
+        // Print(('[VEHICLE_DEBUG] FindRandomRoadPointForVehiclePatrol called with position: " + position + ", maxDist: " + maxDistance + ", groupNum: " + groupNumber, LogLevel.NORMAL);
+        
+        vector originalPosition = position; 
+        float initialMaxDistance = maxDistance; 
+
+        if (position == vector.Zero)
+        {
+            if (groupNumber >= 0)
+            {
+                vector groupCenter = IA_AreaMarker.CalculateGroupCenterPoint(groupNumber);
+                if (groupCenter != vector.Zero)
+                {
+                    position = groupCenter; 
+                }
+                else
+                {
+                    return FindFallbackNavigationPoint(originalPosition, initialMaxDistance, groupNumber);
+                }
+            }
+            else
+            {
+                return FindFallbackNavigationPoint(originalPosition, initialMaxDistance, groupNumber);
+            }
+        }
+        
+        vector searchCenter = position;
+        if (searchCenter != vector.Zero) 
+        {
+            vector randomOffset = IA_Game.rng.GenerateRandomPointInRadius(1, 20.0, vector.Zero); 
+            searchCenter[0] = searchCenter[0] + randomOffset[0];
+            searchCenter[2] = searchCenter[2] + randomOffset[2];
+        }
+
+        float currentSearchRadius = initialMaxDistance; 
+        
+        if (groupNumber >= 0)
+        {
+            float groupRadiusCalc = IA_AreaMarker.CalculateGroupRadius(groupNumber);
+            if (groupRadiusCalc > 0)
+            {
+                if (currentSearchRadius <= 10 || currentSearchRadius == DEFAULT_INITIAL_ROAD_SEARCH_RADIUS) 
+                {
+                    currentSearchRadius = Math.Max(currentSearchRadius, groupRadiusCalc * 0.8);
+                }
+            }
+        }
+        if (IA_Game.CurrentAreaInstance && IA_Game.CurrentAreaInstance.IsUnderAttack())
+        {
+            vector areaOrigin = IA_Game.CurrentAreaInstance.m_area.GetOrigin();
+            if (areaOrigin != vector.Zero) 
+            {
+                float defensiveRadius = IA_Game.CurrentAreaInstance.m_area.GetRadius() * 0.5; 
+                if (defensiveRadius < 100) defensiveRadius = 100; 
+                if (defensiveRadius < currentSearchRadius) 
+                {
+                    currentSearchRadius = defensiveRadius;
+                }
+            }
+        }
+
+        int maxRetries = 3; 
+        float radiusIncrement = 150; 
+        float absoluteMaxSearchRadius = 1200;
+
+        for (int attempt = 0; attempt <= maxRetries; attempt++)
+        {
+            if (attempt > 0) 
+            {
+                currentSearchRadius += radiusIncrement;
+                if (currentSearchRadius > absoluteMaxSearchRadius)
+                {
+                    break; 
+                }
+            }
+            
+            AIWorld aiWorld = GetGame().GetAIWorld();
+            SCR_AIWorld scr_aiWorld = SCR_AIWorld.Cast(aiWorld);
+            if (!scr_aiWorld) {
+                 if (attempt == maxRetries) break; 
+                 continue;
+            }
+            RoadNetworkManager roadMngr = scr_aiWorld.GetRoadNetworkManager();
+            if (!roadMngr) {
+                if (attempt == maxRetries) break; 
+                continue;
+            }
+            
+            array<BaseRoad> Roads = {};
+            vector vectorAABBMin = Vector(searchCenter[0] - currentSearchRadius, searchCenter[1] - 1000, searchCenter[2] - currentSearchRadius);
+            vector vectorAABBMax = Vector(searchCenter[0] + currentSearchRadius, searchCenter[1] + 1000, searchCenter[2] + currentSearchRadius);
+            roadMngr.GetRoadsInAABB(vectorAABBMin, vectorAABBMax, Roads);
+            
+            if (Roads.IsEmpty()){
+                if (attempt == maxRetries) break; 
+                continue; 
+            }
+            
+            array<vector> validPoints = {};
+            array<vector> pointsOnCurrentRoad = {};
+
+            foreach (BaseRoad road : Roads)
+            {
+                pointsOnCurrentRoad.Clear();
+                road.GetPoints(pointsOnCurrentRoad);
+                
+                if (pointsOnCurrentRoad.IsEmpty())
+                    continue;
+
+                foreach (vector point : pointsOnCurrentRoad)
+                {
+                    float distSq = vector.DistanceSq(searchCenter, point);
+                    float currentRadiusSq = currentSearchRadius * currentSearchRadius;
+                    if (distSq <= currentRadiusSq) 
+                    {
+                        validPoints.Insert(point);
+                    }
+                }
+            }
+
+            if (!validPoints.IsEmpty())
+            {
+                int randomIndex = Math.RandomInt(0, validPoints.Count() - 1);
+                vector selectedPoint = validPoints[randomIndex];
+                return selectedPoint;
+            }
+            if (attempt == maxRetries) break; 
+        }
+        return FindFallbackNavigationPoint(originalPosition, initialMaxDistance, groupNumber);
     }
 };
 

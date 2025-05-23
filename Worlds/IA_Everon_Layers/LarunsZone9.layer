@@ -7,20 +7,18 @@ IA_AreaMarker Laruns2 : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
  m_areaType "RadioTower"
  m_radius 50
 }
-$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
- Laruns {
-  coords 7580.667 81.622 5516.958
-  m_areaGroup 9
-  m_fZoneRadius 115
-  m_areaName "Laruns"
-  m_radius 115
- }
- Laruns3 {
-  coords 7552.131 82.781 5463.429
-  m_areaGroup 9
-  m_fZoneRadius 30
-  m_areaName "Laruns - Officer's Hideout"
-  m_areaType "SmallMilitary"
-  m_radius 30
- }
+IA_AreaMarker Laruns3 : "{7ADD348E46715524}Prefabs/IA_AreaMarkers/IA_SmallMilitary.et" {
+ coords 7552.131 82.781 5463.429
+ m_areaGroup 9
+ m_fZoneRadius 30
+ m_areaName "Laruns - Officer's Hideout"
+ m_areaType "SmallMilitary"
+ m_radius 30
+}
+IA_AreaMarker Laruns : "{EB1E27CA063A3403}Prefabs/IA_AreaMarkers/IA_City.et" {
+ coords 7580.667 81.622 5516.958
+ m_areaGroup 9
+ m_fZoneRadius 115
+ m_areaName "Laruns"
+ m_radius 115
 }

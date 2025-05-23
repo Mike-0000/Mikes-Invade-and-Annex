@@ -4,26 +4,9 @@ class IA_VehicleCatalog
     static array<EEditableEntityLabel> GetRandomVehicleLabels(IA_Faction faction)
     {
         array<EEditableEntityLabel> labels = {};
-        
-        // Add faction label
-        switch (faction)
-        {
-            case IA_Faction.US:
-                labels.Insert(EEditableEntityLabel.FACTION_US);
-                break;
-            case IA_Faction.USSR:
-                labels.Insert(EEditableEntityLabel.FACTION_USSR);
-                break;
-            case IA_Faction.CIV:
-                labels.Insert(EEditableEntityLabel.FACTION_CIV);
-                break;
-            case IA_Faction.FIA:
-                labels.Insert(EEditableEntityLabel.FACTION_FIA);
-                break;
-        }
-        
+
         // Generate random vehicle type based on faction
-        int randInt = IA_Game.rng.RandInt(0, 3);
+        int randInt = IA_Game.rng.RandInt(0, 4);
         if (faction == IA_Faction.USSR)
         {
             switch (randInt)
@@ -36,11 +19,12 @@ class IA_VehicleCatalog
 					labels.Insert(EEditableEntityLabel.TRAIT_ARMED);
 					labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
 					break;
-                case 2: // Armed Vic
+				case 2: // Armed Vic
 					labels.Insert(EEditableEntityLabel.TRAIT_ARMED);
                     break;
-                case 3: // Armor Vic
-                    labels.Insert(EEditableEntityLabel.TRAIT_ARMOR);
+                case 3:
+				case 4: // Armor Vic
+                    labels.Insert(EEditableEntityLabel.VEHICLE_APC);
                     break;
             }
         }
@@ -66,14 +50,15 @@ class IA_VehicleCatalog
         }
         else if (faction == IA_Faction.CIV)
         {
+			 // Dont add any labels right now for most diversity.
             switch (randInt)
             {
                 case 0:
-                case 1: // Civilian Car
+                case 1: 
                 case 2:
                 case 3:
                 case 4: // Civilian Truck
-                    labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
+                    //labels.Insert(EEditableEntityLabel.VEHICLE_CAR);
                     break;
             }
         }
@@ -119,7 +104,7 @@ class IA_VehicleCatalog
     }
     
     // Get catalog entries for a specific faction with random vehicle type
-    static array<SCR_EntityCatalogEntry> GetVehicleEntries(IA_Faction faction)
+    static array<SCR_EntityCatalogEntry> GetVehicleEntries(IA_Faction faction, Faction AreaFaction)
     {
        //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries called for faction " + faction, LogLevel.NORMAL);
         array<SCR_EntityCatalogEntry> result = {};
@@ -131,44 +116,71 @@ class IA_VehicleCatalog
            //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get faction manager", LogLevel.WARNING);
             return result;
         }
-        
-        // Get the faction by key
-        string factionKey = GetFactionKey(faction);
-       //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Looking for faction with key " + factionKey, LogLevel.NORMAL);
-        SCR_Faction scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey(factionKey));
-        if (!scrFaction)
-        {
-           //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get faction with key " + factionKey, LogLevel.WARNING);
-            // For CIV vehicles, sometimes we might still want US vehicles
-            if (faction == IA_Faction.CIV)
-            {
-               //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Trying US faction as fallback", LogLevel.NORMAL);
-                scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
-                if (!scrFaction)
-                {
-                   //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get US faction fallback", LogLevel.WARNING);
-                    return result;
-                }
-            }
-            else
-            {
-                return result;
-            }
-        }
-        
+		
+		array<EEditableEntityLabel> includedLabels = GetRandomVehicleLabels(faction);
+        array<EEditableEntityLabel> excludedLabels = {EEditableEntityLabel.VEHICLE_HELICOPTER};
+		SCR_EntityCatalog areaFactionEntityCatalog;
+		array<SCR_EntityCatalogEntry> areaFactionEntityCatalogEntryArray = {};
+		
+		// Check if AreaFaction has enough vehicles
+		
+		if(AreaFaction && faction != IA_Faction.CIV){
+			SCR_Faction scr_AreaFaction = SCR_Faction.Cast(AreaFaction);
+			areaFactionEntityCatalog = scr_AreaFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+			areaFactionEntityCatalog.GetFullFilteredEntityList(areaFactionEntityCatalogEntryArray, includedLabels, excludedLabels);
+			if (areaFactionEntityCatalogEntryArray.Count() > 0){
+				Print("Area Faction has more than 1 vehicle for this query, using Area Faction for vehicle query", LogLevel.NORMAL);
+				return areaFactionEntityCatalogEntryArray;
+			}
+			Print("Area Faction has less than 1 vehicle for this query, using all enemy Factions for vehicle query", LogLevel.NORMAL);
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		SCR_Faction USFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
+		array<Faction> AllFactions = {};
+		array<Faction> EnemyFactions = {};
+		factionManager.GetFactionsList(AllFactions);
+		
+		foreach(Faction currentFaction : AllFactions){
+			if(USFaction.IsFactionEnemy(currentFaction))
+				EnemyFactions.Insert(currentFaction);
+		}
+		array<SCR_EntityCatalog> finalEntityCatalogArray = {};
+        foreach(Faction currentFaction : EnemyFactions){
+	        // Get the faction by key
+	        string factionKey = GetFactionKey(faction);
+	       //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Looking for faction with key " + factionKey, LogLevel.NORMAL);
+	        SCR_Faction scrFaction = SCR_Faction.Cast(currentFaction);
+	        if (!scrFaction)
+	        {
+	            continue;
+	        }
+		
+			finalEntityCatalogArray.Insert(scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true));
+	        
+		
+		
+		
+		}
+        if (finalEntityCatalogArray.IsEmpty())
+	        {
+	           Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get entity catalogs", LogLevel.WARNING);
+	            return result;
+	        }
         // Get the entity catalog for vehicles
        //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Getting vehicle catalog for faction " + factionKey, LogLevel.NORMAL);
-        SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
-        if (!entityCatalog)
-        {
-           //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Failed to get entity catalog", LogLevel.WARNING);
-            return result;
-        }
+        
         
         // Setup the filter labels
-        array<EEditableEntityLabel> includedLabels = GetRandomVehicleLabels(faction);
-        array<EEditableEntityLabel> excludedLabels = {EEditableEntityLabel.VEHICLE_HELICOPTER};
-        
+
+        array<SCR_EntityCatalogEntry> finalEntityCatalogEntries = {};
         // For civilian vehicles, exclude military faction vehicles
         if (faction == IA_Faction.CIV)
         {
@@ -176,20 +188,32 @@ class IA_VehicleCatalog
             excludedLabels.Insert(EEditableEntityLabel.FACTION_US);
             excludedLabels.Insert(EEditableEntityLabel.FACTION_USSR);
             excludedLabels.Insert(EEditableEntityLabel.FACTION_FIA);
+			SCR_Faction scr_CIVFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("CIV"));
+
+			SCR_EntityCatalog CIVEntityCatalog = scr_CIVFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+			
+			CIVEntityCatalog.GetFullFilteredEntityList(finalEntityCatalogEntries, includedLabels, excludedLabels);
+			return finalEntityCatalogEntries;
         }
         
         // Get the filtered list of vehicles
        //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Getting filtered entity list", LogLevel.NORMAL);
-        entityCatalog.GetFullFilteredEntityList(result, includedLabels, excludedLabels);
-       //Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Found " + result.Count() + " entries", LogLevel.NORMAL);
-        return result;
+		
+		foreach(SCR_EntityCatalog currentEntityCatalog : finalEntityCatalogArray){
+			array<SCR_EntityCatalogEntry> currentEntityCatalogEntries = {};
+        	currentEntityCatalog.GetFullFilteredEntityList(currentEntityCatalogEntries, includedLabels, excludedLabels);
+			finalEntityCatalogEntries.InsertAll(currentEntityCatalogEntries);
+       		//Print("[DEBUG] IA_VehicleCatalog.GetVehicleEntries: Found " + result.Count() + " entries", LogLevel.NORMAL);
+			
+		}
+        return finalEntityCatalogEntries;
     }
     
     // Get a random catalog entry for a specific faction
-    static SCR_EntityCatalogEntry GetRandomVehicleEntry(IA_Faction faction)
+    static SCR_EntityCatalogEntry GetRandomVehicleEntry(IA_Faction faction, Faction AreaFaction)
     {
        //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry called for faction " + faction, LogLevel.NORMAL);
-        array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
+        array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction, AreaFaction);
         if (entries.IsEmpty())
         {
            //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehicleEntry: No entries found", LogLevel.WARNING);
@@ -202,10 +226,10 @@ class IA_VehicleCatalog
     }
     
     // Get a random vehicle prefab resource name as a string
-    static string GetRandomVehiclePrefab(IA_Faction faction)
+    static string GetRandomVehiclePrefab(IA_Faction faction, Faction AreaFaction)
     {
        //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab called for faction " + faction, LogLevel.NORMAL);
-        SCR_EntityCatalogEntry entry = GetRandomVehicleEntry(faction);
+        SCR_EntityCatalogEntry entry = GetRandomVehicleEntry(faction, AreaFaction);
         if (!entry)
         {
            //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefab: No entry found", LogLevel.WARNING);
@@ -218,10 +242,10 @@ class IA_VehicleCatalog
     }
     
     // Get all vehicle prefab resource names for a specific faction
-    static array<string> GetVehiclePrefabList(IA_Faction faction)
+    static array<string> GetVehiclePrefabList(IA_Faction faction, Faction AreaFaction)
     {
         array<string> result = {};
-        array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
+        array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction, AreaFaction);
         
         foreach (SCR_EntityCatalogEntry entry : entries)
         {
@@ -232,14 +256,14 @@ class IA_VehicleCatalog
     }
     
     // Get all vehicle catalog entries matching a filter
-    static array<SCR_EntityCatalogEntry> GetVehicleEntriesByFilter(IA_Faction faction, bool allowCivilian, bool allowMilitary)
+    static array<SCR_EntityCatalogEntry> GetVehicleEntriesByFilter(IA_Faction faction, bool allowCivilian, bool allowMilitary, Faction AreaFaction)
     {
         array<SCR_EntityCatalogEntry> result = {};
         
         // For civilian vehicles
         if (allowCivilian && faction == IA_Faction.CIV)
         {
-            array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
+            array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction, AreaFaction);
             foreach (SCR_EntityCatalogEntry entry : entries)
                 result.Insert(entry);
         }
@@ -247,7 +271,7 @@ class IA_VehicleCatalog
         // For military vehicles
         if (allowMilitary && faction != IA_Faction.CIV)
         {
-            array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction);
+            array<SCR_EntityCatalogEntry> entries = GetVehicleEntries(faction, AreaFaction);
             foreach (SCR_EntityCatalogEntry entry : entries)
                 result.Insert(entry);
         }
@@ -256,10 +280,10 @@ class IA_VehicleCatalog
     }
     
     // Get all vehicle prefabs matching a filter
-    static array<string> GetVehiclesByFilter(IA_Faction faction, bool allowCivilian, bool allowMilitary)
+    static array<string> GetVehiclesByFilter(IA_Faction faction, bool allowCivilian, bool allowMilitary, Faction AreaFaction)
     {
         array<string> result = {};
-        array<SCR_EntityCatalogEntry> entries = GetVehicleEntriesByFilter(faction, allowCivilian, allowMilitary);
+        array<SCR_EntityCatalogEntry> entries = GetVehicleEntriesByFilter(faction, allowCivilian, allowMilitary, AreaFaction);
         
         foreach (SCR_EntityCatalogEntry entry : entries)
         {
@@ -305,24 +329,7 @@ class IA_VehicleCatalog
                 //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Invalid or non-faction label provided as factionLabel: %1", typename.EnumToString(EEditableEntityLabel, factionLabel)), LogLevel.WARNING);
                 return ""; // Not a valid faction label
         }
-        
-        //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Looking for faction with key %1", factionKey), LogLevel.NORMAL);
-        SCR_Faction scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey(factionKey));
-        if (!scrFaction)
-        {
-            //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Failed to get faction with key %1", factionKey), LogLevel.WARNING);
-            return "";
-        }
-        
-        SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
-        if (!entityCatalog)
-        {
-            //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Failed to get vehicle entity catalog for faction %1", factionKey), LogLevel.WARNING);
-            return "";
-        }
-        
         array<EEditableEntityLabel> includedLabels = {};
-        includedLabels.Insert(factionLabel); // Add the main faction label
         foreach (EEditableEntityLabel traitLabel : explicitIncludedTraitLabels)
         {
             if (traitLabel != 0) // Ensure no "none" or default labels are accidentally included if 0 is used for that
@@ -333,8 +340,38 @@ class IA_VehicleCatalog
         array<EEditableEntityLabel> finalExcludedLabels = {};
         if (explicitExcludedTraitLabels)
         {
-            finalExcludedLabels.Copy(explicitExcludedTraitLabels);
+            finalExcludedLabels.InsertAll(explicitExcludedTraitLabels);
         }
+		array<Faction> friendlyFactions = {};
+        //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Looking for faction with key %1", factionKey), LogLevel.NORMAL);
+        SCR_Faction scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey(factionKey));
+		scrFaction.GetFriendlyFactions(friendlyFactions, true);
+		Faction civFaction = factionManager.GetFactionByKey("CIV");
+		foreach(Faction currentFaction : friendlyFactions){
+			if(factionKey != "CIV" && currentFaction == civFaction)
+				continue;
+			SCR_Faction scrCurrentFaction = SCR_Faction.Cast(currentFaction);
+			SCR_EntityCatalog entityCatalog = scrCurrentFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+	        if (!entityCatalog)
+	        {
+	            //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Failed to get vehicle entity catalog for faction %1", factionKey), LogLevel.WARNING);
+	            continue;
+	        }
+       		array<SCR_EntityCatalogEntry> preResult = {};
+			entityCatalog.GetFullFilteredEntityList(preResult, includedLabels, finalExcludedLabels);
+			result.InsertAll(preResult);
+		}
+        
+		if(result.IsEmpty()){
+			SCR_Faction newScrCurrentFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
+
+			SCR_EntityCatalog newEntityCatalog = newScrCurrentFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+			newEntityCatalog.GetFullFilteredEntityList(result, includedLabels, finalExcludedLabels);
+			
+		}
+        
+        
+
         
         //Print("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Getting full filtered entity list.");
         //Print("[DEBUG] Final Included Labels Count: " + includedLabels.Count());
@@ -342,7 +379,7 @@ class IA_VehicleCatalog
         //Print("[DEBUG] Final Excluded Labels Count: " + finalExcludedLabels.Count());
         //foreach (EEditableEntityLabel lbl : finalExcludedLabels) Print("[DEBUG] Excl: " + typename.EnumToString(EEditableEntityLabel, lbl));
 
-        entityCatalog.GetFullFilteredEntityList(result, includedLabels, finalExcludedLabels);
+        
         
         //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Found %1 entries after filtering.", result.Count()), LogLevel.NORMAL);
 

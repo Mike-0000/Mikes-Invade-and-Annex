@@ -1,0 +1,20 @@
+GenericEntity {
+ ID "65635B551DDA2669"
+ components {
+  BaseRadioComponent "{6562F6970372AABC}" {
+   "Turned on" 1
+   Transceivers {
+    RelayTransceiver "{6562F697056BB5C7}" {
+     "Transmitting Range" 100000
+    }
+    RadioTransceiver "{6562F6971774BF2E}" {
+     "Transmitting Range" 100000
+    }
+   }
+  }
+  RplComponent "{655C27679699B519}" {
+   "Rpl State Override" Runtime
+  }
+ }
+ coords 4994.487 116.017 3430.437
+}

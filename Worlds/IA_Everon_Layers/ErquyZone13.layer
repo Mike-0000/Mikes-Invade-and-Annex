@@ -1,0 +1,59 @@
+GenericEntity : "{3D4DCD05B7C716E3}Prefabs/IA_RadioCoverage.et" {
+ coords 5469.852 96.526 6181.347
+}
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+ coords 11044.459 22.276 11698.561
+ angleY 125.077
+ m_areaGroup 13
+ m_areaName "Erquy Radio Tower"
+}
+$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ Figari2 {
+  coords 10921.342 24.933 11702.283
+  m_areaGroup 13
+  m_fZoneRadius 110
+  m_areaName "Erquy"
+  m_areaType "Town"
+  m_radius 110
+ }
+ Figari3 {
+  coords 10670.939 2.669 11799.402
+  m_areaGroup 13
+  m_fZoneRadius 50
+  m_areaName "Erquy Docks"
+  m_areaType "Docks"
+  m_radius 50
+ }
+ Figari4 {
+  coords 11356.38 62.063 11226.222
+  m_areaGroup 13
+  m_fZoneRadius 50
+  m_areaName "Erquy Light Tower"
+  m_areaType "Military"
+  m_radius 50
+ }
+ Figari5 {
+  coords 11491.261 2 10903.834
+  m_areaGroup 13
+  m_fZoneRadius 50
+  m_areaName "Erquy SE Docks"
+  m_areaType "Docks"
+  m_radius 50
+ }
+ Figari6 {
+  coords 10982.908 24.133 11820.604
+  m_areaGroup 13
+  m_fZoneRadius 35
+  m_areaName "Erquy Industrial"
+  m_areaType "Military"
+  m_radius 35
+ }
+ Figari7 {
+  coords 10895.554 25.157 11813.039
+  m_areaGroup 13
+  m_fZoneRadius 20
+  m_areaName "Erquy Cemetary"
+  m_areaType "SmallMilitary"
+  m_radius 20
+ }
+}

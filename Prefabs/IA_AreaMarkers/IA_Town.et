@@ -1,0 +1,9 @@
+IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ ID "64F935A1015AFBEE"
+ coords 7490.393 138.456 4721.647
+ m_areaGroup 6
+ m_fZoneRadius 90
+ m_areaName "Levie"
+ m_areaType "Town"
+ m_radius 90
+}

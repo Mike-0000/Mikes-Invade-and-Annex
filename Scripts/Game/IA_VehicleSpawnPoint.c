@@ -61,12 +61,12 @@ class IA_VehicleSpawnPoint: GenericEntity
     }
     
     // Spawn a random vehicle according to the spawn point's settings
-    Vehicle SpawnRandomVehicle(IA_Faction faction)
+    Vehicle SpawnRandomVehicle(IA_Faction faction, Faction AreaFaction)
     {
         if (!CanSpawnVehicle())
             return null;
 
-        m_spawnedVehicle = IA_VehicleManager.SpawnRandomVehicle(faction, m_allowCivilian, m_allowMilitary, GetOrigin());
+        m_spawnedVehicle = IA_VehicleManager.SpawnRandomVehicle(faction, m_allowCivilian, m_allowMilitary, GetOrigin(), AreaFaction);
         return m_spawnedVehicle;
     }
     

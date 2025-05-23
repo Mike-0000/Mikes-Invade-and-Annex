@@ -45,8 +45,8 @@ class IA_AreaInstance
     private ref map<IA_AiGroup, int> m_stateStability = new map<IA_AiGroup, int>();
     // State timing and duration tracking
     private ref map<IA_AiGroup, int> m_stateStartTimes = new map<IA_AiGroup, int>();
-    private const int MINIMUM_STATE_DURATION = 180; // 3 minutes (in seconds)
-    private const int AREA_AUTHORITY_INTERVAL = 60; // Only perform major state reassignments every 60 seconds
+    private const int MINIMUM_STATE_DURATION = 300;
+    private const int AREA_AUTHORITY_INTERVAL = 90; // perform major state reassignments
     private int m_lastGlobalStateAuthority = 0; // Last time we performed a global authority check
     
     // Tracking variables for state change requests
@@ -72,8 +72,8 @@ class IA_AreaInstance
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
     private int m_reinforcementGroupsSpawned = 0;     // Groups spawned in this attack cycle
     private int m_reinforcementWaveDelayTimer = 0;    // Ticks until next wave
-    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = 3;
-    private const int REINFORCEMENT_WAVE_DELAY_TICKS = 4;   
+    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = 8;
+    private const int REINFORCEMENT_WAVE_DELAY_TICKS = 10;   
     // --- END ADDED ---
 
     // --- Vehicle Reinforcement System ---
@@ -89,6 +89,12 @@ class IA_AreaInstance
     private ref array<Vehicle> m_areaCivVehicles = {};
     private int m_maxCivVehicles = 2;
     private int m_civVehicleCheckTimer = 0;
+
+    // --- BEGIN ADDED: Forced Reinforcement S&D Tracking ---
+    private ref array<ref IA_AiGroup> m_forcedReinforcementGroups = {}; 
+    private ref map<IA_AiGroup, int> m_forcedReinforcementTimeouts = new map<IA_AiGroup, int>();
+    private const int REINFORCEMENT_SND_TIMEOUT_SECONDS = 600; 
+    // --- END ADDED ---
 
     // --- Dynamic Task Variables ---
     private SCR_TriggerTask m_currentTaskEntity;
@@ -516,18 +522,12 @@ class IA_AreaInstance
                 if (initialWaveSpawned)
                 {
                      // First wave spawned successfully
-                     m_reinforcements = IA_ReinforcementState.SpawningWaves;
-                     m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS; // Set delay for next wave
+                     m_reinforcements = IA_ReinforcementState.Done;
                 }
                 else
                 {
                      // Initial wave failed (e.g., no safe spot).
-                     // DO NOT set state to Done. Transition to SpawningWaves state
-                     // and set the timer to retry after the standard wave delay.
-                     //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 failed to spawn INITIAL wave (e.g., no safe spot). Will retry after delay (%2 ticks).",
-//                         m_area.GetName(), REINFORCEMENT_WAVE_DELAY_TICKS), LogLevel.WARNING);
-                     m_reinforcements = IA_ReinforcementState.SpawningWaves; // Still transition state
-                     m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS; // Set timer to retry
+                     m_reinforcements = IA_ReinforcementState.Done; // Ensure it's Done even if the wave fails, per one-attempt logic
                 }
                 m_reinforcementTimer = 0; // Reset initial countdown timer regardless
             }
@@ -1583,15 +1583,58 @@ class IA_AreaInstance
         foreach (IA_AiGroup g : m_military)
         {
              if (!g || g.GetAliveCount() == 0) continue;
-             // if (g.IsDriving()) continue; // This is the OLD line
              
-             // --- PROPOSED CHANGE START ---
              if (g.IsDriving())
              {
                  g.UpdateVehicleOrders(); // Ensure driving groups get their orders updated
                  continue; // Still skip the subsequent role assignment and idle logic for driving groups
              }
-             // --- PROPOSED CHANGE END ---
+
+            // --- BEGIN ADDED: Check for Forced S&D Reinforcements ---
+            int forcedGroupIndex = m_forcedReinforcementGroups.Find(g);
+            if (forcedGroupIndex != -1)
+            {
+                bool removeForcedStatus = false;
+                int spawnTime = 0;
+                if (!m_forcedReinforcementTimeouts.Find(g, spawnTime))
+                {
+                    // Should not happen if group is in m_forcedReinforcementGroups, but as a safeguard:
+                    removeForcedStatus = true; 
+                    //Print(string.Format("[MilitaryOrderTask] ERROR: Group %1 in forced list but no timeout found. Removing.", g.GetOrigin()), LogLevel.ERROR);
+                }
+                else if (g.GetAliveCount() == 0)
+                {
+                    removeForcedStatus = true;
+                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 is dead. Removing from special tracking.", g.GetOrigin()), LogLevel.DEBUG);
+                }
+                else if (System.GetUnixTime() - spawnTime > REINFORCEMENT_SND_TIMEOUT_SECONDS)
+                {
+                    removeForcedStatus = true;
+                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 timed out (%2s). Removing from special tracking.", g.GetOrigin(), REINFORCEMENT_SND_TIMEOUT_SECONDS), LogLevel.DEBUG);
+                }
+                else if (!g.HasOrders()) 
+                {
+                    removeForcedStatus = true;
+                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 has no orders (completed task?). Removing from special tracking.", g.GetOrigin()), LogLevel.DEBUG);
+                }
+
+                if (removeForcedStatus)
+                {
+                    m_forcedReinforcementGroups.Remove(forcedGroupIndex); 
+                    if (m_forcedReinforcementTimeouts.Contains(g)) m_forcedReinforcementTimeouts.Remove(g);
+                }
+                else // Group is still under "forced S&D" status
+                {
+                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 is still active. Refreshing S&D to origin and skipping general re-tasking.", g.GetOrigin()), LogLevel.DEBUG);
+                    vector targetPos = m_area.GetOrigin();
+                    g.RemoveAllOrders(true); 
+                    g.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, true); 
+                    g.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true); 
+                    
+                    continue; // Skip the rest of MilitaryOrderTask for this group
+                }
+            }
+            // --- END ADDED ---
 
             IA_GroupTacticalState finalAssignedState = m_assignedGroupStates.Get(g); // Get final role for this cycle
             IA_GroupTacticalState actualState = g.GetTacticalState();
@@ -2277,7 +2320,7 @@ class IA_AreaInstance
     
     void SpawnVehicleReinforcements()
     {
-        return; // Prevent scheduled vehicle reinforcements
+        return; // Prevent scheduled vehicle reinforcements for now
             
         if (!m_area)
             return;
@@ -2356,7 +2399,7 @@ class IA_AreaInstance
             }
             
             // Use military vehicles only
-            Vehicle spawnedVehicle = IA_VehicleManager.SpawnRandomVehicle(m_faction, false, true, spawnPos);
+            Vehicle spawnedVehicle = IA_VehicleManager.SpawnRandomVehicle(m_faction, false, true, spawnPos, m_AreaFaction);
             
             if (spawnedVehicle)
             {
@@ -2539,7 +2582,7 @@ class IA_AreaInstance
         }
         
         // Spawn a new military vehicle
-        Vehicle replacementVehicle = IA_VehicleManager.SpawnRandomVehicle(m_faction, false, true, spawnPos);
+        Vehicle replacementVehicle = IA_VehicleManager.SpawnRandomVehicle(m_faction, false, true, spawnPos, m_AreaFaction);
         
         if (replacementVehicle)
         {
@@ -2657,7 +2700,7 @@ class IA_AreaInstance
             }
             
             // Spawn the vehicle (with military-only vehicles)
-            Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicle(m_faction, false, true, spawnPos);
+            Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicle(m_faction, false, true, spawnPos, m_AreaFaction);
             
             if (vehicle)
             {
@@ -2687,6 +2730,17 @@ class IA_AreaInstance
             float y = GetGame().GetWorld().GetSurfaceY(pos[0], pos[2]);
             pos[1] = y;
             IA_AiGroup civ = IA_AiGroup.CreateCivilianGroup(pos);
+            
+            // Directly assign the area instance's area to the civilian group
+            if (m_area) // Ensure m_area is not null before assigning
+            {
+                civ.SetAssignedArea(m_area);
+            }
+            else
+            {
+                Print(string.Format("[IA_AreaInstance.GenerateCivilians] CRITICAL: m_area is null for instance when trying to assign to civilian group. Area Name: %1 (This should not happen if instance was created properly)", m_area.GetName()), LogLevel.ERROR);
+            }
+            
             civ.Spawn();
             m_civilians.Insert(civ);
         }
@@ -2820,7 +2874,7 @@ class IA_AreaInstance
         }
         
         // Spawn the civilian vehicle (using IA_Faction.CIV and civilian-only flag)
-        Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicle(IA_Faction.CIV, true, false, spawnPos);
+        Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicle(IA_Faction.CIV, true, false, spawnPos, m_AreaFaction);
         
         if (vehicle)
         {
@@ -2947,7 +3001,7 @@ class IA_AreaInstance
             
             // Spawn the civilian vehicle (using IA_Faction.CIV and civilian-only flag)
            //////Print("[DEBUG_CIV_VEHICLES] Attempting to spawn civilian vehicle " + (i+1) + " at position: " + spawnPos, LogLevel.NORMAL);
-            Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicle(IA_Faction.CIV, true, false, spawnPos);
+            Vehicle vehicle = IA_VehicleManager.SpawnRandomVehicle(IA_Faction.CIV, true, false, spawnPos, m_AreaFaction);
             
             if (vehicle)
             {
@@ -3816,7 +3870,7 @@ class IA_AreaInstance
 
         bool spawnedAny = false;
         const int MAX_SPAWN_ATTEMPTS = 10; // Max tries to find a safe spot
-        const float SAFE_SPAWN_RADIUS_SQ = 300 * 300; // Check within 800m (squared for efficiency)
+        const float SAFE_SPAWN_RADIUS_SQ = 300 * 300; // Check within 300m (squared for efficiency)
 
         // Get player positions once per wave
         array<vector> playerPositions = {};
@@ -3833,17 +3887,17 @@ class IA_AreaInstance
                 // //Print(string.Format("[SpawnReinforcementWave] Attempt %1/%2 to find safe spawn location...", attempt + 1, MAX_SPAWN_ATTEMPTS), LogLevel.NORMAL);
                 
                 // 1. Calculate potential Spawn Position (inside attempt loop)
-                float spawnMinRadius = 100;
-                float spawnMaxRadius = 350;
+                float spawnMinRadius = 280;
+                float spawnMaxRadius = 450 + (attempt*30);
                 vector center = m_area.GetOrigin();
                 
                 // Try finding a road nearby first 
-                vector searchPoint = IA_Game.rng.GenerateRandomPointInRadius(spawnMinRadius, spawnMaxRadius, center);
+                //vector searchPoint = IA_Game.rng.GenerateRandomPointInRadius(spawnMinRadius, spawnMaxRadius, center);
                 int activeGroup = -1;
                 array<IA_AreaMarker> markers = IA_AreaMarker.GetAreaMarkersForArea(m_area.GetName());
                 if (markers && !markers.IsEmpty() && markers[0]) activeGroup = markers[0].m_areaGroup; 
                 if (activeGroup < 0) activeGroup = IA_VehicleManager.GetActiveGroup();
-                vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(searchPoint, 150, activeGroup); 
+                vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(center, spawnMaxRadius, activeGroup, spawnMinRadius); 
                 
                 if (roadPos != vector.Zero)
                 {
@@ -3923,6 +3977,7 @@ class IA_AreaInstance
             int unitCount = IA_SquadCount(st, m_faction); 
             int scaledUnitCount = Math.Round(unitCount * m_aiScaleFactor); // Use current scale factor
             if (scaledUnitCount < 1) scaledUnitCount = 1; 
+            scaledUnitCount = scaledUnitCount * 3; // Make reinforcement groups 3x larger
 
             IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, m_faction, scaledUnitCount, AreaFaction);
 

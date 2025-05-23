@@ -1,28 +1,20 @@
+IA_AreaMarker Levie2 : "{0C868FB4A69F9BE8}Prefabs/IA_AreaMarkers/IA_Military.et" {
+ coords 7504.875 165.75 4287.524
+ m_areaGroup 6
+ m_fZoneRadius 125
+ m_areaName "Levie Military Depot"
+ m_areaType "Military"
+ m_radius 125
+}
 IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
  coords 7834.357 254.531 4031.96
  angleY 146.791
  m_areaGroup 6
  m_areaName "Levie Radio Tower"
 }
-$grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
- Levie2 {
-  coords 7504.875 165.75 4287.524
-  m_areaGroup 6
-  m_fZoneRadius 125
-  m_areaName "Levie Military Depot"
-  m_areaType "Military"
-  m_radius 125
- }
- Levie1 {
-  coords 7490.393 138.456 4721.647
-  m_areaGroup 6
-  m_fZoneRadius 90
-  m_areaName "Levie"
-  m_areaType "Town"
-  m_radius 90
- }
+$grp IA_AreaMarker : "{7ADD348E46715524}Prefabs/IA_AreaMarkers/IA_SmallMilitary.et" {
  Levie4 {
-  coords 7815.696 144.704 4739.819
+  coords 7815.696 144.704 4739.818
   m_areaGroup 6
   m_fZoneRadius 35
   m_areaName "Levie Homestead West"
@@ -37,6 +29,14 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaType "SmallMilitary"
   m_radius 20
  }
+}
+IA_AreaMarker Levie1 : "{808EDC7240341FEE}Prefabs/IA_AreaMarkers/IA_Town.et" {
+ coords 7490.393 138.456 4721.647
+ m_areaGroup 6
+ m_fZoneRadius 90
+ m_areaName "Levie"
+ m_areaType "Town"
+ m_radius 90
 }
 $grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
  Vehicle1 {

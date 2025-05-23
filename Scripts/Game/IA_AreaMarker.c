@@ -706,6 +706,15 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         m_FactionScores.Set("US", 1000);
         USFactionScore = 1000;
     }
+
+    // New method to check if a position is within this marker's radius
+    bool IsPositionInside(vector pos)
+    {
+        if (!this) return false; // Should not happen, but good check
+        float distanceSq = vector.DistanceSq(GetOrigin(), pos);
+        float radiusSq = m_radius * m_radius;
+        return distanceSq <= radiusSq;
+    }
 };
 
 class MIKE_QueryCallback

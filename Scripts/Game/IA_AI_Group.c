@@ -663,7 +663,7 @@ class IA_AiGroup
         
         // --- BEGIN ADDED LOGGING ---
         //Print(string.Format("[IA_Waypoint DEBUG AddOrder] Group %1 | Order: %2 | Waypoint Resource: %3 | Target: %4", 
-        //    m_group, typename.EnumToString(IA_AiOrder, order), rname, origin), LogLevel.DEBUG);
+        //    m_group, typename.EnumToString(IA_AiOrder, order), rname, origin), LogLevel.NORMAL);
         // --- END ADDED LOGGING ---
         
         Resource res = Resource.Load(rname);
@@ -877,6 +877,14 @@ class IA_AiGroup
             return;
         }
         
+        // Ensure the assigned area is found and set for civilians before setting their initial tactical state.
+        if (m_isCivilian)
+        {
+            // TryFindAndSetAssignedArea will only act if m_lastAssignedArea is currently null,
+            // and it uses m_initialPosition which is set when the civilian group is created.
+            TryFindAndSetAssignedArea(); 
+        }
+        
         // Initialize the default tactical state based on the initial order
         IA_GroupTacticalState initialState = IA_GroupTacticalState.Neutral;
         
@@ -953,21 +961,18 @@ class IA_AiGroup
             Resource charRes = Resource.Load(resourceName);
             if (!charRes)
             {
-                ////Print("[IA_AiGroup.PerformSpawn] Civilian character resource load failed: " + resourceName, LogLevel.ERROR);
                 return false;
             }
             
             IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSurfaceAdjustedSpawnParams(spawnPos));
             if (!charEntity)
             {
-                ////Print("[IA_AiGroup.PerformSpawn] Civilian character entity spawn failed for: " + resourceName, LogLevel.ERROR);
                 return false;
             }
 
             Resource groupPrefabRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
             if (!groupPrefabRes)
             {
-                 ////Print("[IA_AiGroup.PerformSpawn] Civilian group prefab resource load failed.", LogLevel.ERROR);
                  IA_Game.AddEntityToGc(charEntity); // Clean up character
                  return false;
             }
@@ -976,7 +981,6 @@ class IA_AiGroup
 
             if (!m_group)
             {
-                ////Print("[IA_AiGroup.PerformSpawn] Civilian SCR_AIGroup entity spawn or cast failed.", LogLevel.ERROR);
                 IA_Game.AddEntityToGc(charEntity); // Clean up character
                 if (groupEntity) IA_Game.AddEntityToGc(groupEntity); // Clean up group entity if it was spawned
                 return false;
@@ -985,7 +989,6 @@ class IA_AiGroup
             // Add the spawned civilian character to the SCR_AIGroup
             if (!m_group.AddAIEntityToGroup(charEntity))
             {
-                ////Print("[IA_AiGroup.PerformSpawn] Failed to add civilian character to SCR_AIGroup.", LogLevel.ERROR);
                 IA_Game.AddEntityToGc(charEntity); // Clean up character
                 IA_Game.AddEntityToGc(m_group);    // Clean up the group as well since it's unusable
                 m_group = null;
@@ -1111,7 +1114,7 @@ class IA_AiGroup
         if (m_isDriving)
         {
            // //Print(string.Format("[IA_AiGroup.ProcessDangerEvent] Vehicle Group %1 recorded danger event from %2 at %3. LastDangerTime: %4", 
-           //     this, sourceFaction, position.ToString(), m_lastDangerEventTime), LogLevel.DEBUG);
+           //     this, sourceFaction, position.ToString(), m_lastDangerEventTime), LogLevel.NORMAL);
             return; // Exit early for vehicles after updating timestamp
         }
         // --- END ADDED ---
@@ -1604,7 +1607,7 @@ class IA_AiGroup
         if (anyOutside)
         {
             // Someone is outside, order them back in
-            ////Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 members outside vehicle. Ordering GetInVehicle.", this), LogLevel.DEBUG);
+            ////Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 members outside vehicle. Ordering GetInVehicle.", this), LogLevel.NORMAL);
             RemoveAllOrders();
             
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
@@ -1626,12 +1629,12 @@ class IA_AiGroup
             bool vehicleReachedDest = IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget);
             
             // Debug //Print for waypoint status
-            // //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle waypoint check: HasActiveWP=%1, ReachedDest=%2", this, hasActiveWP, vehicleReachedDest), LogLevel.DEBUG);
+            // //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle waypoint check: HasActiveWP=%1, ReachedDest=%2", this, hasActiveWP, vehicleReachedDest), LogLevel.NORMAL);
                   
             if (!hasActiveWP || vehicleReachedDest)
             {
                 // Need a new waypoint
-                //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle needs new waypoint to %2.", this, m_drivingTarget.ToString()), LogLevel.DEBUG);
+                //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle needs new waypoint to %2.", this, m_drivingTarget.ToString()), LogLevel.NORMAL);
                 // Ensure driving state is set (might have been unset if we tried to recover at the start)
                 m_isDriving = true; 
                 
@@ -1642,7 +1645,7 @@ class IA_AiGroup
         {
             // Vehicle group has no destination - perhaps assign a patrol or hold?
             // For now, do nothing, let it idle or follow base game logic.
-            // //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle has no driving target.", this), LogLevel.DEBUG);
+            // //Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 vehicle has no driving target.", this), LogLevel.NORMAL);
         }
     }
 
@@ -1651,7 +1654,7 @@ class IA_AiGroup
     {
         
         //Print(string.Format("[IA_AiGroup.ClearVehicleReference] Group %1 clearing vehicle reference. Was driving: %2, Entity: %3, Target: %4",
-//            this, m_isDriving, m_referencedEntity, m_drivingTarget.ToString()), LogLevel.DEBUG);
+//            this, m_isDriving, m_referencedEntity, m_drivingTarget.ToString()), LogLevel.NORMAL);
 
         if (m_referencedEntity)
         {
@@ -1825,7 +1828,7 @@ class IA_AiGroup
                     m_tacticalState == IA_GroupTacticalState.LastStand)
                 {
                     //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Reapplying authority-managed state %1 for group %2", 
-//                        typename.EnumToString(IA_GroupTacticalState, m_tacticalState), this), LogLevel.DEBUG);
+//                        typename.EnumToString(IA_GroupTacticalState, m_tacticalState), this), LogLevel.NORMAL);
                     ApplyTacticalStateOrders();
                 }
             }
@@ -1904,12 +1907,12 @@ class IA_AiGroup
                             if (threatFarEnoughForFlank && Math.RandomFloat01() < 0.35)
                             {
                                 RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition);
-                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Assigned Attacker, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG);
+                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Assigned Attacker, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.NORMAL);
                             }
                             else
                             {
                                 RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition); // Continue attacking
-                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Assigned Attacker, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.DEBUG);
+                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Assigned Attacker, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.NORMAL);
                             }
                         }
                         // If already assigned Flanking, continue flanking (don't request Attacking)
@@ -1919,7 +1922,7 @@ class IA_AiGroup
                              // For now, just don't request a change to attacking. Maybe request Flanking again?
                              // Let's request Flanking again to potentially update the target position if needed by AreaInstance logic.
                              // RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition); // REMOVED: Don't re-request flank if already flanking.
-                             //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Maintaining FLANKING (Already Flanking, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG); // MODIFIED Log message
+                             //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Maintaining FLANKING (Already Flanking, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.NORMAL); // MODIFIED Log message
                         }
                         else // Not currently assigned an offensive role by authority
                         {
@@ -1927,14 +1930,14 @@ class IA_AiGroup
                             if (threatFarEnoughForFlank && Math.RandomFloat01() < 0.50)
                             {
                                 RequestTacticalStateChange(IA_GroupTacticalState.Flanking, m_lastDangerPosition);
-                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Not Assigned Offense, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.DEBUG);
+                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting FLANKING (Not Assigned Offense, Dist=%.1fm)", this, Math.Sqrt(distanceSqToThreat)), LogLevel.NORMAL);
                             }
                             else
                             {
                                 // Default response: request attack towards the source of the danger
                                 // This case implies the current state is not Attacking or Flanking
                                 RequestTacticalStateChange(IA_GroupTacticalState.Attacking, m_lastDangerPosition);
-                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Not Assigned Offense, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.DEBUG);
+                                //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Threat Response: Requesting ATTACKING (Not Assigned Offense, Dist=%.1fm, ThreatTooClose=%1)", this, Math.Sqrt(distanceSqToThreat), !threatFarEnoughForFlank), LogLevel.NORMAL);
                             }
                         }
                     }
@@ -2043,7 +2046,7 @@ class IA_AiGroup
                     // Request appropriate state based on strength
                     if (aliveCount <= 2 || strengthRatio < 0.3)
                     {
-                        //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Group %1 unit strength too low for attack/flank - requesting Defend", this), LogLevel.DEBUG);
+                        //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Group %1 unit strength too low for attack/flank - requesting Defend", this), LogLevel.NORMAL);
                         RequestTacticalStateChange(IA_GroupTacticalState.Defending, GetOrigin());
                     }
                     else if (aliveCount >= 3 && strengthRatio >= 0.6 && Math.RandomFloat(0, 1) < 0.35)
@@ -2208,7 +2211,7 @@ class IA_AiGroup
         if (m_tacticalState != newState)
         {
             //Print(string.Format("[IA_AiGroup.SetTacticalState] Group %1 changing state: %2 -> %3", 
-//                this, m_tacticalState, newState), LogLevel.DEBUG);
+//                this, m_tacticalState, newState), LogLevel.NORMAL);
                 
             // Record the time when the state changed
             m_tacticalStateStartTime = System.GetUnixTime();
@@ -2499,17 +2502,17 @@ class IA_AiGroup
         {
             flankPos = leftFlankPos;
             //Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Group %1 choosing LEFT flank (Closer: %.1fm vs %.1fm)", 
-//                this, Math.Sqrt(distSqToLeft), Math.Sqrt(distSqToRight)), LogLevel.DEBUG);
+//                this, Math.Sqrt(distSqToLeft), Math.Sqrt(distSqToRight)), LogLevel.NORMAL);
         }
         else
         {
             flankPos = rightFlankPos;
             //Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Group %1 choosing RIGHT flank (Closer: %.1fm vs %.1fm)", 
-            //    this, Math.Sqrt(distSqToRight), Math.Sqrt(distSqToLeft)), LogLevel.DEBUG);
+            //    this, Math.Sqrt(distSqToRight), Math.Sqrt(distSqToLeft)), LogLevel.NORMAL);
         }
         
         //Print(string.Format("[IA_AiGroup.CalculateFlankingPosition] Calculated flank position at %1 (distance=%.1fm)", 
-//            flankPos.ToString(), flankDistance), LogLevel.DEBUG);
+//            flankPos.ToString(), flankDistance), LogLevel.NORMAL);
         // --- END MODIFIED FLANKING LOGIC ---
         
         return flankPos;
@@ -2542,6 +2545,12 @@ class IA_AiGroup
     // Add a public setter for the assigned area
     void SetAssignedArea(IA_Area area)
     {
+        string currentAreaStr;
+        if (m_lastAssignedArea)
+            currentAreaStr = m_lastAssignedArea.ToString();
+        else
+            currentAreaStr = "NULL";
+
         m_lastAssignedArea = area;
     }
 
@@ -2563,7 +2572,7 @@ class IA_AiGroup
         // Log the request
         //Print(string.Format("[IA_AiGroup.RequestTacticalStateChange] Group %1 requesting state change from %2 to %3", 
 //            this, typename.EnumToString(IA_GroupTacticalState, m_tacticalState), 
-//            typename.EnumToString(IA_GroupTacticalState, newState)), LogLevel.DEBUG);
+//            typename.EnumToString(IA_GroupTacticalState, newState)), LogLevel.NORMAL);
             
         // Set pending request data
         m_hasPendingStateRequest = true;
@@ -2623,5 +2632,68 @@ class IA_AiGroup
         return m_lastDangerEventTime;
     }
     // --- END ADDED ---
+
+    // NEW PRIVATE HELPER METHOD
+    private void TryFindAndSetAssignedArea()
+    {
+        if (m_lastAssignedArea) // Already have an area, no need to search
+        {
+            // Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 already has m_lastAssignedArea: %2. Skipping search.", this, m_lastAssignedArea.ToString()), LogLevel.DEBUG);
+            return;
+        }
+
+        Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 attempting to find its area (m_lastAssignedArea is currently NULL).", 
+            this, m_initialPosition.ToString()), LogLevel.NORMAL);
+
+        IA_AreaMarker foundMarker = null;
+        array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
+        int markersSearchedCount = 0;
+        
+        if (allMarkers)
+            markersSearchedCount = allMarkers.Count();
+        else 
+            markersSearchedCount = -1; // Indicate null array if that happens
+
+        if (allMarkers && !allMarkers.IsEmpty())
+        {
+            Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1: Found %2 total area markers to check.", this, markersSearchedCount), LogLevel.NORMAL);
+            foreach (IA_AreaMarker marker : allMarkers)
+            {
+                if (marker && marker.IsPositionInside(m_initialPosition))
+                {
+                    foundMarker = marker;
+                    Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 found to be INSIDE marker %3 (Center: %4, Radius: %5)",
+                        this, m_initialPosition.ToString(), marker.ToString(), marker.GetOrigin().ToString(), marker.GetRadius()), LogLevel.NORMAL);
+                    break;
+                }
+            }
+        }
+        else
+        {
+             Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1: IA_AreaMarker.GetAllMarkers() returned null or empty array. Count: %2", this, markersSearchedCount), LogLevel.WARNING);
+        }
+
+        if (foundMarker)
+        {
+            IA_Area areaToAssign = IA_Area.Cast(foundMarker.FindComponent(IA_Area));
+            if (areaToAssign)
+            {
+                SetAssignedArea(areaToAssign); // This will use the updated SetAssignedArea with logging
+                // Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 SUCCESS: Found marker %2 and IA_Area component %3. Area set.", this, foundMarker.ToString(), areaToAssign.ToString()), LogLevel.NORMAL);
+            }
+            else
+            {
+                Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Found marker %2, but FAILED TO FIND/CAST IA_Area component on it.",
+                    this, foundMarker.ToString()), LogLevel.WARNING);
+            }
+        }
+        else
+        {
+            Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Could NOT find an area marker that its initial position %2 is inside. (Searched %3 markers)",
+                this, m_initialPosition.ToString(), markersSearchedCount), LogLevel.WARNING);
+        }
+    }
+    // END NEW PRIVATE HELPER METHOD
+    //------------------------------------------------------------------------------------------------
 
 };  
