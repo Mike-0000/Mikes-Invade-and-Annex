@@ -1,0 +1,81 @@
+FrameWidgetClass {
+ Name "ia_root"
+ Color 0.8817 0.4151 0.0124 1
+ {
+  RichTextWidgetClass "{656F50BF7E305CF0}" {
+   Name "RichText0"
+   Slot FrameWidgetSlot "{656F50BF7E305CD3}" {
+    Anchor 0.5 0 0.5 0
+    PositionX -632
+    OffsetLeft -632
+    PositionY 144
+    OffsetTop 144
+    SizeX 1256.75
+    OffsetRight -624.75
+    SizeY 64
+    OffsetBottom -208
+   }
+   Color 0.5843 0.6939 0.01 1
+   "Min Font Size" 12
+   "Horizontal Alignment" Center
+   "Vertical Alignment" Center
+   Wrap 1
+   FontProperties FontProperties "{656F50B032C1F33D}" {
+    Font "{3E7733BAC8C831F6}UI/Fonts/RobotoCondensed/RobotoCondensed_Regular.fnt"
+    Bold 1
+    OutlineSize 2
+    ShadowSize 17
+   }
+  }
+  RichTextWidgetClass "{656F50B7620CD0D5}" {
+   Name "RichText1"
+   Slot FrameWidgetSlot "{656F50BF7E305CD3}" {
+    Anchor 0.5 0 0.5 0
+    PositionX -632
+    OffsetLeft -632
+    PositionY 80
+    OffsetTop 80
+    SizeX 1256
+    OffsetRight -624
+    SizeY 64
+    OffsetBottom -144
+   }
+   Color 0.6423 0.0459 0.0069 1
+   "Min Font Size" 12
+   "Horizontal Alignment" Center
+   "Vertical Alignment" Center
+   Wrap 1
+   FontProperties FontProperties "{656F50B032C1F33D}" {
+    Font "{3E7733BAC8C831F6}UI/Fonts/RobotoCondensed/RobotoCondensed_Regular.fnt"
+    Bold 1
+    OutlineSize 2
+    ShadowSize 17
+   }
+  }
+  RichTextWidgetClass "{657002D9DAF6DCCB}" {
+   Name "RichText3"
+   Slot FrameWidgetSlot "{656F50BF7E305CD3}" {
+    Anchor 0.5 0 0.5 0
+    PositionX -632
+    OffsetLeft -632
+    PositionY 80
+    OffsetTop 80
+    SizeX 1256
+    OffsetRight -624
+    SizeY 64
+    OffsetBottom -144
+   }
+   Color 0.7429 0.5121 0.0052 1
+   "Min Font Size" 12
+   "Horizontal Alignment" Center
+   "Vertical Alignment" Center
+   Wrap 1
+   FontProperties FontProperties "{656F50B032C1F33D}" {
+    Font "{3E7733BAC8C831F6}UI/Fonts/RobotoCondensed/RobotoCondensed_Regular.fnt"
+    Bold 1
+    OutlineSize 2
+    ShadowSize 17
+   }
+  }
+ }
+}

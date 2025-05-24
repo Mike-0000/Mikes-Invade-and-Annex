@@ -1,3 +1,14 @@
 SCR_PlayerController : "{6E2BB64764E3BE9B}Prefabs/Characters/Core/DefaultPlayerController.et" {
  ID "1A9BA6BEFA06E3B1"
+ components {
+  SCR_HUDManagerComponent "{2FDC275D9EBCDB8B}" {
+   InfoDisplays {
+    IA_NotificationDisplay "{656F50B1F6151FD1}" {
+     m_LayoutPath "{BEDCCD2C6F460736}UI/layouts/HUD/IA/IA_NotificationLayout.layout"
+     m_eLayer ALWAYS_TOP
+     m_eShow 127
+    }
+   }
+  }
+ }
 }

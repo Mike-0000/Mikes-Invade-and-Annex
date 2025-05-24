@@ -57,5 +57,5 @@ SCR_BaseTaskManager : "{87208DAD6F3C0DE2}Prefabs/MP/Managers/Tasks/TaskManager_E
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
  coords 4828.903 28.5 11735.593
  m_numberOfGroups 14
- m_spawnDelayMs 2000
+ m_spawnDelayMs 7000
 }

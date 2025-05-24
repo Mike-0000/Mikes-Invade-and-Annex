@@ -72,8 +72,8 @@ class IA_AreaInstance
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
     private int m_reinforcementGroupsSpawned = 0;     // Groups spawned in this attack cycle
     private int m_reinforcementWaveDelayTimer = 0;    // Ticks until next wave
-    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = 8;
-    private const int REINFORCEMENT_WAVE_DELAY_TICKS = 10;   
+    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = Math.RandomInt(8,16);
+    private const int REINFORCEMENT_WAVE_DELAY_TICKS = Math.RandomInt(10,19);   
     // --- END ADDED ---
 
     // --- Vehicle Reinforcement System ---
@@ -295,6 +295,10 @@ class IA_AreaInstance
         m_currentTaskEntity.SetDescription(description);
         m_currentTaskEntity.Create(false);
         //////Print("[DEBUG] Task created and activated.", LogLevel.NORMAL);
+		
+		// --- BEGIN ADDED: Notify players of new task ---
+		TriggerGlobalNotification("TaskCreated", title);
+		// --- END ADDED ---
     }
 
     void CompleteCurrentTask()
@@ -302,6 +306,11 @@ class IA_AreaInstance
         //////Print("[DEBUG] CompleteCurrentTask called.", LogLevel.NORMAL);
         if (m_currentTaskEntity)
         {
+			// --- BEGIN ADDED: Notify players of completed task ---
+			string completedTaskTitle = m_currentTaskEntity.GetTitle();
+			TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
+			// --- END ADDED ---
+			
             m_currentTaskEntity.Finish();
             m_currentTaskEntity = null;
         }
@@ -311,6 +320,11 @@ class IA_AreaInstance
             m_taskQueue.Remove(0);
             m_currentTaskEntity.Create(false);
             //////Print("[DEBUG] Next queued task activated.", LogLevel.NORMAL);
+			
+			// --- BEGIN ADDED: Notify players of new task from queue ---
+			string newTaskTitle = m_currentTaskEntity.GetTitle();
+			TriggerGlobalNotification("TaskCreated", newTaskTitle);
+			// --- END ADDED ---
         }
     }
 
@@ -2660,7 +2674,19 @@ class IA_AreaInstance
         int baseVehicles = IA_Game.rng.RandInt(1, 3);
         int scaledVehicles = Math.Round(baseVehicles * m_aiScaleFactor);
         if (scaledVehicles < 1) scaledVehicles = 1;
-        
+        IA_AreaType areaType = m_area.GetAreaType();
+		int randInt = IA_Game.rng.RandInt(1, 10);
+		switch (areaType){
+			case IA_AreaType.SmallMilitary:
+				if(randInt > 2)
+					scaledVehicles = 0;
+				else
+					scaledVehicles = 1;
+				break;
+			case IA_AreaType.Military:
+				scaledVehicles = scaledVehicles*1.5;
+				
+		}
        //////Print("[PLAYER_SCALING] SpawnInitialVehicles: Base vehicles=" + baseVehicles + 
 //              ", Scaled=" + scaledVehicles + " (scale factor: " + m_aiScaleFactor + ")", LogLevel.NORMAL);
               
@@ -3614,7 +3640,7 @@ class IA_AreaInstance
             }
             
             // Random order refresh time between 35-55 seconds instead of fixed 45
-            int randomOrderRefresh = 35 + Math.RandomInt(0, 20);
+            int randomOrderRefresh = 35 + Math.RandomInt(0, 60);
             if (g.TimeSinceLastOrder() >= randomOrderRefresh)
             {
                 g.RemoveAllOrders();
@@ -3624,7 +3650,12 @@ class IA_AreaInstance
             {
                 vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() * 1.0, m_area.GetOrigin());
                 // For civilians, use Neutral or DefendPatrol state instead of direct patrol order
-                g.SetTacticalState(IA_GroupTacticalState.DefendPatrol, pos, null, true); // Added authority flag
+				IA_GroupTacticalState civState
+				if(IsUnderAttack())
+					civState = IA_GroupTacticalState.Retreating;
+				else
+					civState = IA_GroupTacticalState.DefendPatrol;
+                g.SetTacticalState(civState, pos, null, true); // Added authority flag
             }
         }
     }
@@ -3859,6 +3890,7 @@ class IA_AreaInstance
         }
 		
         int actualSpawnCount = Math.Min(groupsToSpawn, m_totalReinforcementQuota - m_reinforcementGroupsSpawned);
+		actualSpawnCount = Math.RandomInt(actualSpawnCount*0.6, actualSpawnCount*1.5);
         if (actualSpawnCount <= 0) 
         {
             //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Calculated spawn count is zero or negative.", m_area.GetName()), LogLevel.NORMAL);
@@ -3978,6 +4010,7 @@ class IA_AreaInstance
             int scaledUnitCount = Math.Round(unitCount * m_aiScaleFactor); // Use current scale factor
             if (scaledUnitCount < 1) scaledUnitCount = 1; 
             scaledUnitCount = scaledUnitCount * 3; // Make reinforcement groups 3x larger
+			scaledUnitCount = Math.RandomInt(scaledUnitCount*0.5, scaledUnitCount*1.5);
 
             IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, m_faction, scaledUnitCount, AreaFaction);
 
@@ -4201,4 +4234,64 @@ class IA_AreaInstance
         }
     }
     // --- END ADDED ---
+
+	
+
+    // --- BEGIN ADDED: Helper to trigger global notifications ---
+	void TriggerGlobalNotification(string messageType, string taskTitle)
+	{
+		if(!Replication.IsServer())
+			return;
+		IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
+		rep.TriggerGlobalNotification(messageType, taskTitle);
+		return;
+/*
+		array<int> playerIDs = new array<int>();
+		GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
+
+		foreach (int playerID : playerIDs)
+		{
+			PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
+			if (!pc)
+				continue;
+
+			SCR_HUDManagerComponent displayManager = SCR_HUDManagerComponent.Cast(pc.FindComponent(SCR_HUDManagerComponent)); 
+
+			if (!displayManager)
+				continue;
+
+			// The following lines will likely cause errors if SCR_HUDManagerComponent 
+			// doesn't have FindDisplay(typename) and RegisterInfoDisplay(typename, ...)
+			IA_NotificationDisplay notificationDisplay = IA_NotificationDisplay.Cast(displayManager.FindInfoDisplay(IA_NotificationDisplay));
+			
+			if (!notificationDisplay)
+			{
+							
+					Print("notificationDisplay is NULL", LogLevel.FATAL);
+				
+			}
+
+			if (notificationDisplay)
+			{
+				if (messageType == "TaskCreated")
+				{
+					GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayTaskCreatedNotification, 100, false, taskTitle);
+				}
+				else if (messageType == "AreaGroupCompleted")
+			{
+				// Using CallLater to avoid potential issues with immediate UI updates in certain contexts,
+				// and to allow a slight delay for dramatic effect or to prevent spam if zones complete rapidly.
+				// Random delay removed as it's for a group completion, not individual tasks.
+				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayAreaCompletedNotification, 100, false, taskTitle); 
+			}
+				// Optional: Auto-hide after a few seconds
+				// GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
+			}
+			else
+			{
+				Print(string.Format("[IA_AreaInstance] Could not find or create IA_NotificationDisplay for player %1.", playerID), LogLevel.WARNING);
+			}
+		}*/
+	}
+	// --- END ADDED ---
 }

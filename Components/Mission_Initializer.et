@@ -5,4 +5,5 @@ IA_MissionInitializer {
   }
  }
  coords 4830.262 28.5 11735.97
+ m_spawnDelayMs 7000
 }

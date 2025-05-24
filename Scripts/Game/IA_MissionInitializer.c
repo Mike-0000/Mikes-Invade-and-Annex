@@ -98,7 +98,7 @@ class IA_MissionInitializer : GenericEntity
 				actualFactions.Insert(currentFaction); // Build List of Enemy Factions
 		}
 		if(actualFactions.Count() > 1){ // If modded content
-			if(Math.RandomInt(0,20) > 1) // 95% chance to use a modded faction
+			if(Math.RandomInt(1,20) > 1) // 95% chance to use a modded faction
 				actualFactions.Remove(actualFactions.Find(factionManager.GetFactionByKey("USSR")));
 		}
 		return actualFactions[Math.RandomInt(0, actualFactions.Count()-1)];
@@ -403,6 +403,8 @@ class IA_MissionInitializer : GenericEntity
 					
 				// If there's an active task for this completed zone, finish it.
 				if (instance.GetCurrentTaskEntity()) {
+					string completedTaskTitle = instance.m_area.GetName();
+					TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
 				    //Print("[DEBUG_ZONE_GROUP] Finishing task for completed zone: " + marker.GetAreaName(), LogLevel.NORMAL);
 					instance.GetCurrentTaskEntity().Finish();
 				}
@@ -441,6 +443,11 @@ class IA_MissionInitializer : GenericEntity
 		if(actualCompletedZones >= amountOfZones){ // Use the accurate count
 			//Print("[INFO] All " + amountOfZones + " zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
 
+			// --- BEGIN ADDED: Trigger Area Completed Notification ---
+			TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area"); // Example task name
+
+			// --- END ADDED ---
+
 			// --- BEGIN ADDED: Schedule civilian cleanup for completed zone instances ---
 			if (m_currentAreaInstances)
 			{
@@ -450,7 +457,7 @@ class IA_MissionInitializer : GenericEntity
 				{
 					if (oldInstance)
 					{
-						oldInstance.ScheduleCivilianCleanup(60000); // 60 seconds delay
+						oldInstance.ScheduleCivilianCleanup(50000); // 60 seconds delay
 					}
 				}
 			}
@@ -459,13 +466,61 @@ class IA_MissionInitializer : GenericEntity
 			m_currentIndex++;
 			if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
 			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Stop checking this group
-			ProceedToNextZone(); // Start next group
+			GetGame().GetCallqueue().CallLater(ProceedToNextZone, Math.RandomInt(45,90)*1000, false); // Start next group
 		}
 		else {
 			//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " still needs " + (amountOfZones - actualCompletedZones) + " more zones to complete. Will re-check.", LogLevel.NORMAL);
 			// Callqueue will call this method again.
 		}
 	}
+
+	// --- BEGIN ADDED: Method to trigger global area completed notification ---
+	void TriggerGlobalNotification(string messageType, string taskTitle)
+	{
+		if (!Replication.IsServer())
+			return;
+		IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
+		rep.TriggerGlobalNotification(messageType, taskTitle);
+		return;
+/*
+		array<int> playerIDs = new array<int>();
+		GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
+
+		foreach (int playerID : playerIDs)
+		{
+			PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
+			if (!pc)
+				continue;
+
+			SCR_HUDManagerComponent displayManager = SCR_HUDManagerComponent.Cast(pc.FindComponent(SCR_HUDManagerComponent)); 
+
+			if (!displayManager)
+				continue;
+
+			IA_NotificationDisplay notificationDisplay = IA_NotificationDisplay.Cast(displayManager.FindInfoDisplay(IA_NotificationDisplay));
+			
+			if (!notificationDisplay)
+			{
+				// Attempt to register it if not found. This part might need adjustment based on how displays are typically registered.
+				// It's also possible the display isn't registered at this point for some players.
+				//Print(string.Format("[IA_MissionInitializer] IA_NotificationDisplay not found for player %1. Attempting to register.", playerID), LogLevel.WARNING);
+				// notificationDisplay = new IA_NotificationDisplay(); // This line is problematic, displays are usually part of a layout.
+				// displayManager.RegisterInfoDisplay(notificationDisplay); // This might also not be the correct way or time.
+				// For now, we'll just log if it's not found, as direct creation/registration here is complex and error-prone.
+				Print(string.Format("[IA_MissionInitializer] IA_NotificationDisplay not found for player %1. Cannot show area completion.", playerID), LogLevel.ERROR);
+				continue;
+			}
+
+			if (messageType == "AreaGroupCompleted")
+			{
+				// Using CallLater to avoid potential issues with immediate UI updates in certain contexts,
+				// and to allow a slight delay for dramatic effect or to prevent spam if zones complete rapidly.
+				// Random delay removed as it's for a group completion, not individual tasks.
+				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayAreaCompletedNotification, 100, false, taskName); 
+			}
+		}*/
+	}
+	// --- END ADDED ---
 
 	void InitDelayed(IEntity owner){
 	

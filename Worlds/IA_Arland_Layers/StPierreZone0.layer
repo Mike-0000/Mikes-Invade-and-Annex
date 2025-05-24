@@ -42,6 +42,14 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaType "RadioTower"
   m_radius 50
  }
+ StPierre5 {
+  coords 2960.338 62.4 1656.384
+  m_areaGroup 1
+  m_fZoneRadius 50
+  m_areaName "St Pierre1"
+  m_areaType "Docks"
+  m_radius 50
+ }
 }
 $grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
  HarborVehicle {

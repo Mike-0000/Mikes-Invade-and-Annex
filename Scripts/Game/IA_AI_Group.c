@@ -80,8 +80,8 @@ class IA_AiGroup
     
     // State evaluation scheduling
     private int m_nextStateEvaluationTime = 0;
-    private const int MIN_STATE_EVALUATION_INTERVAL = 10000; // milliseconds, increased from 5000
-    private const int MAX_STATE_EVALUATION_INTERVAL = 25000; // milliseconds, increased from 15000
+    private const int MIN_STATE_EVALUATION_INTERVAL = 18000; // milliseconds, increased from 5000
+    private const int MAX_STATE_EVALUATION_INTERVAL = 35000; // milliseconds, increased from 15000
     private bool m_isStateEvaluationScheduled = false;
     
     // Tactical state
@@ -154,11 +154,11 @@ class IA_AiGroup
             return "";
         }
 		*/
-		int randInt = Math.RandomInt(0,11);
+		int randInt = Math.RandomInt(0,12);
 
 		array<EEditableEntityLabel> includedLabels = {};
 
-		/*if(faction == IA_Faction.USSR){
+		if(faction == IA_Faction.USSR){
 			switch(randInt){
 				case 11:
 				case 0: // ROLE_ANTITANK
@@ -192,6 +192,9 @@ class IA_AiGroup
 				case 9: 
 					includedLabels = {EEditableEntityLabel.ROLE_SCOUT};
 					break;
+				case 12: 
+					includedLabels = {EEditableEntityLabel.ROLE_SAPPER};
+					break;
 			}
 		}
 		// --- BEGIN NEW US FACTION LOGIC ---
@@ -219,7 +222,7 @@ class IA_AiGroup
 
 		    includedLabels = {EEditableEntityLabel.ROLE_RIFLEMAN};
 
-		}*/
+		}
 		SCR_EntityCatalog entityCatalog;
 		SCR_Faction scrFaction = SCR_Faction.Cast(DesiredFaction);
 		entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
@@ -584,7 +587,8 @@ class IA_AiGroup
         {
             return;
         }
-
+		vector zoneOrigin;
+		float zoneRadius;
         // Restrict infantry waypoints to a single zone, while vehicle waypoints can navigate across the zone group
         if (!m_isDriving && order != IA_AiOrder.GetInVehicle)
         {
@@ -596,8 +600,8 @@ class IA_AiGroup
             
             if (closestMarker)
             {
-                float zoneRadius = closestMarker.GetRadius();
-                vector zoneOrigin = closestMarker.GetZoneCenter();
+                zoneRadius = closestMarker.GetRadius();
+                zoneOrigin = closestMarker.GetZoneCenter();
                 
                 float distToZoneCenter = vector.Distance(origin, zoneOrigin);
                 
@@ -612,8 +616,21 @@ class IA_AiGroup
         }
         // Adjust spawn height based on terrain
         float y = GetGame().GetWorld().GetSurfaceY(origin[0], origin[2]);
-        origin[1] = y + 0.5;
+		
 
+		
+		
+		
+		
+        origin[1] = y + 0.5;
+		if(zoneOrigin && zoneRadius)
+		{
+			float yDiff = origin[1] - zoneOrigin[1];
+			if (yDiff < 0) yDiff = -yDiff;
+			if(yDiff > zoneRadius*0.35) // Add logic to check if the origin's Y value is farther away from the Area's Origin Point than the Area's Radius.
+				origin[1] = zoneOrigin[1];
+		}
+		
         // --- BEGIN WATER CHECK ---
         if (WaterCheck(origin))
         {
@@ -626,7 +643,7 @@ class IA_AiGroup
             return; // Do not add this order.
         }
         // --- END WATER CHECK ---
-
+		
         // For vehicle orders, snap to nearest road - EXCEPT GetInVehicle orders which should go directly to the vehicle
         if (m_isDriving && order != IA_AiOrder.GetInVehicle)
         {
@@ -1518,6 +1535,8 @@ class IA_AiGroup
 		float oceanHeight = GetGame().GetWorld().GetOceanBaseHeight();
 		return requestedLocation[1] <= oceanHeight; // True if at or below ocean level
     }
+	
+
     
     void UpdateVehicleOrders()
     {
@@ -1827,6 +1846,9 @@ class IA_AiGroup
                     m_tacticalState == IA_GroupTacticalState.Flanking ||
                     m_tacticalState == IA_GroupTacticalState.LastStand)
                 {
+					if(m_tacticalState == IA_GroupTacticalState.DefendPatrol && timeSinceLastOrder < 150)
+						return;
+						
                     //Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Reapplying authority-managed state %1 for group %2", 
 //                        typename.EnumToString(IA_GroupTacticalState, m_tacticalState), this), LogLevel.NORMAL);
                     ApplyTacticalStateOrders();

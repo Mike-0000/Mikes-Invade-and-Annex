@@ -90,6 +90,60 @@ class IA_ReplicationWorkaround : GenericEntity
         Rpc(RpcDo_SetFaction, areaName, fi);
     }
 
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	void RpcDo_TriggerGlobalNotification(string messageType, string taskTitle, int playerID){
+			PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
+			if (!pc)
+				return;
+
+			SCR_HUDManagerComponent displayManager = SCR_HUDManagerComponent.Cast(pc.FindComponent(SCR_HUDManagerComponent)); 
+
+			if (!displayManager)
+				return;
+
+			// The following lines will likely cause errors if SCR_HUDManagerComponent 
+			// doesn't have FindDisplay(typename) and RegisterInfoDisplay(typename, ...)
+			IA_NotificationDisplay notificationDisplay = IA_NotificationDisplay.Cast(displayManager.FindInfoDisplay(IA_NotificationDisplay));
+			
+			if (!notificationDisplay)
+			{
+							
+					Print("notificationDisplay is NULL", LogLevel.FATAL);
+				
+			}
+
+			if (notificationDisplay)
+			{
+				if (messageType == "TaskCreated")
+				{
+					GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayTaskCreatedNotification, 100, false, taskTitle);
+				}else if (messageType == "AreaGroupCompleted")
+			{
+				// Using CallLater to avoid potential issues with immediate UI updates in certain contexts,
+				// and to allow a slight delay for dramatic effect or to prevent spam if zones complete rapidly.
+				// Random delay removed as it's for a group completion, not individual tasks.
+				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayAreaCompletedNotification, 100, false, taskTitle); 
+			}else if (messageType == "TaskCompleted")
+			{
+				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayTaskCompletedNotification, 100, false, taskTitle); 
+			}
+				// Optional: Auto-hide after a few seconds
+				// GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
+			}
+			else
+			{
+				Print(string.Format("[IA_AreaInstance] Could not find or create IA_NotificationDisplay for player %1.", playerID), LogLevel.WARNING);
+			}
+		
+	}
+	
+	void TriggerGlobalNotification(string messageType, string taskTitle){
+		array<int> playerIDs = new array<int>();
+		GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
+		foreach (int playerID : playerIDs)
+		 	Rpc(RpcDo_TriggerGlobalNotification, messageType, taskTitle, playerID);
+	}
+	
     void SetStrength(string areaName, int val)
     {
         Rpc(RpcDo_SetStrength, areaName, val);
