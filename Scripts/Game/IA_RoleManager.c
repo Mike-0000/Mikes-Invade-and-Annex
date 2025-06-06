@@ -13,7 +13,7 @@ class IA_RoleManager
     private ref map<IA_PlayerRole, int> m_RoleLimits = new map<IA_PlayerRole, int>();
     
     // Player to role mapping for quick lookups
-    private ref map<int, IA_PlayerRole> m_PlayerRoles = new map<int, IA_PlayerRole>();
+    private ref map<string, IA_PlayerRole> m_PlayerRoles = new map<string, IA_PlayerRole>();
     
     //------------------------------------------------------------------------------------------------
     // SINGLETON ACCESS
@@ -116,6 +116,13 @@ class IA_RoleManager
             return false;
         }
         
+        string playerGuid = GetGame().GetBackendApi().GetPlayerIdentityId(playerId);
+        if (playerGuid.IsEmpty())
+        {
+            Print(string.Format("Could not get GUID for player %1. Role assignment failed.", playerId), LogLevel.WARNING);
+            return false;
+        }
+        
         // Check if role is full
         if (IsRoleFull(newRole))
         {
@@ -127,9 +134,9 @@ class IA_RoleManager
         }
         
         // If player already has a role, unregister from old role first
-        if (m_PlayerRoles.Contains(playerId))
+        if (m_PlayerRoles.Contains(playerGuid))
         {
-            IA_PlayerRole oldRole = m_PlayerRoles[playerId];
+            IA_PlayerRole oldRole = m_PlayerRoles[playerGuid];
             if (m_RoleCounts.Contains(oldRole))
             {
                 int oldCount = m_RoleCounts[oldRole];
@@ -142,7 +149,7 @@ class IA_RoleManager
         }
         
         // Assign new role and update counts
-        m_PlayerRoles[playerId] = newRole;
+        m_PlayerRoles[playerGuid] = newRole;
         if (!m_RoleCounts.Contains(newRole))
             m_RoleCounts[newRole] = 0;
             
@@ -160,10 +167,20 @@ class IA_RoleManager
 				SCR_ChimeraCharacter char = SCR_ChimeraCharacter.Cast(playerEntity);
                 if (char)
                 {
-                    char.SetRole(newRole, true); // Force replication as this is a server-authoritative change
-                    Print(string.Format("Assigned role %1 to player %2", 
-                        typename.EnumToString(IA_PlayerRole, newRole), 
-                        playerId), LogLevel.NORMAL);
+                    // Only set role if it's different from current role to prevent recursive events
+                    IA_PlayerRole currentRole = char.GetRole();
+                    if (currentRole != newRole)
+                    {
+                        char.SetRole(newRole, true); // Force replication as this is a server-authoritative change
+                        Print(string.Format("Assigned role %1 to player %2", 
+                            typename.EnumToString(IA_PlayerRole, newRole), 
+                            playerId), LogLevel.NORMAL);
+                    }
+                    else
+                    {
+                        Print(string.Format("Player %1 already has role %2, skipping assignment", 
+                            playerId, typename.EnumToString(IA_PlayerRole, newRole)), LogLevel.DEBUG);
+                    }
                 }
                 else
                 {
@@ -176,14 +193,14 @@ class IA_RoleManager
     }
     
     // Unregister a player's role (e.g., when they disconnect)
-    void UnregisterPlayer(int playerId)
+    void UnregisterPlayer(string playerGuid)
     {
         if (!Replication.IsServer())
             return;
             
-        if (m_PlayerRoles.Contains(playerId))
+        if (m_PlayerRoles.Contains(playerGuid))
         {
-            IA_PlayerRole oldRole = m_PlayerRoles[playerId];
+            IA_PlayerRole oldRole = m_PlayerRoles[playerGuid];
             if (m_RoleCounts.Contains(oldRole))
             {
                 int oldCount = m_RoleCounts[oldRole];
@@ -194,7 +211,7 @@ class IA_RoleManager
                 }
             }
                 
-            m_PlayerRoles.Remove(playerId);
+            m_PlayerRoles.Remove(playerGuid);
         }
     }
     
@@ -210,8 +227,12 @@ class IA_RoleManager
     // Get the role for a specific player
     IA_PlayerRole GetPlayerRole(int playerId)
     {
-        if (m_PlayerRoles.Contains(playerId))
-            return m_PlayerRoles[playerId];
+		string playerGuid = GetGame().GetBackendApi().GetPlayerIdentityId(playerId);
+        if (playerGuid.IsEmpty())
+            return IA_PlayerRole.NONE;
+			
+        if (m_PlayerRoles.Contains(playerGuid))
+            return m_PlayerRoles[playerGuid];
         return IA_PlayerRole.NONE;
     }
     
