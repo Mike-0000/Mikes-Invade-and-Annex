@@ -6,7 +6,7 @@ IA_AreaMarker Levie2 : "{0C868FB4A69F9BE8}Prefabs/IA_AreaMarkers/IA_Military.et"
  m_areaType "Military"
  m_radius 125
 }
-IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/IA_AreaMarkers/RadioTower.et" {
  coords 7834.357 254.531 4031.96
  angleY 146.791
  m_areaGroup 6
@@ -37,6 +37,18 @@ IA_AreaMarker Levie1 : "{808EDC7240341FEE}Prefabs/IA_AreaMarkers/IA_Town.et" {
  m_areaName "Levie"
  m_areaType "Town"
  m_radius 90
+}
+$grp IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ {
+  coords 7410.802 136.409 4722.289
+  m_areaGroup 6
+  m_areaName "Levie Mayor's House"
+ }
+ {
+  coords 7504.54 165.749 4279.333
+  m_areaGroup 6
+  m_areaName "Levie Military Base"
+ }
 }
 $grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
  Vehicle1 {

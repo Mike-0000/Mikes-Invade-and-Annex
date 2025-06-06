@@ -1,4 +1,4 @@
-IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/IA_AreaMarkers/RadioTower.et" {
  coords 5756.253 8.757 9766.367
  angleY 0
  m_areaGroup 8
@@ -31,4 +31,9 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaType "Military"
   m_radius 75
  }
+}
+IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ coords 5829.289 4.562 9772.481
+ m_areaGroup 8
+ m_areaName "Power Plant"
 }

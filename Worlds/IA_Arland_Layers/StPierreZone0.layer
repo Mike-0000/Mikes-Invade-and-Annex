@@ -5,15 +5,6 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaType "Town"
   m_radius 250
  }
- StPierreHarbor {
-  coords 1194.773 2.23 3339.724
-  angleY -161.962
-  m_areaGroup 1
-  m_fZoneRadius 140
-  m_areaName "St Pierre Harbour"
-  m_areaType "Docks"
-  m_radius 140
- }
  TheRockwayInn {
   coords 1264.478 12.345 1894.521
   m_areaGroup 2
@@ -21,26 +12,6 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaName "The Rockway Inn"
   m_areaType "Property"
   m_radius 30
- }
- StPierre2 {
-  coords 3274.94 2.031 2881.128
-  m_fZoneRadius 50
-  m_areaType "Docks"
-  m_radius 50
- }
- StPierre3 {
-  coords 3112.672 43.93 2422.562
-  m_fZoneRadius 50
-  m_areaType "Property"
-  m_radius 10
- }
- StPierre4 {
-  coords 3260.375 41.074 2490.962
-  m_fZoneRadius 50
-  m_prefabToSpawn "{DBCDEC45DB834E8A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01.et"
-  m_areaName "StPierre Radio Tower"
-  m_areaType "RadioTower"
-  m_radius 50
  }
  StPierre5 {
   coords 2960.338 62.4 1656.384
@@ -51,14 +22,24 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_radius 50
  }
 }
-$grp IA_VehicleSpawnPoint : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
- HarborVehicle {
-  coords 940.821 39 2840.942
-  angleY -163.492
-  m_allowCivilian 0
+$grp IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ {
+  coords 3034.215 40.284 2064.396
+  m_areaName "St Pierre HQ1"
  }
- HarborVehicle3 {
-  coords 1263.592 34.332 3003.569
-  angleY -163.492
+ {
+  coords 2598.26 87.006 1834.501
+  m_areaGroup 1
+  m_areaName "St Pierre HQ2"
  }
+ {
+  coords 2701.6 78.225 1770.779
+  m_areaGroup 2
+  m_areaName "St Pierre HQ3"
+ }
+}
+IA_VehicleSpawnPoint HarborVehicle : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
+ coords 940.821 39 2840.942
+ angleY -163.492
+ m_allowCivilian 0
 }

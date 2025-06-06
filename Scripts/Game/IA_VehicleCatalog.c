@@ -119,38 +119,73 @@ class IA_VehicleCatalog
 		
 		array<EEditableEntityLabel> includedLabels = GetRandomVehicleLabels(faction);
         array<EEditableEntityLabel> excludedLabels = {EEditableEntityLabel.VEHICLE_HELICOPTER};
-		SCR_EntityCatalog areaFactionEntityCatalog;
-		array<SCR_EntityCatalogEntry> areaFactionEntityCatalogEntryArray = {};
 		
-		// Check if AreaFaction has enough vehicles
+		// Check for config overrides first - they take precedence over AreaFaction
+		IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+		array<Faction> EnemyFactions = {};
 		
-		if(AreaFaction && faction != IA_Faction.CIV){
-			SCR_Faction scr_AreaFaction = SCR_Faction.Cast(AreaFaction);
-			areaFactionEntityCatalog = scr_AreaFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
-			areaFactionEntityCatalog.GetFullFilteredEntityList(areaFactionEntityCatalogEntryArray, includedLabels, excludedLabels);
-			if (areaFactionEntityCatalogEntryArray.Count() > 0){
-				Print("Area Faction has more than 1 vehicle for this query, using Area Faction for vehicle query", LogLevel.NORMAL);
-				return areaFactionEntityCatalogEntryArray;
+		if (config && config.m_sDesiredEnemyVehicleFactionKeys && !config.m_sDesiredEnemyVehicleFactionKeys.IsEmpty()) {
+			Print("[IA_VehicleCatalog] Using config override for enemy vehicle factions", LogLevel.NORMAL);
+			
+			foreach (string factionKey : config.m_sDesiredEnemyVehicleFactionKeys) {
+				Faction configFaction = factionManager.GetFactionByKey(factionKey);
+				if (configFaction) {
+					// Verify faction has vehicles before adding
+					SCR_Faction scrConfigFaction = SCR_Faction.Cast(configFaction);
+					if (scrConfigFaction) {
+						SCR_EntityCatalog configEntityCatalog = scrConfigFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+						if (configEntityCatalog) {
+							array<EEditableEntityLabel> configExcludedLabels = {};
+							array<EEditableEntityLabel> configIncludedLabels = {};
+							array<SCR_EntityCatalogEntry> vehicleEntries = {};
+							configEntityCatalog.GetFullFilteredEntityList(vehicleEntries, configIncludedLabels, configExcludedLabels);
+							
+							if (vehicleEntries.Count() >= 1) {
+								EnemyFactions.Insert(configFaction);
+								Print("[IA_VehicleCatalog] Added vehicle faction '" + factionKey + "' from config", LogLevel.NORMAL);
+							} else {
+								Print("[IA_VehicleCatalog] Skipping vehicle faction '" + factionKey + "' - insufficient vehicles (" + vehicleEntries.Count() + ")", LogLevel.WARNING);
+							}
+						}
+					}
+				} else {
+					Print("[IA_VehicleCatalog] Warning: Vehicle faction key '" + factionKey + "' not found", LogLevel.WARNING);
+				}
 			}
-			Print("Area Faction has less than 1 vehicle for this query, using all enemy Factions for vehicle query", LogLevel.NORMAL);
+			
+			if (EnemyFactions.IsEmpty()) {
+				Print("[IA_VehicleCatalog] No valid vehicle factions from config, falling back to default behavior", LogLevel.WARNING);
+			}
 		}
 		
-		
-		
-		
-		
-		
-		
-		
-		
-		SCR_Faction USFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
-		array<Faction> AllFactions = {};
-		array<Faction> EnemyFactions = {};
-		factionManager.GetFactionsList(AllFactions);
-		
-		foreach(Faction currentFaction : AllFactions){
-			if(USFaction.IsFactionEnemy(currentFaction))
-				EnemyFactions.Insert(currentFaction);
+		// Default behavior when no config, config is empty, or no valid config factions
+		if (EnemyFactions.IsEmpty()) {
+			// First try AreaFaction if it has vehicles
+			if(AreaFaction && faction != IA_Faction.CIV){
+				SCR_Faction scr_AreaFaction = SCR_Faction.Cast(AreaFaction);
+				if (scr_AreaFaction) {
+					SCR_EntityCatalog areaFactionEntityCatalog = scr_AreaFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+					if (areaFactionEntityCatalog) {
+						array<SCR_EntityCatalogEntry> areaFactionEntityCatalogEntryArray = {};
+						areaFactionEntityCatalog.GetFullFilteredEntityList(areaFactionEntityCatalogEntryArray, includedLabels, excludedLabels);
+						if (areaFactionEntityCatalogEntryArray.Count() > 0){
+							Print("[IA_VehicleCatalog] No config override, using Area Faction for vehicle query", LogLevel.NORMAL);
+							return areaFactionEntityCatalogEntryArray;
+						}
+					}
+				}
+			}
+			
+			// Fallback to general enemy faction detection
+			Print("[IA_VehicleCatalog] Using default enemy vehicle faction detection", LogLevel.NORMAL);
+			SCR_Faction USFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
+			array<Faction> AllFactions = {};
+			factionManager.GetFactionsList(AllFactions);
+			
+			foreach(Faction currentFaction : AllFactions){
+				if(USFaction.IsFactionEnemy(currentFaction))
+					EnemyFactions.Insert(currentFaction);
+			}
 		}
 		array<SCR_EntityCatalog> finalEntityCatalogArray = {};
         foreach(Faction currentFaction : EnemyFactions){

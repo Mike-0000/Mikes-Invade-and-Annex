@@ -1,4 +1,4 @@
-IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/IA_AreaMarkers/RadioTower.et" {
  coords 4653.82 23.649 9569.023
  angleY 0
  m_areaGroup 2
@@ -35,5 +35,17 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaName "Meaux Industrial"
   m_areaType "SmallMilitary"
   m_radius 40
+ }
+}
+$grp IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ {
+  coords 4522.229 18.438 9535.195
+  m_areaGroup 2
+  m_areaName "Meaux Church"
+ }
+ {
+  coords 4522.438 14.265 9468.075
+  m_areaGroup 2
+  m_areaName "Meaux Town Square"
  }
 }

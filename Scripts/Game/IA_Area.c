@@ -10,7 +10,8 @@ enum IA_AreaType
     Docks,
     Military,
     SmallMilitary,
-    RadioTower
+    RadioTower,
+    DefendObjective
 };
 
 ///////////////////////////////////////////////////////////////////////

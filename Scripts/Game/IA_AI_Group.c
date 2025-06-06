@@ -113,6 +113,10 @@ class IA_AiGroup
 
 	Faction m_groupFaction;
 	
+    // Defend mission mode
+    private bool m_isInDefendMode = false;
+    private vector m_defendTarget = vector.Zero;
+	
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount)
     {
         m_initialPosition = initialPos;
@@ -243,7 +247,7 @@ class IA_AiGroup
 		if (characterEntries.IsEmpty())
 			return "";
 		
-        return characterEntries[Math.RandomInt(1, characterEntries.Count())].GetPrefab();
+        return characterEntries[Math.RandomInt(0, characterEntries.Count())].GetPrefab();
 
 
 
@@ -372,8 +376,19 @@ class IA_AiGroup
 
         grp.m_isSpawned = true;
 
-        // Initialize tactical state and schedule evaluation
-        grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, groundPos);
+        // --- BEGIN MODIFIED: Only set default state if not in defend mode and no area assigned ---
+        // Initialize tactical state and schedule evaluation only if not in defend mode
+        if (!grp.IsInDefendMode() && !grp.m_lastAssignedArea)
+        {
+            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, groundPos);
+        }
+        else
+        {
+            Print(string.Format("[IA_AiGroup.CreateGroupForVehicle] Vehicle group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
+                grp.IsInDefendMode(), grp.m_lastAssignedArea != null), LogLevel.NORMAL);
+        }
+        // --- END MODIFIED ---
+        
         grp.ScheduleNextStateEvaluation();
         grp.SetupDeathListener(); // Ensure CheckDangerEvents is scheduled
 
@@ -472,16 +487,27 @@ class IA_AiGroup
         // Instead of using Spawn directly, we'll handle initialization here
         grp.PerformSpawn();
         
-        // Explicitly set a default tactical state for the new group
-        if (spawnPos != vector.Zero)
+        // --- BEGIN MODIFIED: Only set default state if not in defend mode and no area assigned ---
+        // Don't set default tactical state if the group is already in defend mode or has an assigned area
+        if (!grp.IsInDefendMode() && !grp.m_lastAssignedArea)
         {
-            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, spawnPos, null, true); // Added authority flag
+            // Explicitly set a default tactical state for the new group
+            if (spawnPos != vector.Zero)
+            {
+                grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, spawnPos, null, true); // Added authority flag
+            }
+            else
+            {
+                vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, grp.GetOrigin());
+                grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos, null, true); // Added authority flag
+            }
         }
         else
         {
-            vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, grp.GetOrigin());
-            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos, null, true); // Added authority flag
+            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupFromUnits] Group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
+                grp.IsInDefendMode(), grp.m_lastAssignedArea != null), LogLevel.NORMAL);
         }
+        // --- END MODIFIED ---
 
         return grp;
     }
@@ -562,6 +588,36 @@ class IA_AiGroup
             ////Print("[IA_AiGroup.AddWaypoint] Group or waypoint is null.", LogLevel.WARNING);
             return;
         }
+        
+        // --- BEGIN ENHANCED: More detailed waypoint type validation ---
+        // Get the actual type of the waypoint
+        string waypointTypeName = waypoint.Type().ToString();
+        
+        // Check if this is a defend waypoint
+        SCR_DefendWaypoint defendTest = SCR_DefendWaypoint.Cast(waypoint);
+        bool isDefendWaypoint = (defendTest != null);
+        
+        // Log waypoint addition with type info
+        Print(string.Format("[IA_AiGroup.AddWaypoint] Adding waypoint to Group %1 | Faction: %2 | Waypoint Type: %3 | Is SCR_DefendWaypoint: %4 | Group State: %5", 
+            this, typename.EnumToString(IA_Faction, m_faction), waypointTypeName, isDefendWaypoint, 
+            typename.EnumToString(IA_GroupTacticalState, m_tacticalState)), LogLevel.WARNING);
+        
+        // Validate waypoint type based on current tactical state
+        if (m_tacticalState == IA_GroupTacticalState.Defending)
+        {
+            // For defending state, we should ideally have a SCR_DefendWaypoint
+            if (!isDefendWaypoint)
+            {
+                Print(string.Format("[IA_AiGroup.AddWaypoint] ERROR: Group %1 (Faction: %2) is in Defending state but received non-DefendWaypoint type: %3. This may cause issues!", 
+                    this, typename.EnumToString(IA_Faction, m_faction), waypointTypeName), LogLevel.ERROR);
+                
+                // Log a stack trace to help identify where this is coming from
+                Print("[IA_AiGroup.AddWaypoint] Stack trace for non-defend waypoint:", LogLevel.ERROR);
+                // Still add it, but log the warning
+            }
+        }
+        // --- END ENHANCED ---
+        
         m_group.AddWaypoint(waypoint);
         ////Print("[DEBUG] IA_AiGroup.AddWaypoint: Waypoint added to internal SCR_AIGroup.", LogLevel.NORMAL);
     }
@@ -627,7 +683,7 @@ class IA_AiGroup
 		{
 			float yDiff = origin[1] - zoneOrigin[1];
 			if (yDiff < 0) yDiff = -yDiff;
-			if(yDiff > zoneRadius*0.35) // Add logic to check if the origin's Y value is farther away from the Area's Origin Point than the Area's Radius.
+			if(yDiff > zoneRadius*0.25) // Add logic to check if the origin's Y value is farther away from the Area's Origin Point than the Area's Radius.
 				origin[1] = zoneOrigin[1];
 		}
 		
@@ -662,12 +718,20 @@ class IA_AiGroup
         //Print("IA_AiOrder is = " + typename.EnumToString(IA_AiOrder, order));
         if (order == IA_AiOrder.Defend) 
         {
-            // --- BEGIN ADDED: Debug logging for direct defend orders ---
-           // Print(string.Format("[IA_AiGroup.AddOrder] DIRECT DEFEND ORDER DEBUG: Group %1 | Faction: %2 | AliveCount: %3 | Current Pos: %4 | Target: %5 | ScriptLine: 330", 
-           //     this, typename.EnumToString(IA_Faction, m_faction), GetAliveCount(), GetOrigin().ToString(), origin.ToString()), LogLevel.NORMAL);
+            // --- BEGIN ADDED: Debug logging for defend orders with faction info ---
+            Print(string.Format("[IA_AiGroup.AddOrder] DEFEND ORDER CREATION: Group %1 | Faction: %2 | IsCivilian: %3 | Position: %4", 
+                this, typename.EnumToString(IA_Faction, m_faction), m_isCivilian, origin.ToString()), LogLevel.WARNING);
             // --- END ADDED ---
             
             rname = "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
+        }else if (order == IA_AiOrder.DefendSmall) // Added condition for SearchAndDestroy
+        {
+            // --- BEGIN ADDED: Debug logging for defend small orders ---
+            Print(string.Format("[IA_AiGroup.AddOrder] DEFENDSMALL ORDER CREATION: Group %1 | Faction: %2 | Position: %3", 
+                this, typename.EnumToString(IA_Faction, m_faction), origin.ToString()), LogLevel.WARNING);
+            // --- END ADDED ---
+            
+            rname = "{0AB63F524C44E0D2}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_DefendSmall.et";
         }
         else if (order == IA_AiOrder.SearchAndDestroy) // Added condition for SearchAndDestroy
         {
@@ -695,11 +759,16 @@ class IA_AiGroup
         IEntity waypointEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(origin));
         SCR_AIWaypoint w = null; // Initialize w to null
 
-        if (order == IA_AiOrder.Defend)
+        if (order == IA_AiOrder.Defend || order == IA_AiOrder.DefendSmall)
         {
             SCR_DefendWaypoint defendW = SCR_DefendWaypoint.Cast(waypointEnt);
             if (defendW)
             {
+                // --- BEGIN ADDED: Log successful defend waypoint creation ---
+                Print(string.Format("[IA_AiGroup.AddOrder] SUCCESS: Created SCR_DefendWaypoint for Group %1 | Faction: %2 | Type: %3", 
+                    this, typename.EnumToString(IA_Faction, m_faction), waypointEnt.Type()), LogLevel.WARNING);
+                // --- END ADDED ---
+                
                 // If specific SCR_DefendWaypoint methods were needed, they could be called on 'defendW' here.
                 w = defendW; // Assign to the SCR_AIWaypoint variable for common operations
             }
@@ -707,7 +776,8 @@ class IA_AiGroup
             {
                 // Handle failed cast to SCR_DefendWaypoint
                 string entStr = "null"; if (waypointEnt) entStr = waypointEnt.ToString();
-                Print(string.Format("[IA_Waypoint] Failed to cast spawned entity to SCR_DefendWaypoint. Resource: %1, Origin: %2, Entity: %3 for Group %4", rname, origin, entStr, m_group), LogLevel.ERROR);
+                Print(string.Format("[IA_Waypoint] FAILED CAST: Entity type is %1. Resource: %2, Origin: %3, Entity: %4 for Group %5 | Faction: %6", 
+                    waypointEnt.Type(), rname, origin, entStr, m_group, typename.EnumToString(IA_Faction, m_faction)), LogLevel.ERROR);
             }
         }
         else if (order == IA_AiOrder.SearchAndDestroy) // Added condition for SearchAndDestroy
@@ -1070,6 +1140,10 @@ class IA_AiGroup
     // Process a danger event at the group level
     void ProcessDangerEvent(IA_GroupDangerType dangerType, vector position, IEntity sourceEntity = null, float intensity = 0.5, bool isSuppressed = false)
     {
+        // Skip danger processing if in defend mode
+        if (m_isInDefendMode)
+            return;
+            
         // Rate limit processing per group
         int currentTime_proc = GetGame().GetWorld().GetWorldTime(); // Use world time for milliseconds
         if (currentTime_proc - m_lastDangerProcessTime < DANGER_PROCESS_INTERVAL_MS)
@@ -1823,6 +1897,20 @@ class IA_AiGroup
     // Evaluate and potentially change tactical state based on situation
     void EvaluateTacticalState()
     {
+        // Override tactical state evaluation in defend mode - but don't constantly re-set the state
+        if (m_isInDefendMode && m_defendTarget != vector.Zero)
+        {
+            // In defend mode, only ensure we have orders if we don't have any
+            // Don't constantly change the tactical state - it should already be set correctly
+            if (!HasOrders())
+            {
+                // Re-add the SearchAndDestroy order if it was somehow lost
+                AddOrder(m_defendTarget, IA_AiOrder.SearchAndDestroy, true);
+                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Defend mode group lost orders, re-adding SearchAndDestroy at %1", m_defendTarget.ToString()), LogLevel.WARNING);
+            }
+            return; // Don't do any further state evaluation in defend mode
+        }
+        
         // If the last order was very recent, let it execute
         int timeSinceLastOrder = TimeSinceLastOrder();
         if (timeSinceLastOrder < 3) {
@@ -2417,19 +2505,21 @@ class IA_AiGroup
         switch (order)
         {
             case IA_AiOrder.SearchAndDestroy:
-                priority += 25; 
+                priority += 35; 
                 break;
 			case IA_AiOrder.VehicleMove:
                 return 0;
             case IA_AiOrder.Defend:
-                return 0;
+                return 20;
+			case IA_AiOrder.DefendSmall:
+                return 40;
             case IA_AiOrder.GetInVehicle:
                 priority += 100;  // Vehicle mounting is important
                 break;
             case IA_AiOrder.PriorityMove:
                 return 100;  // High priority movement
             case IA_AiOrder.Move:
-                priority += 20;  // Move orders medium priority (between combat and patrol)
+                priority += 30;  // Move orders medium priority (between combat and patrol)
                 break;
             case IA_AiOrder.Patrol:
                 priority += 1;  // Patrol orders lowest priority
@@ -2563,6 +2653,34 @@ class IA_AiGroup
     {
         return m_faction;
     }
+    
+    void SetDefendMode(bool enable, vector defendPoint = vector.Zero)
+    {
+        m_isInDefendMode = enable;
+        m_defendTarget = defendPoint;
+        
+        if (enable && defendPoint != vector.Zero)
+        {
+            Print(string.Format("[IA_AiGroup] Setting defend mode ON for group, target: %1", defendPoint.ToString()), LogLevel.NORMAL);
+            
+            // Force Search & Destroy order on defend point
+            RemoveAllOrders(true);
+            AddOrder(defendPoint, IA_AiOrder.SearchAndDestroy, true);
+            
+            // Set tactical state directly
+            SetTacticalState(IA_GroupTacticalState.Attacking, defendPoint, null, true);
+        }
+        else
+        {
+            Print("[IA_AiGroup] Setting defend mode OFF for group", LogLevel.NORMAL);
+        }
+    }
+    
+    // Add getter for defend mode
+    bool IsInDefendMode()
+    {
+        return m_isInDefendMode;
+    }
 
     // Add a public setter for the assigned area
     void SetAssignedArea(IA_Area area)
@@ -2660,7 +2778,7 @@ class IA_AiGroup
     {
         if (m_lastAssignedArea) // Already have an area, no need to search
         {
-            // Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 already has m_lastAssignedArea: %2. Skipping search.", this, m_lastAssignedArea.ToString()), LogLevel.DEBUG);
+            // Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 already has m_lastAssignedArea: %2. Skipping search.", this, m_lastAssignedArea.ToString()), LogLevel.NORMAL);
             return;
         }
 

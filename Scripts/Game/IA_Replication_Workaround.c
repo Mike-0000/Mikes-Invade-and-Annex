@@ -91,18 +91,19 @@ class IA_ReplicationWorkaround : GenericEntity
     }
 
 	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
-	void RpcDo_TriggerGlobalNotification(string messageType, string taskTitle, int playerID){
-			PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
-			if (!pc)
-				return;
-
-			SCR_HUDManagerComponent displayManager = SCR_HUDManagerComponent.Cast(pc.FindComponent(SCR_HUDManagerComponent)); 
+	void RpcDo_TriggerGlobalNotificationFinal(string messageType, string taskTitle, int playerId){
+		Print("Going For RpcDo_TriggerGlobalNotificationFinal",LogLevel.NORMAL);
+		PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerId);
+		if(!pc)
+			return;
+		SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pc.GetControlledEntity());
+		if(!character)
+			return;
+		SCR_HUDManagerComponent displayManager = SCR_HUDManagerComponent.Cast(character.FindComponent(SCR_HUDManagerComponent)); 
 
 			if (!displayManager)
 				return;
 
-			// The following lines will likely cause errors if SCR_HUDManagerComponent 
-			// doesn't have FindDisplay(typename) and RegisterInfoDisplay(typename, ...)
 			IA_NotificationDisplay notificationDisplay = IA_NotificationDisplay.Cast(displayManager.FindInfoDisplay(IA_NotificationDisplay));
 			
 			if (!notificationDisplay)
@@ -132,18 +133,31 @@ class IA_ReplicationWorkaround : GenericEntity
 			}
 			else
 			{
-				Print(string.Format("[IA_AreaInstance] Could not find or create IA_NotificationDisplay for player %1.", playerID), LogLevel.WARNING);
+				Print(string.Format("[IA_AreaInstance] Could not find or create IA_NotificationDisplay for player."), LogLevel.WARNING);
 			}
 		
 	}
+	void TriggerGlobalNotificationFinal(string messageType, string taskTitle, int playerId){
+		Rpc(RpcDo_TriggerGlobalNotificationFinal, messageType, taskTitle, playerId);
 	
+	}
+	/*
 	void TriggerGlobalNotification(string messageType, string taskTitle){
 		array<int> playerIDs = new array<int>();
 		GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
-		foreach (int playerID : playerIDs)
-		 	Rpc(RpcDo_TriggerGlobalNotification, messageType, taskTitle, playerID);
+		foreach (int playerID : playerIDs){
+			PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
+			if(pc){
+			 	SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pc.GetControlledEntity());
+				if(character)
+			 		character.SetUIOne(messageType, taskTitle);
+			}
+			
+		}
+			
+		 	//Rpc(RpcDo_TriggerGlobalNotification, messageType, taskTitle, playerID);
 	}
-	
+	*/
     void SetStrength(string areaName, int val)
     {
         Rpc(RpcDo_SetStrength, areaName, val);

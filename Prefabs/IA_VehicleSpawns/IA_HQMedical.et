@@ -1,0 +1,18 @@
+GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
+ ID "65552AD16FD1A017"
+ components {
+  IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+   m_eVehicleSpawnType MEDICAL_VEHICLE
+   m_aIncludedTraitLabels {
+    24
+   }
+   m_aExcludedTraitLabels {
+    51
+   }
+  }
+ }
+ coords 4892.531 28.594 11805.325
+ angleX 0.258
+ angleY -178.995
+ angleZ 1.069
+}

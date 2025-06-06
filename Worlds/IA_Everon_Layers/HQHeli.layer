@@ -1,66 +1,22 @@
-$grp GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
+$grp GenericEntity : "{7AF7C9F3DD5D34FE}Prefabs/IA_VehicleSpawns/IA_TransportHeli.et" {
  UnarmedHeli2 {
-  components {
-   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
-    m_aIncludedTraitLabels {
-     51 37
-    }
-    m_aExcludedTraitLabels {
-     21
-    }
-   }
-  }
   coords 4878.863 28.593 11825.419
   angleY -132.254
  }
- AttackHeli2 {
-  components {
-   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
-    m_aIncludedTraitLabels {
-     51 21
-    }
-   }
-  }
-  coords 4877.034 28.577 11885.344
-  angleY -132.254
- }
- Heli4 {
-  components {
-   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
-    m_aIncludedTraitLabels {
-     51
-    }
-   }
-  }
-  coords 4876.688 28.577 11846.582
-  angleY -132.254
- }
- UnarmedHeli5 {
-  components {
-   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
-    m_aIncludedTraitLabels {
-     51
-    }
-    m_aExcludedTraitLabels {
-     21
-    }
-   }
-  }
-  coords 4876.857 28.577 11866.364
-  angleY -132.254
- }
  UnarmedHeli3 {
-  components {
-   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
-    m_aIncludedTraitLabels {
-     51 37
-    }
-    m_aExcludedTraitLabels {
-     21
-    }
-   }
-  }
   coords 4878.416 28.594 11801.792
   angleY -132.254
  }
+ UnarmedHeli5 {
+  coords 4876.856 28.577 11866.363
+  angleY -132.254
+ }
+}
+GenericEntity AttackHeli2 : "{8867E1B42D07CB26}Prefabs/IA_VehicleSpawns/IA_HQAttackHeli.et" {
+ coords 4877.034 28.577 11885.344
+ angleY -132.254
+}
+GenericEntity Heli4 : "{F5D2A161F014166B}Prefabs/IA_VehicleSpawns/IA_HQGenericHeli.et" {
+ coords 4876.688 28.577 11846.582
+ angleY -132.254
 }

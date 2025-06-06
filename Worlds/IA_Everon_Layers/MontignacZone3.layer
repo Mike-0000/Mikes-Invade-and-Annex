@@ -31,3 +31,8 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_radius 35
  }
 }
+IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ coords 4721.843 161.957 6978.431
+ m_areaGroup 3
+ m_areaName "Montignac Town Square"
+}

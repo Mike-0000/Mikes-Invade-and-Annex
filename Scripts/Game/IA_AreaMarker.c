@@ -484,6 +484,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             return IA_AreaType.SmallMilitary;
         else if (m_areaType == "RadioTower")
             return IA_AreaType.RadioTower;
+        else if (m_areaType == "DefendObjective")
+            return IA_AreaType.DefendObjective;
         return IA_AreaType.Property; // Fallback
     }
     

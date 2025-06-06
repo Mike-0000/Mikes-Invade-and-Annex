@@ -1,0 +1,13 @@
+GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
+ ID "65552AD16FD1A017"
+ components {
+  IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+   m_eVehicleSpawnType GENERIC_HELI
+   m_aIncludedTraitLabels {
+    51
+   }
+  }
+ }
+ coords 4876.688 28.577 11846.582
+ angleY -132.254
+}

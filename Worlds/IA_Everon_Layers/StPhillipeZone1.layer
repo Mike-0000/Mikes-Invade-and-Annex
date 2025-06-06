@@ -1,4 +1,4 @@
-IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/IA_AreaMarkers/RadioTower.et" {
  coords 4546.507 16.156 10606.07
  angleY -9.876
  m_areaGroup 1
@@ -27,5 +27,17 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaName "St Phillipe Factory"
   m_areaType "Military"
   m_radius 75
+ }
+}
+$grp IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ {
+  coords 4434.012 12.869 10731.695
+  m_areaGroup 1
+  m_areaName "St Phillipe Church"
+ }
+ {
+  coords 4554.872 15.924 10502.152
+  m_areaGroup 1
+  m_areaName "St Phillipe Industrial"
  }
 }

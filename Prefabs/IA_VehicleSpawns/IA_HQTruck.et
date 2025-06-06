@@ -1,0 +1,18 @@
+GenericEntity : "{3659DB2A48741E3E}Prefabs/VehicleSpawner.et" {
+ ID "65552AD16FD1A017"
+ components {
+  IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+   m_eVehicleSpawnType TRUCK
+   m_aIncludedTraitLabels {
+    54 37
+   }
+   m_aExcludedTraitLabels {
+    51
+   }
+  }
+ }
+ coords 4900.161 28.594 11861.914
+ angleX 0.299
+ angleY 178.782
+ angleZ 1.058
+}

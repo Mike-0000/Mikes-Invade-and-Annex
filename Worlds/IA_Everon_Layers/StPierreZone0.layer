@@ -1,4 +1,4 @@
-IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/IA_AreaMarkers/RadioTower.et" {
  coords 9551.438 30.566 1674.103
  angleY -50.851
  m_areaGroup 0
@@ -37,5 +37,17 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaName "St Pierre Church"
   m_areaType "Military"
   m_radius 45
+ }
+}
+$grp IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ {
+  coords 9682.388 21.376 1605.034
+  m_areaName "Saint Pierre Church"
+ }
+ {
+  coords 10065.146 2.531 1538.604
+  m_fZoneRadius 60
+  m_areaName "Saint Pierre Industrial"
+  m_radius 60
  }
 }

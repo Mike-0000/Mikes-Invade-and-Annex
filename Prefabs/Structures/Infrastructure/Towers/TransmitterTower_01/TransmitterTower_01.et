@@ -4,8 +4,8 @@ StaticModelEntity : "{68CA807F237FFB7A}Prefabs/Structures/Infrastructure/Towers/
   SCR_DestructibleBuildingComponent "{5DA867E872E096D8}" {
    "Additional hit zones" {
     SCR_HitZone Default {
-     MaxHealth 6000
-     "Explosive multiplier" 15
+     MaxHealth 3500
+     "Explosive multiplier" 30
     }
    }
    m_fDelay 0.1

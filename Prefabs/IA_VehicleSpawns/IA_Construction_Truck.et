@@ -1,0 +1,15 @@
+GenericEntity : "{024EDCF56DD2165E}Prefabs/IA_VehicleSpawns/IA_HQTruck.et" {
+ ID "65552AD16FD1A017"
+ components {
+  IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+   m_eVehicleSpawnType TRUCK_CONSTRUCTION
+   m_aIncludedTraitLabels {
+    54 240 210
+   }
+  }
+ }
+ coords 4903.414 28.594 11874.532
+ angleX 0.299
+ angleY 178.782
+ angleZ 1.058
+}

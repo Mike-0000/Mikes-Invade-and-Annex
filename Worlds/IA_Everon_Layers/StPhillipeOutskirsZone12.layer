@@ -1,4 +1,4 @@
-IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/IA_AreaMarkers/RadioTower.et" {
  coords 5337.261 43.496 10533.86
  angleY -19.696
  m_areaGroup 12
@@ -39,6 +39,11 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaType "Military"
   m_radius 50
  }
+}
+IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ coords 5435.593 49.021 10532.954
+ m_areaGroup 12
+ m_areaName "Military Base"
 }
 IA_VehicleSpawnPoint Vehicle3 : "{F781DFA2C8816781}Prefabs/Spawnpoints/VehicleSpawnPointPrefab.et" {
  coords 5160.812 41.228 10491.387

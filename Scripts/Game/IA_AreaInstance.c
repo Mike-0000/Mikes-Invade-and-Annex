@@ -104,6 +104,10 @@ class IA_AreaInstance
     private float m_aiScaleFactor = 1.0;
     private int m_currentPlayerCount = 0;
     
+    // --- Defend Mission Mode ---
+    private bool m_isInDefendMode = false;
+    private vector m_defendTarget = vector.Zero;
+    
     // Update scaling factors based on player count
     void UpdatePlayerScaling(int playerCount, float aiScaleFactor, int maxVehicles)
     {
@@ -245,6 +249,56 @@ class IA_AreaInstance
 	{
 	    return m_currentTaskEntity != null || !m_taskQueue.IsEmpty();
 	}
+	
+	// --- BEGIN ADDED: Method to complete a specific task by title ---
+	bool CompleteTaskByTitle(string taskTitle)
+	{
+		// Check if the task is currently active
+		if (m_currentTaskEntity && m_currentTaskEntity.GetTitle() == taskTitle)
+		{
+			Print(string.Format("[IA_AreaInstance] Completing current task: %1", taskTitle), LogLevel.NORMAL);
+			
+			// Trigger task completion notification
+			TriggerGlobalNotification("TaskCompleted", taskTitle);
+			
+			m_currentTaskEntity.Finish();
+			m_currentTaskEntity = null;
+			
+			// Activate next queued task if any
+			if (!m_taskQueue.IsEmpty())
+			{
+				m_currentTaskEntity = m_taskQueue[0];
+				m_taskQueue.Remove(0);
+				m_currentTaskEntity.Create(false);
+				
+				string newTaskTitle = m_currentTaskEntity.GetTitle();
+				TriggerGlobalNotification("TaskCreated", newTaskTitle);
+			}
+			return true;
+		}
+		
+		// Check if the task is in the queue
+		for (int i = 0; i < m_taskQueue.Count(); i++)
+		{
+			SCR_TriggerTask queuedTask = m_taskQueue[i];
+			if (queuedTask && queuedTask.GetTitle() == taskTitle)
+			{
+				Print(string.Format("[IA_AreaInstance] Found and removing queued task: %1", taskTitle), LogLevel.NORMAL);
+				
+				// Trigger task completion notification
+				TriggerGlobalNotification("TaskCompleted", taskTitle);
+				
+				// Clean up the task entity and remove from queue
+				IA_Game.AddEntityToGc(queuedTask);
+				m_taskQueue.Remove(i);
+				return true;
+			}
+		}
+		
+		Print(string.Format("[IA_AreaInstance] Task not found: %1", taskTitle), LogLevel.WARNING);
+		return false;
+	}
+	// --- END ADDED ---
 
 /*
 
@@ -268,6 +322,13 @@ class IA_AreaInstance
     // --- Task Queue Methods ---
     void QueueTask(string title, string description, vector spawnOrigin)
     {
+        // Add safety checks for null arrays
+        if (!m_taskQueue)
+        {
+            Print("[ERROR] IA_AreaInstance.QueueTask: m_taskQueue is null! Reinitializing...", LogLevel.ERROR);
+            m_taskQueue = {};
+        }
+        
         //////Print("[DEBUG] QueueTask called with title: " + title + ", description: " + description + ", spawnOrigin: " + spawnOrigin, LogLevel.NORMAL);
         if (!m_currentTaskEntity)
         {
@@ -275,9 +336,28 @@ class IA_AreaInstance
         }
         else
         {
-            Resource res = Resource.Load("{EE9A99488B40628B}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_SearchAndDestroy.et");
+            Resource res = Resource.Load("{33DA4D098C409421}Prefabs/Tasks/TriggerTask.et");
+            if (!res)
+            {
+                Print("[ERROR] IA_AreaInstance.QueueTask: Failed to load TriggerTask resource", LogLevel.ERROR);
+                return;
+            }
+            
             IEntity taskEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(spawnOrigin));
+            if (!taskEnt)
+            {
+                Print("[ERROR] IA_AreaInstance.QueueTask: Failed to spawn task entity", LogLevel.ERROR);
+                return;
+            }
+            
             SCR_TriggerTask task = SCR_TriggerTask.Cast(taskEnt);
+            if (!task)
+            {
+                Print("[ERROR] IA_AreaInstance.QueueTask: Failed to cast entity to SCR_TriggerTask", LogLevel.ERROR);
+                IA_Game.AddEntityToGc(taskEnt);
+                return;
+            }
+            
             task.SetTitle(title);
             task.SetDescription(description);
             m_taskQueue.Insert(task);
@@ -289,8 +369,27 @@ class IA_AreaInstance
     {
         //////Print("[DEBUG] CreateTask called with title: " + title + ", spawnOrigin: " + spawnOrigin, LogLevel.NORMAL);
         Resource res = Resource.Load("{33DA4D098C409421}Prefabs/Tasks/TriggerTask.et");
+        if (!res)
+        {
+            Print("[ERROR] IA_AreaInstance.CreateTask: Failed to load TriggerTask resource", LogLevel.ERROR);
+            return;
+        }
+        
         IEntity taskEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(spawnOrigin));
+        if (!taskEnt)
+        {
+            Print("[ERROR] IA_AreaInstance.CreateTask: Failed to spawn task entity", LogLevel.ERROR);
+            return;
+        }
+        
         m_currentTaskEntity = SCR_TriggerTask.Cast(taskEnt);
+        if (!m_currentTaskEntity)
+        {
+            Print("[ERROR] IA_AreaInstance.CreateTask: Failed to cast entity to SCR_TriggerTask", LogLevel.ERROR);
+            IA_Game.AddEntityToGc(taskEnt);
+            return;
+        }
+        
         m_currentTaskEntity.SetTitle(title);
         m_currentTaskEntity.SetDescription(description);
         m_currentTaskEntity.Create(false);
@@ -391,8 +490,19 @@ class IA_AreaInstance
             // Optionally update strength immediately?
             // OnStrengthChange(m_strength + group.GetAliveCount());
             
-            // --- BEGIN ADDED: Assign initial state ---
-            // Assign a default state when group is added
+            // --- BEGIN MODIFIED: Don't override defend mode groups ---
+            // Check if the group is already in defend mode - if so, don't change its state
+            if (group.IsInDefendMode())
+            {
+                Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, preserving existing tactical state"), LogLevel.NORMAL);
+                // Still add to our state tracking for consistency, but don't override
+                m_assignedGroupStates.Insert(group, group.GetTacticalState());
+                return; // Don't change the group's tactical state
+            }
+            // --- END MODIFIED ---
+            
+            // --- BEGIN ADDED: Assign initial state for non-defend groups ---
+            // Assign a default state when group is added (only for non-defend groups)
             IA_GroupTacticalState initialState = IA_GroupTacticalState.DefendPatrol;
             if (IsUnderAttack()) // If area is already under attack, start defending/attacking
             {
@@ -467,7 +577,7 @@ class IA_AreaInstance
         if (m_initialTotalUnits == 0 && m_strength == 0 && newVal > 0)
         {
             m_initialTotalUnits = newVal;
-            ////Print(string.Format("[AreaInstance.OnStrengthChange] Area %1: Initial total units set to %2", m_area.GetName(), newVal), LogLevel.DEBUG);
+            ////Print(string.Format("[AreaInstance.OnStrengthChange] Area %1: Initial total units set to %2", m_area.GetName(), newVal), LogLevel.NORMAL);
         }
 
         m_strength = newVal;
@@ -953,6 +1063,11 @@ class IA_AreaInstance
                 if (!g || g.GetAliveCount() == 0)
                     continue;
                     
+                // --- BEGIN ADDED: Skip groups in defend mode ---
+                if (g.IsInDefendMode())
+                    continue;
+                // --- END ADDED ---
+                    
                 // Get current state
                 IA_GroupTacticalState currentState;
                 if (m_assignedGroupStates.Find(g, currentState))
@@ -977,6 +1092,11 @@ class IA_AreaInstance
         {
             if (!g || g.GetAliveCount() == 0)
                 continue;
+                
+            // --- BEGIN ADDED: Skip groups in defend mode ---
+            if (g.IsInDefendMode())
+                continue;
+            // --- END ADDED ---
 
             if (g.HasPendingStateRequest())
             {
@@ -1052,6 +1172,14 @@ class IA_AreaInstance
         {
             if (!g || g.GetAliveCount() == 0) continue;
             if (g.IsDriving()) continue; // Skip driving groups for role assignment
+            
+            // --- BEGIN ADDED: Skip groups in defend mode (for defend missions) ---
+            if (g.IsInDefendMode())
+            {
+                //Print(string.Format("[AreaInstance.MilitaryTask] Skipping group in defend mode at %1", g.GetOrigin().ToString()), LogLevel.NORMAL);
+                continue;
+            }
+            // --- END ADDED ---
 
             // Get current state information
             IA_GroupTacticalState currentAssignedState = IA_GroupTacticalState.Neutral;
@@ -1168,6 +1296,11 @@ class IA_AreaInstance
 
         foreach (IA_AiGroup g, IA_GroupTacticalState assignedState : currentAssignments)
         {
+            // --- BEGIN ADDED: Skip groups in defend mode ---
+            if (g.IsInDefendMode())
+                continue;
+            // --- END ADDED ---
+            
             // Get unit count for this group
             int groupAliveCount = g.GetAliveCount();
             totalAliveUnits += groupAliveCount;
@@ -1603,6 +1736,14 @@ class IA_AreaInstance
                  g.UpdateVehicleOrders(); // Ensure driving groups get their orders updated
                  continue; // Still skip the subsequent role assignment and idle logic for driving groups
              }
+             
+             // --- BEGIN ADDED: Skip groups in defend mode ---
+             if (g.IsInDefendMode())
+             {
+                 //Print(string.Format("[AreaInstance.MilitaryTask] Enforcement: Skipping group in defend mode at %1", g.GetOrigin().ToString()), LogLevel.NORMAL);
+                 continue;
+             }
+             // --- END ADDED ---
 
             // --- BEGIN ADDED: Check for Forced S&D Reinforcements ---
             int forcedGroupIndex = m_forcedReinforcementGroups.Find(g);
@@ -1619,17 +1760,17 @@ class IA_AreaInstance
                 else if (g.GetAliveCount() == 0)
                 {
                     removeForcedStatus = true;
-                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 is dead. Removing from special tracking.", g.GetOrigin()), LogLevel.DEBUG);
+                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 is dead. Removing from special tracking.", g.GetOrigin()), LogLevel.NORMAL);
                 }
                 else if (System.GetUnixTime() - spawnTime > REINFORCEMENT_SND_TIMEOUT_SECONDS)
                 {
                     removeForcedStatus = true;
-                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 timed out (%2s). Removing from special tracking.", g.GetOrigin(), REINFORCEMENT_SND_TIMEOUT_SECONDS), LogLevel.DEBUG);
+                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 timed out (%2s). Removing from special tracking.", g.GetOrigin(), REINFORCEMENT_SND_TIMEOUT_SECONDS), LogLevel.NORMAL);
                 }
                 else if (!g.HasOrders()) 
                 {
                     removeForcedStatus = true;
-                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 has no orders (completed task?). Removing from special tracking.", g.GetOrigin()), LogLevel.DEBUG);
+                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 has no orders (completed task?). Removing from special tracking.", g.GetOrigin()), LogLevel.NORMAL);
                 }
 
                 if (removeForcedStatus)
@@ -1639,7 +1780,7 @@ class IA_AreaInstance
                 }
                 else // Group is still under "forced S&D" status
                 {
-                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 is still active. Refreshing S&D to origin and skipping general re-tasking.", g.GetOrigin()), LogLevel.DEBUG);
+                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 is still active. Refreshing S&D to origin and skipping general re-tasking.", g.GetOrigin()), LogLevel.NORMAL);
                     vector targetPos = m_area.GetOrigin();
                     g.RemoveAllOrders(true); 
                     g.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, true); 
@@ -2252,13 +2393,13 @@ class IA_AreaInstance
 
             if (scaledUnitCountForThisGroup <= 0) 
             {
-                ////Print("[IA_AreaInstance.GenerateRandomAiGroups] Invalid scaled unit count (" + scaledUnitCountForThisGroup + ") for squad type " + st + ", skipping group scheduling.", LogLevel.DEBUG);
+                ////Print("[IA_AreaInstance.GenerateRandomAiGroups] Invalid scaled unit count (" + scaledUnitCountForThisGroup + ") for squad type " + st + ", skipping group scheduling.", LogLevel.NORMAL);
                 continue;
             }
             
             GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction);
             ////Print(string.Format("[IA_AreaInstance.GenerateRandomAiGroups] Area %1: Scheduled group %2/%3 spawn. Pos: %4, Units: %5. Delay: %6ms",
-            //    m_area.GetName(), i + 1, scaledNumberOfGroupsToSpawn, pos.ToString(), scaledUnitCountForThisGroup, accumulatedDelay), LogLevel.DEBUG);
+            //    m_area.GetName(), i + 1, scaledNumberOfGroupsToSpawn, pos.ToString(), scaledUnitCountForThisGroup, accumulatedDelay), LogLevel.NORMAL);
             
             accumulatedDelay += Math.RandomInt(600, 5000);
 
@@ -3223,6 +3364,14 @@ class IA_AreaInstance
         if (!group)
             return;
         
+        // --- BEGIN ADDED: Skip groups in defend mode ---
+        if (m_isInDefendMode && group.IsInDefendMode())
+        {
+            // Print(string.Format("[ApplyUnderFireReactionToGroup] Skipping group in defend mode at %1", group.GetOrigin().ToString()), LogLevel.NORMAL);
+            return;
+        }
+        // --- END ADDED ---
+        
         // Update engagement state if not already engaged
         if (!group.IsEngagedWithEnemy())
         {
@@ -3349,6 +3498,14 @@ class IA_AreaInstance
     {
         if (!group)
             return;
+        
+        // --- BEGIN ADDED: Skip groups in defend mode ---
+        if (m_isInDefendMode && group.IsInDefendMode())
+        {
+            // Print(string.Format("[ApplyEnemySpottedReactionToGroup] Skipping group in defend mode at %1", group.GetOrigin().ToString()), LogLevel.NORMAL);
+            return;
+        }
+        // --- END ADDED ---
         
         // Skip for civilians and vehicles
         if (group.IsDriving())
@@ -3879,30 +4036,54 @@ class IA_AreaInstance
     }
 
     // --- BEGIN ADDED: Spawn Reinforcement Wave Logic ---
-    private bool SpawnReinforcementWave(int groupsToSpawn, Faction AreaFaction)
+    bool SpawnReinforcementWave(int groupsToSpawn, Faction AreaFaction, bool forDefendMission = false)
     {
-		Print("SpawnReinforcementWave called for area " + m_area.GetName(),LogLevel.NORMAL);
-        if (m_reinforcementGroupsSpawned >= m_totalReinforcementQuota)
+		Print(string.Format("SpawnReinforcementWave called for area %1. Request: %2 groups. Current: %3/%4. ForDefend: %5", 
+		    m_area.GetName(), groupsToSpawn, m_reinforcementGroupsSpawned, m_totalReinforcementQuota, forDefendMission), LogLevel.NORMAL);
+		
+		// --- BEGIN ADDED: Log defend mode status ---
+		if (m_isInDefendMode)
+		{
+		    Print(string.Format("[SpawnReinforcementWave] Area is in DEFEND MODE. Defend target: %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+		}
+		else
+		{
+		    Print(string.Format("[SpawnReinforcementWave] Area is in NORMAL MODE. Using area origin: %1", m_area.GetOrigin().ToString()), LogLevel.NORMAL);
+		}
+		// --- END ADDED ---
+        // Allow defend missions to bypass normal reinforcement quota
+        if (!forDefendMission && m_reinforcementGroupsSpawned >= m_totalReinforcementQuota)
         {
-            //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Quota met (%2/%3).", 
-    //            m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Quota met (%2/%3).", 
+                m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
             return false; // Quota already met
         }
 		
-        int actualSpawnCount = Math.Min(groupsToSpawn, m_totalReinforcementQuota - m_reinforcementGroupsSpawned);
-		actualSpawnCount = Math.RandomInt(actualSpawnCount*0.6, actualSpawnCount*1.5);
+        int actualSpawnCount;
+        if (forDefendMission)
+        {
+            // For defend missions, use the requested count directly (no quota limit)
+            actualSpawnCount = groupsToSpawn;
+            Print(string.Format("[AreaInstance.SpawnReinforcementWave] DEFEND MISSION: Using direct spawn count %1", actualSpawnCount), LogLevel.NORMAL);
+        }
+        else
+        {
+            // Normal reinforcement logic
+            actualSpawnCount = Math.Min(groupsToSpawn, m_totalReinforcementQuota - m_reinforcementGroupsSpawned);
+            actualSpawnCount = Math.RandomInt(actualSpawnCount*0.6, actualSpawnCount*1.5);
+        }
         if (actualSpawnCount <= 0) 
         {
-            //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Calculated spawn count is zero or negative.", m_area.GetName()), LogLevel.NORMAL);
+            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Calculated spawn count is zero or negative.", m_area.GetName()), LogLevel.NORMAL);
             return false; // Should not happen if initial check passed, but safety first
         }
         
-        //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
-//            m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+        Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
+            m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
 
         bool spawnedAny = false;
-        const int MAX_SPAWN_ATTEMPTS = 10; // Max tries to find a safe spot
-        const float SAFE_SPAWN_RADIUS_SQ = 300 * 300; // Check within 300m (squared for efficiency)
+        const int MAX_SPAWN_ATTEMPTS = 12; // Max tries to find a safe spot
+        const float SAFE_SPAWN_RADIUS_SQ = 400 * 400; // Check within 300m (squared for efficiency)
 
         // Get player positions once per wave
         array<vector> playerPositions = {};
@@ -3910,21 +4091,43 @@ class IA_AreaInstance
 
         for (int i = 0; i < actualSpawnCount; i++)
         {
-            vector spawnPos = vector.Zero;
+			GetGame().GetCallqueue().CallLater(SpawnReinforcementEnactor, Math.RandomInt(2500,5000), false, MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission);
+			//SpawnReinforcementEnactor(MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission);
+        }
+        
+        return spawnedAny;
+    }
+    // --- END ADDED ---
+
+	bool SpawnReinforcementEnactor(int MAX_SPAWN_ATTEMPTS, array<vector> playerPositions, float SAFE_SPAWN_RADIUS_SQ, Faction AreaFaction, bool forDefendMission = false){
+	
+		    vector spawnPos = vector.Zero;
             bool safeSpawnFound = false;
-            float unsafeAngle = -1.0; // Store the angle that was unsafe in the previous attempt (-1 means no bias)
+			bool spawnedAny = false;
 
             for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)
             {
                 // //Print(string.Format("[SpawnReinforcementWave] Attempt %1/%2 to find safe spawn location...", attempt + 1, MAX_SPAWN_ATTEMPTS), LogLevel.NORMAL);
                 
                 // 1. Calculate potential Spawn Position (inside attempt loop)
-                float spawnMinRadius = 280;
-                float spawnMaxRadius = 450 + (attempt*30);
-                vector center = m_area.GetOrigin();
+                // Increase search radius with each attempt
+                float spawnMinRadius = 90 + (attempt*40);
+                float spawnMaxRadius = 320 + (attempt*40);
+                
+                // --- BEGIN MODIFIED: Use defend target as center when in defend mode ---
+                vector center;
+                if (m_isInDefendMode && m_defendTarget != vector.Zero)
+                {
+                    center = m_defendTarget;
+                    Print(string.Format("[SpawnReinforcementEnactor] Using defend target %1 as spawn center", center.ToString()), LogLevel.NORMAL);
+                }
+                else
+                {
+                    center = m_area.GetOrigin();
+                }
+                // --- END MODIFIED ---
                 
                 // Try finding a road nearby first 
-                //vector searchPoint = IA_Game.rng.GenerateRandomPointInRadius(spawnMinRadius, spawnMaxRadius, center);
                 int activeGroup = -1;
                 array<IA_AreaMarker> markers = IA_AreaMarker.GetAreaMarkersForArea(m_area.GetName());
                 if (markers && !markers.IsEmpty() && markers[0]) activeGroup = markers[0].m_areaGroup; 
@@ -3936,25 +4139,9 @@ class IA_AreaInstance
                     spawnPos = roadPos;
                 }
                 else 
-                { // Fallback to random point in the ring
-                    float angle;
-                    if (unsafeAngle != -1.0) // Check if we need to bias the angle
-                    {
-                        // Bias away from the unsafe angle (opposite side +/- 45 degrees)
-                        float targetAngle = unsafeAngle + Math.PI; // Add 180 degrees
-                        angle = targetAngle + IA_Game.rng.RandFloatXY(-Math.PI / 18, Math.PI / 18); // Reduced randomness
-                        // Normalize angle to be within 0..2PI
-                        while (angle < 0) angle += Math.PI2;
-                        while (angle >= Math.PI2) angle -= Math.PI2;
-                        ////Print(string.Format("[SpawnReinforcementWave Attempt %1] Biasing angle away from %2 towards %3 (final: %4)", attempt + 1, unsafeAngle * Math.RAD2DEG, targetAngle * Math.RAD2DEG, angle * Math.RAD2DEG), LogLevel.NORMAL);
-                        // unsafeAngle = -1.0; // REMOVED: Do not reset bias until a safe spot is found or max attempts reached
-                    }
-                    else
-                    {
-                        // Standard random angle
-                        angle = IA_Game.rng.RandFloat01() * Math.PI2;
-                    }
-                    
+                { 
+                    // Fallback to random point in the ring - PURE RANDOM, no bias
+                    float angle = IA_Game.rng.RandFloat01() * Math.PI2;
                     float dist = IA_Game.rng.RandFloatXY(spawnMinRadius, spawnMaxRadius);
                     spawnPos[0] = center[0] + Math.Cos(angle) * dist;
                     spawnPos[2] = center[2] + Math.Sin(angle) * dist;
@@ -3970,15 +4157,8 @@ class IA_AreaInstance
                     if (vector.DistanceSq(spawnPos, playerPos) < SAFE_SPAWN_RADIUS_SQ)
                     {
                         isSafe = false;
-                        // Calculate and store the angle of the player relative to the center
-                        vector delta = playerPos - center;
-                        unsafeAngle = Math.Atan2(delta[2], delta[0]); // atan2(z, x) gives angle in radians
-                        // Normalize angle to 0..2PI for consistency
-                        while (unsafeAngle < 0) unsafeAngle += Math.PI2;
-                        while (unsafeAngle >= Math.PI2) unsafeAngle -= Math.PI2; 
-                        
-                        //Print(string.Format("[SpawnReinforcementWave Attempt %1] UNSAFE: Spawn candidate %2 is too close to player at %3 (DistSq < %4). Will bias next attempt away from angle %5 deg.", 
-//                            attempt + 1, spawnPos.ToString(), playerPos.ToString(), SAFE_SPAWN_RADIUS_SQ, unsafeAngle * Math.RAD2DEG), LogLevel.NORMAL);
+                        //Print(string.Format("[SpawnReinforcementWave Attempt %1] UNSAFE: Spawn candidate %2 is too close to player at %3 (DistSq < %4).", 
+//                            attempt + 1, spawnPos.ToString(), playerPos.ToString(), SAFE_SPAWN_RADIUS_SQ), LogLevel.NORMAL);
                         break; // No need to check other players for this spot
                     }
                 }
@@ -4001,47 +4181,68 @@ class IA_AreaInstance
             // If no safe spawn was found after all attempts, skip this group
             if (!safeSpawnFound)
             {
-                continue; // Move to the next group index in the wave
+                return false; // Move to the next group index in the wave
             }
 
             // 4. Create Group (with scaling) - Only if safe spot found
             IA_SquadType st = IA_GetRandomSquadType();
-            int unitCount = IA_SquadCount(st, m_faction); 
+            
+            int unitCount = IA_SquadCount(st, IA_Faction.USSR); 
             int scaledUnitCount = Math.Round(unitCount * m_aiScaleFactor); // Use current scale factor
             if (scaledUnitCount < 1) scaledUnitCount = 1; 
             scaledUnitCount = scaledUnitCount * 3; // Make reinforcement groups 3x larger
 			scaledUnitCount = Math.RandomInt(scaledUnitCount*0.5, scaledUnitCount*1.5);
 
-            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, m_faction, scaledUnitCount, AreaFaction);
+            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, scaledUnitCount, AreaFaction);
 
             // 5. Spawn and Integrate
             if (grp)
             {
+                // --- BEGIN ADDED: Explicitly set the assigned area for reinforcement groups ---
+                // Set the assigned area BEFORE spawning to prevent automatic area detection
+                grp.SetAssignedArea(m_area);
+                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Explicitly assigned reinforcement group to area %1", m_area.GetName()), LogLevel.NORMAL);
+                // --- END ADDED ---
+                
                 grp.Spawn();
-                AddMilitaryGroup(grp); // This assigns initial state based on area status
+
+                // Give initial orders based on defend mode or normal mode
+                vector targetPos;
+                IA_GroupTacticalState initialState;
+                
+                if (m_isInDefendMode && m_defendTarget != vector.Zero)
+                {
+                    // In defend mode: all reinforcements target the defend point with attacking
+                    targetPos = m_defendTarget;
+                    initialState = IA_GroupTacticalState.Attacking;
+                    grp.SetDefendMode(true, m_defendTarget);
+                    Print(string.Format("[AreaInstance.SpawnReinforcementWave] Setting reinforcement group to defend mode, target: %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+                }
+                else
+                {
+                    // Normal mode: target area origin for attacking
+                    targetPos = m_area.GetOrigin();
+                    initialState = IA_GroupTacticalState.Attacking;
+                }
+                
+                grp.SetTacticalState(initialState, targetPos, null, true);
+                
+                AddMilitaryGroup(grp); // This will now preserve defend mode if set
                 m_reinforcementGroupsSpawned++;
                 spawnedAny = true;
-
-                // Give initial orders towards the general area
-                // If primary threat location is known, use it, otherwise use area origin
-                vector targetPos = m_area.GetOrigin(); 
-                // TODO: Potentially access primaryThreatLocation if available?
-                // It might be better to let the standard MilitaryOrderTask handle specific targeting once they integrate.
-                grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true); // Send them towards the fight
                 
-                //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Spawned reinforcement group (%1 units) at %2. Total spawned: %3/%4.",
-//                    scaledUnitCount, spawnPos.ToString(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Spawned reinforcement group (%1 units, faction: %2) at %3. Total spawned: %4/%5.",
+                    scaledUnitCount, typename.EnumToString(IA_Faction, IA_Faction.USSR), spawnPos.ToString(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
             }
             else
             {
-                //Print(string.Format("[AreaInstance.SpawnReinforcementWave] Failed to create reinforcement group of type %1 at %2.", st, spawnPos.ToString()), LogLevel.WARNING);
+                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Failed to create reinforcement group of type %1 at %2.", st, spawnPos.ToString()), LogLevel.WARNING);
             }
-        }
-        
-        return spawnedAny;
-    }
-    // --- END ADDED ---
-
+		return spawnedAny;
+	
+	}
+	
+	
     // --- BEGIN ADDED: Helper to get player positions ---
     static void GetAllPlayerPositions(out array<vector> playerPositions)
     {
@@ -4150,7 +4351,7 @@ class IA_AreaInstance
                 if (associatedVehicle)
                 {
                     //Print(string.Format("[AreaInstance %1] Civilian group %2 is associated with vehicle %3. Cleaning up vehicle.", 
-//                        m_area.GetName(), civGroupToDespawn, associatedVehicle), LogLevel.DEBUG);
+//                        m_area.GetName(), civGroupToDespawn, associatedVehicle), LogLevel.NORMAL);
 
                     // Release reservation first (if any)
                     IA_VehicleManager.ReleaseVehicleReservation(associatedVehicle);
@@ -4162,7 +4363,7 @@ class IA_AreaInstance
                     if (vehIdx != -1)
                     {
                         m_areaCivVehicles.Remove(vehIdx);
-                        //Print(string.Format("[AreaInstance %1] Removed vehicle %2 from m_areaCivVehicles.", m_area.GetName(), associatedVehicle), LogLevel.DEBUG);
+                        //Print(string.Format("[AreaInstance %1] Removed vehicle %2 from m_areaCivVehicles.", m_area.GetName(), associatedVehicle), LogLevel.NORMAL);
                     }
                 }
 
@@ -4170,7 +4371,7 @@ class IA_AreaInstance
                 // Check if it's actually spawned before trying to despawn, as it might have been cleaned up by other means.
                 if (civGroupToDespawn.IsSpawned()) 
                 {
-                    //Print(string.Format("[AreaInstance %1] Despawning civilian group: %2", m_area.GetName(), civGroupToDespawn), LogLevel.DEBUG);
+                    //Print(string.Format("[AreaInstance %1] Despawning civilian group: %2", m_area.GetName(), civGroupToDespawn), LogLevel.NORMAL);
                     civGroupToDespawn.Despawn(); 
                 }
 
@@ -4180,7 +4381,7 @@ class IA_AreaInstance
                 if (idxInCurrentList != -1)
                 {
                     m_civilians.Remove(idxInCurrentList);
-                    //Print(string.Format("[AreaInstance %1] Removed civilian group %2 from m_civilians.", m_area.GetName(), civGroupToDespawn), LogLevel.DEBUG);
+                    //Print(string.Format("[AreaInstance %1] Removed civilian group %2 from m_civilians.", m_area.GetName(), civGroupToDespawn), LogLevel.NORMAL);
                 }
             }
         }
@@ -4201,7 +4402,49 @@ class IA_AreaInstance
         return m_areaGroup;
     }
     // --- END ADDED ---
-
+    
+    // --- BEGIN ADDED: Defend Mode Support ---
+    void SetDefendMode(bool enable, vector defendPoint = vector.Zero)
+    {
+        m_isInDefendMode = enable;
+        m_defendTarget = defendPoint;
+        
+        if (enable && defendPoint != vector.Zero)
+        {
+            Print(string.Format("[IA_AreaInstance] Setting defend mode ON for area %1, target: %2", 
+                m_area.GetName(), defendPoint.ToString()), LogLevel.NORMAL);
+            
+            // Set all existing military groups to defend mode
+            foreach (IA_AiGroup group : m_military)
+            {
+                if (group && group.IsSpawned())
+                {
+                    group.SetDefendMode(true, defendPoint);
+                }
+            }
+        }
+        else
+        {
+            Print(string.Format("[IA_AreaInstance] Setting defend mode OFF for area %1", 
+                m_area.GetName()), LogLevel.NORMAL);
+                
+            // Return all military groups to normal mode
+            foreach (IA_AiGroup group : m_military)
+            {
+                if (group && group.IsSpawned())
+                {
+                    group.SetDefendMode(false);
+                }
+            }
+        }
+        }
+    
+    array<ref IA_AiGroup> GetMilitaryGroups()
+    {
+        return m_military;
+    }
+    // --- END ADDED ---
+    
     // --- BEGIN ADDED: Helper to spawn a single AI group with delay and add it ---
     private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask)
     {
@@ -4215,7 +4458,7 @@ class IA_AreaInstance
         IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, m_faction, unitCountForGroup, areaFactionForGroupTask);
         if (!grp)
         {
-            Print("[IA_AreaInstance._SpawnSingleAiGroupAndAddToArea] Failed to create military group from units with params: " + spawnPos + " fac: " + m_faction + " units: " + unitCountForGroup + " areaFac: " + areaFactionForGroupTask, LogLevel.WARNING);
+            Print(" " + spawnPos + " fac: " + m_faction + " units: " + unitCountForGroup + " areaFac: " + areaFactionForGroupTask, LogLevel.NORMAL);
             return;
         }
 
@@ -4230,7 +4473,7 @@ class IA_AreaInstance
         }
         else
         {
-             Print("[IA_AreaInstance._SpawnSingleAiGroupAndAddToArea] Group not properly spawned, skipping strength update for this group.", LogLevel.DEBUG);
+             Print("[IA_AreaInstance._SpawnSingleAiGroupAndAddToArea] Group not properly spawned, skipping strength update for this group.", LogLevel.NORMAL);
         }
     }
     // --- END ADDED ---
@@ -4240,10 +4483,26 @@ class IA_AreaInstance
     // --- BEGIN ADDED: Helper to trigger global notifications ---
 	void TriggerGlobalNotification(string messageType, string taskTitle)
 	{
-		if(!Replication.IsServer())
-			return;
-		IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
-		rep.TriggerGlobalNotification(messageType, taskTitle);
+		//if(!Replication.IsServer())
+		//	return;
+		//Print("Going For TriggerGlobalNotification",LogLevel.NORMAL);
+		array<int> playerIDs = new array<int>();
+		GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
+		foreach (int playerID : playerIDs){
+			PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
+			if(pc){
+			 	SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pc.GetControlledEntity());
+				if(character){
+					//Print("Going For SetUIOne on player " + playerID,LogLevel.NORMAL);
+			 		character.SetUIOne(messageType, taskTitle, playerID);
+				}
+			}
+			
+		}
+		
+		
+		//IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
+		//rep.TriggerGlobalNotification(messageType, taskTitle);
 		return;
 /*
 		array<int> playerIDs = new array<int>();

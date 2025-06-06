@@ -1,4 +1,4 @@
-IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/IA_AreaMarkers/RadioTower.et" {
  coords 1422.301 62.653 6160.479
  angleY 43.723
  m_areaGroup 5
@@ -38,4 +38,16 @@ IA_AreaMarker Lamentin2 : "{B3CEBC9A9C5872A6}Prefabs/IA_AreaMarkers/IA_Docks.et"
  m_areaName "Lamentin North Docks"
  m_areaType "Docks"
  m_radius 45
+}
+$grp IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ {
+  coords 1276.179 37.401 6015.103
+  m_areaGroup 5
+  m_areaName "Lamentin City Center"
+ }
+ {
+  coords 1063.104 2.719 6030.031
+  m_areaGroup 5
+  m_areaName "Lamentin Docks"
+ }
 }

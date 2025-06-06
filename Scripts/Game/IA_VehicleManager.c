@@ -1406,6 +1406,12 @@ class IA_VehicleManager: GenericEntity
             waypoint.SetPriorityLevel(20);
             // Print(("[VEHICLE_DEBUG] Setting waypoint priority to 2000", LogLevel.NORMAL);
             
+            // Check if the group is in defending state before adding vehicle waypoint
+            if (aiGroup.GetTacticalState() == IA_GroupTacticalState.Defending)
+            {
+                Print(string.Format("[VEHICLE_DEBUG] WARNING: Adding vehicle Move waypoint to group %1 that is in Defending state!", aiGroup), LogLevel.WARNING);
+            }
+            
             aiGroup.AddWaypoint(waypoint);
             // Print(("[VEHICLE_DEBUG] Added waypoint to group successfully", LogLevel.NORMAL);
         }

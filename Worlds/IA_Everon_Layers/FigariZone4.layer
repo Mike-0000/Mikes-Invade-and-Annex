@@ -1,4 +1,4 @@
-IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
+IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/IA_AreaMarkers/RadioTower.et" {
  coords 5486.417 97.692 6165.043
  angleY -17.415
  m_areaGroup 4
@@ -29,4 +29,9 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_areaType "SmallMilitary"
   m_radius 25
  }
+}
+IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ coords 5265.323 63.503 5335.522
+ m_areaGroup 4
+ m_areaName "Figari Town Square"
 }

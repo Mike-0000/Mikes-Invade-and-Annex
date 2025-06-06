@@ -1,0 +1,8 @@
+IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ ID "64F935A1015AFBEE"
+ coords 9451.146 38.427 1821.541
+ m_fZoneRadius 40
+ m_areaName "St Pierre HQ"
+ m_areaType "DefendObjective"
+ m_radius 40
+}

@@ -171,39 +171,61 @@ class IA_Game
     // Calculate scale factor for AI spawning based on player count
     static float GetAIScaleFactor()
     {
+        // Check for config override first
+        IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+        if (config && config.m_fStaticAIScaleOverride > 0)
+        {
+            Print(string.Format("[PLAYER_SCALING] Using static AI scale override from config: %1", config.m_fStaticAIScaleOverride), LogLevel.DEBUG);
+            return config.m_fStaticAIScaleOverride;
+        }
+
         // Get current player count
         int playerCount = GetPlayerCount();
         
+        // Calculate dynamic scale factor
+        float dynamicScaleFactor;
+        
         // Handle zero players explicitly
-        if (playerCount <= 0) return MIN_SCALE_FACTOR;
-        
-        // For 1 to BASELINE players: linear scaling from MIN to BASELINE
-        if (playerCount <= BASELINE_PLAYER_COUNT) {
-            if (playerCount <= 1) return MIN_SCALE_FACTOR;
-            return MIN_SCALE_FACTOR + ((BASELINE_SCALE_FACTOR - MIN_SCALE_FACTOR) * (playerCount - 1) / (BASELINE_PLAYER_COUNT - 1));
+        if (playerCount <= 0) 
+        {
+            dynamicScaleFactor = MIN_SCALE_FACTOR;
         }
-        
+        // For 1 to BASELINE players: linear scaling from MIN to BASELINE
+        else if (playerCount <= BASELINE_PLAYER_COUNT) {
+            if (playerCount <= 1) 
+                dynamicScaleFactor = MIN_SCALE_FACTOR;
+            else
+                dynamicScaleFactor = MIN_SCALE_FACTOR + ((BASELINE_SCALE_FACTOR - MIN_SCALE_FACTOR) * (playerCount - 1) / (BASELINE_PLAYER_COUNT - 1));
+        }
         // For BASELINE to MEDIUM players: slower growth
         else if (playerCount <= MEDIUM_PLAYER_COUNT) {
             float mediumScaleFactor = BASELINE_SCALE_FACTOR + 0.2; // +0.2 at MEDIUM_PLAYER_COUNT (1.2)
-            return BASELINE_SCALE_FACTOR + ((mediumScaleFactor - BASELINE_SCALE_FACTOR) * (playerCount - BASELINE_PLAYER_COUNT) / (MEDIUM_PLAYER_COUNT - BASELINE_PLAYER_COUNT));
+            dynamicScaleFactor = BASELINE_SCALE_FACTOR + ((mediumScaleFactor - BASELINE_SCALE_FACTOR) * (playerCount - BASELINE_PLAYER_COUNT) / (MEDIUM_PLAYER_COUNT - BASELINE_PLAYER_COUNT));
         }
-        
         // For MEDIUM to HIGH players: continued growth
         else if (playerCount <= HIGH_PLAYER_COUNT) {
             float highScaleFactor = BASELINE_SCALE_FACTOR + 0.4; // +0.4 at HIGH_PLAYER_COUNT (1.4)
-            return (BASELINE_SCALE_FACTOR + 0.2) + ((highScaleFactor - (BASELINE_SCALE_FACTOR + 0.2)) * (playerCount - MEDIUM_PLAYER_COUNT) / (HIGH_PLAYER_COUNT - MEDIUM_PLAYER_COUNT));
+            dynamicScaleFactor = (BASELINE_SCALE_FACTOR + 0.2) + ((highScaleFactor - (BASELINE_SCALE_FACTOR + 0.2)) * (playerCount - MEDIUM_PLAYER_COUNT) / (HIGH_PLAYER_COUNT - MEDIUM_PLAYER_COUNT));
         }
-        
         // For HIGH to MAX players: final increase to max cap
         else if (playerCount <= MAX_PLAYER_COUNT) {
-            return (BASELINE_SCALE_FACTOR + 0.4) + ((MAX_SCALE_FACTOR - (BASELINE_SCALE_FACTOR + 0.4)) * (playerCount - HIGH_PLAYER_COUNT) / (MAX_PLAYER_COUNT - HIGH_PLAYER_COUNT));
+            dynamicScaleFactor = (BASELINE_SCALE_FACTOR + 0.4) + ((MAX_SCALE_FACTOR - (BASELINE_SCALE_FACTOR + 0.4)) * (playerCount - HIGH_PLAYER_COUNT) / (MAX_PLAYER_COUNT - HIGH_PLAYER_COUNT));
         }
-        
         // Cap at MAX_SCALE_FACTOR for extremely high player counts
         else {
-            return MAX_SCALE_FACTOR;
+            dynamicScaleFactor = MAX_SCALE_FACTOR;
         }
+
+        // Apply multiplier from config if set
+        if (config && config.m_fAIScaleMultiplier != 1.0)
+        {
+            float finalScaleFactor = dynamicScaleFactor * config.m_fAIScaleMultiplier;
+            Print(string.Format("[PLAYER_SCALING] Dynamic scale %1 multiplied by config multiplier %2 = %3", dynamicScaleFactor, config.m_fAIScaleMultiplier, finalScaleFactor), LogLevel.DEBUG);
+            return finalScaleFactor;
+        }
+
+        // Return unmodified dynamic scale factor
+        return dynamicScaleFactor;
     }
     
     // Calculate max vehicles based on player count (also using a more gentle scaling curve)
@@ -263,6 +285,14 @@ class IA_Game
 	void PeriodicalGameTask()
 	{
 	    //Print("IA_Game.PeriodicalGameTask: Periodical Game Task has started", LogLevel.NORMAL);
+	    
+	    // Update active defend mission first
+	    if (m_activeDefendMission && m_activeDefendMission.IsActive())
+	    {
+	        m_activeDefendMission.UpdateDefendMission();
+	        // Defend mission will handle its own completion and notification
+	    }
+	    
 	    if (m_areas.IsEmpty())
 	    {
 	        // Log that no areas exist yet so you can see that the task is running.
@@ -385,6 +415,31 @@ class IA_Game
     {
         s_isInitialObjectiveSpawning = false;
         Print("[PLAYER_SCALING] Initial objective scaling DISABLED. Reverting to actual player count.", LogLevel.NORMAL);
+    }
+    // --- END ADDED ---
+    
+    // --- BEGIN ADDED: Defend Mission Management ---
+    private ref IA_DefendMission m_activeDefendMission = null;
+    
+    void SetActiveDefendMission(IA_DefendMission mission)
+    {
+        m_activeDefendMission = mission;
+        Print("[IA_Game] Active defend mission set", LogLevel.NORMAL);
+    }
+    
+    IA_DefendMission GetActiveDefendMission()
+    {
+        return m_activeDefendMission;
+    }
+    
+    bool HasActiveDefendMission()
+    {
+        return (m_activeDefendMission != null && m_activeDefendMission.IsActive());
+    }
+    
+    array<IA_AreaInstance> GetAreaInstances()
+    {
+        return m_areas;
     }
     // --- END ADDED ---
 };

@@ -6,4 +6,5 @@ IA_MissionInitializer {
  }
  coords 4830.262 28.5 11735.97
  m_spawnDelayMs 7000
+ m_configResource "{A42AB2A7C078DA1E}Configs/IA/IA_Config_Master.conf"
 }

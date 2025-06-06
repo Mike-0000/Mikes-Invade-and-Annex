@@ -31,3 +31,8 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_radius 25
  }
 }
+IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ coords 7105.186 119.285 6036.073
+ m_areaGroup 7
+ m_areaName "Chotain Church"
+}

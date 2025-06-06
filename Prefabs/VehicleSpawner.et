@@ -2,8 +2,12 @@ GenericEntity {
  ID "65552AD16FD1A017"
  components {
   IA_VehicleRespawner "{65552ACE8AFA29BB}" {
+   m_eVehicleSpawnType TRANSPORT_HELI
    m_aIncludedTraitLabels {
-    51 11
+    51 37
+   }
+   m_aExcludedTraitLabels {
+    21
    }
   }
   RplComponent "{65552ACFEEE1ECE1}" {

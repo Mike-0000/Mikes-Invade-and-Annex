@@ -6,14 +6,14 @@ FrameWidgetClass {
    Name "RichText0"
    Slot FrameWidgetSlot "{656F50BF7E305CD3}" {
     Anchor 0.5 0 0.5 0
-    PositionX -632
-    OffsetLeft -632
-    PositionY 144
-    OffsetTop 144
+    PositionX -624
+    OffsetLeft -624
+    PositionY 120
+    OffsetTop 120
     SizeX 1256.75
-    OffsetRight -624.75
+    OffsetRight -632.75
     SizeY 64
-    OffsetBottom -208
+    OffsetBottom -184
    }
    Color 0.5843 0.6939 0.01 1
    "Min Font Size" 12
@@ -31,14 +31,14 @@ FrameWidgetClass {
    Name "RichText1"
    Slot FrameWidgetSlot "{656F50BF7E305CD3}" {
     Anchor 0.5 0 0.5 0
-    PositionX -632
-    OffsetLeft -632
-    PositionY 80
-    OffsetTop 80
+    PositionX -624
+    OffsetLeft -624
+    PositionY 56
+    OffsetTop 56
     SizeX 1256
-    OffsetRight -624
+    OffsetRight -632
     SizeY 64
-    OffsetBottom -144
+    OffsetBottom -120
    }
    Color 0.6423 0.0459 0.0069 1
    "Min Font Size" 12
@@ -56,14 +56,14 @@ FrameWidgetClass {
    Name "RichText3"
    Slot FrameWidgetSlot "{656F50BF7E305CD3}" {
     Anchor 0.5 0 0.5 0
-    PositionX -632
-    OffsetLeft -632
-    PositionY 80
-    OffsetTop 80
+    PositionX -624
+    OffsetLeft -624
+    PositionY 88
+    OffsetTop 88
     SizeX 1256
-    OffsetRight -624
+    OffsetRight -632
     SizeY 64
-    OffsetBottom -144
+    OffsetBottom -152
    }
    Color 0.7429 0.5121 0.0052 1
    "Min Font Size" 12

@@ -18,6 +18,10 @@ class IA_MissionInitializer : GenericEntity
 	[Attribute(defvalue: "1000", desc: "Delay in milliseconds between spawning each area instance")]
     int m_spawnDelayMs;
 
+	[Attribute(defvalue: "", desc: "IA Config file to override faction and vehicle settings", params: "conf")]
+	ResourceName m_configResource;
+
+	private ref IA_Config m_config;
 	private ref array<int> groupsArray;
     // Simple flag to ensure we only run once.
     protected bool m_bInitialized = false;
@@ -25,6 +29,9 @@ class IA_MissionInitializer : GenericEntity
 	private int m_currentIndex = -1;
 	private ref array<IA_AreaInstance> m_currentAreaInstances; 
 	private bool m_runOnce = false;
+
+	// Static reference for global access
+	static IA_MissionInitializer s_instance;
 
 	int GetCurrentIndex(){
 		return m_currentIndex;
@@ -66,20 +73,53 @@ class IA_MissionInitializer : GenericEntity
         if (!factionManager) {
             return null;
         }
-		
-		
-		
-		
-		
-		
+
+		// Declare configFactions in function scope for later reference
+		array<Faction> configFactions = {};
+
+		// Check if we have config overrides for enemy faction keys
+		if (m_config && m_config.m_sDesiredEnemyFactionKeys && !m_config.m_sDesiredEnemyFactionKeys.IsEmpty()) {
+			Print("[IA_MissionInitializer] Using config override for enemy factions", LogLevel.NORMAL);
+			foreach (string factionKey : m_config.m_sDesiredEnemyFactionKeys) {
+				Faction faction = factionManager.GetFactionByKey(factionKey);
+				if (faction) {
+					// Verify faction has enough characters before adding
+					SCR_Faction scrFaction = SCR_Faction.Cast(faction);
+					if (scrFaction) {
+						SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
+						if (entityCatalog) {
+							array<EEditableEntityLabel> excludedLabels = {};
+							array<EEditableEntityLabel> includedLabels = {};
+							array<SCR_EntityCatalogEntry> characterEntries = {};
+							entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
+							
+							if (characterEntries.Count() >= 1) {
+								configFactions.Insert(faction);
+								Print("[IA_MissionInitializer] Added faction '" + factionKey + "' from config", LogLevel.NORMAL);
+							} else {
+								Print("[IA_MissionInitializer] Skipping faction '" + factionKey + "' - insufficient characters (" + characterEntries.Count() + ")", LogLevel.ERROR);
+							}
+						}
+					}
+				} else {
+					Print("[IA_MissionInitializer] Warning: Faction key '" + factionKey + "' not found", LogLevel.WARNING);
+				}
+			}
+			
+			if (!configFactions.IsEmpty()) {
+				return configFactions[Math.RandomInt(0, configFactions.Count())];
+			} else {
+				Print("[IA_MissionInitializer] No valid factions from config, falling back to default behavior", LogLevel.WARNING);
+			}
+		}
+
+		// Default behavior when no config or config is empty
+		Print("[IA_MissionInitializer] Using default enemy faction detection", LogLevel.NORMAL);
 		Faction USFaction = factionManager.GetFactionByKey("US");
         array<Faction> actualFactions = {};
 		array<Faction> factionGet = {};
         factionManager.GetFactionsList(factionGet);
 		foreach (Faction currentFaction : factionGet){
-			
-			
-			
 			SCR_EntityCatalog entityCatalog;
 			SCR_Faction scrFaction = SCR_Faction.Cast(currentFaction);
 			entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
@@ -92,12 +132,10 @@ class IA_MissionInitializer : GenericEntity
 			array<SCR_EntityCatalogEntry> characterEntries = {};
 			entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
 				
-			
-			
 			if(USFaction.IsFactionEnemy(currentFaction) && currentFaction != factionManager.GetFactionByKey("FIA") && characterEntries.Count() >= 4)
 				actualFactions.Insert(currentFaction); // Build List of Enemy Factions
 		}
-		if(actualFactions.Count() > 1){ // If modded content
+		if(actualFactions.Count() > 1 && configFactions.IsEmpty()){ // If modded content and no config overrides
 			if(Math.RandomInt(1,20) > 1) // 95% chance to use a modded faction
 				actualFactions.Remove(actualFactions.Find(factionManager.GetFactionByKey("USSR")));
 		}
@@ -186,7 +224,7 @@ class IA_MissionInitializer : GenericEntity
         array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
         foreach(IA_AreaMarker marker : allMarkers)
         {
-            if (marker && marker.m_areaGroup == currentGroup)
+            if (marker && marker.m_areaGroup == currentGroup && marker.GetAreaType() != IA_AreaType.DefendObjective)
             {
                 markersInGroup.Insert(marker);
             }
@@ -331,6 +369,15 @@ class IA_MissionInitializer : GenericEntity
 			return;
 		}
 		
+		// --- BEGIN ADDED: Check if defend mission is active and return early ---
+		IA_Game gameInstance = IA_Game.Instantiate();
+		if (gameInstance && gameInstance.HasActiveDefendMission())
+		{
+			//Print("[IA_MissionInitializer] Defend mission is active, waiting for completion before checking zones", LogLevel.DEBUG);
+			return;
+		}
+		// --- END ADDED ---
+		
 		////Print("Running CheckCurrentZoneComplete",LogLevel.NORMAL);
 		if (!m_currentAreaInstances)
 		{
@@ -351,7 +398,7 @@ class IA_MissionInitializer : GenericEntity
 		// First, find all markers for current group, count them, and initialize their completion status tracking
 		int amountOfZones = 0;
 		foreach(IA_AreaMarker marker_counter : markers) { // Changed loop variable name for clarity
-			if(!marker_counter || marker_counter.m_areaGroup != currentGroup)
+			if(!marker_counter || marker_counter.m_areaGroup != currentGroup || marker_counter.GetAreaType() == IA_AreaType.DefendObjective)
 				continue;
 				
 			// Add this zone to our tracking array, initialized to false
@@ -374,7 +421,7 @@ class IA_MissionInitializer : GenericEntity
 		////Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " has " + amountOfZones + " zones to complete.", LogLevel.NORMAL);
 		
 		foreach(IA_AreaMarker marker : markers) {
-			if(!marker || marker.m_areaGroup != currentGroup)
+			if(!marker || marker.m_areaGroup != currentGroup || marker.GetAreaType() == IA_AreaType.DefendObjective)
 				continue;
 			
 			////Print("Running CheckCurrentZoneComplete 3.5 for marker: " + marker.GetAreaName(),LogLevel.NORMAL);
@@ -443,11 +490,6 @@ class IA_MissionInitializer : GenericEntity
 		if(actualCompletedZones >= amountOfZones){ // Use the accurate count
 			//Print("[INFO] All " + amountOfZones + " zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
 
-			// --- BEGIN ADDED: Trigger Area Completed Notification ---
-			TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area"); // Example task name
-
-			// --- END ADDED ---
-
 			// --- BEGIN ADDED: Schedule civilian cleanup for completed zone instances ---
 			if (m_currentAreaInstances)
 			{
@@ -461,6 +503,20 @@ class IA_MissionInitializer : GenericEntity
 					}
 				}
 			}
+			// --- END ADDED ---
+
+			// --- BEGIN ADDED: Check for defend mission before proceeding ---
+			if (CheckAndStartDefendMission(currentGroup))
+			{
+				// Defend mission started, don't proceed to next zone yet
+				Print("[IA_MissionInitializer] Defend mission started for group " + currentGroup + ". Delaying progression.", LogLevel.NORMAL);
+				return;
+			}
+			// --- END ADDED ---
+
+			// --- BEGIN ADDED: Trigger RTB notification only when actually proceeding to next zone ---
+			// Only send RTB notification if we're not starting a defend mission
+			TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area");
 			// --- END ADDED ---
 
 			m_currentIndex++;
@@ -477,10 +533,26 @@ class IA_MissionInitializer : GenericEntity
 	// --- BEGIN ADDED: Method to trigger global area completed notification ---
 	void TriggerGlobalNotification(string messageType, string taskTitle)
 	{
-		if (!Replication.IsServer())
-			return;
-		IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
-		rep.TriggerGlobalNotification(messageType, taskTitle);
+		//if (!Replication.IsServer())
+		//	return;
+		//IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
+		//Rpc(rep.RpcDo_TriggerGlobalNotificationFinal, messageType, taskTitle);
+		array<int> playerIDs = new array<int>();
+		GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
+		foreach (int playerID : playerIDs){
+			PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
+			if(pc){
+			 	SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pc.GetControlledEntity());
+				if(character){
+					//Print("Going For SetUIOne",LogLevel.NORMAL);
+			 		character.SetUIOne(messageType, taskTitle, playerID);
+				}
+					
+			}
+			
+		}
+		
+		//rep.TriggerGlobalNotification(messageType, taskTitle);
 		return;
 /*
 		array<int> playerIDs = new array<int>();
@@ -531,6 +603,12 @@ class IA_MissionInitializer : GenericEntity
         // Prevent re-initialization
         if (m_bInitialized) return;
 	    m_bInitialized = true;
+
+		// Set static instance for global access
+		s_instance = this;
+
+		// Load config file if specified
+		LoadConfig();
 
         // Set this instance as the reference for IA_AreaMarker
         IA_AreaMarker.SetMissionInitializer(this);
@@ -641,4 +719,142 @@ class IA_MissionInitializer : GenericEntity
         //Print("[DEBUG_ZONE_GROUP_DELAYED] Calling IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints for faction " + nextAreaFaction.GetFactionKey() + " in active group: " + IA_VehicleManager.GetActiveGroup(), LogLevel.NORMAL);
         IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR, nextAreaFaction);
     }
+
+	void LoadConfig()
+	{
+		if (m_configResource.IsEmpty())
+		{
+			Print("[IA_MissionInitializer] No config resource specified, using default behavior", LogLevel.NORMAL);
+			return;
+		}
+
+		Resource configRes = Resource.Load(m_configResource);
+		if (!configRes)
+		{
+			Print("[IA_MissionInitializer] Failed to load config resource: " + m_configResource, LogLevel.ERROR);
+			return;
+		}
+
+		m_config = IA_Config.Cast(BaseContainerTools.CreateInstanceFromContainer(configRes.GetResource().ToBaseContainer()));
+		if (!m_config)
+		{
+			Print("[IA_MissionInitializer] Failed to create IA_Config instance from resource", LogLevel.ERROR);
+			return;
+		}
+
+		Print("[IA_MissionInitializer] Successfully loaded config: " + m_configResource, LogLevel.NORMAL);
+	}
+
+	IA_Config GetConfig()
+	{
+		return m_config;
+	}
+
+	// Static getter for global access to config
+	static IA_MissionInitializer GetInstance()
+	{
+		return s_instance;
+	}
+
+	// Static getter for config
+	static IA_Config GetGlobalConfig()
+	{
+		if (s_instance)
+			return s_instance.GetConfig();
+		return null;
+	}
+	
+	// --- BEGIN ADDED: Defend Mission Methods ---
+	private bool CheckAndStartDefendMission(int completedGroup)
+	{
+		// Check if a defend mission is already active
+		IA_Game gameInstance = IA_Game.Instantiate();
+		if (gameInstance && gameInstance.HasActiveDefendMission())
+		{
+			Print("[IA_MissionInitializer] Defend mission already active, skipping new defend mission", LogLevel.DEBUG);
+			return false;
+		}
+		
+		// Check for defend objective markers in the completed group
+		array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
+		array<IA_AreaMarker> defendMarkers = {};
+		
+		if (!allMarkers)
+			return false;
+			
+		foreach (IA_AreaMarker marker : allMarkers)
+		{
+			if (marker && marker.m_areaGroup == completedGroup && marker.GetAreaType() == IA_AreaType.DefendObjective)
+			{
+				defendMarkers.Insert(marker);
+			}
+		}
+		
+		// If no defend objectives found, return false
+		if (defendMarkers.IsEmpty())
+		{
+			Print("[IA_MissionInitializer] No defend objectives found for group " + completedGroup, LogLevel.DEBUG);
+			return false;
+		}
+		
+		// Random chance (80%) to trigger defend mission
+		if (Math.RandomFloat01() > 1)
+		{
+			Print("[IA_MissionInitializer] Defend objectives found but random chance failed for group " + completedGroup, LogLevel.DEBUG);
+			return false;
+		}
+		
+		// Select random defend objective
+		int randomIndex = Math.RandomInt(0, defendMarkers.Count());
+		IA_AreaMarker selectedMarker = defendMarkers[randomIndex];
+		vector defendPoint = selectedMarker.GetOrigin();
+		
+		// Debug: Check if defend point is valid
+		if (defendPoint == vector.Zero)
+		{
+			Print(string.Format("[IA_MissionInitializer] WARNING: Defend objective marker '%1' has zero position! This will cause issues.", 
+				selectedMarker.GetAreaName()), LogLevel.ERROR);
+		}
+		
+		Print(string.Format("[IA_MissionInitializer] Starting defend mission at %1 (%2) for group %3", 
+			selectedMarker.GetAreaName(), defendPoint.ToString(), completedGroup), LogLevel.NORMAL);
+		
+		// Create and start defend mission
+		IA_DefendMission defendMission = IA_DefendMission.Create(defendPoint, completedGroup, selectedMarker.GetAreaName());
+		if (defendMission)
+		{
+			defendMission.StartDefendMission();
+			
+			// Set the defend mission in IA_Game (reuse the gameInstance from above)
+			if (gameInstance)
+			{
+				gameInstance.SetActiveDefendMission(defendMission);
+			}
+			
+			// Trigger notification
+			TriggerGlobalNotification("DefendMissionStarted", "Defend " + selectedMarker.GetAreaName());
+			
+			return true;
+		}
+		
+		return false;
+	}
+	
+	void OnDefendMissionComplete()
+	{
+		Print("[IA_MissionInitializer] Defend mission completed, proceeding to next zone", LogLevel.NORMAL);
+		
+		// Trigger RTB notification just like normal area group completion
+		TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area");
+		
+		// Clean up current area instances
+		m_currentIndex++;
+		if (m_currentAreaInstances) 
+			m_currentAreaInstances.Clear();
+		
+		// Remove the zone completion check and proceed to next zone
+		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+		GetGame().GetCallqueue().CallLater(ProceedToNextZone, Math.RandomInt(45,90)*1000, false);
+	}
+	// --- END ADDED ---
 }

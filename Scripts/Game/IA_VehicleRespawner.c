@@ -7,13 +7,16 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 {
 	static const float DEFAULT_RESPAWN_INTERVAL_S = 15.0;
 	static const float MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN = 10.0; // Min distance to an existing ALIVE vehicle to prevent re-spawn
-	static const int INITIAL_SPAWN_DELAY_MS = 1000; // 1 second delay for initial spawn
+	static const int INITIAL_SPAWN_DELAY_MS = 7000; // 7 second delay for initial spawn to allow config loading
 
 	[Attribute(category: "Catalog Parameters", desc: "Type of entity catalogs that will be allowed on this spawner.", uiwidget: UIWidgets.SearchComboBox, enums: ParamEnumArray.FromEnum(EEntityCatalogType))]
 	protected ref array<EEntityCatalogType> m_aCatalogTypes;
 	
 	[Attribute(defvalue: EEditableEntityLabel.FACTION_US.ToString(), UIWidgets.ComboBox, "Faction of the vehicle to spawn.", enums: ParamEnumArray.FromEnum(EEditableEntityLabel))]
 	private EEditableEntityLabel m_eFactionLabel;
+
+	[Attribute(defvalue: IA_VehicleSpawnType.VEHICLE_CAR.ToString(), UIWidgets.ComboBox, "Type of vehicle to spawn from config.", enums: ParamEnumArray.FromEnum(IA_VehicleSpawnType))]
+	private IA_VehicleSpawnType m_eVehicleSpawnType;
 
 	[Attribute(uiwidget: UIWidgets.SearchComboBox, category: "Catalog Parameters", desc: "Allowed labels.", enums: ParamEnumArray.FromEnum(EEditableEntityLabel))]
 	protected ref array<EEditableEntityLabel> m_aIncludedTraitLabels;
@@ -97,6 +100,77 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 		IA_Game.AddEntityToGc(vic);
 	
 	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Get a random vehicle prefab from the config based on the spawn type
+	string GetRandomVehiclePrefabFromConfig()
+	{
+		// Get the config instance from MissionInitializer
+		IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+		if (!config)
+		{
+			Print(string.Format("IA_VehicleRespawner %1: Could not get config instance from MissionInitializer!", m_RespawnerOwnerEntity), LogLevel.WARNING);
+			return string.Empty;
+		}
+
+		Print(string.Format("IA_VehicleRespawner %1: Got config instance, checking spawn type: %2", m_RespawnerOwnerEntity, typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+
+		array<ResourceName> vehicleArray;
+		
+		// Select the appropriate array based on spawn type
+		switch (m_eVehicleSpawnType)
+		{
+			case IA_VehicleSpawnType.GENERIC_HELI:
+				vehicleArray = config.m_aGenericHeliOverridePrefabs;
+				break;
+			case IA_VehicleSpawnType.ATTACK_HELI:
+				vehicleArray = config.m_aAttackHeliOverridePrefabs;
+				break;
+			case IA_VehicleSpawnType.TRANSPORT_HELI:
+				vehicleArray = config.m_aTransportHeliOverridePrefabs;
+				break;
+			case IA_VehicleSpawnType.VEHICLE_CAR:
+				vehicleArray = config.m_aVehicleCarOverridePrefabs;
+				break;
+			case IA_VehicleSpawnType.VEHICLE_ARMOR:
+				vehicleArray = config.m_aVehicleArmorOverridePrefabs;
+				break;
+			case IA_VehicleSpawnType.APC:
+				vehicleArray = config.m_aAPC_OverridePrefabs;
+				break;
+			case IA_VehicleSpawnType.TRUCK:
+				vehicleArray = config.m_aTruckOverridePrefabs;
+				break;
+			case IA_VehicleSpawnType.MEDICAL_VEHICLE:
+				vehicleArray = config.m_aMedicalVehicleOverridePrefabs;
+				break;
+			case IA_VehicleSpawnType.MEDICAL_CAR:
+				vehicleArray = config.m_aMedicalCarOverridePrefabs;
+				break;
+			default:
+				Print(string.Format("IA_VehicleRespawner %1: Unknown vehicle spawn type: %2", m_RespawnerOwnerEntity, m_eVehicleSpawnType), LogLevel.ERROR);
+				return string.Empty;
+		}
+
+		// Check if array exists and has entries
+		if (!vehicleArray)
+		{
+			Print(string.Format("IA_VehicleRespawner %1: vehicleArray is null for spawn type: %2", m_RespawnerOwnerEntity, typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.WARNING);
+			return string.Empty;
+		}
+		
+		if (vehicleArray.Count() == 0)
+		{
+			Print(string.Format("IA_VehicleRespawner %1: No vehicle prefabs configured for spawn type: %2 (array exists but is empty)", m_RespawnerOwnerEntity, typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+			return string.Empty;
+		}
+
+		// Return a random prefab from the array
+		int randomIndex = Math.RandomInt(0, vehicleArray.Count());
+		string selectedPrefab = vehicleArray[randomIndex];
+		Print(string.Format("IA_VehicleRespawner %1: Selected prefab %2 (index %3 of %4) for spawn type: %5", m_RespawnerOwnerEntity, selectedPrefab, randomIndex, vehicleArray.Count(), typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+		return selectedPrefab;
+	}
 	//------------------------------------------------------------------------------------------------
 	//! PerformSpawn is overridden to use the specific m_sVehiclePrefab and handle wreck cleanup.
 	override void PerformSpawn()
@@ -132,34 +206,53 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			m_RespawnerSpawnedVehicle = null; // Clear the reference as it's now deleted or scheduled for deletion.
 		}
 		
-		// Validate mandatory faction label
-		if (m_eFactionLabel == 0) // Assuming 0 is an invalid/default unselected faction value
-		{
-			Print(string.Format("IA_VehicleRespawner %1: Faction Label is not set (or is default 0)! Cannot spawn!", m_RespawnerOwnerEntity), LogLevel.ERROR);
-			return;
-		}
+		// Try to get the vehicle prefab from config first
+		string vehiclePrefabToSpawn = GetRandomVehiclePrefabFromConfig();
 
-		// Ensure arrays are initialized if null, though attributes should ideally initialize them as empty arrays.
-		array<EEditableEntityLabel> includedTraits = {};
-		if (m_aIncludedTraitLabels)
-			includedTraits.Copy(m_aIncludedTraitLabels);
-
-		array<EEditableEntityLabel> excludedTraits = {};
-		if (m_aExcludedTraitLabels)
-			excludedTraits.Copy(m_aExcludedTraitLabels);
-
-		// Get the vehicle prefab string from the catalog using selected labels
-		// This method will be updated in IA_VehicleCatalog.c in the next step
-		string vehiclePrefabToSpawn = IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels(m_eFactionLabel, includedTraits, excludedTraits);
-
+		// If config doesn't have any prefabs, fall back to catalog system
 		if (vehiclePrefabToSpawn == string.Empty)
 		{
-			Print(string.Format("IA_VehicleRespawner %1: Could not find a matching vehicle prefab for Faction: %2, IncludedTraits: %3, ExcludedTraits: %4", 
+			// Validate mandatory faction label for catalog fallback
+			if (m_eFactionLabel == 0) // Assuming 0 is an invalid/default unselected faction value
+			{
+				Print(string.Format("IA_VehicleRespawner %1: No config prefabs and Faction Label is not set! Cannot spawn!", m_RespawnerOwnerEntity), LogLevel.ERROR);
+				return;
+			}
+
+			// Ensure arrays are initialized if null, though attributes should ideally initialize them as empty arrays.
+			array<EEditableEntityLabel> includedTraits = {};
+			if (m_aIncludedTraitLabels)
+				includedTraits.Copy(m_aIncludedTraitLabels);
+
+			array<EEditableEntityLabel> excludedTraits = {};
+			if (m_aExcludedTraitLabels)
+				excludedTraits.Copy(m_aExcludedTraitLabels);
+
+			// Get the vehicle prefab string from the catalog using selected labels
+			vehiclePrefabToSpawn = IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels(m_eFactionLabel, includedTraits, excludedTraits);
+
+			if (vehiclePrefabToSpawn == string.Empty)
+			{
+				Print(string.Format("IA_VehicleRespawner %1: Could not find a vehicle prefab for spawn type: %2, Faction: %3, IncludedTraits: %4, ExcludedTraits: %5", 
+					m_RespawnerOwnerEntity, 
+					typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType),
+					typename.EnumToString(EEditableEntityLabel, m_eFactionLabel), 
+					includedTraits.Count(), 
+					excludedTraits.Count()), LogLevel.WARNING);
+				return;
+			}
+			else
+			{
+				Print(string.Format("IA_VehicleRespawner %1: Using catalog fallback for spawn type: %2", 
+					m_RespawnerOwnerEntity, 
+					typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+			}
+		}
+		else
+		{
+			Print(string.Format("IA_VehicleRespawner %1: Using config override for spawn type: %2", 
 				m_RespawnerOwnerEntity, 
-				typename.EnumToString(EEditableEntityLabel, m_eFactionLabel), 
-				includedTraits.Count(), 
-				excludedTraits.Count()), LogLevel.WARNING);
-			return;
+				typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
 		}
 		
 		Resource resource = Resource.Load(vehiclePrefabToSpawn);

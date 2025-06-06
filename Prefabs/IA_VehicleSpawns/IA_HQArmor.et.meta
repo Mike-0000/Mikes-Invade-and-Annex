@@ -1,5 +1,5 @@
 MetaFileClass {
- Name "{2FCBE5C76E285A7B}Prefabs/AI/Waypoints/AIWaypoint_DefendSmall.et"
+ Name "{6CD1DF9BB4591E8A}Prefabs/IA_VehicleSpawns/IA_HQArmor.et"
  Configurations {
   EntityTemplateResourceClass PC {
   }

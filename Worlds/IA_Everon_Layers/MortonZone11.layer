@@ -15,3 +15,8 @@ $grp IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
   m_radius 60
  }
 }
+IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ coords 5130.085 14.239 3992.506
+ m_areaGroup 11
+ m_areaName "Morton City Center"
+}
