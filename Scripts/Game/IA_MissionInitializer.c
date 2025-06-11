@@ -533,10 +533,6 @@ class IA_MissionInitializer : GenericEntity
 	// --- BEGIN ADDED: Method to trigger global area completed notification ---
 	void TriggerGlobalNotification(string messageType, string taskTitle)
 	{
-		//if (!Replication.IsServer())
-		//	return;
-		//IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
-		//Rpc(rep.RpcDo_TriggerGlobalNotificationFinal, messageType, taskTitle);
 		array<int> playerIDs = new array<int>();
 		GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
 		foreach (int playerID : playerIDs){
@@ -544,53 +540,10 @@ class IA_MissionInitializer : GenericEntity
 			if(pc){
 			 	SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pc.GetControlledEntity());
 				if(character){
-					//Print("Going For SetUIOne",LogLevel.NORMAL);
 			 		character.SetUIOne(messageType, taskTitle, playerID);
 				}
-					
 			}
-			
 		}
-		
-		//rep.TriggerGlobalNotification(messageType, taskTitle);
-		return;
-/*
-		array<int> playerIDs = new array<int>();
-		GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
-
-		foreach (int playerID : playerIDs)
-		{
-			PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
-			if (!pc)
-				continue;
-
-			SCR_HUDManagerComponent displayManager = SCR_HUDManagerComponent.Cast(pc.FindComponent(SCR_HUDManagerComponent)); 
-
-			if (!displayManager)
-				continue;
-
-			IA_NotificationDisplay notificationDisplay = IA_NotificationDisplay.Cast(displayManager.FindInfoDisplay(IA_NotificationDisplay));
-			
-			if (!notificationDisplay)
-			{
-				// Attempt to register it if not found. This part might need adjustment based on how displays are typically registered.
-				// It's also possible the display isn't registered at this point for some players.
-				//Print(string.Format("[IA_MissionInitializer] IA_NotificationDisplay not found for player %1. Attempting to register.", playerID), LogLevel.WARNING);
-				// notificationDisplay = new IA_NotificationDisplay(); // This line is problematic, displays are usually part of a layout.
-				// displayManager.RegisterInfoDisplay(notificationDisplay); // This might also not be the correct way or time.
-				// For now, we'll just log if it's not found, as direct creation/registration here is complex and error-prone.
-				Print(string.Format("[IA_MissionInitializer] IA_NotificationDisplay not found for player %1. Cannot show area completion.", playerID), LogLevel.ERROR);
-				continue;
-			}
-
-			if (messageType == "AreaGroupCompleted")
-			{
-				// Using CallLater to avoid potential issues with immediate UI updates in certain contexts,
-				// and to allow a slight delay for dramatic effect or to prevent spam if zones complete rapidly.
-				// Random delay removed as it's for a group completion, not individual tasks.
-				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayAreaCompletedNotification, 100, false, taskName); 
-			}
-		}*/
 	}
 	// --- END ADDED ---
 

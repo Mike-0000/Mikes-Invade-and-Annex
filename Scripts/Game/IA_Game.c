@@ -441,5 +441,16 @@ class IA_Game
     {
         return m_areas;
     }
+
+    // --- BEGIN ADDED: Helper to get instance by name ---
+    IA_AreaInstance GetAreaInstance(string name)
+    {
+        foreach (IA_AreaInstance instance : m_areas)
+        {
+            if (instance && instance.m_area && instance.m_area.GetName() == name)
+                return instance;
+        }
+        return null;
+    }
     // --- END ADDED ---
 };

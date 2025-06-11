@@ -155,9 +155,8 @@ class IA_DefendMission
     {
         // Use existing player scaling logic
         float scaleFactor = IA_Game.GetAIScaleFactor();
-        int baseAICount = 15; // Base AI count for defend mission
         
-        int targetCount = Math.Round(baseAICount * scaleFactor);
+        int targetCount = Math.Round(5 * ((scaleFactor*1.9) * (scaleFactor*1.9)));
         Print(string.Format("[IA_DefendMission] Calculated target AI count: %1 (scale factor: %2)", targetCount, scaleFactor), LogLevel.NORMAL);
         
         return targetCount;
@@ -332,8 +331,9 @@ class IA_DefendMission
         }
         
         float scaleFactor = IA_Game.GetAIScaleFactor();
-        int groupsToSpawn = Math.Max(2, Math.Round(1.85 * ((scaleFactor*1.5) * (scaleFactor*1.5))));
-        
+        //int groupsToSpawn = Math.Max(2, Math.Round(1.85 * ((scaleFactor*1.5) * (scaleFactor*1.5))));
+        int groupsToSpawn = 1;
+
         Print(string.Format("[IA_DefendMission] Spawning defend wave: %1 groups from area %2", 
             groupsToSpawn, targetArea.m_area.GetName()), LogLevel.NORMAL);
             

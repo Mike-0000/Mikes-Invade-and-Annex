@@ -41,6 +41,54 @@ modded class SCR_ChimeraCharacter{
 			
 	
 	}
+	/*
+	void Do_TriggerSetUIOneHandler(string messageType, string taskTitle, int playerId){
+		//Print("Running Do_TriggerSetUIOneHandler for "+ messageType + " And " + taskTitle,LogLevel.NORMAL);
+		PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerId);
+		if(!pc)
+			return;
+		SCR_HUDManagerComponent displayManager = SCR_HUDManagerComponent.Cast(pc.FindComponent(SCR_HUDManagerComponent)); 
+
+		if (!displayManager)
+			return;
+		//Print("Running Do_TriggerSetUIOneHandler",LogLevel.NORMAL);
+		IA_NotificationDisplay notificationDisplay = IA_NotificationDisplay.Cast(displayManager.FindInfoDisplay(IA_NotificationDisplay));
+			
+			if (!notificationDisplay)
+			{
+							
+					Print("notificationDisplay is NULL", LogLevel.ERROR);
+				
+			}
+
+			if (notificationDisplay)
+			{
+				if (messageType == "TaskCreated")
+				{
+					GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayTaskCreatedNotification, 100, false, taskTitle);
+				}else if (messageType == "AreaGroupCompleted")
+				{
+					notificationDisplay.DisplayAreaCompletedNotification("All Objectives In Area Complete, RTB");
+				}
+				else if (messageType == "DefendMissionStarted")
+				{
+					notificationDisplay.DisplayTaskCreatedNotification(taskTitle);
+				}
+				else if (messageType == "RadioTowerDefenseStarted")
+				{
+					string message = "Enemy reinforcements are responding! Destroy the "+taskTitle+" to prevent their continuous reinforcements.";
+					notificationDisplay.ShowNotification(message, true, "1,0.5,0,1"); 
+					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 10000, false);
+				}
+			}
+			else
+			{
+				Print(string.Format("[IA_AreaInstance] Could not find or create IA_NotificationDisplay for player."), LogLevel.WARNING);
+			}
+	
+	}
+	*/
+	
 	void Do_TriggerSetUIOneHandler(string messageType, string taskTitle, int playerId){
 		//Print("Running Do_TriggerSetUIOneHandler for "+ messageType + " And " + taskTitle,LogLevel.NORMAL);
 		PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerId);
@@ -74,7 +122,18 @@ modded class SCR_ChimeraCharacter{
 			}else if (messageType == "TaskCompleted")
 			{
 				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayTaskCompletedNotification, 100, false, taskTitle); 
-			}
+			}else if (messageType == "RadioTowerDefenseStarted")
+			{
+				string message = "Enemy reinforcements are responding! Destroy the "+taskTitle+" to prevent their continuous reinforcements.";
+				GetGame().GetCallqueue().CallLater(notificationDisplay.ShowNotification, 20000, false, message, true, "yellow"); 
+				GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 30000, false);
+			}else if (messageType == "DefendMissionStarted")
+				{
+					notificationDisplay.DisplayTaskCreatedNotification(taskTitle);
+				}
+			
+			
+			
 				// Optional: Auto-hide after a few seconds
 				// GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
 			}
@@ -84,6 +143,8 @@ modded class SCR_ChimeraCharacter{
 			}
 	
 	}
+	
+	
 	
 	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
 	void RpcDo_TriggerSetUIOneHandler(string messageType, string taskTitle, int playerId){
@@ -211,6 +272,10 @@ modded class SCR_ChimeraCharacter{
 		// }
 	}
 	
+	void SetCurrentArea(IA_AreaInstance area)
+	{
+		// Implementation of SetCurrentArea method
+	}
 }
 
 

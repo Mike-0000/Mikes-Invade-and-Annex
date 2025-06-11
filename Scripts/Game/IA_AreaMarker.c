@@ -235,6 +235,15 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                     USFactionScore = 1000;
                     Print("[DEBUG_ZONE_SCORE] Radio Tower " + m_areaName + " - DESTROYED! Score set to 1000", LogLevel.WARNING);
                 }
+
+                // Deactivate defense mode now that tower is gone
+                IA_Game game = IA_Game.Instantiate();
+                if (game)
+                {
+                    IA_AreaInstance instance = game.GetAreaInstance(m_areaName);
+                    if (instance)
+                        instance.SetRadioTowerDefenseActive(false);
+                }
 	        }
 	        return; // Skip standard scoring for Radio Tower
 	    }
@@ -698,12 +707,32 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     // Event handler for when the prefab is destroyed
     protected void OnPrefabDestroyed(EDamageState state)
     {
-        if (state != EDamageState.DESTROYED)
+        if (state != EDamageState.DESTROYED || m_isDestroyed)
             return;
             
         Print("[INFO] Radio Tower prefab has been destroyed!", LogLevel.NORMAL);
         m_isDestroyed = true;
         
+        // --- BEGIN ADDED ---
+        // Get the area instance and notify it that the tower is destroyed
+        IA_Game game = IA_Game.Instantiate();
+        if (game)
+        {
+            IA_AreaInstance instance = game.GetAreaInstance(m_areaName);
+            if (instance)
+            {
+                instance.SetRadioTowerDestroyed();
+            }
+        }
+        // --- END ADDED ---
+        
+        // --- BEGIN MODIFIED ---
+        // Notify players that the objective is complete and waves have stopped
+        IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
+        if (initializer)
+            initializer.TriggerGlobalNotification("TaskCompleted", "Radio Tower " + m_areaName + " Destroyed. Reinforcements halted.");
+        // --- END MODIFIED ---
+
         // Set the US faction score to 1000 (maximum) to indicate completion
         m_FactionScores.Set("US", 1000);
         USFactionScore = 1000;
