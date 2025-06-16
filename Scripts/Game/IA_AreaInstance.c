@@ -32,6 +32,9 @@ class IA_AreaInstance
     int m_strength;
     private ref array<ref IA_AiGroup> m_military  = {};
     private ref array<ref IA_AiGroup> m_civilians = {};
+	private int m_initialCivilianCount = 0;
+    private int m_aliveCivilianCount = 0;
+    private bool m_isInitialCivilianSpawnDone = false;
     private ref array<IA_Faction>     m_attackingFactions = {};
 	static Faction m_AreaFaction;
     // Target role counts for military groups
@@ -2807,6 +2810,7 @@ class IA_AreaInstance
         if (m_civilians.Find(vehicleGroup) == -1)
         {
             m_civilians.Insert(vehicleGroup);
+			m_initialCivilianCount++;
         }
     }
     
@@ -2900,6 +2904,9 @@ class IA_AreaInstance
         // Don't apply player scaling to civilians - they're always spawned at the original count
         //////Print("[PLAYER_SCALING] Civilians not affected by scaling - using original count: " + number, LogLevel.DEBUG);
         
+		m_initialCivilianCount = number;
+		m_isInitialCivilianSpawnDone = false;
+		
         m_civilians.Clear();
         for (int i = 0; i < number; i = i + 1)
         {
@@ -2921,6 +2928,8 @@ class IA_AreaInstance
             civ.Spawn();
             m_civilians.Insert(civ);
         }
+		
+		m_aliveCivilianCount = m_civilians.Count();
     }
 
     // Handle civilian vehicle management
@@ -3727,16 +3736,76 @@ class IA_AreaInstance
         {
             return;
         }
+		
+		Print(string.Format("[AreaInstance] Checking civilian status for area %1. Civ count =" + m_aliveCivilianCount, m_area.GetName()), LogLevel.NORMAL);
+		
         if (!m_canSpawn || m_civilians.IsEmpty())
+		{
+			if(m_aliveCivilianCount != 0)
+            {
+                Print(string.Format("[AreaInstance] Civilian list for area %1 is empty. Resetting count to 0. Initial: %2, Previous: %3", m_area.GetName(), m_initialCivilianCount, m_aliveCivilianCount), LogLevel.DEBUG);
+				m_aliveCivilianCount = 0;
+            }
             return;
+		}
         
         // Get current time for state tracking
         int currentTime = System.GetUnixTime();
         
+		// --- BEGIN NEW LOGIC: Clean up dead/invalid civilians first ---
+		if (!m_isInitialCivilianSpawnDone)
+		{
+			int spawnedCount = 0;
+			foreach (IA_AiGroup g_check : m_civilians)
+			{
+				if (g_check && g_check.IsSpawned())
+					spawnedCount++;
+			}
+			
+			if (spawnedCount >= m_initialCivilianCount)
+			{
+				m_isInitialCivilianSpawnDone = true;
+				// One-time count after initial spawn is confirmed done
+				int initialAliveCount = 0;
+				for (int i = m_civilians.Count() - 1; i >= 0; i--)
+				{
+					IA_AiGroup g = m_civilians[i];
+					if (g && g.GetAliveCount() > 0)
+						initialAliveCount++;
+					else
+						m_civilians.Remove(i); // Clean up any that died during spawn
+				}
+				
+				Print(string.Format("[AreaInstance] Initial civilian spawn for area %1 complete. Initial: %2, Actually Alive: %3", 
+					m_area.GetName(), m_initialCivilianCount, initialAliveCount), LogLevel.DEBUG);
+				m_aliveCivilianCount = initialAliveCount;
+			}
+		}
+		else // m_isInitialCivilianSpawnDone is true, so we can just remove dead ones
+		{
+			for (int i = m_civilians.Count() - 1; i >= 0; i--)
+			{
+				IA_AiGroup g = m_civilians[i];
+				if (!g || g.GetAliveCount() == 0)
+				{
+					m_civilians.Remove(i);
+				}
+			}
+		}
+		
+		// After cleanup, the current alive count is simply the size of the array
+		int currentAliveCount = m_civilians.Count();
+		if (m_aliveCivilianCount != currentAliveCount)
+        {
+            Print(string.Format("[AreaInstance] Civilian count for area %1 updated. Initial: %2, Previous: %3, Current: %4.", 
+                m_area.GetName(), m_initialCivilianCount, m_aliveCivilianCount, currentAliveCount), LogLevel.DEBUG);
+            m_aliveCivilianCount = currentAliveCount;
+        }
+		// --- END NEW LOGIC ---
+		
         foreach (IA_AiGroup g : m_civilians)
         {
-            if (!g.IsSpawned() || g.GetAliveCount() == 0)
-                continue;
+			// The list now only contains alive, spawned civilians, so we just give them orders.
             
             // --- NEW SECTION: Check for pending state change requests from civilian groups ---
             // Check if this civilian group has a pending state change request
@@ -4453,6 +4522,17 @@ class IA_AreaInstance
     {
         return m_military;
     }
+    
+    int GetAliveCivilianCount()
+    {
+        return m_aliveCivilianCount;
+    }
+    
+    int GetInitialCivilianCount()
+    {
+        return m_initialCivilianCount;
+    }
+	
     // --- END ADDED ---
     
     // --- BEGIN ADDED: Helper to spawn a single AI group with delay and add it ---
@@ -4464,11 +4544,23 @@ class IA_AreaInstance
             return;
         }
 
-        // Note: m_faction (the area's owning faction) and m_aiScaleFactor are members of IA_AreaInstance (this)
-        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, m_faction, unitCountForGroup, areaFactionForGroupTask);
+        // Use the async road search version
+        IA_AiGroup.StartAsyncMilitaryGroupCreation(spawnPos, m_faction, unitCountForGroup, areaFactionForGroupTask, this);
+    }
+    
+    // Callback for when async group creation completes
+    void OnAsyncGroupCreated(IA_AiGroup grp, bool roadFound)
+    {
         if (!grp)
         {
-            Print(" " + spawnPos + " fac: " + m_faction + " units: " + unitCountForGroup + " areaFac: " + areaFactionForGroupTask, LogLevel.DEBUG);
+            Print("[IA_AreaInstance.OnAsyncGroupCreated] Group creation failed.", LogLevel.ERROR);
+            return;
+        }
+        
+        if (!m_area) // Area instance might have been destroyed while waiting
+        {
+            Print("[IA_AreaInstance.OnAsyncGroupCreated] m_area is null, cannot add group.", LogLevel.ERROR);
+            grp.Despawn();
             return;
         }
 
@@ -4483,7 +4575,7 @@ class IA_AreaInstance
         }
         else
         {
-             Print("[IA_AreaInstance._SpawnSingleAiGroupAndAddToArea] Group not properly spawned, skipping strength update for this group.", LogLevel.DEBUG);
+             Print("[IA_AreaInstance.OnAsyncGroupCreated] Group not properly spawned, skipping strength update for this group.", LogLevel.DEBUG);
         }
     }
     // --- END ADDED ---
@@ -4654,5 +4746,123 @@ class IA_AreaInstance
         Print(string.Format("[IA_AreaInstance] Radio Tower at %1 has been marked as destroyed.", m_area.GetName()), LogLevel.DEBUG);
         m_radioTowerDestroyed = true;
         SetRadioTowerDefenseActive(false);
+    }
+
+	array<ref IA_AiGroup> GetCivilianGroups()
+    {
+        return m_civilians;
+    }
+
+    void SpawnCivilianRevoltReinforcements()
+    {
+        if (!m_area)
+            return;
+
+        // "large" wave. A normal wave is based on 1 group, scaled. We'll use 3 as a base.
+        float scaleFactor = IA_Game.GetAIScaleFactor();
+        const int baseGroupsForRevolt = 3; 
+        int waveSize = Math.Max(2, Math.Round(baseGroupsForRevolt * scaleFactor));
+        
+        Print(string.Format("[IA_AreaInstance] Spawning large civilian revolt reinforcement wave of size %1 for area %2", waveSize, m_area.GetName()), LogLevel.NORMAL);
+
+        // Set the area to defend mode, targeting its own origin. This mimics radio tower/defend missions.
+        SetDefendMode(true, m_area.GetOrigin());
+
+        for (int i = 0; i < waveSize; i++)
+        {
+            GetGame().GetCallqueue().CallLater(this._SpawnAndArmHostileCivilianGroup_Internal, Math.RandomInt(500, 2000) * (i + 1), false, m_AreaFaction);
+        }
+    }
+    
+    private void _SpawnAndArmHostileCivilianGroup_Internal(Faction AreaFaction)
+    {
+        // This combines logic from SpawnReinforcementEnactor and the arming step.
+        
+        // 1. Find safe spawn point
+        vector spawnPos = vector.Zero;
+        bool safeSpawnFound = false;
+        const int MAX_SPAWN_ATTEMPTS = 12;
+        const float SAFE_SPAWN_RADIUS_SQ = 400 * 400;
+    
+        array<vector> playerPositions = {};
+        GetAllPlayerPositions(playerPositions);
+        
+        vector center = m_area.GetOrigin();
+    
+        for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)
+        {
+            float spawnMinRadius = 90 + (attempt * 40);
+            float spawnMaxRadius = 320 + (attempt * 40);
+            
+            int activeGroup = GetAreaGroup();
+            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(center, spawnMaxRadius, activeGroup, spawnMinRadius); 
+            
+            if (roadPos != vector.Zero)
+            {
+                spawnPos = roadPos;
+            }
+            else 
+            { 
+                float angle = IA_Game.rng.RandFloat01() * Math.PI2;
+                float dist = IA_Game.rng.RandFloatXY(spawnMinRadius, spawnMaxRadius);
+                spawnPos[0] = center[0] + Math.Cos(angle) * dist;
+                spawnPos[2] = center[2] + Math.Sin(angle) * dist;
+                spawnPos[1] = GetGame().GetWorld().GetSurfaceY(spawnPos[0], spawnPos[2]);
+            }
+    
+            bool isSafe = true;
+            foreach (vector playerPos : playerPositions)
+            {
+                if (vector.DistanceSq(spawnPos, playerPos) < SAFE_SPAWN_RADIUS_SQ)
+                {
+                    isSafe = false;
+                    break;
+                }
+            }
+    
+            if (isSafe)
+            {
+                safeSpawnFound = true;
+                break;
+            }
+        }
+    
+        if (!safeSpawnFound)
+        {
+            Print(string.Format("[AreaInstance] Failed to find safe spawn point for hostile civilian reinforcement in area %1.", m_area.GetName()), LogLevel.WARNING);
+            return;
+        }
+    
+        // 2. Create the group
+        float scaleFactor = IA_Game.GetAIScaleFactor();
+        IA_SquadType st = IA_GetRandomSquadType();
+        int unitCount = IA_SquadCount(st, IA_Faction.USSR); 
+        int scaledUnitCount = Math.Max(1, Math.Round(unitCount * scaleFactor));
+    
+        IA_AiGroup grp = IA_AiGroup.CreateHostileCivilianGroup(spawnPos, scaledUnitCount, AreaFaction);
+    
+        if (grp)
+        {
+            // Arming is now handled by a callback in IA_AiGroup.
+    
+            // 4. Integrate group
+            grp.SetAssignedArea(m_area);
+            
+            // If the area is in defend mode (which it should be from the revolt), set the group to defend mode.
+            if (m_isInDefendMode && m_defendTarget != vector.Zero)
+            {
+                grp.SetDefendMode(true, m_defendTarget);
+            }
+            else
+            {
+                // Fallback to original behavior if not in defend mode for some reason.
+                vector targetPos = m_area.GetOrigin();
+                grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+            }
+
+            AddMilitaryGroup(grp); // Add them to the military roster since they are combatants
+            
+            Print(string.Format("[AreaInstance] Spawned and armed hostile civilian reinforcement group (%1 units) for area %2.", scaledUnitCount, m_area.GetName()), LogLevel.DEBUG);
+        }
     }
 }

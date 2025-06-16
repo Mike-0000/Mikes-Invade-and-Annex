@@ -963,7 +963,7 @@ class IA_VehicleManager: GenericEntity
         
         // Then directly teleport units into the vehicle instead of making them walk to it
        //// Print(("[DEBUG_VEHICLE_UNITS] Placing units in vehicle", LogLevel.NORMAL);
-        _PlaceSpawnedUnitsInVehicle(vehicle, group, destination);
+        GetGame().GetCallqueue().CallLater(_PlaceSpawnedUnitsInVehicle, 12500, false, vehicle, group, destination);
         
        //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Vehicle and destination assigned to group", LogLevel.NORMAL);
         
@@ -1231,7 +1231,7 @@ class IA_VehicleManager: GenericEntity
             
             // Include only driver and cargo compartments
             if (type == ECompartmentType.PILOT || 
-                type == ECompartmentType.CARGO)
+                type == ECompartmentType.CARGO || type == ECompartmentType.TURRET)
             {
                 usableCompartments.Insert(compartment);
             }

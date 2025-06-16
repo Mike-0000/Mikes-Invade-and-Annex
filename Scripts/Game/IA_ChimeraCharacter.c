@@ -131,6 +131,18 @@ modded class SCR_ChimeraCharacter{
 				{
 					notificationDisplay.DisplayTaskCreatedNotification(taskTitle);
 				}
+				else if (messageType == "CivilianRevoltStarted")
+				{
+					string message = "The civilian population is revolting! Be advised, they are now hostile.";
+					notificationDisplay.ShowNotification(message, true, "red");
+					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 10000, false);
+				}
+				else if (messageType == "CivilianRevoltReinforcements")
+				{
+					string message = "Civilian militias are reinforcing the objective areas!";
+					notificationDisplay.ShowNotification(message, true, "red");
+					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 10000, false);
+				}
 			
 			
 			

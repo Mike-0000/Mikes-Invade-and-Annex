@@ -32,6 +32,48 @@ class IA_GroupDangerEvent
     int m_time;
 }
 
+// Class to handle async road search for group spawning
+class IA_RoadSearchState
+{
+    // Search parameters
+    vector m_initialPos;
+    IA_Faction m_faction;
+    int m_unitCount;
+    Faction m_areaFaction;
+    int m_activeGroup;
+    
+    // Search state
+    int m_currentDistanceIndex = 0;
+    int m_alternativeAttempt = 0;
+    bool m_tryingAlternatives = false;
+    vector m_foundSpawnPos = vector.Zero;
+    bool m_roadFound = false;
+    
+    // Search configuration
+    ref array<int> m_searchDistances = {50, 100, 200, 400, 800, 1200};
+    static const int ALTERNATIVE_ATTEMPTS = 3;
+    static const int SEARCH_DELAY_MS = 50; // Delay between search attempts
+    
+    // Callback for when search completes
+    IA_AreaInstance m_callbackInstance = null;
+    string m_callbackMethod = "";
+    
+    void IA_RoadSearchState(vector initialPos, IA_Faction faction, int unitCount, Faction areaFaction, int activeGroup)
+    {
+        m_initialPos = initialPos;
+        m_faction = faction;
+        m_unitCount = unitCount;
+        m_areaFaction = areaFaction;
+        m_activeGroup = activeGroup;
+    }
+    
+    void SetCallback(IA_AreaInstance instance, string methodName)
+    {
+        m_callbackInstance = instance;
+        m_callbackMethod = methodName;
+    }
+}
+
 class IA_AiGroup
 {
     private SCR_AIGroup m_group;
@@ -290,6 +332,7 @@ class IA_AiGroup
 
         IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, faction, unitCount);
         grp.m_isCivilian = false;
+        grp.m_referencedEntity = vehicle; // Store vehicle reference for later use
 
 		Resource groupRes;
 		switch(faction){
@@ -350,29 +393,29 @@ class IA_AiGroup
 
         int actualUnitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
 
+        // --- BEGIN REFACTOR: Use delayed spawning to prevent server hitching ---
+        // Create a list of unit prefabs to spawn asynchronously
+        array<ResourceName> unitPrefabs = {};
         for (int i = 0; i < actualUnitsToSpawn; i++)
         {
-			string charPrefabPath = GetRandomUnitPrefab(faction, AreaFaction);
-			if(charPrefabPath == "")
-				continue;
-
-            vector unitSpawnPos = groundPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
-            Resource charRes = Resource.Load(charPrefabPath);
-            if (!charRes) {
-                continue;
-            }
-
-            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitSpawnPos));
-            if (!charEntity) {
-                continue;
-            }
-
-            if (!grp.m_group.AddAIEntityToGroup(charEntity)) {
-                IA_Game.AddEntityToGc(charEntity);
-            } else {
-                grp.SetupDeathListenerForUnit(charEntity);
+            string charPrefabPath = GetRandomUnitPrefab(faction, AreaFaction);
+            if (charPrefabPath != "")
+            {
+                unitPrefabs.Insert(charPrefabPath);
             }
         }
+        
+        // Assign the list of prefabs to the group's spawn slots and initiate spawning
+        if (grp.m_group)
+        {
+            grp.m_group.m_aUnitPrefabSlots = unitPrefabs;
+            grp.m_group.SetMemberSpawnDelay(100); // 100ms delay between each unit
+            grp.m_group.SpawnUnits();
+            
+            // Register a callback to order units into the vehicle once they have all spawned.
+            grp.m_group.GetOnAllDelayedEntitySpawned().Insert(grp.OnAllVehicleGroupMembersSpawned);
+        }
+        // --- END REFACTOR ---
 
         grp.m_isSpawned = true;
 
@@ -395,12 +438,161 @@ class IA_AiGroup
         return grp;
     }
 
+    // Legacy synchronous version - now just creates the group at initial position without road search
+    // Use this when:
+    // - You need the group immediately (e.g., for vehicle spawning, reinforcements)
+    // - You already have a good spawn position
+    // - Performance is not a concern (small number of groups)
     static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction)
     {
         if (unitCount <= 0)
             return null;
 
-        IA_AiGroup grp = new IA_AiGroup(initialPos, IA_SquadType.Riflemen, faction, unitCount);
+        // For backward compatibility, create the group immediately at the initial position
+        // The async road search should be initiated separately by callers that want it
+        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction);
+    }
+    
+    // Start an async road search and group creation
+    // Use this when:
+    // - Creating multiple groups at startup (prevents frame drops)
+    // - Road position is important for AI navigation
+    // - You can handle the group creation callback
+    static void StartAsyncMilitaryGroupCreation(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, IA_AreaInstance callbackInstance = null)
+    {
+        if (unitCount <= 0)
+            return;
+            
+        int activeGroup = IA_VehicleManager.GetActiveGroup();
+        
+        // Create search state
+        IA_RoadSearchState searchState = new IA_RoadSearchState(initialPos, faction, unitCount, AreaFaction, activeGroup);
+        if (callbackInstance)
+        {
+            searchState.SetCallback(callbackInstance, "OnAsyncGroupCreated");
+        }
+        
+        // Start the search
+        GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, IA_RoadSearchState.SEARCH_DELAY_MS, false, searchState);
+    }
+    
+    // Perform one step of the road search
+    static void PerformNextRoadSearch(IA_RoadSearchState searchState)
+    {
+        if (!searchState)
+            return;
+            
+        // If not trying alternatives yet
+        if (!searchState.m_tryingAlternatives)
+        {
+            // Check if we've exhausted all distance searches
+            if (searchState.m_currentDistanceIndex >= searchState.m_searchDistances.Count())
+            {
+                // Move to alternative search phase
+                searchState.m_tryingAlternatives = true;
+                searchState.m_alternativeAttempt = 0;
+                
+                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] No road found within %1m of %2. Starting alternative search...", 
+                    searchState.m_searchDistances[searchState.m_searchDistances.Count() - 1], 
+                    searchState.m_initialPos.ToString()), LogLevel.WARNING);
+                    
+                // Continue with alternative search
+                GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, IA_RoadSearchState.SEARCH_DELAY_MS, false, searchState);
+                return;
+            }
+            
+            // Try current search distance
+            int searchDistance = searchState.m_searchDistances[searchState.m_currentDistanceIndex];
+            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(searchState.m_initialPos, searchDistance, searchState.m_activeGroup);
+            
+            if (roadPos != vector.Zero)
+            {
+                // Found a road!
+                searchState.m_foundSpawnPos = roadPos;
+                searchState.m_roadFound = true;
+                
+                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] Found road at distance %1m from initial pos %2. Road pos: %3", 
+                    searchDistance, searchState.m_initialPos.ToString(), roadPos.ToString()), LogLevel.NORMAL);
+                    
+                // Complete the group creation
+                CompleteAsyncGroupCreation(searchState);
+                return;
+            }
+            
+            // No road found at this distance, try next
+            searchState.m_currentDistanceIndex++;
+            GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, IA_RoadSearchState.SEARCH_DELAY_MS, false, searchState);
+        }
+        else
+        {
+            // Alternative search phase
+            if (searchState.m_alternativeAttempt >= IA_RoadSearchState.ALTERNATIVE_ATTEMPTS)
+            {
+                // All searches exhausted, use initial position
+                searchState.m_foundSpawnPos = searchState.m_initialPos;
+                searchState.m_roadFound = false;
+                
+                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] WARNING: No road found for group spawn. Using initial position %1. AI navigation may be impaired!", 
+                    searchState.m_initialPos.ToString()), LogLevel.WARNING);
+                    
+                CompleteAsyncGroupCreation(searchState);
+                return;
+            }
+            
+            // Try alternative search from random point
+            float angle = Math.RandomFloat(0, Math.PI2);
+            float distance = Math.RandomFloat(100, 500);
+            vector searchPoint;
+            searchPoint[0] = searchState.m_initialPos[0] + Math.Cos(angle) * distance;
+            searchPoint[1] = searchState.m_initialPos[1];
+            searchPoint[2] = searchState.m_initialPos[2] + Math.Sin(angle) * distance;
+            
+            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(searchPoint, 200, searchState.m_activeGroup);
+            
+            if (roadPos != vector.Zero)
+            {
+                searchState.m_foundSpawnPos = roadPos;
+                searchState.m_roadFound = true;
+                
+                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] Found road via alternative search (attempt %1) at %2", 
+                    searchState.m_alternativeAttempt + 1, roadPos.ToString()), LogLevel.NORMAL);
+                    
+                CompleteAsyncGroupCreation(searchState);
+                return;
+            }
+            
+            // Try next alternative
+            searchState.m_alternativeAttempt++;
+            GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, IA_RoadSearchState.SEARCH_DELAY_MS, false, searchState);
+        }
+    }
+    
+    // Complete the async group creation
+    static void CompleteAsyncGroupCreation(IA_RoadSearchState searchState)
+    {
+        if (!searchState)
+            return;
+            
+        // Create the group at the found position
+        IA_AiGroup grp = CreateMilitaryGroupAtPosition(searchState.m_foundSpawnPos, searchState.m_faction, 
+            searchState.m_unitCount, searchState.m_areaFaction);
+            
+        // Call the callback if set
+        if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
+        {
+            // Note: This is a simplified callback mechanism. In real implementation,
+            // you might need to use a more robust callback system
+            searchState.m_callbackInstance.OnAsyncGroupCreated(grp, searchState.m_roadFound);
+        }
+    }
+    
+    // Create a military group at a specific position (no road search)
+    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction)
+    {
+        if (unitCount <= 0)
+            return null;
+
+        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, faction, unitCount);
         grp.m_isCivilian = false;
 
         Resource groupRes;
@@ -420,35 +612,16 @@ class IA_AiGroup
         }
 
         if (!groupRes) {
+            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Failed to load group resource for faction %1", faction), LogLevel.ERROR);
             return null;
         }
-
-        // Find a road near the initial position - NEW CODE
-		int searchDistance = 50;
-        vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(initialPos, searchDistance, IA_VehicleManager.GetActiveGroup());
-        vector spawnPos;
-        
-        // Use road position if found, otherwise use the initial position
-        if (roadPos != vector.Zero) {
-            spawnPos = roadPos;
-        } 
-		else{
-			roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(initialPos, searchDistance*4, IA_VehicleManager.GetActiveGroup()); // Expand Search Radius
-		
-			if (roadPos != vector.Zero) {
-	            spawnPos = roadPos;
-	        } 
-			else {
-	            spawnPos = initialPos;
-	        }
-		}
-        // END NEW CODE
 
         IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
         grp.m_group = SCR_AIGroup.Cast(groupEnt);
 
         if (!grp.m_group) {
             delete groupEnt;
+            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Failed to create SCR_AIGroup for faction %1 at %2", faction, spawnPos.ToString()), LogLevel.ERROR);
             return null;
         }
 
@@ -457,32 +630,26 @@ class IA_AiGroup
         groundPos[1] = groundY;
         grp.m_group.SetOrigin(groundPos);
 
+        // --- BEGIN REFACTOR: Use delayed spawning to prevent server hitching ---
+        // Create a list of unit prefabs to spawn asynchronously
+        array<ResourceName> unitPrefabs = {};
         for (int i = 0; i < unitCount; i++)
         {
             string charPrefabPath = GetRandomUnitPrefab(faction, AreaFaction);
-            if (charPrefabPath == "")
+            if (charPrefabPath != "")
             {
-                 continue;
-            }
-
-            // Modified to spawn units close to the road position
-            vector unitSpawnPos = groundPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
-            Resource charRes = Resource.Load(charPrefabPath);
-            if (!charRes) {
-                continue;
-            }
-
-            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitSpawnPos));
-            if (!charEntity) {
-                continue;
-            }
-
-            if (!grp.m_group.AddAIEntityToGroup(charEntity)) {
-                IA_Game.AddEntityToGc(charEntity); // Schedule for deletion if adding failed
-            } else {
-                grp.SetupDeathListenerForUnit(charEntity); // Setup death listener for the added unit
+                unitPrefabs.Insert(charPrefabPath);
             }
         }
+
+        // Assign the list of prefabs to the group's spawn slots and initiate spawning
+        if (grp.m_group)
+        {
+            grp.m_group.m_aUnitPrefabSlots = unitPrefabs;
+            grp.m_group.SetMemberSpawnDelay(100); // 100ms delay between each unit
+            grp.m_group.SpawnUnits();
+        }
+        // --- END REFACTOR ---
 
         // Instead of using Spawn directly, we'll handle initialization here
         grp.PerformSpawn();
@@ -600,7 +767,7 @@ class IA_AiGroup
         // Log waypoint addition with type info
         Print(string.Format("[IA_AiGroup.AddWaypoint] Adding waypoint to Group %1 | Faction: %2 | Waypoint Type: %3 | Is SCR_DefendWaypoint: %4 | Group State: %5", 
             this, typename.EnumToString(IA_Faction, m_faction), waypointTypeName, isDefendWaypoint, 
-            typename.EnumToString(IA_GroupTacticalState, m_tacticalState)), LogLevel.WARNING);
+            typename.EnumToString(IA_GroupTacticalState, m_tacticalState)), LogLevel.DEBUG);
         
         // Validate waypoint type based on current tactical state
         if (m_tacticalState == IA_GroupTacticalState.Defending)
@@ -618,7 +785,7 @@ class IA_AiGroup
         }
         // --- END ENHANCED ---
         
-        m_group.AddWaypoint(waypoint);
+        m_group.AddWaypointToGroup(waypoint);
         ////Print("[DEBUG] IA_AiGroup.AddWaypoint: Waypoint added to internal SCR_AIGroup.", LogLevel.NORMAL);
     }
 
@@ -720,10 +887,11 @@ class IA_AiGroup
         {
             // --- BEGIN ADDED: Debug logging for defend orders with faction info ---
             Print(string.Format("[IA_AiGroup.AddOrder] DEFEND ORDER CREATION: Group %1 | Faction: %2 | IsCivilian: %3 | Position: %4", 
-                this, typename.EnumToString(IA_Faction, m_faction), m_isCivilian, origin.ToString()), LogLevel.WARNING);
+                this, typename.EnumToString(IA_Faction, m_faction), m_isCivilian, origin.ToString()), LogLevel.DEBUG);
             // --- END ADDED ---
-            
-            rname = "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
+            rname = "{FAD1D789EE291964}Prefabs/AI/Waypoints/AIWaypoint_Defend_Large.et";
+
+            //rname = "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
         }else if (order == IA_AiOrder.DefendSmall) // Added condition for SearchAndDestroy
         {
             // --- BEGIN ADDED: Debug logging for defend small orders ---
@@ -731,7 +899,9 @@ class IA_AiGroup
                 this, typename.EnumToString(IA_Faction, m_faction), origin.ToString()), LogLevel.WARNING);
             // --- END ADDED ---
             
-            rname = "{0AB63F524C44E0D2}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_DefendSmall.et";
+            //rname = "{0AB63F524C44E0D2}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_DefendSmall.et";
+			rname = "{2FCBE5C76E285A7B}Prefabs/AI/Waypoints/AIWaypoint_DefendSmall.et";
+
         }
         else if (order == IA_AiOrder.SearchAndDestroy) // Added condition for SearchAndDestroy
         {
@@ -766,7 +936,7 @@ class IA_AiGroup
             {
                 // --- BEGIN ADDED: Log successful defend waypoint creation ---
                 Print(string.Format("[IA_AiGroup.AddOrder] SUCCESS: Created SCR_DefendWaypoint for Group %1 | Faction: %2 | Type: %3", 
-                    this, typename.EnumToString(IA_Faction, m_faction), waypointEnt.Type()), LogLevel.WARNING);
+                    this, typename.EnumToString(IA_Faction, m_faction), waypointEnt.Type()), LogLevel.DEBUG);
                 // --- END ADDED ---
                 
                 // If specific SCR_DefendWaypoint methods were needed, they could be called on 'defendW' here.
@@ -837,7 +1007,7 @@ class IA_AiGroup
         }
         // --- END ADDED ---
 
-        m_group.AddWaypoint(w);
+        m_group.AddWaypointToGroup(w);
         
         // --- BEGIN ADDED LOGGING ---
         //Print(string.Format("[IA_Waypoint] Added Order: %1 at %2 for Group %3", typename.EnumToString(IA_AiOrder, order), origin, m_group), LogLevel.WARNING);
@@ -1044,23 +1214,10 @@ class IA_AiGroup
                 spawnPos = m_initialPosition;
             }
             
-            string resourceName = IA_RandomCivilianResourceName();
-            Resource charRes = Resource.Load(resourceName);
-            if (!charRes)
-            {
-                return false;
-            }
-            
-            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSurfaceAdjustedSpawnParams(spawnPos));
-            if (!charEntity)
-            {
-                return false;
-            }
-
+            // Create the SCR_AIGroup entity for the civilian
             Resource groupPrefabRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
             if (!groupPrefabRes)
             {
-                 IA_Game.AddEntityToGc(charEntity); // Clean up character
                  return false;
             }
             IEntity groupEntity = GetGame().SpawnEntityPrefab(groupPrefabRes, null, IA_CreateSimpleSpawnParams(spawnPos));
@@ -1068,21 +1225,18 @@ class IA_AiGroup
 
             if (!m_group)
             {
-                IA_Game.AddEntityToGc(charEntity); // Clean up character
                 if (groupEntity) IA_Game.AddEntityToGc(groupEntity); // Clean up group entity if it was spawned
                 return false;
             }
             
-            // Add the spawned civilian character to the SCR_AIGroup
-            if (!m_group.AddAIEntityToGroup(charEntity))
+            // Get a random civilian prefab and use the asynchronous SpawnUnits method
+            string resourceName = IA_RandomCivilianResourceName();
+            if (resourceName != "")
             {
-                IA_Game.AddEntityToGc(charEntity); // Clean up character
-                IA_Game.AddEntityToGc(m_group);    // Clean up the group as well since it's unusable
-                m_group = null;
-                return false;
+                m_group.m_aUnitPrefabSlots.Insert(resourceName);
+                m_group.SetMemberSpawnDelay(0); // No delay needed for one unit
+                m_group.SpawnUnits();
             }
-            // If successfully added, setup death listener for this specific unit
-            SetupDeathListenerForUnit(charEntity);
         }
         else // Military group
         {
@@ -1388,49 +1542,10 @@ class IA_AiGroup
             GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
             return;
         }
-            
-        array<AIAgent> agents = {};
-        m_group.GetAgents(agents);
         
-        if (agents.IsEmpty())
-        {
-            GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
-            return;
-        }
-        
-
-        
-        foreach (AIAgent agent : agents)
-        {
-            if (!agent)
-            {
-                continue;
-            }
-                
-            SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
-            if (!ch)
-            {
-                continue;
-            }
-                
-            SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
-            if (!ccc)
-            {
-                continue;
-            }
-            EAISkill aiSkill = EAISkill.EXPERT;
-			SCR_AICombatComponent combatComponent = SCR_AICombatComponent.Cast(agent.FindComponent(SCR_AICombatComponent));
-			if (combatComponent)
-				combatComponent.SetAISkill(aiSkill);
-			
-            ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
-            
-            // Set up danger event processing for this agent
-            ProcessAgentDangerEvents(agent);
-            
-            // Verify the agent has danger event capability
-            int dangerCount = agent.GetDangerEventsCount();
-        }
+        // Hook into the group's OnAgentAdded event.
+        // This will call OnUnitAdded for each member as they are spawned by the engine.
+        m_group.GetOnAgentAdded().Insert(OnUnitAdded);
         
         if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
         {
@@ -2118,12 +2233,12 @@ class IA_AiGroup
                 {
                     RequestTacticalStateChange(IA_GroupTacticalState.Flanking, targetPos);
                 }
-                // Default to attacking when no special conditions, UNLESS currently flanking
-                else if (m_tacticalState != IA_GroupTacticalState.Flanking) // <--- Added condition here
+                // Default to attacking when no special conditions, UNLESS currently flanking or defending
+                else if (m_tacticalState != IA_GroupTacticalState.Flanking && m_tacticalState != IA_GroupTacticalState.Defending)
                 {
                     RequestTacticalStateChange(IA_GroupTacticalState.Attacking, targetPos);
                 }
-                // If currently flanking and none of the above conditions met, the group will continue flanking (by not requesting a change here)
+                // If currently flanking or defending and none of the above conditions met, the group will continue its current state
                 
                 // Ensure faction is set for combat
                 if (m_engagedEnemyFaction == IA_Faction.NONE)
@@ -2331,7 +2446,7 @@ class IA_AiGroup
         if (!fromAuthority)
         {
             Print(string.Format("[IA_AiGroup.SetTacticalState] WARNING: Called without authority flag. Groups should request state changes instead of setting directly."), 
-                LogLevel.WARNING);
+                LogLevel.DEBUG);
         }
         
         // Manage the authority flag - can be acquired by authority, or released by non-authority
@@ -2343,7 +2458,7 @@ class IA_AiGroup
         {
             // If currently under authority control, log that we're getting a non-authority state change
             Print(string.Format("[IA_AiGroup.SetTacticalState] WARNING: Group %1 state changed from %2 to %3 by non-authority source!", 
-                this, m_tacticalState, newState), LogLevel.WARNING);
+                this, m_tacticalState, newState), LogLevel.DEBUG);
             m_isStateManagedByAuthority = false; // Only release authority when explicitly changed by non-authority
         }
 
@@ -2654,6 +2769,11 @@ class IA_AiGroup
         return m_faction;
     }
     
+	SCR_AIGroup GetSCR_AIGroup()
+	{
+		return m_group;
+	}
+	
     void SetDefendMode(bool enable, vector defendPoint = vector.Zero)
     {
         m_isInDefendMode = enable;
@@ -2835,5 +2955,224 @@ class IA_AiGroup
     }
     // END NEW PRIVATE HELPER METHOD
     //------------------------------------------------------------------------------------------------
+
+    // New callback to set up units as they are added to the group asynchronously
+    private void OnUnitAdded(AIAgent agent)
+    {
+        if (!agent)
+            return;
+            
+        SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
+        if (!ch)
+            return;
+            
+        // Setup death listener for the unit
+        SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
+        if (ccc)
+        {
+            ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
+        }
+        
+        // Set AI Skill
+        EAISkill aiSkill = EAISkill.EXPERT;
+        SCR_AICombatComponent combatComponent = SCR_AICombatComponent.Cast(agent.FindComponent(SCR_AICombatComponent));
+        if (combatComponent)
+            combatComponent.SetAISkill(aiSkill);
+        
+        // Perform initial danger event processing for the new agent
+        ProcessAgentDangerEvents(agent);
+    }
+
+    // New callback to order units into their assigned vehicle after they have all spawned.
+    private void OnAllVehicleGroupMembersSpawned(SCR_AIGroup group)
+    {
+        if (m_referencedEntity)
+        {
+            AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+
+            // Clean up the callback to prevent it from running again.
+            if (m_group)
+            {
+                m_group.GetOnAllDelayedEntitySpawned().Remove(OnAllVehicleGroupMembersSpawned);
+            }
+        }
+    }
+
+    private void OnAllHostileCiviliansSpawned(SCR_AIGroup group)
+    {
+        ArmGroupWithLongGuns();
+        
+        // Clean up the callback to prevent it from running again.
+        if (m_group)
+        {
+            m_group.GetOnAllDelayedEntitySpawned().Remove(OnAllHostileCiviliansSpawned);
+        }
+    }
+
+    void ArmGroupWithPistols()
+    {
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach(SCR_ChimeraCharacter character : characters)
+        {
+            if (character && !character.GetDamageManager().IsDestroyed())
+            {
+                CharacterControllerComponent charController = character.GetCharacterController();
+                if (!charController)
+                    continue;
+    
+                SCR_InventoryStorageManagerComponent inventoryManager = SCR_InventoryStorageManagerComponent.Cast(charController.GetInventoryStorageManager());
+                if (!inventoryManager)
+                {
+                    Print(string.Format("[IA_AiGroup] Character %1 has no SCR_InventoryStorageManagerComponent.", character), LogLevel.WARNING);
+                    continue;
+                }
+                
+                EntitySpawnParams spawnParams = new EntitySpawnParams();
+                spawnParams.TransformMode = ETransformMode.WORLD;
+                character.GetTransform(spawnParams.Transform);
+                
+                Resource weaponRes = Resource.Load("{1353C6EAD1DCFE43}Prefabs/Weapons/Handguns/M9/Handgun_M9.et");
+                IEntity weaponEntity = GetGame().SpawnEntityPrefab(weaponRes, GetGame().GetWorld(), spawnParams);
+    
+                if (!weaponEntity)
+                {
+                    Print("[IA_AiGroup] Failed to spawn weapon for arming.", LogLevel.ERROR);
+                    continue;
+                }
+                inventoryManager.EquipWeapon(weaponEntity, null, true);
+    
+                Resource magazineRes = Resource.Load("{9C05543A503DB80E}Prefabs/Weapons/Magazines/Magazine_9x19_M9_15rnd_Ball.et");
+                for (int i = 0; i < 2; i++)
+                {
+                    IEntity magazineEntity = GetGame().SpawnEntityPrefab(magazineRes, GetGame().GetWorld(), spawnParams);
+                    if (magazineEntity && !inventoryManager.TryInsertItem(magazineEntity))
+                    {
+                        Print(string.Format("[IA_AiGroup] Failed to add magazine to character %1 inventory.", character), LogLevel.WARNING);
+                        IA_Game.AddEntityToGc(magazineEntity);
+                    }
+                }
+            }
+        }
+    }
+
+    void ArmGroupWithLongGuns()
+    {
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach(SCR_ChimeraCharacter character : characters)
+        {
+            if (character && !character.GetDamageManager().IsDestroyed())
+            {
+                CharacterControllerComponent charController = character.GetCharacterController();
+                if (!charController)
+                    continue;
+    
+                SCR_InventoryStorageManagerComponent inventoryManager = SCR_InventoryStorageManagerComponent.Cast(charController.GetInventoryStorageManager());
+                if (!inventoryManager)
+                {
+                    Print(string.Format("[IA_AiGroup] Character %1 has no SCR_InventoryStorageManagerComponent.", character), LogLevel.WARNING);
+                    continue;
+                }
+                
+                EntitySpawnParams spawnParams = new EntitySpawnParams();
+                spawnParams.TransformMode = ETransformMode.WORLD;
+                character.GetTransform(spawnParams.Transform);
+                
+                Resource weaponRes = Resource.Load("{FA5C25BF66A53DCF}Prefabs/Weapons/Rifles/AK74/Rifle_AK74.et");
+                IEntity weaponEntity = GetGame().SpawnEntityPrefab(weaponRes, GetGame().GetWorld(), spawnParams);
+    
+                if (!weaponEntity)
+                {
+                    Print("[IA_AiGroup] Failed to spawn weapon for arming.", LogLevel.ERROR);
+                    continue;
+                }
+                inventoryManager.EquipWeapon(weaponEntity, null, true);
+    
+                Resource magazineRes = Resource.Load("{0A84AA5A3884176F}Prefabs/Weapons/Magazines/Magazine_545x39_AK_30rnd_Last_5Tracer.et");
+                for (int i = 0; i < 3; i++)
+                {
+                    IEntity magazineEntity = GetGame().SpawnEntityPrefab(magazineRes, GetGame().GetWorld(), spawnParams);
+                    if (magazineEntity && !inventoryManager.TryInsertItem(magazineEntity))
+                    {
+                        Print(string.Format("[IA_AiGroup] Failed to add magazine to character %1 inventory.", character), LogLevel.WARNING);
+                        IA_Game.AddEntityToGc(magazineEntity);
+                    }
+                }
+            }
+        }
+    }
+    
+    static IA_AiGroup CreateHostileCivilianGroup(vector spawnPos, int unitCount, Faction AreaFaction)
+    {
+        if (unitCount <= 0)
+            return null;
+    
+        // Use USSR faction for the group, but civilian character models
+        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, IA_Faction.USSR, unitCount);
+        grp.m_isCivilian = false; // Treat them as combatants
+    
+        Resource groupRes = Resource.Load("{8DE0C0830FE0C33D}Prefabs/Groups/OPFOR/Group_USSR_Base.et"); // USSR Group Prefab
+    
+        if (!groupRes) {
+            Print("[IA_AiGroup.CreateHostileCivilianGroup] Failed to load group resource for USSR.", LogLevel.ERROR);
+            return null;
+        }
+    
+        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
+        grp.m_group = SCR_AIGroup.Cast(groupEnt);
+    
+        if (!grp.m_group) {
+            delete groupEnt;
+            Print(string.Format("[IA_AiGroup.CreateHostileCivilianGroup] Failed to create SCR_AIGroup for USSR at %1", spawnPos.ToString()), LogLevel.ERROR);
+            return null;
+        }
+    
+        vector groundPos = spawnPos;
+        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
+        groundPos[1] = groundY;
+        grp.m_group.SetOrigin(groundPos);
+    
+        // KEY DIFFERENCE: Use civilian prefabs
+        array<ResourceName> unitPrefabs = {};
+        for (int i = 0; i < unitCount; i++)
+        {
+            string charPrefabPath = IA_RandomCivilianResourceName();
+            if (charPrefabPath != "")
+            {
+                unitPrefabs.Insert(charPrefabPath);
+            }
+        }
+    
+        if (grp.m_group)
+        {
+            grp.m_group.m_aUnitPrefabSlots = unitPrefabs;
+            grp.m_group.SetMemberSpawnDelay(100);
+            grp.m_group.SpawnUnits();
+            
+            // Register a callback to arm units once they have all spawned.
+            grp.m_group.GetOnAllDelayedEntitySpawned().Insert(grp.OnAllHostileCiviliansSpawned);
+            
+            // Ensure the underlying SCR_AIGroup has the correct faction set
+            Faction ussrFaction = GetGame().GetFactionManager().GetFactionByKey("USSR");
+            if (ussrFaction)
+                grp.m_group.SetFaction(ussrFaction);
+        }
+    
+        grp.PerformSpawn();
+        
+        // Set a default state
+        if (spawnPos != vector.Zero)
+        {
+            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, spawnPos, null, true);
+        }
+        else
+        {
+            vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, grp.GetOrigin());
+            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos, null, true);
+        }
+    
+        return grp;
+    }
+    
+
 
 };  

@@ -28,6 +28,9 @@ class IA_MissionInitializer : GenericEntity
 	//ref array<IA_AreaMarker> m_shuffledMarkers = {};
 	private int m_currentIndex = -1;
 	private ref array<IA_AreaInstance> m_currentAreaInstances; 
+	private int m_initialTotalCiviliansInGroup = 0;
+	private bool m_initialCiviliansCounted = false;
+	private bool m_civilianRevoltActive = false;
 	private bool m_runOnce = false;
 
 	// Static reference for global access
@@ -170,6 +173,10 @@ class IA_MissionInitializer : GenericEntity
 	        return;
 	    }
 		
+		m_initialTotalCiviliansInGroup = 0;
+		m_initialCiviliansCounted = false;
+		m_civilianRevoltActive = false;
+
 	    Faction nextAreaFaction = GetRandomEnemyFaction();
 		Print("Next Faction is = " +nextAreaFaction.GetFactionName(), LogLevel.NORMAL);
 	    int currentGroup = groupsArray[m_currentIndex];
@@ -244,7 +251,7 @@ class IA_MissionInitializer : GenericEntity
             ////Print("[DEBUG_ZONE_GROUP] Scheduled initialization for zone: " + marker.GetAreaName() + " in group " + currentGroup + " with delay " + accumulatedDelay + "ms", LogLevel.NORMAL);
             accumulatedDelay += m_spawnDelayMs;
             markerIndex++;
-	    }
+        }
 	    // --- END REORDERED CODE FOR INITIAL SCALING --- 
 	    
 	    // --- BEGIN ADDED: Disable initial objective scaling after first group setup ---
@@ -354,6 +361,64 @@ class IA_MissionInitializer : GenericEntity
     ProceedToNextZone();
 }
 
+	void CivilianRevoltInit()
+	{
+		if (m_civilianRevoltActive)
+			return;
+		m_civilianRevoltActive = true;
+		
+		Print("[IA_MissionInitializer] Civilian revolt initiated.", LogLevel.NORMAL);
+
+		// Notification for revolt start (30s delay)
+		GetGame().GetCallqueue().CallLater(TriggerGlobalNotification, 30000, false, "CivilianRevoltStarted", "Civilian Revolt");
+
+		if (!m_currentAreaInstances)
+			return;
+
+		SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+		if (!factionManager)
+		{
+			Print("[IA_MissionInitializer] CivilianRevoltInit: Faction manager not found!", LogLevel.ERROR);
+			return;
+		}
+		Faction ussrFaction = factionManager.GetFactionByKey("USSR");
+		if (!ussrFaction)
+		{
+			Print("[IA_MissionInitializer] CivilianRevoltInit: USSR Faction not found!", LogLevel.ERROR);
+			return;
+		}
+
+		foreach (IA_AreaInstance instance : m_currentAreaInstances)
+		{
+			if (!instance)
+				continue;
+
+			// Trigger a large reinforcement wave for this area with a 180-second delay.
+			GetGame().GetCallqueue().CallLater(instance.SpawnCivilianRevoltReinforcements, 180 * 1000, false);
+
+			array<ref IA_AiGroup> civilianGroups = instance.GetCivilianGroups();
+			foreach (IA_AiGroup civGroup : civilianGroups)
+			{
+				if (!civGroup)
+					continue;
+				
+				// Change the IA_AiGroup's underlying SCR_AIGroup faction
+				SCR_AIGroup scrAIGroup = civGroup.GetSCR_AIGroup();
+				if (scrAIGroup)
+				{
+					scrAIGroup.SetFaction(ussrFaction);
+				}
+				
+				// Arm the revolting civilians
+                civGroup.ArmGroupWithPistols();
+			}
+		}
+
+		// Notification for reinforcements sighted (180s wave spawn + 30s delay)
+		GetGame().GetCallqueue().CallLater(TriggerGlobalNotification, 210000, false, "CivilianRevoltReinforcements", "Civilian Reinforcements");
+	}
+
+
 	void CheckCurrentZoneComplete()
 	{
 		// Safety check for array access
@@ -367,6 +432,46 @@ class IA_MissionInitializer : GenericEntity
 		{
 			//Print("[ERROR] IA_MissionInitializer.CheckCurrentZoneComplete: Invalid m_currentIndex " + m_currentIndex + ", array size: " + groupsArray.Count(), LogLevel.ERROR);
 			return;
+		}
+		
+		m_initialTotalCiviliansInGroup = 0;
+		if (m_currentAreaInstances)
+		{
+			foreach (IA_AreaInstance instance : m_currentAreaInstances)
+			{
+				if (instance)
+				{
+					m_initialTotalCiviliansInGroup += instance.GetInitialCivilianCount();
+				}
+			}
+		}
+		
+		int currentTotalAliveCivilians = 0;
+		if (m_currentAreaInstances)
+		{
+			foreach (IA_AreaInstance instance : m_currentAreaInstances)
+			{
+				if (instance)
+				{
+					currentTotalAliveCivilians += instance.GetAliveCivilianCount();
+				}
+			}
+		}
+
+		Print(string.Format("[IA_MissionInitializer] Area Group %1 Civilian Status: %2 / %3 civilians remaining.", 
+			groupsArray[m_currentIndex], currentTotalAliveCivilians, m_initialTotalCiviliansInGroup), LogLevel.NORMAL);
+		
+		if (m_initialTotalCiviliansInGroup > 0)
+		{
+			float civilianPercentageRemaining = currentTotalAliveCivilians / (float)m_initialTotalCiviliansInGroup;
+			if (civilianPercentageRemaining < 0.90)
+			{
+
+
+				CivilianRevoltInit();
+				// More than 25% of civilians are no longer alive.
+				// Future logic for this condition goes here.
+			}
 		}
 		
 		// --- BEGIN ADDED: Check if defend mission is active and return early ---
@@ -619,6 +724,12 @@ class IA_MissionInitializer : GenericEntity
         Print("[DEBUG_ZONE_GROUP_DELAYED] Initializing zone: " + name + " in group " + currentGroup, LogLevel.NORMAL);
 
         IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
+		
+		/*
+		// Sum up initial civilians for the whole area group
+        m_initialTotalCiviliansInGroup += area.GetCivilianCount();
+		*/
+		
         IA_Game game = IA_Game.Instantiate();
         if (!game)
         {
@@ -801,6 +912,7 @@ class IA_MissionInitializer : GenericEntity
 		TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area");
 		
 		// Clean up current area instances
+		m_civilianRevoltActive = false;
 		m_currentIndex++;
 		if (m_currentAreaInstances) 
 			m_currentAreaInstances.Clear();
