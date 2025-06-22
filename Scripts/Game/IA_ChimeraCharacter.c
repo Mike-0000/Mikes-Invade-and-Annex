@@ -143,6 +143,21 @@ modded class SCR_ChimeraCharacter{
 					notificationDisplay.ShowNotification(message, true, "red");
 					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 10000, false);
 				}
+				else if (messageType == "CaptureStarted")
+				{
+					notificationDisplay.ShowNotification(taskTitle, true, "green");
+					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
+				}
+				else if (messageType == "CapturePaused")
+				{
+					notificationDisplay.ShowNotification(taskTitle, true, "yellow");
+					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
+				}
+				else if (messageType == "Capture50Percent")
+				{
+					notificationDisplay.ShowNotification(taskTitle, true, "green");
+					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
+				}
 			
 			
 			

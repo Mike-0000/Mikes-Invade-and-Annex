@@ -42,6 +42,20 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected const int SCORE_UPDATE_INTERVAL = 1; // Update score every second
     protected int m_LastFrameCount = 0; // Track the last frame we updated on
     
+    // -- New capture system variables
+    protected float m_captureProgress = 0.0; // 0-120 seconds
+    protected const float CAPTURE_TIME_SECONDS = 120.0; // Total capture time
+    protected bool m_isCapturing = false;
+    protected bool m_wasPausedLastFrame = false;
+    protected bool m_hasReached50Percent = false;
+    protected string m_captureStatus = "Neutral"; // "Capturing", "Paused", "Contested", "Neutral"
+    
+    // -- Player scoring system
+    protected ref map<string, int> m_playerCaptureScores = new map<string, int>(); // PlayerGUID -> score points
+    protected float m_lastScoringTime = 0;
+    protected const float SCORING_INTERVAL = 1.0; // Award points every 1 second
+    protected bool m_isCaptured = false; // Track if zone has been captured
+    
     // Static reference to the mission initializer
     static IA_MissionInitializer s_missionInitializer = null;
     
@@ -102,6 +116,23 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	
     // Static array to hold all pre-placed markers
     static ref array<IA_AreaMarker> s_areaMarkers = new array<IA_AreaMarker>();
+    
+    // Reset all markers for a new zone group
+    static void ResetAllMarkersForNewGroup()
+    {
+        if (!s_areaMarkers)
+            return;
+            
+        foreach (IA_AreaMarker marker : s_areaMarkers)
+        {
+            if (marker)
+            {
+                marker.ResetForNewCapture();
+            }
+        }
+        
+        Print("[IA_AreaMarker] Reset all markers for new zone group", LogLevel.DEBUG);
+    }
 
     // New static function to retrieve all markers.
     static array<IA_AreaMarker> GetAllMarkers()
@@ -222,8 +253,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        }
 	    }
 	    
-	    // Special handling for Radio Tower
-	    if (GetAreaType() == IA_AreaType.RadioTower)
+	    // Special handling for Radio Tower and DefendObjective
+	    IA_AreaType areaType = GetAreaType();
+	    if (areaType == IA_AreaType.RadioTower)
 	    {
 	        // For Radio Tower, we only care if the prefab is destroyed
 	        if (m_isDestroyed)
@@ -246,6 +278,18 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                 }
 	        }
 	        return; // Skip standard scoring for Radio Tower
+	    }
+	    
+	    // Skip capture logic for DefendObjective areas
+	    if (areaType == IA_AreaType.DefendObjective)
+	    {
+	        return; // DefendObjective areas are not capturable
+	    }
+	    
+	    // Skip capture logic if already captured
+	    if (m_isCaptured)
+	    {
+	        return; // Zone already captured, no need to process
 	    }
 
 	    // Get all entities within radius
@@ -278,71 +322,114 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    if (usCount == 0 && ussrCount == 0)
 	    {
 	        m_IsActive = false;
-	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - No US or USSR units present, no score change", LogLevel.NORMAL);
+	        m_captureStatus = "Neutral";
 	        return;
 	    }
 	    
 	    m_IsActive = true;
 	    
-	    // Get current US score
-	    float currentScore = 0.0;
-	    if (m_FactionScores.Contains("US"))
-	        currentScore = m_FactionScores.Get("US");
-	        
-	    // Determine which faction has the majority
-	    float scoreChange = 0.0;
+	    // Get current capture progress (now 0-120 seconds instead of 0-1000 points)
+	    float previousProgress = m_captureProgress;
+	    bool wasCapturing = m_isCapturing;
 	    
+	    // Determine capture state based on majority
 	    if (usCount > ussrCount) 
 	    {
-	        // US has majority - increase score
-	        int advantage = usCount - ussrCount;
-	        float multiplier = 6.0; // Normal multiplier
-	        if (usCount < 5) // If US (majority) count is less than 5
+	        // US has majority - capture progresses (only if not already captured)
+	        if (!m_isCaptured)
 	        {
-	            multiplier = 15.0; // Use faster multiplier
+	            m_isCapturing = true;
+	            m_captureStatus = "Capturing";
+	            m_captureProgress += SCORE_UPDATE_INTERVAL; // Add 1 second per update
+	            
+	            // Check if it's time to award points to players
+	            float currentGameTime = GetGame().GetWorld().GetWorldTime() / 1000.0; // Convert to seconds
+	            if (currentGameTime - m_lastScoringTime >= SCORING_INTERVAL)
+	            {
+	                AwardCapturePoints(entities);
+	                m_lastScoringTime = currentGameTime;
+	            }
 	        }
-	        scoreChange = advantage * multiplier;
-	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - US majority (+" + scoreChange + " points)", LogLevel.NORMAL);
-	    }
-	    /* Commented out to prevent score decreases
-	    else if (ussrCount > usCount)
-	    {
-	        // USSR has majority - decrease score
-	        int advantage = ussrCount - usCount;
-	        float multiplier = 3.0; // Normal multiplier
-	        if (ussrCount < 5) // If USSR (majority) count is less than 5
+	        else
 	        {
-	            multiplier = 5.0; // Use faster multiplier
+	            // Zone already captured, just maintain captured status
+	            m_captureStatus = "Captured";
 	        }
-	        scoreChange = -advantage * multiplier;
-	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - USSR majority (" + scoreChange + " points)", LogLevel.NORMAL);
+	        
+	        // Handle notifications
+	        if (!wasCapturing)
+	        {
+	            // Capture just started
+	            TriggerCaptureNotification("CaptureStarted", m_areaName + " capture started");
+	        }
+	        
+	        // Check 50% threshold
+	        if (!m_hasReached50Percent && m_captureProgress >= CAPTURE_TIME_SECONDS * 0.5)
+	        {
+	            m_hasReached50Percent = true;
+	            TriggerCaptureNotification("Capture50Percent", m_areaName + " 50% captured");
+	        }
 	    }
-
-	    */
-	    
-	    // Calculate new score
-	    float newScore = currentScore + scoreChange;
-	    
-	    // Clamp score between 0-1000
-	    if (newScore < 0) newScore = 0;
-	    if (newScore > 1000) newScore = 1000;
-	    
-	    // Update USFactionScore for backward compatibility
-	    USFactionScore = newScore;
-	    
-	    // Store the new score
-	    m_FactionScores.Set("US", newScore);
-	    
-	    // Log score changes
-	    
-	    // Add threshold warnings
-	    if (newScore >= 900 && newScore < 1000)
+	    else if (ussrCount >= usCount)
 	    {
-	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - APPROACHING COMPLETION THRESHOLD! Current score: " + newScore + "/100", LogLevel.WARNING);
+	        // USSR has majority or equal - capture pauses
+	        m_isCapturing = false;
+	        
+	        if (ussrCount > usCount)
+	            m_captureStatus = "Contested";
+	        else
+	            m_captureStatus = "Neutral";
+	        
+	        // Handle pause notification
+	        if (wasCapturing && m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
+	        {
+	            // Capture was in progress but now paused
+	            TriggerCaptureNotification("CapturePaused", m_areaName + " capture paused");
+	        }
 	    }
-	    else if (newScore >= 1000)
+	    
+	    // Clamp progress between 0 and capture time
+	    m_captureProgress = Math.Clamp(m_captureProgress, 0, CAPTURE_TIME_SECONDS);
+	    
+	    // Update faction score for compatibility (scale to 0-1000 range)
+	    float scaledScore = (m_captureProgress / CAPTURE_TIME_SECONDS) * 1000.0;
+	    USFactionScore = scaledScore;
+	    m_FactionScores.Set("US", scaledScore);
+	    
+	    // Debug logging
+	    if (m_isCapturing)
 	    {
-	        // Print(("[DEBUG_ZONE_SCORE] Zone " + m_areaName + " - COMPLETION THRESHOLD REACHED! Score: " + newScore + "/100", LogLevel.WARNING);
+	        int remainingTime = Math.Ceil(CAPTURE_TIME_SECONDS - m_captureProgress);
+	        Print(string.Format("[CAPTURE] Zone %1 - Progress: %2/%3 seconds (%4%%) - Time remaining: %5s", 
+	            m_areaName, 
+	            Math.Round(m_captureProgress), 
+	            CAPTURE_TIME_SECONDS,
+	            Math.Round((m_captureProgress / CAPTURE_TIME_SECONDS) * 100),
+	            remainingTime), LogLevel.DEBUG);
+	    }
+	    
+	    // Check if capture is complete
+	    if (m_captureProgress >= CAPTURE_TIME_SECONDS && !m_isCaptured)
+	    {
+	        m_isCaptured = true; // Mark as captured to prevent repeated logging
+	        m_isCapturing = false; // Stop capturing state
+	        
+	        Print(string.Format("[CAPTURE] Zone %1 - CAPTURED! Top contributors being calculated...", m_areaName), LogLevel.NORMAL);
+	        
+	        // Get and log top contributors
+	        array<string> topContributors = GetTopContributors(3);
+	        if (!topContributors.IsEmpty())
+	        {
+	            Print("Top contributors:", LogLevel.NORMAL);
+	            foreach (string playerGuid : topContributors)
+	            {
+	                int score = GetPlayerScore(playerGuid);
+	                // For logging, we'll just show the GUID for now - you can convert this to player name later
+	                Print(string.Format("  Player (GUID: %1): %2 seconds", playerGuid, score), LogLevel.NORMAL);
+	            }
+	        }
+	        
+	        // Note: Score reset will be handled by IA_MissionInitializer when checking completion
 	    }
 	}
 		
@@ -745,6 +832,172 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         float distanceSq = vector.DistanceSq(GetOrigin(), pos);
         float radiusSq = m_radius * m_radius;
         return distanceSq <= radiusSq;
+    }
+    
+    // --- Player Scoring Methods ---
+    protected void AwardCapturePoints(array<IEntity> entities)
+    {
+        int playersAwarded = 0;
+        
+        foreach (IEntity entity : entities)
+        {
+            SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(entity);
+            if (!character) continue;
+            
+            // Check if US faction
+            string factionKey = GetFactionOfCharacter(character);
+            if (factionKey != "US") continue;
+            
+            // Check if player-controlled
+            int playerId = GetGame().GetPlayerManager().GetPlayerIdFromControlledEntity(character);
+            if (playerId > 0)
+            {
+                // Get player GUID
+                string playerGuid = GetGame().GetBackendApi().GetPlayerIdentityId(playerId);
+                if (playerGuid.IsEmpty())
+                {
+                    Print(string.Format("[CAPTURE_SCORING] Could not get GUID for player %1", playerId), LogLevel.WARNING);
+                    continue;
+                }
+                
+                // Award 1 point
+                int currentScore = 0;
+                if (m_playerCaptureScores.Contains(playerGuid))
+                {
+                    currentScore = m_playerCaptureScores[playerGuid];
+                }
+                
+                m_playerCaptureScores[playerGuid] = currentScore + 1;
+                playersAwarded++;
+            }
+        }
+        
+        // Debug logging
+        if (playersAwarded > 0)
+        {
+            Print(string.Format("[CAPTURE_SCORING] Zone %1 - Awarded points to %2 US players", m_areaName, playersAwarded), LogLevel.DEBUG);
+        }
+    }
+    
+    array<string> GetTopContributors(int maxCount = 3)
+    {
+        array<string> sortedPlayers = new array<string>();
+        array<int> sortedScores = new array<int>();
+        
+        // Copy all entries to arrays for sorting
+        foreach (string playerGuid, int score : m_playerCaptureScores)
+        {
+            // Only include if they have at least 5 points (5 seconds of contribution)
+            if (score >= 5)
+            {
+                sortedPlayers.Insert(playerGuid);
+                sortedScores.Insert(score);
+            }
+        }
+        
+        // Simple bubble sort by score (highest first)
+        for (int i = 0; i < sortedScores.Count() - 1; i++)
+        {
+            for (int j = 0; j < sortedScores.Count() - i - 1; j++)
+            {
+                if (sortedScores[j] < sortedScores[j + 1])
+                {
+                    // Swap scores
+                    int tempScore = sortedScores[j];
+                    sortedScores[j] = sortedScores[j + 1];
+                    sortedScores[j + 1] = tempScore;
+                    
+                    // Swap players
+                    string tempPlayer = sortedPlayers[j];
+                    sortedPlayers[j] = sortedPlayers[j + 1];
+                    sortedPlayers[j + 1] = tempPlayer;
+                }
+            }
+        }
+        
+        // Return top contributors
+        array<string> topContributors = new array<string>();
+        for (int i = 0; i < Math.Min(maxCount, sortedPlayers.Count()); i++)
+        {
+            topContributors.Insert(sortedPlayers[i]);
+        }
+        
+        return topContributors;
+    }
+    
+    // Get score for specific player by GUID
+    int GetPlayerScore(string playerGuid)
+    {
+        if (m_playerCaptureScores.Contains(playerGuid))
+            return m_playerCaptureScores[playerGuid];
+        return 0;
+    }
+    
+    // Reset scores (call after zone capture)
+    void ResetCaptureScores()
+    {
+        m_playerCaptureScores.Clear();
+        // Don't reset m_isCaptured here - that should only be reset when actually starting a new zone group
+    }
+    
+    // Fully reset the zone for a new capture (called when moving to next zone group)
+    void ResetForNewCapture()
+    {
+        m_playerCaptureScores.Clear();
+        m_isCapturing = false;
+        m_hasReached50Percent = false;
+        m_isCaptured = false;
+        m_captureProgress = 0.0;
+        m_captureStatus = "Neutral";
+    }
+    
+    // Trigger notification to all players
+    void TriggerCaptureNotification(string messageType, string message)
+    {
+        array<int> playerIDs = new array<int>();
+        GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
+        foreach (int playerID : playerIDs)
+        {
+            PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
+            if (pc)
+            {
+                SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pc.GetControlledEntity());
+                if (character)
+                {
+                    character.SetUIOne(messageType, message, playerID);
+                }
+            }
+        }
+    }
+    
+    // Get capture progress percentage
+    float GetCapturePercentage()
+    {
+        return (m_captureProgress / CAPTURE_TIME_SECONDS) * 100.0;
+    }
+    
+    // Get remaining capture time
+    int GetRemainingCaptureTime()
+    {
+        if (m_captureProgress >= CAPTURE_TIME_SECONDS)
+            return 0;
+        return Math.Ceil(CAPTURE_TIME_SECONDS - m_captureProgress);
+    }
+    
+    // Helper method to get player name from GUID (for future implementation)
+    static string GetPlayerNameFromGuid(string playerGuid)
+    {
+        // You'll need to implement a lookup system here
+        // For now, just return a shortened version of the GUID
+        if (playerGuid.Length() > 8)
+            return playerGuid.Substring(0, 8) + "...";
+        return playerGuid;
+    }
+    
+    // Check if zone is captured (needed by mission initializer)
+    bool IsCaptured()
+    {
+        return m_isCaptured;
     }
 };
 

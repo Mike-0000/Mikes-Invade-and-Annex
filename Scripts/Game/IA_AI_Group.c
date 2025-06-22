@@ -158,6 +158,13 @@ class IA_AiGroup
     // Defend mission mode
     private bool m_isInDefendMode = false;
     private vector m_defendTarget = vector.Zero;
+    
+    // Staggered spawning state
+    private int m_pendingUnitsToSpawn = 0;
+    private int m_unitsSpawnedCount = 0;
+    private vector m_staggeredSpawnPos = vector.Zero;
+    private IA_Faction m_staggeredSpawnFaction = IA_Faction.NONE;
+    private Faction m_staggeredAreaFaction = null;
 	
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount)
     {
@@ -393,47 +400,17 @@ class IA_AiGroup
 
         int actualUnitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
 
-        // --- BEGIN REFACTOR: Use delayed spawning to prevent server hitching ---
-        // Create a list of unit prefabs to spawn asynchronously
-        array<ResourceName> unitPrefabs = {};
-        for (int i = 0; i < actualUnitsToSpawn; i++)
-        {
-            string charPrefabPath = GetRandomUnitPrefab(faction, AreaFaction);
-            if (charPrefabPath != "")
-            {
-                unitPrefabs.Insert(charPrefabPath);
-            }
-        }
+        // Set up staggered spawning state for vehicle groups
+        grp.m_pendingUnitsToSpawn = actualUnitsToSpawn;
+        grp.m_unitsSpawnedCount = 0;
+        grp.m_staggeredSpawnPos = groundPos;
+        grp.m_staggeredSpawnFaction = faction;
+        grp.m_staggeredAreaFaction = AreaFaction;
         
-        // Assign the list of prefabs to the group's spawn slots and initiate spawning
-        if (grp.m_group)
-        {
-            grp.m_group.m_aUnitPrefabSlots = unitPrefabs;
-            grp.m_group.SetMemberSpawnDelay(100); // 100ms delay between each unit
-            grp.m_group.SpawnUnits();
-            
-            // Register a callback to order units into the vehicle once they have all spawned.
-            grp.m_group.GetOnAllDelayedEntitySpawned().Insert(grp.OnAllVehicleGroupMembersSpawned);
-        }
-        // --- END REFACTOR ---
-
-        grp.m_isSpawned = true;
-
-        // --- BEGIN MODIFIED: Only set default state if not in defend mode and no area assigned ---
-        // Initialize tactical state and schedule evaluation only if not in defend mode
-        if (!grp.IsInDefendMode() && !grp.m_lastAssignedArea)
-        {
-            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, groundPos);
-        }
-        else
-        {
-            Print(string.Format("[IA_AiGroup.CreateGroupForVehicle] Vehicle group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
-                grp.IsInDefendMode(), grp.m_lastAssignedArea != null), LogLevel.NORMAL);
-        }
-        // --- END MODIFIED ---
+        Print(string.Format("[IA_AiGroup.CreateGroupForVehicle] Starting staggered spawning of %1 units for vehicle group faction %2", actualUnitsToSpawn, faction), LogLevel.NORMAL);
         
-        grp.ScheduleNextStateEvaluation();
-        grp.SetupDeathListener(); // Ensure CheckDangerEvents is scheduled
+        // Start spawning the first unit immediately
+        grp.SpawnNextUnit();
 
         return grp;
     }
@@ -630,51 +607,17 @@ class IA_AiGroup
         groundPos[1] = groundY;
         grp.m_group.SetOrigin(groundPos);
 
-        // --- BEGIN REFACTOR: Use delayed spawning to prevent server hitching ---
-        // Create a list of unit prefabs to spawn asynchronously
-        array<ResourceName> unitPrefabs = {};
-        for (int i = 0; i < unitCount; i++)
-        {
-            string charPrefabPath = GetRandomUnitPrefab(faction, AreaFaction);
-            if (charPrefabPath != "")
-            {
-                unitPrefabs.Insert(charPrefabPath);
-            }
-        }
-
-        // Assign the list of prefabs to the group's spawn slots and initiate spawning
-        if (grp.m_group)
-        {
-            grp.m_group.m_aUnitPrefabSlots = unitPrefabs;
-            grp.m_group.SetMemberSpawnDelay(100); // 100ms delay between each unit
-            grp.m_group.SpawnUnits();
-        }
-        // --- END REFACTOR ---
-
-        // Instead of using Spawn directly, we'll handle initialization here
-        grp.PerformSpawn();
+        // Set up staggered spawning state
+        grp.m_pendingUnitsToSpawn = unitCount;
+        grp.m_unitsSpawnedCount = 0;
+        grp.m_staggeredSpawnPos = groundPos;
+        grp.m_staggeredSpawnFaction = faction;
+        grp.m_staggeredAreaFaction = AreaFaction;
         
-        // --- BEGIN MODIFIED: Only set default state if not in defend mode and no area assigned ---
-        // Don't set default tactical state if the group is already in defend mode or has an assigned area
-        if (!grp.IsInDefendMode() && !grp.m_lastAssignedArea)
-        {
-            // Explicitly set a default tactical state for the new group
-            if (spawnPos != vector.Zero)
-            {
-                grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, spawnPos, null, true); // Added authority flag
-            }
-            else
-            {
-                vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, grp.GetOrigin());
-                grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos, null, true); // Added authority flag
-            }
-        }
-        else
-        {
-            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupFromUnits] Group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
-                grp.IsInDefendMode(), grp.m_lastAssignedArea != null), LogLevel.NORMAL);
-        }
-        // --- END MODIFIED ---
+        Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Starting staggered spawning of %1 units for faction %2 at %3", unitCount, faction, spawnPos.ToString()), LogLevel.NORMAL);
+        
+        // Start spawning the first unit immediately
+        grp.SpawnNextUnit();
 
         return grp;
     }
@@ -1229,14 +1172,32 @@ class IA_AiGroup
                 return false;
             }
             
-            // Get a random civilian prefab and use the asynchronous SpawnUnits method
+            // Restore old spawning logic - spawn civilian directly
             string resourceName = IA_RandomCivilianResourceName();
-            if (resourceName != "")
+            Resource charRes = Resource.Load(resourceName);
+            if (!charRes)
             {
-                m_group.m_aUnitPrefabSlots.Insert(resourceName);
-                m_group.SetMemberSpawnDelay(0); // No delay needed for one unit
-                m_group.SpawnUnits();
+                return false;
             }
+            
+            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSurfaceAdjustedSpawnParams(spawnPos));
+            if (!charEntity)
+            {
+                return false;
+            }
+
+            // Add the spawned civilian character to the SCR_AIGroup
+            if (!m_group.AddAIEntityToGroup(charEntity))
+            {
+                IA_Game.AddEntityToGc(charEntity); // Clean up character
+                IA_Game.AddEntityToGc(m_group);    // Clean up the group as well since it's unusable
+                m_group = null;
+                return false;
+            }
+            // If successfully added, setup death listener for this specific unit
+            SetupDeathListenerForUnit(charEntity);
+            
+            Print(string.Format("[IA_AiGroup.PerformSpawn] Using direct spawning for civilian at %1", spawnPos.ToString()), LogLevel.NORMAL);
         }
         else // Military group
         {
@@ -1542,10 +1503,49 @@ class IA_AiGroup
             GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
             return;
         }
+            
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
         
-        // Hook into the group's OnAgentAdded event.
-        // This will call OnUnitAdded for each member as they are spawned by the engine.
-        m_group.GetOnAgentAdded().Insert(OnUnitAdded);
+        if (agents.IsEmpty())
+        {
+            GetGame().GetCallqueue().CallLater(SetupDeathListener, 1000);
+            return;
+        }
+        
+
+        
+        foreach (AIAgent agent : agents)
+        {
+            if (!agent)
+            {
+                continue;
+            }
+                
+            SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
+            if (!ch)
+            {
+                continue;
+            }
+                
+            SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
+            if (!ccc)
+            {
+                continue;
+            }
+            EAISkill aiSkill = EAISkill.EXPERT;
+			SCR_AICombatComponent combatComponent = SCR_AICombatComponent.Cast(agent.FindComponent(SCR_AICombatComponent));
+			if (combatComponent)
+				combatComponent.SetAISkill(aiSkill);
+			
+            ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
+            
+            // Set up danger event processing for this agent
+            ProcessAgentDangerEvents(agent);
+            
+            // Verify the agent has danger event capability
+            int dangerCount = agent.GetDangerEventsCount();
+        }
         
         if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
         {
@@ -2821,6 +2821,257 @@ class IA_AiGroup
     }
     
     //------------------------------------------------------------------------------------------------
+    
+    // Method to spawn the next unit in the staggered spawning process
+    void SpawnNextUnit()
+    {
+        if (m_pendingUnitsToSpawn <= 0)
+        {
+            // All units spawned, finalize the group
+            OnStaggeredSpawningComplete();
+            return;
+        }
+        
+        // Get the prefab path for this unit
+        string charPrefabPath = GetRandomUnitPrefab(m_staggeredSpawnFaction, m_staggeredAreaFaction);
+        if (charPrefabPath == "")
+        {
+            // Failed to get prefab, try next unit
+            m_pendingUnitsToSpawn--;
+            if (m_pendingUnitsToSpawn > 0)
+            {
+                GetGame().GetCallqueue().CallLater(SpawnNextUnit, 100, false);
+            }
+            else
+            {
+                OnStaggeredSpawningComplete();
+            }
+            return;
+        }
+        
+        // Generate spawn position
+        vector unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+        Resource charRes = Resource.Load(charPrefabPath);
+        if (!charRes)
+        {
+            // Failed to load resource, try next unit
+            m_pendingUnitsToSpawn--;
+            if (m_pendingUnitsToSpawn > 0)
+            {
+                GetGame().GetCallqueue().CallLater(SpawnNextUnit, 100, false);
+            }
+            else
+            {
+                OnStaggeredSpawningComplete();
+            }
+            return;
+        }
+        
+        IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitSpawnPos));
+        if (!charEntity)
+        {
+            // Failed to spawn entity, try next unit
+            m_pendingUnitsToSpawn--;
+            if (m_pendingUnitsToSpawn > 0)
+            {
+                GetGame().GetCallqueue().CallLater(SpawnNextUnit, 100, false);
+            }
+            else
+            {
+                OnStaggeredSpawningComplete();
+            }
+            return;
+        }
+        
+        // Add to group
+        if (!m_group.AddAIEntityToGroup(charEntity))
+        {
+            IA_Game.AddEntityToGc(charEntity); // Schedule for deletion if adding failed
+        }
+        else
+        {
+            SetupDeathListenerForUnit(charEntity); // Setup death listener for the added unit
+            m_unitsSpawnedCount++;
+        }
+        
+        // Decrement pending count and schedule next spawn
+        m_pendingUnitsToSpawn--;
+        if (m_pendingUnitsToSpawn > 0)
+        {
+            GetGame().GetCallqueue().CallLater(SpawnNextUnit, 100, false);
+        }
+        else
+        {
+            OnStaggeredSpawningComplete();
+        }
+    }
+    
+    // Called when all units have been spawned (or attempted)
+    void OnStaggeredSpawningComplete()
+    {
+        // Mark as spawned
+        PerformSpawn();
+        
+        Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Staggered spawning complete. Spawned %1 units for faction %2", 
+            m_unitsSpawnedCount, m_staggeredSpawnFaction), LogLevel.NORMAL);
+        
+        // Special handling for hostile civilian groups (marked by having m_groupFaction set)
+        if (m_groupFaction && m_groupFaction.GetFactionKey() == "USSR" && !m_referencedEntity)
+        {
+            // Ensure the underlying SCR_AIGroup has the correct faction set
+            m_group.SetFaction(m_groupFaction);
+            
+            // Arm the hostile civilians
+            ArmGroupWithLongGuns();
+            
+            // Set default state
+            if (m_staggeredSpawnPos != vector.Zero)
+            {
+                SetTacticalState(IA_GroupTacticalState.DefendPatrol, m_staggeredSpawnPos, null, true);
+            }
+            else
+            {
+                vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, GetOrigin());
+                SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos, null, true);
+            }
+        }
+        // Special handling for vehicle groups
+        else if (m_referencedEntity)
+        {
+            // Order units to get in the vehicle immediately
+            AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+            
+            // Initialize tactical state and schedule evaluation only if not in defend mode
+            if (!IsInDefendMode() && !m_lastAssignedArea)
+            {
+                SetTacticalState(IA_GroupTacticalState.DefendPatrol, m_staggeredSpawnPos);
+            }
+            else
+            {
+                Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Vehicle group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
+                    IsInDefendMode(), m_lastAssignedArea != null), LogLevel.NORMAL);
+            }
+            
+            ScheduleNextStateEvaluation();
+            SetupDeathListener(); // Ensure CheckDangerEvents is scheduled
+        }
+        else
+        {
+            // Non-vehicle groups - original logic
+            // Only set default state if not in defend mode and no area assigned
+            if (!IsInDefendMode() && !m_lastAssignedArea)
+            {
+                // Explicitly set a default tactical state for the new group
+                if (m_staggeredSpawnPos != vector.Zero)
+                {
+                    SetTacticalState(IA_GroupTacticalState.DefendPatrol, m_staggeredSpawnPos, null, true); // Added authority flag
+                }
+                else
+                {
+                    vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, GetOrigin());
+                    SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos, null, true); // Added authority flag
+                }
+            }
+            else
+            {
+                Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
+                    IsInDefendMode(), m_lastAssignedArea != null), LogLevel.NORMAL);
+            }
+        }
+        
+        // Clear staggered spawning state
+        m_staggeredSpawnPos = vector.Zero;
+        m_staggeredSpawnFaction = IA_Faction.NONE;
+        m_staggeredAreaFaction = null;
+    }
+
+    //------------------------------------------------------------------------------------------------
+    
+    // Method to spawn the next hostile civilian unit in the staggered spawning process
+    void SpawnNextHostileCivilianUnit()
+    {
+        if (m_pendingUnitsToSpawn <= 0)
+        {
+            // All units spawned, finalize the group
+            OnStaggeredSpawningComplete();
+            return;
+        }
+        
+        // Get civilian prefab path
+        string charPrefabPath = IA_RandomCivilianResourceName();
+        if (charPrefabPath == "")
+        {
+            // Failed to get prefab, try next unit
+            m_pendingUnitsToSpawn--;
+            if (m_pendingUnitsToSpawn > 0)
+            {
+                GetGame().GetCallqueue().CallLater(SpawnNextHostileCivilianUnit, 100, false);
+            }
+            else
+            {
+                OnStaggeredSpawningComplete();
+            }
+            return;
+        }
+        
+        // Generate spawn position
+        vector unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+        Resource charRes = Resource.Load(charPrefabPath);
+        if (!charRes)
+        {
+            // Failed to load resource, try next unit
+            m_pendingUnitsToSpawn--;
+            if (m_pendingUnitsToSpawn > 0)
+            {
+                GetGame().GetCallqueue().CallLater(SpawnNextHostileCivilianUnit, 100, false);
+            }
+            else
+            {
+                OnStaggeredSpawningComplete();
+            }
+            return;
+        }
+        
+        IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitSpawnPos));
+        if (!charEntity)
+        {
+            // Failed to spawn entity, try next unit
+            m_pendingUnitsToSpawn--;
+            if (m_pendingUnitsToSpawn > 0)
+            {
+                GetGame().GetCallqueue().CallLater(SpawnNextHostileCivilianUnit, 100, false);
+            }
+            else
+            {
+                OnStaggeredSpawningComplete();
+            }
+            return;
+        }
+        
+        // Add to group
+        if (!m_group.AddAIEntityToGroup(charEntity))
+        {
+            IA_Game.AddEntityToGc(charEntity); // Schedule for deletion if adding failed
+        }
+        else
+        {
+            SetupDeathListenerForUnit(charEntity); // Setup death listener for the added unit
+            m_unitsSpawnedCount++;
+        }
+        
+        // Decrement pending count and schedule next spawn
+        m_pendingUnitsToSpawn--;
+        if (m_pendingUnitsToSpawn > 0)
+        {
+            GetGame().GetCallqueue().CallLater(SpawnNextHostileCivilianUnit, 100, false);
+        }
+        else
+        {
+            OnStaggeredSpawningComplete();
+        }
+    }
+
+    //------------------------------------------------------------------------------------------------
 
     // Add this new method before SetTacticalState method
     void RequestTacticalStateChange(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null)
@@ -2956,58 +3207,8 @@ class IA_AiGroup
     // END NEW PRIVATE HELPER METHOD
     //------------------------------------------------------------------------------------------------
 
-    // New callback to set up units as they are added to the group asynchronously
-    private void OnUnitAdded(AIAgent agent)
-    {
-        if (!agent)
-            return;
-            
-        SCR_ChimeraCharacter ch = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
-        if (!ch)
-            return;
-            
-        // Setup death listener for the unit
-        SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(ch.FindComponent(SCR_CharacterControllerComponent));
-        if (ccc)
-        {
-            ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
-        }
-        
-        // Set AI Skill
-        EAISkill aiSkill = EAISkill.EXPERT;
-        SCR_AICombatComponent combatComponent = SCR_AICombatComponent.Cast(agent.FindComponent(SCR_AICombatComponent));
-        if (combatComponent)
-            combatComponent.SetAISkill(aiSkill);
-        
-        // Perform initial danger event processing for the new agent
-        ProcessAgentDangerEvents(agent);
-    }
-
-    // New callback to order units into their assigned vehicle after they have all spawned.
-    private void OnAllVehicleGroupMembersSpawned(SCR_AIGroup group)
-    {
-        if (m_referencedEntity)
-        {
-            AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
-
-            // Clean up the callback to prevent it from running again.
-            if (m_group)
-            {
-                m_group.GetOnAllDelayedEntitySpawned().Remove(OnAllVehicleGroupMembersSpawned);
-            }
-        }
-    }
-
-    private void OnAllHostileCiviliansSpawned(SCR_AIGroup group)
-    {
-        ArmGroupWithLongGuns();
-        
-        // Clean up the callback to prevent it from running again.
-        if (m_group)
-        {
-            m_group.GetOnAllDelayedEntitySpawned().Remove(OnAllHostileCiviliansSpawned);
-        }
-    }
+    // Removed OnUnitAdded, OnAllVehicleGroupMembersSpawned, and OnAllHostileCiviliansSpawned callbacks
+    // as they are no longer needed with direct spawning
 
     void ArmGroupWithPistols()
     {
@@ -3132,43 +3333,21 @@ class IA_AiGroup
         grp.m_group.SetOrigin(groundPos);
     
         // KEY DIFFERENCE: Use civilian prefabs
-        array<ResourceName> unitPrefabs = {};
-        for (int i = 0; i < unitCount; i++)
-        {
-            string charPrefabPath = IA_RandomCivilianResourceName();
-            if (charPrefabPath != "")
-            {
-                unitPrefabs.Insert(charPrefabPath);
-            }
-        }
-    
-        if (grp.m_group)
-        {
-            grp.m_group.m_aUnitPrefabSlots = unitPrefabs;
-            grp.m_group.SetMemberSpawnDelay(100);
-            grp.m_group.SpawnUnits();
-            
-            // Register a callback to arm units once they have all spawned.
-            grp.m_group.GetOnAllDelayedEntitySpawned().Insert(grp.OnAllHostileCiviliansSpawned);
-            
-            // Ensure the underlying SCR_AIGroup has the correct faction set
-            Faction ussrFaction = GetGame().GetFactionManager().GetFactionByKey("USSR");
-            if (ussrFaction)
-                grp.m_group.SetFaction(ussrFaction);
-        }
-    
-        grp.PerformSpawn();
+        // Set up staggered spawning state
+        grp.m_pendingUnitsToSpawn = unitCount;
+        grp.m_unitsSpawnedCount = 0;
+        grp.m_staggeredSpawnPos = groundPos;
+        grp.m_staggeredSpawnFaction = IA_Faction.USSR; // Always USSR for hostile civilians
+        grp.m_staggeredAreaFaction = AreaFaction;
         
-        // Set a default state
-        if (spawnPos != vector.Zero)
-        {
-            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, spawnPos, null, true);
-        }
-        else
-        {
-            vector patrolPos = IA_Game.rng.GenerateRandomPointInRadius(10, 50, grp.GetOrigin());
-            grp.SetTacticalState(IA_GroupTacticalState.DefendPatrol, patrolPos, null, true);
-        }
+        // Mark that this group needs arming after spawning
+        // We'll use a special marker to identify hostile civilian groups
+        grp.m_groupFaction = GetGame().GetFactionManager().GetFactionByKey("USSR");
+        
+        Print(string.Format("[IA_AiGroup.CreateHostileCivilianGroup] Starting staggered spawning of %1 hostile civilians at %2", unitCount, spawnPos.ToString()), LogLevel.NORMAL);
+        
+        // Start spawning the first unit immediately
+        grp.SpawnNextHostileCivilianUnit();
     
         return grp;
     }

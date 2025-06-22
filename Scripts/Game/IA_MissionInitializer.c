@@ -164,6 +164,9 @@ class IA_MissionInitializer : GenericEntity
         {
             Print("[IA_MissionInitializer.ProceedToNextZone] Failed to get IA_Game instance, cannot clear areas.", LogLevel.ERROR);
         }
+        
+        // Reset all area markers for the new zone group
+        IA_AreaMarker.ResetAllMarkersForNewGroup();
         // --- END ADDED ---
 	    
 	    if (m_currentIndex < 0 || m_currentIndex >= groupsArray.Count())
@@ -544,11 +547,11 @@ class IA_MissionInitializer : GenericEntity
 			    continue;
 			}
 				
-			// Get US faction score (now on 0-1000 scale)
+			// Get US faction score (now on 0-1000 scale, representing 0-120 seconds)
 			float factionScore = marker.GetFactionScore("US");
-			//Print("[DEBUG_ZONE_SCORE_DEBUG] Marker name: " + marker.GetAreaName() + ", US faction score: " + factionScore + "/100", LogLevel.WARNING);
+			//Print("[DEBUG_ZONE_SCORE_DEBUG] Marker name: " + marker.GetAreaName() + ", US faction score: " + factionScore + "/1000", LogLevel.WARNING);
 			
-			if(factionScore >= 1000) {
+			if(factionScore >= 1000) { // Score of 1000 = 120 seconds completed
 				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " IS complete (Score: " + factionScore + ").", LogLevel.WARNING);
 				actualCompletedZones++;
 				zoneCompletionStatus[currentZoneIndex] = true; // Update status array
@@ -560,6 +563,9 @@ class IA_MissionInitializer : GenericEntity
 				    //Print("[DEBUG_ZONE_GROUP] Finishing task for completed zone: " + marker.GetAreaName(), LogLevel.NORMAL);
 					instance.GetCurrentTaskEntity().Finish();
 				}
+				
+				// Reset capture scores for next time
+				marker.ResetCaptureScores();
 			}
 			else { // factionScore < 1000
 				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " is NOT complete (Score: " + factionScore + ").", LogLevel.NORMAL);
