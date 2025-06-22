@@ -34,6 +34,7 @@ modded class SCR_ChimeraCharacter{
 			
 		} else{
 						Rpc(RpcDo_TriggerSetUIOneHandler, messageType, taskTitle, playerId);
+						Do_TriggerSetUIOneHandler(messageType, taskTitle, playerId);
 
 			Print("Running As Server",LogLevel.NORMAL);
 		}

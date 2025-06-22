@@ -318,19 +318,36 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    int usCount = factionCounts.Get("US");
 	    int ussrCount = factionCounts.Get("USSR");
 	    
-	    // If no units of either faction, no score change
+	    // Get current capture progress (now 0-120 seconds instead of 0-1000 points)
+	    float previousProgress = m_captureProgress;
+	    bool wasCapturing = m_isCapturing;
+	    
+	    // Debug logging for zone status
+	    if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
+	    {
+	        Print(string.Format("[CAPTURE_DEBUG] Zone %1 - US: %2, USSR: %3, wasCapturing: %4, isCapturing: %5, Progress: %6", 
+	            m_areaName, usCount, ussrCount, wasCapturing, m_isCapturing, Math.Round(m_captureProgress)), LogLevel.DEBUG);
+	    }
+	    
+	    // Check if capture should be paused when zone becomes empty
 	    if (usCount == 0 && ussrCount == 0)
 	    {
+	        // Check if we need to send pause notification before exiting
+	        if (wasCapturing && m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
+	        {
+	            // Zone is now empty but capture was in progress
+	            TriggerCaptureNotification("CapturePaused", m_areaName + " capture paused");
+	            Print(string.Format("[CAPTURE] Zone %1 - PAUSED (empty zone) - Progress: %2/%3 seconds", 
+	                m_areaName, Math.Round(m_captureProgress), CAPTURE_TIME_SECONDS), LogLevel.WARNING);
+	        }
+	        
 	        m_IsActive = false;
+	        m_isCapturing = false;
 	        m_captureStatus = "Neutral";
 	        return;
 	    }
 	    
 	    m_IsActive = true;
-	    
-	    // Get current capture progress (now 0-120 seconds instead of 0-1000 points)
-	    float previousProgress = m_captureProgress;
-	    bool wasCapturing = m_isCapturing;
 	    
 	    // Determine capture state based on majority
 	    if (usCount > ussrCount) 
@@ -418,16 +435,33 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        
 	        // Get and log top contributors
 	        array<string> topContributors = GetTopContributors(3);
+	        
+	        // Build the capture completion message with top contributors
+	        string captureMessage = m_areaName + " Captured!";
+	        
 	        if (!topContributors.IsEmpty())
 	        {
-	            Print("Top contributors:", LogLevel.NORMAL);
-	            foreach (string playerGuid : topContributors)
+	            captureMessage += " Top contributors: ";
+	            
+	            for (int i = 0; i < topContributors.Count(); i++)
 	            {
+	                string playerGuid = topContributors[i];
+	                string playerName = GetPlayerNameFromGuid(playerGuid);
 	                int score = GetPlayerScore(playerGuid);
-	                // For logging, we'll just show the GUID for now - you can convert this to player name later
-	                Print(string.Format("  Player (GUID: %1): %2 seconds", playerGuid, score), LogLevel.NORMAL);
+	                
+	                                // Format: "1. PlayerName (60)"
+                captureMessage += string.Format("%1. %2 (%3)", i + 1, playerName, score);
+	                
+	                if (i < topContributors.Count() - 1)
+	                    captureMessage += ", ";
+	                
+	                // Also log to console
+	                Print(string.Format("  %1. %2 (GUID: %3): %4 seconds", i + 1, playerName, playerGuid, score), LogLevel.NORMAL);
 	            }
 	        }
+	        
+	        // Send notification to all players
+	        TriggerCaptureNotification("TaskCompleted", captureMessage);
 	        
 	        // Note: Score reset will be handled by IA_MissionInitializer when checking completion
 	    }
@@ -854,7 +888,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             {
                 // Get player GUID
                 string playerGuid = GetGame().GetBackendApi().GetPlayerIdentityId(playerId);
-                if (playerGuid.IsEmpty())
+                if (!playerGuid || playerGuid == "")
                 {
                     Print(string.Format("[CAPTURE_SCORING] Could not get GUID for player %1", playerId), LogLevel.WARNING);
                     continue;
@@ -989,9 +1023,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     {
         // You'll need to implement a lookup system here
         // For now, just return a shortened version of the GUID
-        if (playerGuid.Length() > 8)
-            return playerGuid.Substring(0, 8) + "...";
-        return playerGuid;
+		return GetGame().GetPlayerManager().GetPlayerNameByIdentity(playerGuid);
     }
     
     // Check if zone is captured (needed by mission initializer)
