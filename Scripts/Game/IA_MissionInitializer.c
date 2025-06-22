@@ -559,7 +559,7 @@ class IA_MissionInitializer : GenericEntity
 				// If there's an active task for this completed zone, finish it.
 				if (instance.GetCurrentTaskEntity()) {
 					string completedTaskTitle = instance.m_area.GetName();
-					TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
+					//TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
 				    //Print("[DEBUG_ZONE_GROUP] Finishing task for completed zone: " + marker.GetAreaName(), LogLevel.NORMAL);
 					instance.GetCurrentTaskEntity().Finish();
 				}
