@@ -6,11 +6,11 @@ class IA_SideObjectiveManager
     protected ref array<ref IA_SideObjective> m_ActiveObjectives;
     
     protected bool m_IsOnCooldown = false;
-    protected const float OBJECTIVE_COOLDOWN_SECONDS = 10; // 10 minutes
+    protected const float OBJECTIVE_COOLDOWN_SECONDS = 900; // 15 minutes
     
     // --- BEGIN ADDED: Startup delay ---
     protected bool m_IsInitialized = false;
-    protected const float STARTUP_DELAY_SECONDS = 10; // 2 minutes delay after mission start
+    protected const float STARTUP_DELAY_SECONDS = 12; // 5 minutes delay after mission start
     // --- END ADDED ---
     
     // To avoid picking the same marker repeatedly

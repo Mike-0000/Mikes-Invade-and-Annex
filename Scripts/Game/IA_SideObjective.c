@@ -62,7 +62,7 @@ class EscapeVehicleMarkerQueryCallback
 // Base class for all side objectives
 class IA_SideObjective
 {
-	protected const int OBJECTIVE_COOLDOWN_MILLASECONDS = 90000; // 15 minutes
+	protected const int OBJECTIVE_COOLDOWN_MILLASECONDS = 900000; // 15 minutes
 
     protected IA_SideObjectiveType m_Type;
     protected IA_SideObjectiveState m_State;
@@ -434,14 +434,14 @@ class IA_AssassinationObjective : IA_SideObjective
             // This will be processed through the standard AddOrder logic with all its checks
             hvtGroup.RemoveAllOrders(true); // Clear any default orders first
 			
-			ResourceName rname = "{2FCBE5C76E285A7B}Prefabs/AI/Waypoints/AIWaypoint_DefendSmall.et";
+			ResourceName rname = "{2C442840ED2B495D}Prefabs/AI/Waypoints/AIWaypoint_DefendSmallHVT.et";
             Resource res = Resource.Load(rname);
 			IEntity waypointEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(defendPos));
         	SCR_AIWaypoint w = null; // Initialize w to null
 			w = SCR_AIWaypoint.Cast(waypointEnt);
-			
             if(!w)
 				return;
+			w.SetPriorityLevel(150);
 			hvtGroup.GetSCR_AIGroup().AddWaypointToGroup(w);
 			
             //hvtGroup.AddOrder(defendPos, IA_AiOrder.DefendSmall, true); // Using DefendSmall for tighter defense
@@ -471,6 +471,7 @@ class IA_AssassinationObjective : IA_SideObjective
 			
             if(!w)
 				return;
+			w.SetPriorityLevel(80);
 			guardGroup.GetSCR_AIGroup().AddWaypointToGroup(w);
 
             // Use the standard tactical state system
