@@ -13,7 +13,7 @@ class IA_VehicleManager: GenericEntity
 {
     static private ref array<IEntity> m_vehicles = {};
     static private IA_VehicleManager m_instance;
-    static private const float DEFAULT_INITIAL_ROAD_SEARCH_RADIUS = 100.0;
+    static private const float DEFAULT_INITIAL_ROAD_SEARCH_RADIUS = 30.0;
     
     // Group-specific vehicles
     static private ref array<ref array<IEntity>> m_groupVehicles = {};
@@ -1037,8 +1037,8 @@ class IA_VehicleManager: GenericEntity
         }
         currentSearchRadius = Math.Max(currentSearchRadius, minSearchRadius); // Re-ensure minSearchRadius after adjustments
 
-        int maxRetries = 3; 
-        float radiusIncrement = 150; 
+        int maxRetries = 5; 
+        float radiusIncrement = 60; 
         float absoluteMaxSearchRadius = 1200;
 
         // Print(string.Format("[VEHICLE_DEBUG] Initial attempt to find road with searchCenter: %1, initial adjusted radius: %.1f (min requested: %.1f)", searchCenter.ToString(), currentSearchRadius, minSearchRadius), LogLevel.DEBUG);
@@ -1047,7 +1047,7 @@ class IA_VehicleManager: GenericEntity
         {
             if (attempt > 0) 
             {
-                currentSearchRadius += radiusIncrement;
+                currentSearchRadius += radiusIncrement*(attempt+1);
                 currentSearchRadius = Math.Max(currentSearchRadius, minSearchRadius); // Ensure incremented radius also respects min
                 if (currentSearchRadius > absoluteMaxSearchRadius)
                 {

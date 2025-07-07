@@ -36,7 +36,7 @@ class IA_AreaInstance
     private int m_aliveCivilianCount = 0;
     private bool m_isInitialCivilianSpawnDone = false;
     private ref array<IA_Faction>     m_attackingFactions = {};
-	static Faction m_AreaFaction;
+	Faction m_AreaFaction;
     // Target role counts for military groups
     private int targetDefenders = 0;
     private int targetAttackers = 0;
@@ -120,6 +120,16 @@ class IA_AreaInstance
     private bool m_radioTowerDestroyed = false;
     // --- END ADDED ---
     
+    // --- BEGIN ADDED: Side Objective Defense Mode ---
+    private bool m_isSideObjectiveDefenseActive = false;
+    private int m_sideObjectiveTargetAICount = 0;
+    private int m_sideObjectiveLastWaveSpawnTime = 0;
+    private const int SIDE_OBJECTIVE_WAVE_INTERVAL = 20000; // 20 seconds
+    private Faction m_sideObjectiveDefenseFaction = null;
+    // --- END ADDED ---
+    
+    private bool m_isEscapeSequenceActive = false;
+
     // Update scaling factors based on player count
     void UpdatePlayerScaling(int playerCount, float aiScaleFactor, int maxVehicles)
     {
@@ -212,7 +222,7 @@ class IA_AreaInstance
 	    inst.m_faction = faction;
 	    inst.m_strength = startStrength;
 		inst.m_areaGroup = groupID;
-		m_AreaFaction = AreaFaction;
+		inst.m_AreaFaction = AreaFaction;
 		
 			
 	    inst.m_area.SetInstantiated(true);
@@ -228,7 +238,7 @@ class IA_AreaInstance
 	    //////Print("[PLAYER_SCALING] New area created with scale factor: " + scaleFactor + ", player count: " + playerCount, LogLevel.DEBUG);
 	
 	    int groupCount = area.GetMilitaryAiGroupCount();
-	    inst.GenerateRandomAiGroups(groupCount, true, m_AreaFaction);
+	    inst.GenerateRandomAiGroups(groupCount, true, AreaFaction);
 	
 	    int civCount = area.GetCivilianCount();
 	    inst.GenerateCivilians(civCount);
@@ -492,6 +502,35 @@ class IA_AreaInstance
         }
         UpdateTask();
         RadioTowerDefenseTask();
+        SideObjectiveDefenseTask();
+    }
+
+    void Cleanup()
+    {
+        foreach (IA_AiGroup group : m_military)
+        {
+            if (group)
+            {
+                group.Despawn();
+            }
+        }
+        m_military.Clear();
+
+        // Optional: Also clean up vehicles, etc. if needed
+        foreach (Vehicle vehicle : m_areaVehicles)
+        {
+            if (vehicle)
+            {
+                IA_VehicleManager.DespawnVehicle(vehicle);
+            }
+        }
+        m_areaVehicles.Clear();
+    }
+
+    void CancelReinforcements()
+    {
+        m_reinforcements = IA_ReinforcementState.Done;
+        Print(string.Format("[AreaInstance] Reinforcements for area %1 have been cancelled by an external source (e.g., generator destroyed).", m_area.GetName()), LogLevel.DEBUG);
     }
 
     // --- Add a group to the military list ---
@@ -505,9 +544,9 @@ class IA_AreaInstance
             
             // --- BEGIN MODIFIED: Don't override defend mode groups ---
             // Check if the group is already in defend mode - if so, don't change its state
-            if (group.IsInDefendMode())
+            if (group.IsInDefendMode() || group.IsObjectiveUnit())
             {
-                Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, preserving existing tactical state"), LogLevel.DEBUG);
+                Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode or is an objective unit, preserving existing tactical state"), LogLevel.DEBUG);
                 // Still add to our state tracking for consistency, but don't override
                 m_assignedGroupStates.Insert(group, group.GetTacticalState());
                 return; // Don't change the group's tactical state
@@ -530,6 +569,41 @@ class IA_AreaInstance
             //Print(string.Format("[AreaInstance.AddMilitaryGroup] Assigned initial state %1 to group at %2", 
 //                typename.EnumToString(IA_GroupTacticalState, initialState), group.GetOrigin().ToString()), LogLevel.DEBUG);
             // --- END ADDED ---
+        }
+    }
+
+    void RemoveMilitaryGroup(IA_AiGroup group)
+    {
+        if (!group) return;
+    
+        int index = m_military.Find(group);
+        if (index != -1)
+        {
+            m_military.Remove(index);
+        }
+    
+        if (m_assignedGroupStates.Contains(group))
+        {
+            m_assignedGroupStates.Remove(group);
+        }
+        
+        if (m_stateStability.Contains(group)) m_stateStability.Remove(group);
+        if (m_stateStartTimes.Contains(group)) m_stateStartTimes.Remove(group);
+        if (m_hasInvestigatedThreat.Contains(group)) m_hasInvestigatedThreat.Remove(group);
+        if (m_assignedThreatPosition.Contains(group)) m_assignedThreatPosition.Remove(group);
+        if (m_investigationProgress.Contains(group)) m_investigationProgress.Remove(group);
+        if (m_lastThreatUpdateTime.Contains(group)) m_lastThreatUpdateTime.Remove(group);
+        if (m_lastUnderFireTime.Contains(group)) m_lastUnderFireTime.Remove(group);
+        
+        // Also remove from forced reinforcements if it's there
+        int forcedIndex = m_forcedReinforcementGroups.Find(group);
+        if (forcedIndex != -1)
+        {
+            m_forcedReinforcementGroups.Remove(forcedIndex);
+            if (m_forcedReinforcementTimeouts.Contains(group))
+            {
+                m_forcedReinforcementTimeouts.Remove(group);
+            }
         }
     }
 
@@ -623,6 +697,8 @@ class IA_AreaInstance
     // --- MODIFIED: ReinforcementsTask ---
     private void ReinforcementsTask()
     {
+        if (m_isSideObjectiveDefenseActive)
+            return;
         // Stop immediately if area is no longer under attack
         if (!IsUnderAttack())
         {
@@ -813,6 +889,9 @@ class IA_AreaInstance
 
     private void MilitaryOrderTask()
     {
+        if (m_isEscapeSequenceActive)
+            return;
+
         if (!this || !m_area || !m_canSpawn || m_military.IsEmpty())
             return;
 
@@ -1106,8 +1185,8 @@ class IA_AreaInstance
             if (!g || g.GetAliveCount() == 0)
                 continue;
                 
-            // --- BEGIN ADDED: Skip groups in defend mode ---
-            if (g.IsInDefendMode())
+            // --- BEGIN ADDED: Skip groups in defend mode AND objective units---
+            if (g.IsInDefendMode() || g.IsObjectiveUnit())
                 continue;
             // --- END ADDED ---
 
@@ -1186,8 +1265,8 @@ class IA_AreaInstance
             if (!g || g.GetAliveCount() == 0) continue;
             if (g.IsDriving()) continue; // Skip driving groups for role assignment
             
-            // --- BEGIN ADDED: Skip groups in defend mode (for defend missions) ---
-            if (g.IsInDefendMode())
+            // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
+            if (g.IsInDefendMode() || g.IsObjectiveUnit())
             {
                 //Print(string.Format("[AreaInstance.MilitaryTask] Skipping group in defend mode at %1", g.GetOrigin().ToString()), LogLevel.DEBUG);
                 continue;
@@ -1309,8 +1388,8 @@ class IA_AreaInstance
 
         foreach (IA_AiGroup g, IA_GroupTacticalState assignedState : currentAssignments)
         {
-            // --- BEGIN ADDED: Skip groups in defend mode ---
-            if (g.IsInDefendMode())
+            // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
+            if (g.IsInDefendMode() || g.IsObjectiveUnit())
                 continue;
             // --- END ADDED ---
             
@@ -1750,8 +1829,8 @@ class IA_AreaInstance
                  continue; // Still skip the subsequent role assignment and idle logic for driving groups
              }
              
-             // --- BEGIN ADDED: Skip groups in defend mode ---
-             if (g.IsInDefendMode())
+             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
+             if (g.IsInDefendMode() || g.IsObjectiveUnit())
              {
                  //Print(string.Format("[AreaInstance.MilitaryTask] Enforcement: Skipping group in defend mode at %1", g.GetOrigin().ToString()), LogLevel.DEBUG);
                  continue;
@@ -4170,7 +4249,7 @@ class IA_AreaInstance
 
         for (int i = 0; i < actualSpawnCount; i++)
         {
-			GetGame().GetCallqueue().CallLater(SpawnReinforcementEnactor, Math.RandomInt(2500,5000), false, MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission);
+			GetGame().GetCallqueue().CallLater(this.SpawnReinforcementEnactor, Math.RandomInt(2500,5000), false, MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission);
 			//SpawnReinforcementEnactor(MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission);
         }
         
@@ -4533,6 +4612,11 @@ class IA_AreaInstance
         return m_initialCivilianCount;
     }
 	
+    IA_Area GetArea()
+    {
+        return m_area;
+    }
+	
     // --- END ADDED ---
     
     // --- BEGIN ADDED: Helper to spawn a single AI group with delay and add it ---
@@ -4863,6 +4947,100 @@ class IA_AreaInstance
             AddMilitaryGroup(grp); // Add them to the military roster since they are combatants
             
             Print(string.Format("[AreaInstance] Spawned and armed hostile civilian reinforcement group (%1 units) for area %2.", scaledUnitCount, m_area.GetName()), LogLevel.DEBUG);
+        }
+    }
+
+	// --- BEGIN ADDED: Side Objective Defense Methods ---
+	void SetSideObjectiveDefenseActive(bool active, Faction enemyFaction)
+	{
+		if (m_isSideObjectiveDefenseActive == active)
+			return;
+	
+		m_isSideObjectiveDefenseActive = active;
+	
+		if (active)
+		{
+			Print(string.Format("[IA_AreaInstance] Side Objective Defense ACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+	
+			float scaleFactor = IA_Game.GetAIScaleFactor();
+			m_sideObjectiveTargetAICount = Math.Round(5 * ((scaleFactor*1.5) * (scaleFactor*1.5)));
+			Print(string.Format("[IA_SideObjectiveDefense] Calculated target AI count: %1 (scale factor: %2)", m_sideObjectiveTargetAICount, scaleFactor), LogLevel.DEBUG);
+			
+			m_sideObjectiveDefenseFaction = enemyFaction;
+			m_sideObjectiveLastWaveSpawnTime = System.GetTickCount();
+	
+			// Set the area into defend mode, but do not override existing group orders.
+			// Reinforcements will get their orders upon spawning.
+			vector objectiveOrigin = m_area.GetOrigin();
+			m_isInDefendMode = true;
+			m_defendTarget = objectiveOrigin;
+			
+			// Spawn initial wave immediately
+			SpawnSideObjectiveDefenseWave();
+		}
+		else
+		{
+			Print(string.Format("[IA_AreaInstance] Side Objective Defense DEACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+			// Return AI to normal behavior
+			SetDefendMode(false);
+			m_sideObjectiveDefenseFaction = null;
+		}
+	}
+
+	private void SpawnSideObjectiveDefenseWave()
+	{
+		if (!m_sideObjectiveDefenseFaction)
+		{
+			Print("[IA_SideObjectiveDefense] Cannot spawn wave, faction is null.", LogLevel.WARNING);
+			return;
+		}
+	
+		float scaleFactor = IA_Game.GetAIScaleFactor();
+		int groupsToSpawn = Math.Max(1, Math.Round(1.2 * ((scaleFactor*1.2) * (scaleFactor*1.2))));
+		Print(string.Format("[IA_AreaInstance] Spawning side objective defense wave: %1 groups for area %2.", groupsToSpawn, m_area.GetName()), LogLevel.DEBUG);
+		
+		// Use existing wave spawning logic with forDefendMission = true
+		// This makes it use the defend point (the objective origin) and bypasses normal reinforcement quotas
+		SpawnReinforcementWave(groupsToSpawn, m_sideObjectiveDefenseFaction, true);
+	}
+
+	private void SideObjectiveDefenseTask()
+	{
+		if (!m_isSideObjectiveDefenseActive)
+			return;
+		
+		int currentTime = System.GetTickCount();
+		if (currentTime - m_sideObjectiveLastWaveSpawnTime >= SIDE_OBJECTIVE_WAVE_INTERVAL)
+		{
+			int currentAICount = 0;
+			foreach (IA_AiGroup group : m_military)
+			{
+				if (group) currentAICount += group.GetAliveCount();
+			}
+	
+			Print(string.Format("[IA_AreaInstance] Side Objective Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_sideObjectiveTargetAICount), LogLevel.DEBUG);
+	
+			if (currentAICount < m_sideObjectiveTargetAICount)
+			{
+				Print(string.Format("[IA_AreaInstance] Side Objective Defense Task: AI count low, spawning new wave for %1.", m_area.GetName()), LogLevel.DEBUG);
+				SpawnSideObjectiveDefenseWave();
+			}
+			m_sideObjectiveLastWaveSpawnTime = currentTime;
+		}
+	}
+	// --- END ADDED ---
+
+	bool IsForSideObjective()
+	{
+		return m_areaGroup == -1;
+	}
+
+    void SetEscapeSequenceActive(bool active)
+    {
+        m_isEscapeSequenceActive = active;
+        if (active)
+        {
+            Print(string.Format("[AreaInstance] Escape sequence ACTIVATED for area %1. Halting military order task.", m_area.GetName()), LogLevel.DEBUG);
         }
     }
 }

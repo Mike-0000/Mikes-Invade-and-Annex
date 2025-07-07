@@ -442,7 +442,7 @@ class IA_MissionInitializer : GenericEntity
 		{
 			foreach (IA_AreaInstance instance : m_currentAreaInstances)
 			{
-				if (instance)
+				if (instance && !instance.IsForSideObjective())
 				{
 					m_initialTotalCiviliansInGroup += instance.GetInitialCivilianCount();
 				}
@@ -454,7 +454,7 @@ class IA_MissionInitializer : GenericEntity
 		{
 			foreach (IA_AreaInstance instance : m_currentAreaInstances)
 			{
-				if (instance)
+				if (instance && !instance.IsForSideObjective())
 				{
 					currentTotalAliveCivilians += instance.GetAliveCivilianCount();
 				}
@@ -467,7 +467,7 @@ class IA_MissionInitializer : GenericEntity
 		if (m_initialTotalCiviliansInGroup > 0)
 		{
 			float civilianPercentageRemaining = currentTotalAliveCivilians / (float)m_initialTotalCiviliansInGroup;
-			if (civilianPercentageRemaining < 0.90)
+			if (civilianPercentageRemaining < 0.84)
 			{
 
 

@@ -1,0 +1,52 @@
+GenericEntity : "{2FCB46C395C9CBE7}Prefabs/Props/Airport/GeneratorAirfield_USSR_01/GeneratorAirfield_USSR_01.et" {
+ ID "F0DBA538AC2A0552"
+ components {
+  SCR_DestructionMultiPhaseComponent "{51E082CF9A77B1A1}" {
+   Enabled 1
+   "Additional hit zones" {
+    SCR_HitZone Default {
+     ColliderNames {
+      "UBX_GeneratorAirfield_USSR_01"
+     }
+     MaxHealth 5000
+     CriticalDamage 1
+     DamageThreshold 50
+     "Collision multiplier" 0.001
+     "Melee multiplier" 0
+     "Kinetic multiplier" 0.02
+     "Fragmentation multiplier" 0.05
+     "Explosive multiplier" 38
+     "Incendiary multiplier" 0.005
+     "Fire multiplier" 0.005
+    }
+   }
+   m_SecondaryFires SCR_SecondaryExplosions "{65CB074B570911C0}" {
+    m_aSecondaryExplosionTypes {
+     SCR_SecondaryExplosionType "{65CB074B66913BE4}" {
+      m_eSecondaryExplosionType FUEL
+      m_aSecondaryExplosions {
+       SCR_SecondaryExplosion "{65CB074B7CD7D776}" {
+        m_fMinValue 1
+        m_eSecondaryExplosionScale MEDIUM
+       }
+      }
+     }
+     SCR_SecondaryExplosionType "{65CB074B7458BE16}" {
+      m_eSecondaryExplosionType BATTERY
+     }
+    }
+   }
+   m_fBaseHealth 5000
+   m_fForceToDamageScale 1
+   m_fRelativeContactForceThresholdMinimum 15000
+   m_fDamageThresholdMaximum 50000
+   m_bDeleteAfterFinalPhase 0
+   m_aDamagePhases {
+    SCR_DamagePhaseData "{5A16790ADDF0B757}" {
+     m_fPhaseHealth 2000
+    }
+   }
+  }
+ }
+ coords 5418.379 100.825 7944.689
+}

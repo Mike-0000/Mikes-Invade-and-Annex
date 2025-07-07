@@ -1,0 +1,108 @@
+$grp IA_HVTSpawnPositionMarker : "{C0869E1C593E6182}Prefabs/IA_AreaMarkers/IA_HVTSpawnLocation.et" {
+ {
+  coords 7461.805 7.993 6757.031
+ }
+ {
+  coords 7448.341 8.081 6738.284
+ }
+ {
+  coords 7483.094 7.094 6741.896
+ }
+}
+IA_SideObjectiveMarker : "{CC469EDE5BF275E5}Prefabs/IA_AreaMarkers/IA_SideObjectiveMarker.et" {
+ coords 7451.938 7.875 6742.54
+ m_GeneratorPositionOffset PointInfo "{65CB58EB303171F4}" {
+  Offset -48.7266 1.8956 24.3696
+  Angles 0 126.8868 0
+ }
+}
+$grp GenericEntity : "{F76BD5785C7FE191}Prefabs/Systems/Compositions/PatrolPoint/PatrolPoint_ObservationPoint.et" {
+ {
+  coords 7438.619 15.343 6684.26
+  angleY 0
+ }
+ {
+  coords 7445.885 15.343 6685.834
+  angleY 0
+ }
+ {
+  coords 7438.386 12.143 6681.184
+  angleY 0
+ }
+ {
+  coords 7438.673 8.943 6680.851
+  angleY 0
+ }
+ {
+  coords 7470.01 7.385 6729.351
+  angleY 0
+ }
+ {
+  coords 7481.157 7.094 6744.908
+  angleY 0
+ }
+ {
+  coords 7491.13 7.094 6756.631
+  angleY 0
+ }
+ {
+  coords 7469.447 7.993 6771.86
+  angleY 0
+ }
+ {
+  coords 7457.575 7.993 6757.548
+  angleY 0
+ }
+ {
+  coords 7445.856 8.235 6749.394
+  angleY 0
+ }
+ {
+  coords 7389.176 9.745 6690.37
+  angleY 0
+ }
+ {
+  coords 7383.937 9.781 6694.179
+  angleY 0
+ }
+ {
+  coords 7390.718 9.701 6698.402
+  angleY 0
+ }
+ {
+  coords 7378.336 9.988 6696.042
+  angleY 0
+ }
+ {
+  coords 7381.161 9.988 6699.929
+  angleY 0
+ }
+ {
+  coords 7372.558 10.127 6694.942
+  angleY 0
+ }
+ {
+  coords 7378.719 9.926 6690.557
+  angleY 0
+ }
+ {
+  coords 7386.267 9.791 6685.689
+  angleY 0
+ }
+ {
+  coords 7499.221 6.925 6767.609
+  angleY 0
+ }
+ {
+  coords 7479.465 7.868 6782.432
+  angleY 0
+ }
+ {
+  coords 7573.498 2.158 6715.563
+  angleY 0
+ }
+ {
+  coords 7534.502 2.492 6691.03
+  angleY 0
+ }
+}

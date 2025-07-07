@@ -1,0 +1,5 @@
+SCR_DefendWaypoint : "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et" {
+ ID "50EECB8790B5A515"
+ CompletionRadius 4
+ m_fPriorityLevel 700
+}

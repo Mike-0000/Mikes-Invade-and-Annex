@@ -18,8 +18,13 @@ enum IA_GroupTacticalState
     LastStand,     // Final defensive posture when heavily outnumbered
     Regrouping,     // Gathering forces before next action
     DefendPatrol,    // Patrol behavior using defend orders
-    InVehicle       // Group is currently assigned to a vehicle
+    InVehicle,       // Group is currently assigned to a vehicle
+	Escaping,      // Unconditionally moving to an escape point, ignoring combat
 }
+
+// --- BEGIN ADDED: Forward declaration ---
+class IA_AssassinationObjective;
+// --- END ADDED ---
 
 // Class to track danger events for processing
 class IA_GroupDangerEvent
@@ -50,9 +55,9 @@ class IA_RoadSearchState
     bool m_roadFound = false;
     
     // Search configuration
-    ref array<int> m_searchDistances = {50, 100, 200, 400, 800, 1200};
+    ref array<int> m_searchDistances = {25, 50, 75, 100, 200, 300, 400, 800, 1200};
     static const int ALTERNATIVE_ATTEMPTS = 3;
-    static const int SEARCH_DELAY_MS = 50; // Delay between search attempts
+    static const int SEARCH_DELAY_MS = 150; // Delay between search attempts
     
     // Callback for when search completes
     IA_AreaInstance m_callbackInstance = null;
@@ -81,6 +86,8 @@ class IA_AiGroup
     private bool        m_isCivilian = false;
     private IA_SquadType m_squadType;
     private IA_Faction   m_faction;
+    
+    private IA_SideObjective m_OwningSideObjective;
     
     private vector      m_initialPosition;
     private vector      m_lastOrderPosition;
@@ -122,8 +129,8 @@ class IA_AiGroup
     
     // State evaluation scheduling
     private int m_nextStateEvaluationTime = 0;
-    private const int MIN_STATE_EVALUATION_INTERVAL = 18000; // milliseconds, increased from 5000
-    private const int MAX_STATE_EVALUATION_INTERVAL = 35000; // milliseconds, increased from 15000
+    private const int MIN_STATE_EVALUATION_INTERVAL = 3000; // milliseconds, increased from 5000
+    private const int MAX_STATE_EVALUATION_INTERVAL = 4000; // milliseconds, increased from 15000
     private bool m_isStateEvaluationScheduled = false;
     
     // Tactical state
@@ -136,9 +143,9 @@ class IA_AiGroup
     private bool m_isStateManagedByAuthority = false; // New flag
 
     // Danger event processing performance optimization
-    private static const int AGENT_EVENT_CHECK_INTERVAL_MS = 300; // Check agent events every 300ms
+    private const int AGENT_EVENT_CHECK_INTERVAL_MS = Math.RandomInt(700,800); // Check agent events every 300ms
     private int m_lastAgentEventCheckTime = 0;
-    private static const int DANGER_PROCESS_INTERVAL_MS = 150; // Process at most one danger event every 150ms
+    private static const int DANGER_PROCESS_INTERVAL_MS = Math.RandomInt(300,400); // Process at most one danger event every 150ms
     private int m_lastDangerProcessTime = 0;
 
     // Flanking state tracking
@@ -166,12 +173,18 @@ class IA_AiGroup
     private IA_Faction m_staggeredSpawnFaction = IA_Faction.NONE;
     private Faction m_staggeredAreaFaction = null;
 	
-    private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount)
+	// Assassination obj
+	
+	bool m_HVTGroup = false;
+	
+    private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount, bool HVTGroup = false)
     {
+		
         m_initialPosition = initialPos;
         m_squadType = squad;
         m_faction = fac;
-        m_initialUnitCount = unitCount; // Store initial count passed as argument
+        m_initialUnitCount = unitCount;
+		m_HVTGroup = HVTGroup;
     }
 
 	static IA_AiGroup CreateMilitaryGroup(vector initialPos, IA_SquadType squadType, IA_Faction faction, Faction AreaFaction)
@@ -184,7 +197,7 @@ class IA_AiGroup
         return CreateMilitaryGroupFromUnits(initialPos, faction, unitCount, AreaFaction);
 	}
 
-	static string GetRandomUnitPrefab(IA_Faction faction, Faction DesiredFaction){
+	string GetRandomUnitPrefab(IA_Faction faction, Faction DesiredFaction){
 
 		/*
         SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
@@ -275,6 +288,11 @@ class IA_AiGroup
 
 		    includedLabels = {EEditableEntityLabel.ROLE_RIFLEMAN};
 
+		}
+		if(m_HVTGroup == true){
+		
+			return "{5117311FB822FD1F}Prefabs/Characters/Factions/OPFOR/USSR_Army/Character_USSR_Officer.et";
+		
 		}
 		SCR_EntityCatalog entityCatalog;
 		SCR_Faction scrFaction = SCR_Faction.Cast(DesiredFaction);
@@ -420,14 +438,14 @@ class IA_AiGroup
     // - You need the group immediately (e.g., for vehicle spawning, reinforcements)
     // - You already have a good spawn position
     // - Performance is not a concern (small number of groups)
-    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction)
+    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false)
     {
         if (unitCount <= 0)
             return null;
 
         // For backward compatibility, create the group immediately at the initial position
         // The async road search should be initiated separately by callers that want it
-        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction);
+        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup);
     }
     
     // Start an async road search and group creation
@@ -562,14 +580,38 @@ class IA_AiGroup
             searchState.m_callbackInstance.OnAsyncGroupCreated(grp, searchState.m_roadFound);
         }
     }
+	
+	
+	
+	
     
     // Create a military group at a specific position (no road search)
-    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction)
+    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false)
     {
         if (unitCount <= 0)
             return null;
 
-        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, faction, unitCount);
+        // --- BEGIN MODIFIED: Road Spawning for Synchronous Groups (Bypass for HVT) ---
+        vector finalSpawnPos = spawnPos;
+        if (!HVTGroup)
+        {
+            int activeGroup = IA_VehicleManager.GetActiveGroup();
+            // Search for a road within 150m of the requested spawn position
+            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(spawnPos, 150, activeGroup);
+            
+            if (roadPos != vector.Zero)
+            {
+                finalSpawnPos = roadPos;
+                Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Road spawn found. Original: %1, Road: %2", spawnPos, finalSpawnPos), LogLevel.DEBUG);
+            }
+        }
+        else
+        {
+            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] HVT spawn detected, bypassing road snapping. Spawning at exact location: %1", finalSpawnPos.ToString()), LogLevel.DEBUG);
+        }
+        // --- END MODIFIED ---
+
+        IA_AiGroup grp = new IA_AiGroup(finalSpawnPos, IA_SquadType.Riflemen, faction, unitCount, HVTGroup);
         grp.m_isCivilian = false;
 
         Resource groupRes;
@@ -593,18 +635,21 @@ class IA_AiGroup
             return null;
         }
 
-        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(spawnPos));
+        IEntity groupEnt = GetGame().SpawnEntityPrefab(groupRes, null, IA_CreateSimpleSpawnParams(finalSpawnPos));
         grp.m_group = SCR_AIGroup.Cast(groupEnt);
 
         if (!grp.m_group) {
             delete groupEnt;
-            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Failed to create SCR_AIGroup for faction %1 at %2", faction, spawnPos.ToString()), LogLevel.ERROR);
+            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Failed to create SCR_AIGroup for faction %1 at %2", faction, finalSpawnPos.ToString()), LogLevel.ERROR);
             return null;
         }
 
-        vector groundPos = spawnPos;
-        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-        groundPos[1] = groundY;
+        vector groundPos = finalSpawnPos;
+		if (!HVTGroup)
+        {
+	        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
+	        groundPos[1] = groundY;
+		}
         grp.m_group.SetOrigin(groundPos);
 
         // Set up staggered spawning state
@@ -614,7 +659,7 @@ class IA_AiGroup
         grp.m_staggeredSpawnFaction = faction;
         grp.m_staggeredAreaFaction = AreaFaction;
         
-        Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Starting staggered spawning of %1 units for faction %2 at %3", unitCount, faction, spawnPos.ToString()), LogLevel.NORMAL);
+        Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Starting staggered spawning of %1 units for faction %2 at %3", unitCount, faction, finalSpawnPos.ToString()), LogLevel.NORMAL);
         
         // Start spawning the first unit immediately
         grp.SpawnNextUnit();
@@ -828,23 +873,63 @@ class IA_AiGroup
         //Print("IA_AiOrder is = " + typename.EnumToString(IA_AiOrder, order));
         if (order == IA_AiOrder.Defend) 
         {
+            // --- BEGIN ADDED: Check for side objective groups ---
+            if (IsObjectiveUnit() && m_OwningSideObjective)
+            {
+                // Check if this is the HVT group
+                IA_AssassinationObjective assassinObj = IA_AssassinationObjective.Cast(m_OwningSideObjective);
+                if (assassinObj && assassinObj.IsHVTGroup(this))
+                {
+                    rname = "{FAD1D789EE291964}Prefabs/AI/Waypoints/AIWaypoint_Defend_Large.et";
+                    //Print(string.Format("[IA_AiGroup.AddOrder] Using HVTDefend waypoint for HVT group %1", this), LogLevel.DEBUG);
+                }
+                else
+                {
+                    // Use guard defend waypoint for other objective units
+                    rname = "{FAD1D789EE291964}Prefabs/AI/Waypoints/AIWaypoint_Defend_Large.et";
+                    //Print(string.Format("[IA_AiGroup.AddOrder] Using GuardDefend waypoint for guard group %1", this), LogLevel.DEBUG);
+                }
+            }
+            else
+            {
+                // Standard defend waypoint for non-objective units
+                rname = "{FAD1D789EE291964}Prefabs/AI/Waypoints/AIWaypoint_Defend_Large.et";
+            }
+            // --- END ADDED ---
+            
             // --- BEGIN ADDED: Debug logging for defend orders with faction info ---
             Print(string.Format("[IA_AiGroup.AddOrder] DEFEND ORDER CREATION: Group %1 | Faction: %2 | IsCivilian: %3 | Position: %4", 
                 this, typename.EnumToString(IA_Faction, m_faction), m_isCivilian, origin.ToString()), LogLevel.DEBUG);
             // --- END ADDED ---
-            rname = "{FAD1D789EE291964}Prefabs/AI/Waypoints/AIWaypoint_Defend_Large.et";
-
-            //rname = "{D9C14ECEC9772CC6}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Defend.et";
-        }else if (order == IA_AiOrder.DefendSmall) // Added condition for SearchAndDestroy
+        }
+        else if (order == IA_AiOrder.DefendSmall) // Added condition for SearchAndDestroy
         {
+            // --- BEGIN ADDED: Check for side objective HVT using DefendSmall ---
+            if (IsObjectiveUnit() && m_OwningSideObjective)
+            {
+                IA_AssassinationObjective assassinObj = IA_AssassinationObjective.Cast(m_OwningSideObjective);
+                if (assassinObj && assassinObj.IsHVTGroup(this))
+                {
+                    // Use HVT defend waypoint even for DefendSmall orders
+                    rname = "{2FCBE5C76E285A7B}Prefabs/AI/Waypoints/AIWaypoint_DefendSmall.et";
+                }
+                else
+                {
+                    // Standard defend small for guards
+                    rname = "{2FCBE5C76E285A7B}Prefabs/AI/Waypoints/AIWaypoint_DefendSmall.et";
+                }
+            }
+            else
+            {
+                // Standard defend small waypoint
+                rname = "{2FCBE5C76E285A7B}Prefabs/AI/Waypoints/AIWaypoint_DefendSmall.et";
+            }
+            // --- END ADDED ---
+            
             // --- BEGIN ADDED: Debug logging for defend small orders ---
             Print(string.Format("[IA_AiGroup.AddOrder] DEFENDSMALL ORDER CREATION: Group %1 | Faction: %2 | Position: %3", 
                 this, typename.EnumToString(IA_Faction, m_faction), origin.ToString()), LogLevel.WARNING);
             // --- END ADDED ---
-            
-            //rname = "{0AB63F524C44E0D2}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_DefendSmall.et";
-			rname = "{2FCBE5C76E285A7B}Prefabs/AI/Waypoints/AIWaypoint_DefendSmall.et";
-
         }
         else if (order == IA_AiOrder.SearchAndDestroy) // Added condition for SearchAndDestroy
         {
@@ -931,9 +1016,52 @@ class IA_AiGroup
         }
         else
         {
-            // Dynamic priority for infantry based on situation
-            int priorityLevel = CalculateWaypointPriority(order);
-            w.SetPriorityLevel(priorityLevel);
+            // --- BEGIN MODIFIED: Special priority handling for objective units ---
+            if (IsObjectiveUnit() && m_OwningSideObjective && (order == IA_AiOrder.Defend || order == IA_AiOrder.DefendSmall))
+            {
+                IA_AssassinationObjective assassinObj = IA_AssassinationObjective.Cast(m_OwningSideObjective);
+                if (assassinObj && assassinObj.IsHVTGroup(this))
+                {
+                    // HVT gets highest priority defend
+                    w.SetPriorityLevel(300);
+                    
+                    // Set tight completion radius for HVT
+                    if (w.Type().IsInherited(SCR_DefendWaypoint))
+                    {
+                        SCR_DefendWaypoint defendWP = SCR_DefendWaypoint.Cast(w);
+                        if (defendWP)
+                        {
+                            defendWP.SetCompletionRadius(4);
+                        }
+                    }
+                    
+                    Print(string.Format("[IA_AiGroup.AddOrder] Set HVT waypoint priority to 1250 with 4m completion radius", this), LogLevel.DEBUG);
+                }
+                else
+                {
+                    // Guards get high but not maximum priority
+                    w.SetPriorityLevel(140);
+                    
+                    // Set wider completion radius for guards
+                    if (w.Type().IsInherited(SCR_DefendWaypoint))
+                    {
+                        SCR_DefendWaypoint defendWP = SCR_DefendWaypoint.Cast(w);
+                        if (defendWP)
+                        {
+                            defendWP.SetCompletionRadius(Math.RandomInt(15, 40));
+                        }
+                    }
+                    
+                    Print(string.Format("[IA_AiGroup.AddOrder] Set Guard waypoint priority to 300 with 15-40m completion radius", this), LogLevel.DEBUG);
+                }
+            }
+            else
+            {
+                // Dynamic priority for regular infantry based on situation
+                int priorityLevel = CalculateWaypointPriority(order);
+                w.SetPriorityLevel(priorityLevel);
+            }
+            // --- END MODIFIED ---
         }
 
         // --- BEGIN ADDED: Additional logging before adding waypoint to group ---
@@ -1255,8 +1383,8 @@ class IA_AiGroup
     // Process a danger event at the group level
     void ProcessDangerEvent(IA_GroupDangerType dangerType, vector position, IEntity sourceEntity = null, float intensity = 0.5, bool isSuppressed = false)
     {
-        // Skip danger processing if in defend mode
-        if (m_isInDefendMode)
+        // Skip danger processing if in defend mode or escaping
+        if (m_isInDefendMode || m_tacticalState == IA_GroupTacticalState.Escaping)
             return;
             
         // Rate limit processing per group
@@ -1559,8 +1687,8 @@ class IA_AiGroup
         if (!agent)
             return;
         
-        // Skip for civilians
-        if (m_isCivilian || m_faction == IA_Faction.CIV)
+        // Skip for civilians or if the group is escaping
+        if (m_isCivilian || m_faction == IA_Faction.CIV || m_tacticalState == IA_GroupTacticalState.Escaping)
             return;
         
         int dangerCount = agent.GetDangerEventsCount();
@@ -2012,6 +2140,17 @@ class IA_AiGroup
     // Evaluate and potentially change tactical state based on situation
     void EvaluateTacticalState()
     {
+        // If the group is in the Escaping state, it must not be interrupted.
+        if (m_tacticalState == IA_GroupTacticalState.Escaping)
+        {
+            // If the group somehow lost its move order, re-issue it with high priority.
+            if (!HasOrders() && m_tacticalStateTarget != vector.Zero)
+            {
+                AddOrder(m_tacticalStateTarget, IA_AiOrder.PriorityMove, true);
+            }
+            return; // Do not allow any other logic to override the escape.
+        }
+		
         // Override tactical state evaluation in defend mode - but don't constantly re-set the state
         if (m_isInDefendMode && m_defendTarget != vector.Zero)
         {
@@ -2565,6 +2704,13 @@ class IA_AiGroup
                     }
                 }
                 break;
+			
+			case IA_GroupTacticalState.Escaping:
+                if (targetPos != vector.Zero)
+                {
+                    AddOrder(targetPos, IA_AiOrder.PriorityMove, true);
+                }
+                break;
                 
             default:
                 // Unknown state, do nothing
@@ -2632,7 +2778,10 @@ class IA_AiGroup
                 priority += 100;  // Vehicle mounting is important
                 break;
             case IA_AiOrder.PriorityMove:
-                return 100;  // High priority movement
+                // If the group is escaping, give it the highest possible priority.
+                if (m_tacticalState == IA_GroupTacticalState.Escaping)
+                    return 350;
+                return 60;  // High priority movement
             case IA_AiOrder.Move:
                 priority += 30;  // Move orders medium priority (between combat and patrol)
                 break;
@@ -2850,7 +2999,11 @@ class IA_AiGroup
         }
         
         // Generate spawn position
-        vector unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+        vector unitSpawnPos = m_staggeredSpawnPos;
+        if (!m_HVTGroup)
+        {
+            unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+        }
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
         {
@@ -3352,6 +3505,19 @@ class IA_AiGroup
         return grp;
     }
     
-
+    void SetOwningSideObjective(IA_SideObjective objective)
+    {
+        m_OwningSideObjective = objective;
+    }
+    
+    IA_SideObjective GetOwningSideObjective()
+    {
+        return m_OwningSideObjective;
+    }
+    
+    bool IsObjectiveUnit()
+    {
+        return m_OwningSideObjective != null;
+    }
 
 };  

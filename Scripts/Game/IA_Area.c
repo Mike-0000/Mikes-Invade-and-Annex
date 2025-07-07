@@ -8,6 +8,7 @@ enum IA_AreaType
     Property,
     Airport,
     Docks,
+    Assassination,
     Military,
     SmallMilitary,
     RadioTower,
@@ -28,9 +29,9 @@ class IA_Area
     private float       m_radius;
     private bool        m_instantiated = false;
 
-    private void IA_Area(string nm, IA_AreaType t, vector org, float rad)
+    void IA_Area(string nm, IA_AreaType t, vector org, float rad)
     {
-        //Print("[DEBUG] IA_Area constructor called with name: " + nm + ", type: " + t + ", origin: " + org + ", radius: " + rad, LogLevel.NORMAL);
+        Print("[IA_Area] Constructor called for area: " + nm, LogLevel.DEBUG);
         m_name   = nm;
         m_type   = t;
         m_origin = org;
@@ -42,6 +43,14 @@ static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
     //Print("[DEBUG] IA_Area.Create called for area: " + nm, LogLevel.NORMAL);
     IA_Area area = new IA_Area(nm, t, org, rad);
     IA_Game.s_allAreas.Insert(area); // <-- Keeps strong ref
+    return area;
+}
+
+static IA_Area CreateTransient(string nm, IA_AreaType t, vector org, float rad)
+{
+    // This version does NOT add the area to the global list.
+    // It's for temporary, self-contained areas like side objectives.
+    IA_Area area = new IA_Area(nm, t, org, rad);
     return area;
 }
 
@@ -80,13 +89,15 @@ static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
         else if (m_type == IA_AreaType.City)
             return 8;
         else if (m_type == IA_AreaType.Docks)
-            return 2;
+            return 3;
         else if (m_type == IA_AreaType.Airport)
             return 6;
         else if (m_type == IA_AreaType.Military)
-            return 4;
+            return 5;
         else if (m_type == IA_AreaType.SmallMilitary)
-            return 2;
+            return 3;
+        else if (m_type == IA_AreaType.Assassination)
+            return 6;
         else if (m_type == IA_AreaType.Property)
             return 1;
         else if (m_type == IA_AreaType.RadioTower)
@@ -104,6 +115,7 @@ static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
             case IA_AreaType.Military:   return 4;
             case IA_AreaType.SmallMilitary: return 2;
             case IA_AreaType.Airport:    return 4;
+            case IA_AreaType.Assassination:    return 4;
             case IA_AreaType.Docks:      return 3;
             case IA_AreaType.Property:   return 1;
             case IA_AreaType.RadioTower: return 2; // Moderate reinforcements for radio tower
@@ -115,17 +127,26 @@ static IA_Area Create(string nm, IA_AreaType t, vector org, float rad)
     int GetCivilianCount()
     {
         if (m_type == IA_AreaType.Town)
-            return 6;
+            return 9;
         else if (m_type == IA_AreaType.City)
-            return 12;
+            return 14;
         else if (m_type == IA_AreaType.Docks)
-            return 2;
+            return 3;
         else if (m_type == IA_AreaType.SmallMilitary)
-            return 0;
-        else if (m_type == IA_AreaType.Property)
+            return 1;
+        else if (m_type == IA_AreaType.Assassination)
             return 2;
+        else if (m_type == IA_AreaType.Property)
+            return 3;
         else if (m_type == IA_AreaType.RadioTower)
             return 0; // No civilians at radio tower
-        return 0;
+        return 1;
+    }
+
+    bool IsPositionInside(vector pos)
+    {
+        float distanceSq = vector.DistanceSq(m_origin, pos);
+        float radiusSq = m_radius * m_radius;
+        return distanceSq <= radiusSq;
     }
 };

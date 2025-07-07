@@ -116,18 +116,28 @@ modded class SCR_ChimeraCharacter{
 					GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayTaskCreatedNotification, 100, false, taskTitle);
 				}else if (messageType == "AreaGroupCompleted")
 			{
-				// Using CallLater to avoid potential issues with immediate UI updates in certain contexts,
-				// and to allow a slight delay for dramatic effect or to prevent spam if zones complete rapidly.
-				// Random delay removed as it's for a group completion, not individual tasks.
 				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayAreaCompletedNotification, 100, false, taskTitle); 
-			}else if (messageType == "TaskCompleted")
+			}else if (messageType == "SideTaskCreated")
+			{
+
+				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplaySideTaskCreatedNotification, 100, false, taskTitle); 
+			}else if (messageType == "HVTEscaping")
+			{
+				notificationDisplay.QueueNotification(taskTitle, "red", 10000);
+
+			
+			}else if (messageType == "SideTaskCompleted")
+			{
+				notificationDisplay.QueueNotification(taskTitle, "green", 12000);
+
+			}
+			else if (messageType == "TaskCompleted")
 			{
 				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayTaskCompletedNotification, 100, false, taskTitle); 
 			}else if (messageType == "RadioTowerDefenseStarted")
 			{
 				string message = "Enemy reinforcements are responding! Destroy the "+taskTitle+" to prevent their continuous reinforcements.";
-				GetGame().GetCallqueue().CallLater(notificationDisplay.ShowNotification, 20000, false, message, true, "yellow"); 
-				GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 30000, false);
+				notificationDisplay.QueueNotification(message, "yellow", 10000);
 			}else if (messageType == "DefendMissionStarted")
 				{
 					notificationDisplay.DisplayTaskCreatedNotification(taskTitle);
@@ -135,29 +145,41 @@ modded class SCR_ChimeraCharacter{
 				else if (messageType == "CivilianRevoltStarted")
 				{
 					string message = "The civilian population is revolting! Be advised, they are now hostile.";
-					notificationDisplay.ShowNotification(message, true, "red");
-					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 10000, false);
+					notificationDisplay.QueueNotification(message, "red", 10000);
 				}
 				else if (messageType == "CivilianRevoltReinforcements")
 				{
 					string message = "Civilian militias are reinforcing the objective areas!";
-					notificationDisplay.ShowNotification(message, true, "red");
-					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 10000, false);
+					notificationDisplay.QueueNotification(message, "red", 10000);
 				}
 				else if (messageType == "CaptureStarted")
 				{
-					notificationDisplay.ShowNotification(taskTitle, true, "green");
-					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
+					notificationDisplay.QueueNotification(taskTitle, "green", 5000);
 				}
 				else if (messageType == "CapturePaused")
 				{
-					notificationDisplay.ShowNotification(taskTitle, true, "yellow");
-					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
+					notificationDisplay.QueueNotification(taskTitle, "yellow", 5000);
 				}
 				else if (messageType == "Capture50Percent")
 				{
-					notificationDisplay.ShowNotification(taskTitle, true, "green");
-					GetGame().GetCallqueue().CallLater(notificationDisplay.HideNotification, 5000, false);
+					notificationDisplay.QueueNotification(taskTitle, "green", 5000);
+				}
+				else if (messageType == "GeneratorDestroyed")
+				{
+					notificationDisplay.QueueNotification(taskTitle, "green", 10000);
+				}
+				else if (messageType == "ReinforcementsCalled")
+				{
+					notificationDisplay.QueueNotification(taskTitle, "red", 10000);
+				}
+				else if (messageType == "HVTPreparingEscape")
+				{
+					// taskTitle typically is "Intercept HVT" but treat generically
+					notificationDisplay.QueueNotification(taskTitle, "red", 10000);
+				}
+				else if (messageType == "HVTEscaped")
+				{
+					notificationDisplay.QueueNotification(taskTitle, "red", 10000);
 				}
 			
 			

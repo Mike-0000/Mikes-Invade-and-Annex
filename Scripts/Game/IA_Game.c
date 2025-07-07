@@ -14,6 +14,7 @@ class IA_Game
 
     private bool m_periodicTaskActive = false;
     private ref array<IA_AreaInstance> m_areas = {};
+	private ref array<IA_AreaInstance> m_transientAreaInstances = {};
 	static private bool beenInstantiated = false;
     static private ref array<IEntity> m_entityGc = {};
 
@@ -22,6 +23,10 @@ class IA_Game
 
     // --- BEGIN ADDED: Active Group ID ---
     static private int s_activeGroupID = -1;
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Side Objective Manager Instance ---
+    private ref IA_SideObjectiveManager m_SideObjectiveManager;
     // --- END ADDED ---
 
     // --- BEGIN ADDED: Flag for initial objective scaling ---
@@ -57,6 +62,10 @@ class IA_Game
         //Print("[DEBUG] IA_Game.Init called.", LogLevel.NORMAL);
         if (m_hasInit)
             return;
+
+        // --- BEGIN ADDED: Initialize Side Objective Manager ---
+        m_SideObjectiveManager = IA_SideObjectiveManager.GetInstance();
+        // --- END ADDED ---
 
         // --- BEGIN MODIFIED: Enable initial objective scaling earlier ---
         // Enable scaling as soon as IA_Game is initialized for the first time.
@@ -293,7 +302,12 @@ class IA_Game
 	        // Defend mission will handle its own completion and notification
 	    }
 	    
-	    if (m_areas.IsEmpty())
+	    // --- BEGIN MODIFIED: Update Side Objective Manager ---
+	    // This should run regardless of main area status
+	    if (m_SideObjectiveManager)
+	        m_SideObjectiveManager.Update(2.0); // Corresponds to the 2000ms call interval
+		
+	    if (m_areas.IsEmpty() && m_transientAreaInstances.IsEmpty())
 	    {
 	        // Log that no areas exist yet so you can see that the task is running.
 	        //Print("IA_Game.PeriodicalGameTask: m_areas is empty. Waiting for initialization.", LogLevel.NORMAL);
@@ -323,6 +337,23 @@ class IA_Game
 				}
 	        
 	    }
+		
+		// --- BEGIN ADDED: Process Transient Areas ---
+		// Process transient areas separately, iterating backwards for safe removal
+		for (int i = m_transientAreaInstances.Count() - 1; i >= 0; i--)
+	    {
+	        IA_AreaInstance transientAreaInst = m_transientAreaInstances[i];
+	        if (transientAreaInst && transientAreaInst.m_area)
+	        {
+	            transientAreaInst.RunNextTask();
+	        }
+	        else
+	        {
+	            // Clean up invalid transient areas that might have been nulled out elsewhere
+	            m_transientAreaInstances.Remove(i);
+	        }
+	    }
+		// --- END ADDED ---
 	}
 	
 
@@ -442,6 +473,22 @@ class IA_Game
         return m_areas;
     }
 
+    static IA_AreaInstance GetAreaForPosition(vector pos)
+    {
+        IA_Game game = IA_Game.Instantiate();
+        if (!game)
+            return null;
+
+        foreach (IA_AreaInstance areaInst : game.GetAreaInstances())
+        {
+            if (areaInst && areaInst.GetArea() && areaInst.GetArea().IsPositionInside(pos))
+            {
+                return areaInst;
+            }
+        }
+        return null;
+    }
+
     // --- BEGIN ADDED: Helper to get instance by name ---
     IA_AreaInstance GetAreaInstance(string name)
     {
@@ -451,6 +498,50 @@ class IA_Game
                 return instance;
         }
         return null;
+    }
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Global Notification Helper ---
+    static void S_TriggerGlobalNotification(string messageType, string message)
+    {
+        array<int> playerIDs = {};
+        GetGame().GetPlayerManager().GetAllPlayers(playerIDs);
+        foreach (int playerID : playerIDs)
+        {
+            PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerID);
+            if(pc)
+            {
+                SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pc.GetControlledEntity());
+                if(character)
+                {
+                    character.SetUIOne(messageType, message, playerID);
+                }
+            }
+        }
+    }
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Transient Area Management ---
+    void AddTransientArea(IA_AreaInstance inst)
+    {
+        if (inst && m_transientAreaInstances.Find(inst) == -1)
+        {
+            Print(string.Format("[IA_Game.AddTransientArea] Adding Transient Area '%1' to m_transientAreaInstances.", inst.GetArea().GetName()), LogLevel.DEBUG);
+            m_transientAreaInstances.Insert(inst);
+        }
+    }
+    
+    void RemoveTransientArea(IA_AreaInstance inst)
+    {
+        if (inst)
+        {
+            int index = m_transientAreaInstances.Find(inst);
+            if (index != -1)
+            {
+                Print(string.Format("[IA_Game.RemoveTransientArea] Removing Transient Area '%1' from m_transientAreaInstances.", inst.GetArea().GetName()), LogLevel.DEBUG);
+                m_transientAreaInstances.Remove(index);
+            }
+        }
     }
     // --- END ADDED ---
 };

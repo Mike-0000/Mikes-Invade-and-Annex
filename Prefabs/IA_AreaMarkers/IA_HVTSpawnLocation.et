@@ -1,0 +1,8 @@
+IA_HVTSpawnPositionMarker {
+ ID "65B90CFECFC4DAE7"
+ components {
+  RplComponent "{65B90CC8355B9AF4}" {
+  }
+ }
+ coords 5459.886 100.994 7881.202
+}

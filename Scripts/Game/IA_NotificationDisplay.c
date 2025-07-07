@@ -1,4 +1,19 @@
 //------------------------------------------------------------------------------------------------
+class IA_NotificationInfo
+{
+	string m_sMessage;
+	string m_sColor;
+	int m_iDuration;
+
+	void IA_NotificationInfo(string message, string color, int duration)
+	{
+		m_sMessage = message;
+		m_sColor = color;
+		m_iDuration = duration;
+	}
+}
+
+//------------------------------------------------------------------------------------------------
 [BaseContainerProps()]
 class IA_NotificationDisplay : SCR_InfoDisplayExtended
 {
@@ -7,6 +22,11 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected RichTextWidget m_YellowText;
 
 	protected Widget m_wNotificationOverlay;
+
+	// --- BEGIN ADDED: Notification Queue System ---
+	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
+	protected bool m_bIsDisplaying = false;
+	// --- END ADDED ---
 
 	//------------------------------------------------------------------------------------------------
 	//! Starts drawing the display
@@ -67,7 +87,42 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 
 	//------------------------------------------------------------------------------------------------
 	//! Shows a notification message
-	void ShowNotification(string message, bool show, string color)
+	void QueueNotification(string message, string color, int duration, bool show = true)
+	{
+		if (!show)
+			return;
+		
+		m_notificationQueue.Insert(new IA_NotificationInfo(message, color, duration));
+        
+        // If not already displaying a notification, start processing the queue.
+        if (!m_bIsDisplaying)
+        {
+            ProcessNotificationQueue();
+        }
+	}
+	
+	protected void ProcessNotificationQueue()
+    {
+        // Don't process if a notification is already on screen or the queue is empty.
+        if (m_bIsDisplaying || m_notificationQueue.IsEmpty())
+        {
+            return;
+        }
+
+        m_bIsDisplaying = true;
+
+        // Get the next notification from the queue.
+        IA_NotificationInfo info = m_notificationQueue[0];
+        m_notificationQueue.Remove(0);
+
+        // Actually display the notification.
+        _InternalShowNotification(info.m_sMessage, true, info.m_sColor);
+
+        // Schedule the hiding of this notification.
+        GetGame().GetCallqueue().CallLater(this.HideCurrentAndProcessNext, info.m_iDuration);
+    }
+	
+	protected void _InternalShowNotification(string message, bool show, string color)
 	{
 		//Print("IA_NotificationDisplay::ShowNotification - Message: '" + message + "' show: " + show + " color: '" + color + "'", LogLevel.NORMAL);
 		
@@ -90,21 +145,36 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		//Print("IA_NotificationDisplay::ShowNotification - Notification displayed, enabled state: " + m_bIsEnabled, LogLevel.NORMAL);
 	}
 	
+	protected void HideCurrentAndProcessNext()
+    {
+        // Hide the currently displayed notification.
+        _InternalShowNotification("", false, "");
+
+        // Set displaying to false so the next notification can be shown.
+        m_bIsDisplaying = false;
+        
+        // Wait 1 second before processing the next item in the queue.
+        GetGame().GetCallqueue().CallLater(this.ProcessNotificationQueue, 1000); 
+    }
+
 	//------------------------------------------------------------------------------------------------
 	// Method to be called when a new task is created
 	void DisplayTaskCreatedNotification(string taskName)
 	{
 		//Print("IA_NotificationDisplay::DisplayTaskCreatedNotification - Task: '" + taskName + "' creating red notification with 5s auto-hide", LogLevel.NORMAL);
-		ShowNotification("New Objective: " + taskName, true, "red");
-		// Optional: Auto-hide after a delay
-		GetGame().GetCallqueue().CallLater(this.HideNotification, 5000, false); // Hide after 5 seconds
+		QueueNotification("New Objective: " + taskName, "red", 5000);
 	}
+	
+		void DisplaySideTaskCreatedNotification(string taskName)
+	{
+		//Print("IA_NotificationDisplay::DisplayTaskCreatedNotification - Task: '" + taskName + "' creating red notification with 5s auto-hide", LogLevel.NORMAL);
+		QueueNotification("New Side Objective: " + taskName, "red", 5000);
+	}
+	
 		void DisplayTaskCompletedNotification(string taskName)
 	{
 		//Print("IA_NotificationDisplay::DisplayTaskCompletedNotification - Task: '" + taskName + "' creating yellow notification with 9s auto-hide", LogLevel.NORMAL);
-		ShowNotification("Objective Completed: " + taskName, true, "yellow");
-		// Optional: Auto-hide after a delay
-		GetGame().GetCallqueue().CallLater(this.HideNotification, 9000, false); // Hide after 5 seconds
+		QueueNotification("Objective Completed: " + taskName, "yellow", 9000);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -112,17 +182,19 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	void DisplayAreaCompletedNotification(string taskName)
 	{
 		//Print("IA_NotificationDisplay::DisplayAreaCompletedNotification - Area: '" + taskName + "' creating default notification with 12s auto-hide", LogLevel.NORMAL);
-		ShowNotification("Objective Area Completed, RTB and await tasking.", true, "");
-		// Optional: Auto-hide after a delay
-		GetGame().GetCallqueue().CallLater(this.HideNotification, 12000, false); // Hide after 5 seconds
+		QueueNotification("Objective Area Completed, RTB and await tasking.", "", 12000);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	// Method to hide the notification display
 	void HideNotification()
 	{
-		//Print("IA_NotificationDisplay::HideNotification - Hiding all notifications, current enabled state: " + m_bIsEnabled, LogLevel.NORMAL);
-		ShowNotification("", false, "");
-		//Print("IA_NotificationDisplay::HideNotification - All notifications hidden", LogLevel.NORMAL);
+		// This method is kept for compatibility but the queue system should be used.
+		// It could clear the queue and hide the current notification.
+		m_notificationQueue.Clear();
+		_InternalShowNotification("", false, "");
+		m_bIsDisplaying = false;
+		GetGame().GetCallqueue().Remove(this.ProcessNotificationQueue);
+		GetGame().GetCallqueue().Remove(this.HideCurrentAndProcessNext);
 	}
 }; 

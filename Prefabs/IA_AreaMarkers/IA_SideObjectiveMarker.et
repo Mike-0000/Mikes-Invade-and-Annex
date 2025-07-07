@@ -1,0 +1,8 @@
+IA_SideObjectiveMarker {
+ ID "65B378AB4633A402"
+ components {
+  RplComponent "{65B378AB4D50E040}" {
+  }
+ }
+ coords 5422.222 100.931 7919.32
+}

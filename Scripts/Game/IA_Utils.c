@@ -227,10 +227,14 @@ EntitySpawnParams IA_CreateSimpleSpawnParams(vector origin)
 {
     //Print("[DEBUG] IA_CreateSimpleSpawnParams called with origin: " + origin, LogLevel.NORMAL);
     EntitySpawnParams p = new EntitySpawnParams();
+	
     p.TransformMode = ETransformMode.WORLD;
     p.Transform[3]  = origin;
     return p;
 }
+
+
+
 
 EntitySpawnParams IA_CreateSurfaceAdjustedSpawnParams(vector origin)
 {
