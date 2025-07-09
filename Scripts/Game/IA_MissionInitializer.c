@@ -7,7 +7,7 @@ class IA_MissionInitializerClass : GenericEntityClass
 {
 };
 
-
+class IA_AreaGroupManager; // Forward declaration
 
 class IA_MissionInitializer : GenericEntity
 {
@@ -27,11 +27,12 @@ class IA_MissionInitializer : GenericEntity
     protected bool m_bInitialized = false;
 	//ref array<IA_AreaMarker> m_shuffledMarkers = {};
 	private int m_currentIndex = -1;
-	private ref array<IA_AreaInstance> m_currentAreaInstances; 
+	private ref array<ref IA_AreaInstance> m_currentAreaInstances; 
 	private int m_initialTotalCiviliansInGroup = 0;
 	private bool m_initialCiviliansCounted = false;
 	private bool m_civilianRevoltActive = false;
 	private bool m_runOnce = false;
+	private ref IA_AreaGroupManager m_currentAreaGroupManager;
 
 	// Static reference for global access
 	static IA_MissionInitializer s_instance;
@@ -176,6 +177,12 @@ class IA_MissionInitializer : GenericEntity
 	        return;
 	    }
 		
+		if (m_currentAreaGroupManager)
+		{
+			delete m_currentAreaGroupManager;
+			m_currentAreaGroupManager = null;
+		}
+		
 		m_initialTotalCiviliansInGroup = 0;
 		m_initialCiviliansCounted = false;
 		m_civilianRevoltActive = false;
@@ -303,7 +310,7 @@ class IA_MissionInitializer : GenericEntity
 
     ////Print("[DEBUG] IA_MissionInitializer: InitializeNow started.", LogLevel.NORMAL);
 	groupsArray = new array<int>;
-	m_currentAreaInstances = new array<IA_AreaInstance>;
+	m_currentAreaInstances = new array<ref IA_AreaInstance>;
 	for (int i = 0; i < m_numberOfGroups; i++)
         {
             groupsArray.Insert(i);
@@ -440,7 +447,7 @@ class IA_MissionInitializer : GenericEntity
 		m_initialTotalCiviliansInGroup = 0;
 		if (m_currentAreaInstances)
 		{
-			foreach (IA_AreaInstance instance : m_currentAreaInstances)
+			foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
 			{
 				if (instance && !instance.IsForSideObjective())
 				{
@@ -452,7 +459,7 @@ class IA_MissionInitializer : GenericEntity
 		int currentTotalAliveCivilians = 0;
 		if (m_currentAreaInstances)
 		{
-			foreach (IA_AreaInstance instance : m_currentAreaInstances)
+			foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
 			{
 				if (instance && !instance.IsForSideObjective())
 				{
@@ -491,6 +498,18 @@ class IA_MissionInitializer : GenericEntity
 		{
 			//Print("[ERROR] IA_MissionInitializer.CheckCurrentZoneComplete: m_currentAreaInstances is null!", LogLevel.ERROR);
 			return;
+		}
+		
+		if (!m_currentAreaGroupManager && m_currentAreaInstances)
+        {
+            m_currentAreaGroupManager = new IA_AreaGroupManager(m_currentAreaInstances);
+			Print("[AreaGroupManager] Initialized new manager for area group " + groupsArray[m_currentIndex], LogLevel.NORMAL);
+        }
+
+        if (m_currentAreaGroupManager)
+		{
+			Print("[AreaGroupManager] Performing periodic check for area group " + groupsArray[m_currentIndex], LogLevel.NORMAL);
+            m_currentAreaGroupManager.ArtilleryStrikeTask();
 		}
 		
 		////Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
@@ -540,7 +559,7 @@ class IA_MissionInitializer : GenericEntity
 			}
 			
 			////Print("Running CheckCurrentZoneComplete 3.75",LogLevel.NORMAL);
-			IA_AreaInstance instance = m_currentAreaInstances[currentZoneIndex];
+			ref IA_AreaInstance instance = m_currentAreaInstances[currentZoneIndex];
 			if(!instance) {
 			    //Print("[WARNING] Null IA_AreaInstance at index " + currentZoneIndex + " for group " + currentGroup, LogLevel.WARNING);
 			    currentZoneIndex++; // Increment to process next marker correctly
@@ -606,7 +625,7 @@ class IA_MissionInitializer : GenericEntity
 			{
 				Print(string.Format("[IA_MissionInitializer.CheckCurrentZoneComplete] Group %1 completed. Scheduling civilian cleanup for %2 area instances.", 
 					currentGroup, m_currentAreaInstances.Count()), LogLevel.NORMAL);
-				foreach (IA_AreaInstance oldInstance : m_currentAreaInstances)
+				foreach (ref IA_AreaInstance oldInstance : m_currentAreaInstances)
 				{
 					if (oldInstance)
 					{
@@ -629,6 +648,12 @@ class IA_MissionInitializer : GenericEntity
 			// Only send RTB notification if we're not starting a defend mission
 			TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area");
 			// --- END ADDED ---
+			
+			if (m_currentAreaGroupManager)
+			{
+				delete m_currentAreaGroupManager;
+				m_currentAreaGroupManager = null;
+			}
 
 			m_currentIndex++;
 			if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
@@ -743,7 +768,7 @@ class IA_MissionInitializer : GenericEntity
             return;
         }
         
-        IA_AreaInstance currentAreaInstance = game.AddArea(area, IA_Faction.USSR, nextAreaFaction, 0, currentGroup);
+        ref IA_AreaInstance currentAreaInstance = game.AddArea(area, IA_Faction.USSR, nextAreaFaction, 0, currentGroup);
         
         if (currentAreaInstance)
         {
@@ -922,6 +947,12 @@ class IA_MissionInitializer : GenericEntity
 		m_currentIndex++;
 		if (m_currentAreaInstances) 
 			m_currentAreaInstances.Clear();
+		
+		if (m_currentAreaGroupManager)
+		{
+			delete m_currentAreaGroupManager;
+			m_currentAreaGroupManager = null;
+		}
 		
 		// Remove the zone completion check and proceed to next zone
 		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);

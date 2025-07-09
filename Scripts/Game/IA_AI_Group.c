@@ -233,9 +233,10 @@ class IA_AiGroup
 				case 1:
 					includedLabels = {EEditableEntityLabel.ROLE_GRENADIER};
 					break;
+				//case 2:
+				//	includedLabels = {EEditableEntityLabel.ROLE_LEADER};
+				//	break;
 				case 2:
-					includedLabels = {EEditableEntityLabel.ROLE_LEADER};
-					break;
 				case 3: 
 					includedLabels = {EEditableEntityLabel.ROLE_MACHINEGUNNER};
 					break;
