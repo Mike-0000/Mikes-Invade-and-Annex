@@ -1,0 +1,21 @@
+Projectile : "{8AEB3E3846780747}Prefabs/Weapons/Ammo/Ammo_Shell_81mm_HE_M821_EffectModule.et" {
+ ID "5098E3DEA78F878B"
+ components {
+  ShellMoveComponent "{5098E3DEA78F87A3}" {
+   InitSpeed 20
+   Mass 12
+   WindInfluenceMultiplier 0.002
+   ProjectileEffects {
+    ProjectileDamage "{5184D780ECE06751}" {
+     DamageValue 150
+    }
+    ProjectileDamage "{627670F4666B7036}" {
+     DamageValue 600
+    }
+   }
+   AirDrag 0.00462
+   Diameter 93.6
+   Length 77.2
+  }
+ }
+}

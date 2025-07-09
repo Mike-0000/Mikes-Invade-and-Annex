@@ -33,6 +33,10 @@ class IA_MissionInitializer : GenericEntity
 	private bool m_civilianRevoltActive = false;
 	private bool m_runOnce = false;
 	private ref IA_AreaGroupManager m_currentAreaGroupManager;
+	
+	// --- BEGIN ADDED: Artillery Cooldown ---
+    static int s_artilleryDisabledUntil = 0;
+	// --- END ADDED ---
 
 	// Static reference for global access
 	static IA_MissionInitializer s_instance;
@@ -509,7 +513,15 @@ class IA_MissionInitializer : GenericEntity
         if (m_currentAreaGroupManager)
 		{
 			Print("[AreaGroupManager] Performing periodic check for area group " + groupsArray[m_currentIndex], LogLevel.NORMAL);
-            m_currentAreaGroupManager.ArtilleryStrikeTask();
+            int currentTime = System.GetUnixTime();
+            if (s_artilleryDisabledUntil > 0 && currentTime < s_artilleryDisabledUntil)
+            {
+                Print(string.Format("[IA_MissionInitializer] Skipping artillery check due to side objective cooldown. %1 seconds remaining.", s_artilleryDisabledUntil - currentTime), LogLevel.DEBUG);
+            }
+            else 
+            {
+                m_currentAreaGroupManager.ArtilleryStrikeTask();
+            }
 		}
 		
 		////Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
@@ -858,6 +870,15 @@ class IA_MissionInitializer : GenericEntity
 			return s_instance.GetConfig();
 		return null;
 	}
+	
+	// --- BEGIN ADDED: Method to set artillery cooldown ---
+	static void SetArtilleryDisabled(int durationSeconds)
+    {
+        int currentTime = System.GetUnixTime();
+        s_artilleryDisabledUntil = currentTime + durationSeconds;
+        Print(string.Format("[IA_MissionInitializer] Artillery disabled by side objective completion for %1 seconds.", durationSeconds), LogLevel.NORMAL);
+    }
+	// --- END ADDED ---
 	
 	// --- BEGIN ADDED: Defend Mission Methods ---
 	private bool CheckAndStartDefendMission(int completedGroup)

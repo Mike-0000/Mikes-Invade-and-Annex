@@ -10,9 +10,9 @@ class IA_AreaGroupManager
     private int m_artilleryStrikeSmokeTime = 0; // Time when smoke was spawned
     private bool m_artillerySmokeSpawned = false;
     private const int ARTILLERY_CHECK_INTERVAL = 60; // seconds
-    private const int ARTILLERY_COOLDOWN = 300; // 5 minutes
-    private const int ARTILLERY_SMOKE_TO_IMPACT_DELAY = 90; // 90 seconds
-    private const float ARTILLERY_STRIKE_CHANCE = 0.25; // 25% chance per check
+    private const int ARTILLERY_COOLDOWN = 300; // 5+ minutes
+    private const int ARTILLERY_SMOKE_TO_IMPACT_DELAY = 55; // 60 seconds
+    private const float ARTILLERY_STRIKE_CHANCE = 0.18; // 25% chance per check
     private const ResourceName RED_SMOKE_EFFECT_PREFAB = "{002FEEDB0213777D}Prefabs/EffectsModuleEntities/EffectModule_Particle_Smoke_Red.et";
     private const ResourceName ARTILLERY_STRIKE_PREFAB = "{11B2A636F321AD68}PrefabsEditable/EffectsModules/Mortar/IA_EffectModule_Zoned_MortarBarrage_Large.et";
 
@@ -107,7 +107,38 @@ class IA_AreaGroupManager
 		Print(string.Format("[ArtilleryStrike] Passed random chance (Rolled %1, needed <= %2). Initiating strike.", randomRoll, ARTILLERY_STRIKE_CHANCE), LogLevel.NORMAL);
 			
         // 5. Determine target location from *all* danger events in the group
+		vector groupCenter = vector.Zero;
+		if (!m_areaInstances.IsEmpty())
+		{
+			vector totalPos = vector.Zero;
+			int count = 0;
+			foreach (IA_AreaInstance inst : m_areaInstances)
+			{
+				if (inst && inst.GetArea())
+				{
+					totalPos += inst.GetArea().GetOrigin();
+					count++;
+				}
+			}
+			if (count > 0)
+			{
+				groupCenter = totalPos / count;
+				Print(string.Format("[ArtilleryStrike] Calculated area group center: %1", groupCenter), LogLevel.DEBUG);
+			}
+			else
+			{
+				 Print("[ArtilleryStrike] Could not calculate area group center, no valid areas found. Aborting strike.", LogLevel.WARNING);
+				 return;
+			}
+		}
+		else
+		{
+			Print("[ArtilleryStrike] Strike aborted, no area instances in group.", LogLevel.WARNING);
+			return;
+		}
+		
         array<vector> relevantPositions = {};
+		const float MAX_DANGER_EVENT_DISTANCE = 1600.0;
         
         foreach (IA_AreaInstance instance : m_areaInstances)
         {
@@ -123,12 +154,20 @@ class IA_AreaGroupManager
                     vector currentDangerPos = group.GetLastDangerPosition();
                     if (currentDangerPos != vector.Zero)
                     {
-                        relevantPositions.Insert(currentDangerPos);
+						if (vector.DistanceSq(currentDangerPos, groupCenter) <= (MAX_DANGER_EVENT_DISTANCE * MAX_DANGER_EVENT_DISTANCE))
+						{
+                        	relevantPositions.Insert(currentDangerPos);
+						}
+						else
+						{
+							Print(string.Format("[ArtilleryStrike] Discarded danger event at %1, too far from group center %2 (Distance: %3m, Max: %4m)", 
+								currentDangerPos, groupCenter, vector.Distance(currentDangerPos, groupCenter), MAX_DANGER_EVENT_DISTANCE), LogLevel.DEBUG);
+						}
                     }
                 }
             }
         }
-        
+	
         // BUG FIX: If no valid, recent danger events are found, abort the strike.
         if (relevantPositions.IsEmpty())
         {
@@ -144,7 +183,7 @@ class IA_AreaGroupManager
         vector primaryThreatLocation = relevantPositions[medianIndex];
         
         // Add 25m randomization
-        m_artilleryStrikeCenter = IA_Game.rng.GenerateRandomPointInRadius(1, 25, primaryThreatLocation);
+        m_artilleryStrikeCenter = IA_Game.rng.GenerateRandomPointInRadius(4, 30, primaryThreatLocation);
 		m_artilleryStrikeCenter[1] = GetGame().GetWorld().GetSurfaceY(m_artilleryStrikeCenter[0], m_artilleryStrikeCenter[2]);
         Print(string.Format("[ArtilleryStrike] Target determined (Median): %1 for area group.", m_artilleryStrikeCenter), LogLevel.NORMAL);
     

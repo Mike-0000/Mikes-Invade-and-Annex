@@ -3,11 +3,19 @@ GenericEntity : "{1DDF7187608968F2}PrefabsEditable/EffectsModules/Mortar/EffectM
  components {
   SCR_EffectsModuleComponent "{5CA2DE492D8BBCF5}" {
    m_EffectConfig SCR_BarrageEffectsModule "{5CAAAC876B00D6FB}" {
+    m_sModuleEntityPrefab "{BD0DEA891DD341CF}Prefabs/Weapons/Ammo/IA_Ammo_Shell_81mm_HE_M821_EffectModule.et"
     m_ModuleZoneData SCR_EffectsModulePositionData_Radius "{5CACDA1438FA62C7}" {
-     m_fRadius 100
+     m_fRadius 125
      m_fSpawnBufferPercentage 0.01
      m_fCenterBias 0.55
     }
+    m_iMinProjectilesEachBarrage 25
+    m_iMaxProjectilesEachBarrage 40
+    m_fMinProjectileDelay 0.7
+    m_fMaxProjectileDelay 3.2
+    m_iBarrageAmount 1
+    m_fMinBarrageDelay 0.6
+    m_fMaxBarrageDelay 4
    }
   }
  }
