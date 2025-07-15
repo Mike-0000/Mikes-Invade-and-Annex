@@ -145,6 +145,19 @@ class IA_AreaInstance
     
     private bool m_isEscapeSequenceActive = false;
 
+	private int m_civiliansKilledByPlayer = 0;
+	
+	void OnCivilianKilledByPlayer()
+    {
+        m_civiliansKilledByPlayer++;
+        Print(string.Format("[AreaInstance] A civilian was killed by a player in area %1. Total player kills for this area: %2", m_area.GetName(), m_civiliansKilledByPlayer), LogLevel.NORMAL);
+    }
+
+    int GetCiviliansKilledByPlayer()
+    {
+        return m_civiliansKilledByPlayer;
+    }
+
     // Update scaling factors based on player count
     void UpdatePlayerScaling(int playerCount, float aiScaleFactor, int maxVehicles)
     {
@@ -3008,6 +3021,7 @@ class IA_AreaInstance
             float y = GetGame().GetWorld().GetSurfaceY(pos[0], pos[2]);
             pos[1] = y;
             IA_AiGroup civ = IA_AiGroup.CreateCivilianGroup(pos);
+            civ.SetOwningAreaInstance(this);
             
             // Directly assign the area instance's area to the civilian group
             if (m_area) // Ensure m_area is not null before assigning
@@ -3294,6 +3308,7 @@ class IA_AreaInstance
                 // Register the vehicle and group with our civilian tracking
                 if (civGroup)
                 {
+					civGroup.SetOwningAreaInstance(this);
                    //////Print("[DEBUG_CIV_VEHICLES] Created civilian AI group for vehicle, registering vehicle with group", LogLevel.DEBUG);
                     RegisterCivilianVehicle(vehicle, civGroup);
                 }

@@ -43,6 +43,9 @@ class IA_Config{
 	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "AI Player Scale Multiplier (multiplies dynamic scale factor, ignored if static override is set)")]
 	float m_fAIScaleMultiplier;
  
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Roles", desc: "Enforce role restrictions for vehicle pilots.")]
+	bool m_bEnforceRoleRestrictions;
+ 
  // No Getter methods. We reference the variables directly. 
  // Config access is handled through IA_MissionInitializer.GetGlobalConfig()
 }

@@ -7,7 +7,6 @@ class IA_MissionInitializerClass : GenericEntityClass
 {
 };
 
-class IA_AreaGroupManager; // Forward declaration
 
 class IA_MissionInitializer : GenericEntity
 {
@@ -37,6 +36,9 @@ class IA_MissionInitializer : GenericEntity
 	// --- BEGIN ADDED: Artillery Cooldown ---
     static int s_artilleryDisabledUntil = 0;
 	// --- END ADDED ---
+	
+	[RplProp()]
+	private bool m_bEnforceRoleRestrictionsReplicated = false;
 
 	// Static reference for global access
 	static IA_MissionInitializer s_instance;
@@ -449,6 +451,7 @@ class IA_MissionInitializer : GenericEntity
 		}
 		
 		m_initialTotalCiviliansInGroup = 0;
+		int totalCiviliansKilledByPlayer = 0;
 		if (m_currentAreaInstances)
 		{
 			foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
@@ -456,35 +459,26 @@ class IA_MissionInitializer : GenericEntity
 				if (instance && !instance.IsForSideObjective())
 				{
 					m_initialTotalCiviliansInGroup += instance.GetInitialCivilianCount();
-				}
-			}
-		}
-		
-		int currentTotalAliveCivilians = 0;
-		if (m_currentAreaInstances)
-		{
-			foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
-			{
-				if (instance && !instance.IsForSideObjective())
-				{
-					currentTotalAliveCivilians += instance.GetAliveCivilianCount();
+					totalCiviliansKilledByPlayer += instance.GetCiviliansKilledByPlayer();
 				}
 			}
 		}
 
-		Print(string.Format("[IA_MissionInitializer] Area Group %1 Civilian Status: %2 / %3 civilians remaining.", 
-			groupsArray[m_currentIndex], currentTotalAliveCivilians, m_initialTotalCiviliansInGroup), LogLevel.NORMAL);
+		Print(string.Format("[IA_MissionInitializer] Civilian Revolt Check for Group %1: %2 civilians killed by players out of %3 initial civilians.", 
+			groupsArray[m_currentIndex], totalCiviliansKilledByPlayer, m_initialTotalCiviliansInGroup), LogLevel.NORMAL);
 		
 		if (m_initialTotalCiviliansInGroup > 0)
 		{
-			float civilianPercentageRemaining = currentTotalAliveCivilians / (float)m_initialTotalCiviliansInGroup;
-			if (civilianPercentageRemaining < 0.84)
+			float civilianPercentageKilledByPlayer = 0;
+			if (m_initialTotalCiviliansInGroup > 0)
+				civilianPercentageKilledByPlayer = totalCiviliansKilledByPlayer / (float)m_initialTotalCiviliansInGroup;
+			
+			Print(string.Format("[IA_MissionInitializer] Civilian kill percentage by player: %1 (Threshold: 0.11)", civilianPercentageKilledByPlayer), LogLevel.NORMAL);
+			
+			if (civilianPercentageKilledByPlayer >= 0.11)
 			{
-
-
 				CivilianRevoltInit();
-				// More than 25% of civilians are no longer alive.
-				// Future logic for this condition goes here.
+				// More than 16% of civilians have been killed by players.
 			}
 		}
 		
@@ -748,6 +742,7 @@ class IA_MissionInitializer : GenericEntity
     override void EOnInit(IEntity owner)
     {
         super.EOnInit(owner);
+		s_instance = this;
 		GetGame().GetCallqueue().CallLater(InitDelayed, 5000, false, owner);
         
     }
@@ -832,6 +827,8 @@ class IA_MissionInitializer : GenericEntity
 		if (m_configResource.IsEmpty())
 		{
 			Print("[IA_MissionInitializer] No config resource specified, using default behavior", LogLevel.NORMAL);
+			m_bEnforceRoleRestrictionsReplicated = false;
+			Replication.BumpMe();
 			return;
 		}
 
@@ -839,6 +836,8 @@ class IA_MissionInitializer : GenericEntity
 		if (!configRes)
 		{
 			Print("[IA_MissionInitializer] Failed to load config resource: " + m_configResource, LogLevel.ERROR);
+			m_bEnforceRoleRestrictionsReplicated = false;
+			Replication.BumpMe();
 			return;
 		}
 
@@ -846,10 +845,14 @@ class IA_MissionInitializer : GenericEntity
 		if (!m_config)
 		{
 			Print("[IA_MissionInitializer] Failed to create IA_Config instance from resource", LogLevel.ERROR);
+			m_bEnforceRoleRestrictionsReplicated = false;
+			Replication.BumpMe();
 			return;
 		}
 
 		Print("[IA_MissionInitializer] Successfully loaded config: " + m_configResource, LogLevel.NORMAL);
+		m_bEnforceRoleRestrictionsReplicated = m_config.m_bEnforceRoleRestrictions;
+		Replication.BumpMe();
 	}
 
 	IA_Config GetConfig()
@@ -869,6 +872,15 @@ class IA_MissionInitializer : GenericEntity
 		if (s_instance)
 			return s_instance.GetConfig();
 		return null;
+	}
+	
+	static bool AreRoleRestrictionsEnforced()
+	{
+		if (s_instance)
+			return s_instance.m_bEnforceRoleRestrictionsReplicated;
+		
+		// Default to false (not enforced) if instance not available
+		return false;
 	}
 	
 	// --- BEGIN ADDED: Method to set artillery cooldown ---

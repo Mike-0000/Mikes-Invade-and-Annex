@@ -22,9 +22,7 @@ enum IA_GroupTacticalState
 	Escaping,      // Unconditionally moving to an escape point, ignoring combat
 }
 
-// --- BEGIN ADDED: Forward declaration ---
-class IA_AssassinationObjective;
-// --- END ADDED ---
+
 
 // Class to track danger events for processing
 class IA_GroupDangerEvent
@@ -159,6 +157,7 @@ class IA_AiGroup
     private IA_GroupTacticalState m_requestedState = IA_GroupTacticalState.Neutral;
     private vector m_requestedStatePosition = vector.Zero;
     private IEntity m_requestedStateEntity = null;
+	private IA_AreaInstance m_owningAreaInstance;
 
 	Faction m_groupFaction;
 	
@@ -1667,7 +1666,7 @@ class IA_AiGroup
 			if (combatComponent)
 				combatComponent.SetAISkill(aiSkill);
 			
-            ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
+            // ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath); //This line is now removed
             
             // Set up danger event processing for this agent
             ProcessAgentDangerEvents(agent);
@@ -2067,7 +2066,11 @@ class IA_AiGroup
                         string factionKey = faction.GetFactionKey();
                         // Map the faction key to our IA_Faction enum
                         if (factionKey == "US")
+						{
+							if (m_isCivilian && m_owningAreaInstance)
+								m_owningAreaInstance.OnCivilianKilledByPlayer();
                             playerFaction = IA_Faction.US;
+						}
                         else if (factionKey == "USSR")
                             playerFaction = IA_Faction.USSR;
                         else if (factionKey == "FIA")
@@ -3520,5 +3523,10 @@ class IA_AiGroup
     {
         return m_OwningSideObjective != null;
     }
+
+	void SetOwningAreaInstance(IA_AreaInstance owner)
+	{
+		m_owningAreaInstance = owner;
+	}
 
 };  

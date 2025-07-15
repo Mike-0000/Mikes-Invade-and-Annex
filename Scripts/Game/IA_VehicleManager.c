@@ -1431,6 +1431,12 @@ class IA_VehicleManager: GenericEntity
     // Check if a player can pilot a specific vehicle compartment (e.g. helicopter pilot seat)
     static bool CanPlayerPilotVehicle(IEntity user, BaseCompartmentSlot compartment, out string reason)
     {
+		// Get the config and check if role restrictions are enforced
+        if (!IA_MissionInitializer.AreRoleRestrictionsEnforced())
+        {
+            return true; // Role restrictions are disabled, so always allow
+        }
+		
         reason = ""; // Default to no reason
 		SCR_ChimeraCharacter chimeraCharacter = SCR_ChimeraCharacter.Cast(user);
         // Check if it's a pilot seat
