@@ -1,0 +1,99 @@
+ButtonWidgetClass {
+ Name "ListBoxElement"
+ Slot AlignableSlot "{554ADB1D2D5974C0}" {
+  HorizontalAlign 3
+ }
+ components {
+  SCR_ListBoxElementComponent "{56CB58E7628E6533}" : "{2D2F81F501855B34}Configs/UI/ListBoxElement_ModularButtonComponent.conf" {
+  }
+  IA_PlayerLeaderboardEntry "{65EB66AC6D510E7F}" {
+  }
+ }
+ style blank
+ {
+  SizeLayoutWidgetClass "{65EA2E42B68984BA}" {
+   Name "SizeLayout"
+   Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+    HorizontalAlign 3
+   }
+   AllowHeightOverride 1
+   HeightOverride 36
+   {
+    OverlayWidgetClass "{65EC21904CE4AB78}" {
+     Name "Overlay0"
+     Slot AlignableSlot "{65EC21904CE4AB5A}" {
+      HorizontalAlign 3
+      VerticalAlign 3
+     }
+     {
+      HorizontalLayoutWidgetClass "{65EC219057AF9046}" {
+       Name "HorizontalLayout0"
+       Slot OverlayWidgetSlot "{65EC219057AF9029}" {
+        HorizontalAlign 0
+        VerticalAlign 3
+       }
+       {
+        RichTextWidgetClass "{65EC21906D11974C}" {
+         Name "PlayerName"
+         Slot LayoutSlot "{65EC21906D11972B}" {
+          HorizontalAlign 1
+          VerticalAlign 1
+          Padding 5 0 0 0
+         }
+        }
+        RichTextWidgetClass "{65ED460316532EF9}" {
+         Name "Rank"
+         Slot LayoutSlot "{65EC21906D11972B}" {
+          HorizontalAlign 1
+          VerticalAlign 1
+          Padding 45 0 0 0
+         }
+         "Z Order" -1
+         Text "1."
+        }
+       }
+      }
+      HorizontalLayoutWidgetClass "{65EC2193904419E0}" {
+       Name "HorizontalLayout1"
+       Slot OverlayWidgetSlot "{65EC219057AF9029}" {
+        HorizontalAlign 2
+        VerticalAlign 3
+        Padding 0 0 55 0
+       }
+       {
+        RichTextWidgetClass "{65EC219399E46BF6}" {
+         Name "Deaths"
+         Slot LayoutSlot "{65EC21906D11972B}" {
+          HorizontalAlign 1
+          VerticalAlign 1
+          Padding 0 0 10.2 0
+         }
+         Text "10000"
+        }
+       }
+      }
+      HorizontalLayoutWidgetClass "{65EC21845A59A506}" {
+       Name "HorizontalLayout2"
+       Slot OverlayWidgetSlot "{65EC219057AF9029}" {
+        HorizontalAlign 2
+        VerticalAlign 3
+        Padding 0 0 180 0
+       }
+       {
+        RichTextWidgetClass "{65EC21845A59A507}" {
+         Name "Kills"
+         Slot LayoutSlot "{65EC21906D11972B}" {
+          HorizontalAlign 1
+          VerticalAlign 1
+          Padding 0 0 11.5 0
+         }
+         Text "10000"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

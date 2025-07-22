@@ -1,0 +1,228 @@
+FrameWidgetClass {
+ Name "IAStats"
+ Slot AlignableSlot "{54D304FE6A541827}" {
+  HorizontalAlign 3
+  VerticalAlign 3
+ }
+ components {
+  SCR_SuperMenuComponent "{60DAE19D91574CC0}" {
+  }
+ }
+ {
+  FrameWidgetClass "{65E6AAD3FBCCE555}" : "{777A38BB49472774}UI/layouts/WidgetLibrary/BaseElements/WLib_MenuBase.layout" {
+   Name "MenuBase0"
+   Slot FrameWidgetSlot "{54D8A1A6EA84F990}" {
+    Anchor 0.22 0.15 0.78 0.85
+    PositionX -302.4
+    OffsetLeft -302.4
+    PositionY -106
+    OffsetTop -106
+    SizeX 600
+    OffsetRight -297.6
+    SizeY 200
+    OffsetBottom -94
+   }
+   Color 0 0 0 1
+   {
+    BlurWidgetClass "{65E6AAD3FBCCE551}" : "{352322057FD78AE1}UI/layouts/WidgetLibrary/BaseElements/WLib_Blur.layout" {
+     Name "Blur1"
+     Slot FrameWidgetSlot "{5A2CA7C4E49A8180}" {
+      Anchor 0 0 1 1
+      PositionX 0
+      OffsetLeft 0
+      PositionY 0
+      OffsetTop 0
+      SizeX -1675.2
+      OffsetRight 0
+      SizeY -956
+      OffsetBottom 0
+     }
+     "Z Order" -1
+     Color 0.044 0.044 0.044 1
+     Intensity 0.4
+     "Smooth Border" 0 0 0 0
+    }
+    BlurWidgetClass "{00000000E99E7D4A}" {
+     Prefab "{00000000E99E7D4A}"
+     "Is Visible" 0
+     Opacity 0.99
+     Color 0.007 0.012 0.014 0.718
+     Intensity 1
+    }
+    ImageWidgetClass "{00000000209D883B}" {
+     Prefab "{00000000209D883B}"
+     Slot FrameWidgetSlot "{5488B97C9D820763}" {
+     }
+    }
+    VerticalLayoutWidgetClass "{000000005ABA4553}" {
+     Prefab "{000000005ABA4553}"
+     {
+      SizeLayoutWidgetClass "{54ACA291E52533FB}" {
+       Prefab "{54ACA291E52533FB}"
+       {
+        OverlayWidgetClass "{00000000E8F5CC2D}" {
+         Prefab "{00000000E8F5CC2D}"
+         {
+          TextWidgetClass "{0000000059B7F482}" {
+           Prefab "{0000000059B7F482}"
+           Text "Invade and Annex Leaderboard"
+           FontProperties FontProperties "{546AF489DFD25402}" {
+            Font "{EABA4FE9D014CCEF}UI/Fonts/RobotoCondensed/RobotoCondensed_Bold.fnt"
+           }
+          }
+         }
+        }
+       }
+      }
+      VerticalLayoutWidgetClass "{00000000974AC4C5}" {
+       Prefab "{00000000974AC4C5}"
+       components {
+        SCR_TabViewComponent "{546B27D01CA8A38D}" {
+         m_aElements {
+          SCR_TabViewContent "{5706A8A62C7D1976}" {
+           m_ElementLayout "{046BBC76CEADD41E}UI/IA_GlobalLeaderboardMenu.layout"
+           m_sTabButtonContent "Server Leaderboard"
+          }
+          SCR_TabViewContent "{65EC218CE0A0C41C}" {
+           m_ElementLayout "{046BBC76CEADD41E}UI/IA_GlobalLeaderboardMenu.layout"
+           m_sTabButtonContent "Global Leaderboard"
+          }
+          SCR_TabViewContent "{65EC2188E549E87F}" {
+           m_ElementLayout "{046BBC76CEADD41E}UI/IA_GlobalLeaderboardMenu.layout"
+           m_sTabButtonContent "Global Leaderboard by Server"
+          }
+         }
+         m_ColorBackground 0 0 0 0.529
+         m_fTabWidth 248
+        }
+       }
+       {
+        SizeLayoutWidgetClass "{0000000041B59A6F}" {
+         Prefab "{0000000041B59A6F}"
+         {
+          HorizontalLayoutWidgetClass "{54ACA2928A1FCB02}" {
+           Prefab "{54ACA2928A1FCB02}"
+           {
+            OverlayWidgetClass "{54ACA29336E9260F}" {
+             Prefab "{54ACA29336E9260F}"
+             Slot LayoutSlot "{54872531B0DFCE1C}" {
+              FillWeight 1
+             }
+             {
+              ImageWidgetClass "{65E6AAD3FBCCE52D}" {
+               Name "Image0"
+               Slot OverlayWidgetSlot "{591885AE6A9F6DB9}" {
+                HorizontalAlign 3
+                VerticalAlign 3
+               }
+               "Z Order" -1
+               Color 1 1 1 0
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+        ImageWidgetClass "{000000002B6EC668}" {
+         Prefab "{000000002B6EC668}"
+         Slot LayoutSlot "{54871745AA809762}" {
+          Padding 0 0 0 0
+         }
+        }
+        OverlayWidgetClass "{000000004446F260}" {
+         Prefab "{000000004446F260}"
+         Slot LayoutSlot "{5454881316546B14}" {
+         }
+         Clipping Inherit
+         {
+          VerticalLayoutWidgetClass "{65E6AAD3FBCCE526}" {
+           Name "VerticalLayout0"
+           Slot OverlayWidgetSlot "{54E4AE2F1EE7EB55}" {
+            HorizontalAlign 3
+            VerticalAlign 3
+           }
+           {
+            ImageWidgetClass "{65E6AAD3FBCCE527}" {
+             Name "Image0"
+             Slot LayoutSlot "{54E4B229112548B2}" {
+             }
+             "Is Visible" 0
+             Color 0.761 0.392 0.078 1
+             Size 4 4
+            }
+            ScrollLayoutWidgetClass "{65E6AAD3FBCCE525}" {
+             Name "ScrollLayout0"
+             Slot LayoutSlot "{54E4AE2F1EDE7399}" {
+              Padding 0 2 -24 2
+              SizeMode Fill
+             }
+             Color 0.761 0.386 0.078 1
+             "Up rule" Explicit
+             "Up target" "SortName"
+             {
+              VerticalLayoutWidgetClass "{65E6AAD3FBCCE522}" {
+               Name "Table"
+               Slot OverlayWidgetSlot "{54D8A1A6A29D8768}" {
+                HorizontalAlign 3
+                VerticalAlign 3
+                Padding 0 0 14 0
+               }
+               "Up rule" Explicit
+               "Up target" "SortHeader"
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+      VerticalLayoutWidgetClass "{54ACA291480977C5}" {
+       Prefab "{54ACA291480977C5}"
+       {
+        HorizontalLayoutWidgetClass "{54B2E1ECF2166EB6}" {
+         Prefab "{54B2E1ECF2166EB6}"
+         Slot LayoutSlot "{54929003A731D081}" {
+          Padding 0 0 0 4
+         }
+         {
+          ImageWidgetClass "{000000000D58395B}" {
+           Prefab "{000000000D58395B}"
+           Color 0.144 0.144 0.144 1
+          }
+         }
+        }
+        HorizontalLayoutWidgetClass "{0000000059B6DBB4}" {
+         Prefab "{0000000059B6DBB4}"
+         {
+          HorizontalLayoutWidgetClass "{65E6AAD3FBCCE53F}" {
+           Name "FooterLeft"
+           Slot LayoutSlot "{572AC16D2158EF1F}" {
+            SizeMode Fill
+           }
+          }
+          ButtonWidgetClass "{54ACA297FECC1128}" {
+           Prefab "{54ACA297FECC1128}"
+           Slot LayoutSlot "{54ACA297E9BAB648}" {
+            HorizontalAlign 2
+           }
+          }
+          HorizontalLayoutWidgetClass "{56AC962104CF5CDD}" {
+           Prefab "{56AC962104CF5CDD}"
+           Slot LayoutSlot "{56AC962104CF5CEF}" {
+            SizeMode Auto
+           }
+           "Z Order" 63
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

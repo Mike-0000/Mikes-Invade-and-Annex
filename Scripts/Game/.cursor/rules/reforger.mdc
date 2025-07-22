@@ -3,4 +3,15 @@ description:
 globs: 
 alwaysApply: true
 ---
-This is for Arma Reforger Enforce Script. It is heavily sandboxed. The Ternary (?) operator is unavailable
+This is for Arma Reforger, Enforce Script. It is heavily sandboxed. The Ternary (?) operator is unavailable
+
+
+Before writing new code that interacts with core game systems (e.g., creating new GameMode components, entity components, replication logic, or overriding engine methods), you must first search the GameSources folder for existing examples.
+Pay close attention to:
+Class Inheritance: Find what base class similar components inherit from (e.g., SCR_BaseGameModeComponent vs. GameComponent).
+Function Overrides: Find the exact name and signature of lifecycle methods (e.g., OnGameModeStart vs. OnPostInit).
+This is critical because the game's framework has very specific inheritance patterns that are not always obvious. Assuming method names or base classes will lead to compiler errors.
+
+Core game classes that have the SCR_ prefix are preferred, as these are more built out classes with more methods available.
+
+Always try to find specific examples somewhere in the codebase before implementing new logic. The game is very locked down so referencing existing material should always be your starting point.

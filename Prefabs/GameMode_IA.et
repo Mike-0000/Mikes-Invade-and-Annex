@@ -4,6 +4,8 @@ SCR_BaseGameMode : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
   GarbageSystemConfigComponent "{655C2771087BBC31}" {
    Config "{829121DACA5887BC}Configs/Systems/GarbageSystem/IA_GarbageCollection.conf"
   }
+  IA_LeaderboardManagerComponent "{65EC21982326B88F}" {
+  }
   SCR_CampaignBuildingManagerComponent "{658D08F10A28404C}" {
    m_sFreeRoamBuildingClientTrigger "{5E191CEAF4B95816}Prefabs/MP/FreeRoamBuildingClientTrigger.et"
    m_iCompositionRefundPercentage 50

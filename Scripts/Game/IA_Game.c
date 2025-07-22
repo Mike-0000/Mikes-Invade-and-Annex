@@ -66,6 +66,13 @@ class IA_Game
         // --- BEGIN ADDED: Initialize Side Objective Manager ---
         m_SideObjectiveManager = IA_SideObjectiveManager.GetInstance();
         // --- END ADDED ---
+        
+        // --- BEGIN ADDED: Initialize Stats Manager ---
+        if (Replication.IsServer())
+        {
+            IA_StatsManager.GetInstance();
+        }
+        // --- END ADDED ---
 
         // --- BEGIN MODIFIED: Enable initial objective scaling earlier ---
         // Enable scaling as soon as IA_Game is initialized for the first time.

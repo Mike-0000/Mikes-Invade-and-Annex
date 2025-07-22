@@ -1,5 +1,7 @@
 modded class SCR_ChimeraCharacter{
 	
+	private ref ScriptInvoker m_OnGlobalLeaderboardDataReceived;
+	
 	[RplProp(onRplName: "OnRoleChanged")]
 	IA_PlayerRole m_eReplicatedRole;
 	
@@ -8,6 +10,10 @@ modded class SCR_ChimeraCharacter{
 	override void EOnInit(IEntity owner)
 	{
 		super.EOnInit(owner);
+		
+		if (!m_OnGlobalLeaderboardDataReceived)
+			m_OnGlobalLeaderboardDataReceived = new ScriptInvoker();
+		
 		// The server is authoritative for setting the initial role.
 		if (Replication.IsServer())
 		{
@@ -325,6 +331,41 @@ modded class SCR_ChimeraCharacter{
 	void SetCurrentArea(IA_AreaInstance area)
 	{
 		// Implementation of SetCurrentArea method
+	}
+	
+	// --- Leaderboard RPCs ---
+    
+    // --- Client -> Server ---
+    void RequestGlobalLeaderboard()
+    {
+		// No longer needed, data is pushed from server automatically.
+		// Kept for potential future use or debugging, but should not be called by UI.
+		Print("RequestGlobalLeaderboard is deprecated. Leaderboard data is now pushed automatically.", LogLevel.WARNING);
+    }
+    
+    [RplRpc(RplChannel.Reliable, RplRcver.Server)]
+    protected void RpcAsk_RequestGlobalLeaderboard()
+    {
+		// This logic is now handled by the IA_LeaderboardManagerComponent
+    }
+    
+    // --- Server -> Client ---
+    [RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+    void RpcDo_ReceiveGlobalLeaderboard(string jsonData)
+    {
+        // This is now handled by the OnLeaderboardDataChanged callback in IA_LeaderboardManagerComponent
+		// The UI should listen to the manager's invoker instead.
+    }
+
+	static SCR_ChimeraCharacter GetLocalChimeraCharacter()
+	{
+		PlayerController pc = GetGame().GetPlayerController();
+		if (pc)
+		{
+			return SCR_ChimeraCharacter.Cast(pc.GetControlledEntity());
+		}
+		
+		return null;
 	}
 }
 

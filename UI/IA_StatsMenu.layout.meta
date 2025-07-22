@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{BCA1F26D33DC8FB0}Scripts/ServerAdminTools-ExampleMod/UI/layouts/Menus/IA_StatsMenu.layout"
+ Configurations {
+  LayoutResourceClass PC {
+  }
+  LayoutResourceClass XBOX_ONE : PC {
+  }
+  LayoutResourceClass XBOX_SERIES : PC {
+  }
+  LayoutResourceClass PS4 : PC {
+  }
+  LayoutResourceClass PS5 : PC {
+  }
+  LayoutResourceClass HEADLESS : PC {
+  }
+ }
+}

@@ -1,0 +1,175 @@
+VerticalLayoutWidgetClass {
+ Name "rootFrame"
+ {
+  HorizontalLayoutWidgetClass "{65E6AAD57B70CAB3}" {
+   Name "HorizontalLayout0"
+   Slot LayoutSlot "{585C76E415ECBF71}" {
+    SizeMode Fill
+   }
+   {
+    OverlayWidgetClass "{65E6AAD57B70FF6E}" {
+     Name "Overlay1"
+     Slot LayoutSlot "{5866879E20FC41F2}" {
+      SizeMode Fill
+     }
+     {
+      VerticalLayoutWidgetClass "{65E6AAD57B70FF6F}" {
+       Name "VerticalLayout0"
+       Slot OverlayWidgetSlot "{5866878BF920C09F}" {
+        HorizontalAlign 3
+        VerticalAlign 3
+       }
+       {
+        ScrollLayoutWidgetClass "{65E6AAD57B70FF70}" {
+         Name "GroupDetail"
+         Slot LayoutSlot "{5866878BF9396FD4}" {
+          SizeMode Fill
+         }
+         "Z Order" 1
+         Color 0.761 0.386 0.078 1
+         {
+          VerticalLayoutWidgetClass "{65E6AAD57B7060C0}" {
+           Name "LeaderboardContainerb"
+           Slot AlignableSlot "{585C76E5BA8E1CED}" {
+            HorizontalAlign 3
+            VerticalAlign 0
+            Padding 0 0 2 0
+           }
+           {
+            VerticalLayoutWidgetClass "{65E6AAD57B7060C1}" {
+             Name "a"
+             Slot LayoutSlot "{585C76E140CA0F73}" {
+              VerticalAlign 0
+             }
+             "Ignore Cursor" 0
+             "Left rule" Explicit
+             "Left target" "GroupList"
+             {
+              ButtonWidgetClass "{65E6AAD57B7060C4}" : "{67B4F07635959DC7}UI/layouts/WidgetLibrary/EditBox/WLib_EditBoxSearch.layout" {
+               Name "EditBoxSearch0"
+               Slot LayoutSlot "{5D0B394BDA9BB579}" {
+               }
+              }
+              HorizontalLayoutWidgetClass "{65EC2185EBCF8F0F}" {
+               Name "HorizontalLayout0"
+               Slot LayoutSlot "{65EC2185EBCF8FFC}" {
+                Padding 0 4 0 4
+               }
+               {
+                HorizontalLayoutWidgetClass "{65EC2184DECBA7F8}" {
+                 Name "HorizontalLayout0"
+                 Slot LayoutSlot "{65EC2184DECBA7DB}" {
+                  HorizontalAlign 0
+                 }
+                 {
+                  ButtonWidgetClass "{65EC21855373E9C6}" {
+                   Name "Button0"
+                   Slot LayoutSlot "{65EC21855373E9AA}" {
+                    HorizontalAlign 0
+                    Padding 50 0 0 0
+                   }
+                   style blank
+                   {
+                    RichTextWidgetClass "{65EC2185F199F56A}" {
+                     Name "Name"
+                     Slot ButtonWidgetSlot "{65ED4608C59C7481}" {
+                     }
+                     Text "Name"
+                     "Font Size" 32
+                    }
+                   }
+                  }
+                 }
+                }
+                HorizontalLayoutWidgetClass "{65EC2184C65F259F}" {
+                 Name "HorizontalLayout1"
+                 Slot LayoutSlot "{65EC2184C65F2446}" {
+                  HorizontalAlign 2
+                  Padding 0 0 50 0
+                  SizeMode Fill
+                 }
+                 {
+                  ButtonWidgetClass "{65EC2185747A3F20}" {
+                   Name "Button1"
+                   Slot LayoutSlot "{65EC21855373E9AA}" {
+                    HorizontalAlign 2
+                    Padding 50 0 0 0
+                   }
+                   style blank
+                   {
+                    RichTextWidgetClass "{65EC2185747A3F21}" {
+                     Name "Name"
+                     Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
+                     }
+                     Text "Kills"
+                     "Font Size" 32
+                    }
+                   }
+                  }
+                  ButtonWidgetClass "{65EC218409EB6294}" {
+                   Name "Button0"
+                   Slot LayoutSlot "{65EC21855373E9AA}" {
+                    HorizontalAlign 2
+                    Padding 50 0 0 0
+                   }
+                   style blank
+                   {
+                    RichTextWidgetClass "{65EC218409EB6295}" {
+                     Name "Name"
+                     Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
+                     }
+                     Text "Deaths"
+                     "Font Size" 32
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+              OverlayWidgetClass "{65E6AAD57B7060CA}" {
+               Name "ListBox0"
+               Slot LayoutSlot "{5CB15B87951CF5E4}" {
+               }
+               "Z Order" 1
+               "Ignore Cursor" 0
+               {
+                VerticalLayoutWidgetClass "{65E6AAD57B7060CB}" {
+                 Name "LeaderboardContainera"
+                 Slot OverlayWidgetSlot "{5CF70242F6C58335}" {
+                  HorizontalAlign 3
+                  VerticalAlign 0
+                 }
+                 "Ignore Cursor" 0
+                 {
+                  VerticalLayoutWidgetClass "{65E6AAD57B7007B8}" {
+                   Prefab "{5CD8B2C422FB3DD6}"
+                   Name "LeaderboardContainer"
+                   Slot LayoutSlot "{5D04D9D7CC23D0FC}" {
+                   }
+                   "Ignore Cursor" 0
+                  }
+                 }
+                }
+                ScrollLayoutWidgetClass "{65E6AAD57B7007BE}" {
+                 Prefab "{5CD8B2C422FCA2F0}"
+                 Name "LeaderboardContaineraa"
+                 "Is Enabled" 0
+                 "Is Visible" 0
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

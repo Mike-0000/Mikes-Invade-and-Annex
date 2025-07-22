@@ -2051,6 +2051,14 @@ class IA_AiGroup
         
         if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_PLAYER)
         {
+			int playerID = killer.GetInstigatorPlayerID();
+			if (playerID > 0)
+			{
+				string playerGuid = GetGame().GetBackendApi().GetPlayerUID(playerID);
+				string playerName = GetGame().GetPlayerManager().GetPlayerName(playerID);
+				
+				IA_StatsManager.GetInstance().QueuePlayerKill(playerGuid, playerName);
+			}
             
             IA_Faction playerFaction = IA_Faction.NONE;
             SCR_ChimeraCharacter playerCharacter = SCR_ChimeraCharacter.Cast(killerEntity);

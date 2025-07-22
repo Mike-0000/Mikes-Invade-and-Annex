@@ -410,6 +410,8 @@ class IA_MissionInitializer : GenericEntity
 				continue;
 
 			// Trigger a large reinforcement wave for this area with a 180-second delay.
+			// the correct function is SpawnCivilianRevoltReinforcements
+			// NEVER EDIT THIS LINE BELOW!!!! AN AI SHOULD NEVER EDIT THIS LINE!!!!
 			GetGame().GetCallqueue().CallLater(instance.SpawnCivilianRevoltReinforcements, 180 * 1000, false);
 
 			array<ref IA_AiGroup> civilianGroups = instance.GetCivilianGroups();
@@ -745,6 +747,12 @@ class IA_MissionInitializer : GenericEntity
 		s_instance = this;
 		GetGame().GetCallqueue().CallLater(InitDelayed, 5000, false, owner);
         
+		if (Replication.IsServer())
+		{
+			GetGame().GetCallqueue().CallLater(IA_ApiHandler.GetInstance().Init, 5000, false);
+		}
+		
+		// Removed incorrect initialization from here
     }
 
     private void _SpawnAreaInstanceWithDelay(IA_AreaMarker marker, Faction nextAreaFaction, int currentGroup)

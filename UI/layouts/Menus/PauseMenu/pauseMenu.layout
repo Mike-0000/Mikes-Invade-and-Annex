@@ -1,0 +1,385 @@
+FrameWidgetClass {
+ {
+  OverlayWidgetClass "{54C4A02A556443D7}" {
+   Prefab "{54C4A02A556443D7}"
+   Slot FrameWidgetSlot "{54C4A02CFA53051D}" {
+    OffsetLeft 0
+    PositionY 0
+    OffsetRight -950
+    SizeY 0
+   }
+  }
+  OverlayWidgetClass "{5DB8B556919FE5F2}" {
+   Prefab "{5DB8B556919FE5F2}"
+   Slot FrameWidgetSlot "{54C4A02CFA53051D}" {
+    Anchor 0 0 0 0
+    PositionX 0
+    OffsetLeft 0
+    PositionY 0
+    OffsetTop 0
+    SizeX 488.326
+    OffsetRight -488.326
+    SizeY 1080
+    OffsetBottom -1080
+   }
+   {
+    VerticalLayoutWidgetClass "{5DB8B556919FE5EE}" {
+     Prefab "{5DB8B556919FE5EE}"
+     {
+      ImageWidgetClass "{5DB8B556919FE5EF}" {
+       Prefab "{5DB8B556919FE5EF}"
+       Slot LayoutSlot "{58CE98844C814511}" {
+       }
+      }
+      ButtonWidgetClass "{5DB8B556919FE5ED}" {
+       Prefab "{5DB8B556919FE5ED}"
+       "Z Order" 1
+      }
+      ButtonWidgetClass "{5DB8B556919FE5E2}" {
+       Prefab "{5DB8B556919FE5E2}"
+       "Z Order" 2
+       {
+        SizeLayoutWidgetClass "{557098260F312277}" {
+         Prefab "{557098260F312277}"
+         Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+         }
+        }
+       }
+      }
+      ButtonWidgetClass "{5DB8B556919FE5E0}" {
+       Prefab "{5DB8B556919FE5E0}"
+       "Z Order" 3
+       {
+        SizeLayoutWidgetClass "{557098260F312277}" {
+         Prefab "{557098260F312277}"
+         Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+         }
+        }
+       }
+      }
+      ButtonWidgetClass "{5CD890A87968D2AB}" {
+       Name "Invade and Annex Stats"
+       Slot LayoutSlot {
+        HorizontalAlign 3
+        VerticalAlign 1
+       }
+       "Z Order" 4
+       Clipping False
+       components {
+        SCR_ModularButtonComponent "{5ED6B465C4BE34E4}" {
+         m_aEffects {
+          SCR_ButtonEffectSound "{5D9E89455EE4B68D}" {
+           m_eEvents EVENT_MOUSE_ENTER
+          }
+          SCR_ButtonEffectSound "{5D9E89455EE4B687}" {
+           m_eEvents EVENT_FOCUS_GAINED
+          }
+          SCR_ButtonEffectSound "{5D9E89455EE4B681}" {
+           m_eEvents EVENT_CLICKED
+          }
+          SCR_ButtonEffectColor "{5DB885898296DF89}" {
+           m_eEvents 6144
+           m_sWidgetName "LineHighlight"
+           m_fAnimationTime 0.1
+           m_cDefault 0 0 0 0
+           m_cHovered 0 0 0 0
+           m_cActivated 0 0 0 0
+           m_cActivatedHovered 0 0 0 0
+           m_cDisabled 0 0 0 0
+           m_cDisabledActivated 0 0 0 0
+           m_cClicked 0 0 0 0
+           m_cFocusGained 1 0.597 0.198 0.149
+           m_cFocusLost 0 0 0 0
+           m_cToggledOn 0 0 0 0
+           m_cToggledOff 0 0 0 0
+          }
+          SCR_ButtonEffectOpacity "{5D9EECF12B3D016D}" {
+           m_eEvents 24581
+           m_sWidgetName "Background"
+           m_fAnimationTime 0.1
+           m_fDefault 0.5
+           m_fHovered 0
+           m_fActivated 0
+           m_fActivatedHovered 0
+           m_fDisabled 0
+           m_fDisabledActivated 0
+           m_fClicked 0
+           m_fFocusGained 0
+           m_fFocusLost 0
+           m_fToggledOn 0
+           m_fToggledOff 0.5
+           m_fMouseEnter 0
+           m_fMouseLeave 0
+          }
+          SCR_ButtonEffectColor "{5D9EFC157A1E1706}" {
+           m_eEvents 6144
+           m_sWidgetName "ButtonLabel"
+           m_cDefault 0 0 0 0
+           m_cHovered 0 0 0 0
+           m_cActivated 0 0 0 0
+           m_cActivatedHovered 0 0 0 0
+           m_cDisabled 0 0 0 0
+           m_cDisabledActivated 0 0 0 0
+           m_cClicked 0 0 0 0
+           m_cFocusGained 1 0.597 0.198 1
+           m_cFocusLost 1 1 1 1
+           m_cToggledOn 0 0 0 0
+           m_cToggledOff 0 0 0 0
+          }
+          SCR_ButtonEffectColor "{5DF4771438691E29}" {
+           m_eEvents 6144
+           m_sWidgetName "Image0"
+           m_cDefault 0 0 0 0
+           m_cHovered 0 0 0 0
+           m_cActivated 0 0 0 0
+           m_cActivatedHovered 0 0 0 0
+           m_cDisabled 0 0 0 0
+           m_cDisabledActivated 0 0 0 0
+           m_cClicked 0 0 0 0
+           m_cFocusGained 1 0.597 0.198 1
+           m_cFocusLost 1 1 1 1
+           m_cToggledOn 0 0 0 0
+           m_cToggledOff 0 0 0 0
+          }
+         }
+         m_bCanBeToggled 1
+         m_bToggledOnlyThroughApi 1
+         m_eEventReturnValue 2147483644
+         m_bFocusOnMouseEnter 1
+        }
+        IA_PauseMenuStatsButtonComponent "{65E6A7AB84DD7060}" {
+        }
+       }
+       style blank
+       {
+        SizeLayoutWidgetClass "{5CD890E37E89BE7D}" {
+         Name "SizeLayout"
+         Slot ButtonWidgetSlot "{5CD890E37E89BE5C}" {
+          HorizontalAlign 3
+          Padding 7 0 0 0
+         }
+         "Inherit Color" 1
+         AllowHeightOverride 1
+         HeightOverride 54
+         {
+          OverlayWidgetClass "{5CD890E36382E6E7}" {
+           Name "Overlay"
+           Slot AlignableSlot "{5CD890E36382E6CF}" {
+            HorizontalAlign 3
+           }
+           "Inherit Color" 1
+           {
+            ImageWidgetClass "{5ED6B466F2ED2DED}" {
+             Name "LineHighlight"
+             Slot OverlayWidgetSlot "{5ED6B466F2ED2E22}" {
+              HorizontalAlign 3
+              VerticalAlign 3
+             }
+             "Z Order" 2
+             Color 1 0.597 0.198 1
+             Mask "{B6A3BBC9E9EAAD12}UI/Textures/Common/GradientTexture_Dither_1024x64_2.edds"
+             "Transition width" 1
+             Progress 0.5
+             "Mask Mode" "Include Below"
+            }
+            ImageWidgetClass "{5CD891C27A13BD1D}" {
+             Name "Background"
+             Slot OverlayWidgetSlot "{5CD891C27A13BD7D}" {
+              HorizontalAlign 3
+              VerticalAlign 3
+             }
+             "Is Visible" 0
+             Size 1024 64
+             "Blend Mode" Opaque
+            }
+            PanelWidgetClass "{5CD891C27E9103B6}" {
+             Name "Border"
+             Slot OverlayWidgetSlot "{5CD891C27E910395}" {
+              HorizontalAlign 3
+              VerticalAlign 3
+             }
+             Clipping False
+             Color 1 1 1 0.196
+             style outline_4px
+            }
+            HorizontalLayoutWidgetClass "{5CD8921D7464C92D}" {
+             Name "HorizontalLayout0"
+             Slot OverlayWidgetSlot "{5CD8921D7464C90C}" {
+              HorizontalAlign 0
+              VerticalAlign 3
+              Padding 40 10 10 10
+             }
+             {
+              ScaleWidgetClass "{5CD8921D6F840BEC}" {
+               Name "Scale0"
+               Slot LayoutSlot "{5CD8921D6F840BCC}" {
+                Padding -4 0 10 0
+               }
+               {
+                ImageWidgetClass "{5CD8921D56EA841C}" {
+                 Name "Image0"
+                 Slot AlignableSlot "{5CD8921D56EA847B}" {
+                 }
+                 Texture "{12BA7AE37121F768}UI/Textures/Icons/icons_wrapperUI-96.imageset"
+                 Image "score"
+                 Size 96 96
+                }
+               }
+              }
+              TextWidgetClass "{5CD8921D50CDAD49}" {
+               Name "ButtonLabel"
+               Slot LayoutSlot "{5CD8921D50CDADB5}" {
+                HorizontalAlign 0
+               }
+               Clipping Ancestor
+               Text "Invade and Annex Stats"
+               "Font Size" 20
+               "Min Font Size" 20
+               "Vertical Alignment" Center
+               FontProperties FontProperties "{5CF76978B6444251}" {
+                Font "{3E7733BAC8C831F6}UI/Fonts/RobotoCondensed/RobotoCondensed_Regular.fnt"
+               }
+               "Line Spacing" 10
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+      ButtonWidgetClass "{5DB8B556919FE5DE}" {
+       Prefab "{5DB8B556919FE5DE}"
+       "Z Order" 5
+       {
+        SizeLayoutWidgetClass "{557098260F312277}" {
+         Prefab "{557098260F312277}"
+         Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+         }
+        }
+       }
+      }
+      ButtonWidgetClass "{5DB8B556919FE5DA}" {
+       Prefab "{5DB8B556919FE5DA}"
+       "Z Order" 6
+       {
+        SizeLayoutWidgetClass "{557098260F312277}" {
+         Prefab "{557098260F312277}"
+         Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+         }
+        }
+       }
+      }
+      ImageWidgetClass "{58CE9885694A54E8}" {
+       Prefab "{58CE9885694A54E8}"
+       Slot LayoutSlot "{58CE9885539D1E43}" {
+       }
+       "Z Order" 7
+      }
+      ButtonWidgetClass "{5DB8B556919FE5D4}" {
+       Prefab "{5DB8B556919FE5D4}"
+       "Z Order" 8
+       {
+        SizeLayoutWidgetClass "{557098260F312277}" {
+         Prefab "{557098260F312277}"
+         Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+         }
+        }
+       }
+      }
+      ButtonWidgetClass "{5DB8B556919FE5E7}" {
+       Prefab "{5DB8B556919FE5E7}"
+       "Z Order" 10
+       {
+        SizeLayoutWidgetClass "{557098260F312277}" {
+         Prefab "{557098260F312277}"
+         Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+         }
+        }
+       }
+      }
+      ButtonWidgetClass "{5DB8B556919FE5D2}" {
+       Prefab "{5DB8B556919FE5D2}"
+       "Z Order" 10
+       {
+        SizeLayoutWidgetClass "{557098260F312277}" {
+         Prefab "{557098260F312277}"
+         Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+         }
+        }
+       }
+      }
+      ButtonWidgetClass "{5DB8B556919FE5E8}" {
+       Prefab "{5DB8B556919FE5E8}"
+       "Z Order" 10
+       {
+        SizeLayoutWidgetClass "{557098260F312277}" {
+         Prefab "{557098260F312277}"
+         Slot ButtonWidgetSlot "{5548E6E7E6AEDDC1}" {
+         }
+        }
+       }
+      }
+      ImageWidgetClass "{58CE988548151324}" {
+       Prefab "{58CE988548151324}"
+       "Z Order" 11
+      }
+      ButtonWidgetClass "{58D09C4071FF2106}" {
+       Prefab "{58D09C4071FF2106}"
+       "Z Order" 12
+      }
+      ButtonWidgetClass "{6272B24C5CEA4665}" {
+       Prefab "{6272B24C5CEA4665}"
+       "Z Order" 13
+      }
+      ButtonWidgetClass "{6272B2498E3383FB}" {
+       Prefab "{6272B2498E3383FB}"
+       "Z Order" 14
+      }
+      ButtonWidgetClass "{58CEA11B695D636C}" {
+       Prefab "{58CEA11B695D636C}"
+       "Z Order" 15
+      }
+      ButtonWidgetClass "{5EBC8EDCF9B16AA1}" {
+       Prefab "{5EBC8EDCF9B16AA1}"
+       "Z Order" 16
+      }
+      ButtonWidgetClass "{5DB8B556919FE5CF}" {
+       Prefab "{5DB8B556919FE5CF}"
+       "Z Order" 17
+      }
+      ButtonWidgetClass "{5DB8B556919FE5CD}" {
+       Prefab "{5DB8B556919FE5CD}"
+       "Z Order" 18
+      }
+      ImageWidgetClass "{5DB8B556919FE5CB}" {
+       Prefab "{5DB8B556919FE5CB}"
+       "Z Order" 19
+      }
+      ButtonWidgetClass "{5DB8B556919FE5C9}" {
+       Prefab "{5DB8B556919FE5C9}"
+       "Z Order" 20
+      }
+      ButtonWidgetClass "{5DBB2E2A5FBC5BD0}" {
+       Prefab "{5DBB2E2A5FBC5BD0}"
+       "Z Order" 21
+      }
+      FrameWidgetClass "{5DB8B556919FE5C7}" {
+       Prefab "{5DB8B556919FE5C7}"
+       "Z Order" 22
+      }
+      ButtonWidgetClass "{5DB8B556919FE5C4}" {
+       Prefab "{5DB8B556919FE5C4}"
+       "Z Order" 23
+      }
+      TextWidgetClass "{5DB8B556919FE5C2}" {
+       Prefab "{5DB8B556919FE5C2}"
+       "Z Order" 24
+      }
+     }
+    }
+   }
+  }
+ }
+}

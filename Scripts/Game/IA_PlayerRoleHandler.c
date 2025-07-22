@@ -9,6 +9,9 @@ class IA_PlayerRoleHandler
     // Track players who disconnected with grace period (GUID -> disconnect timestamp)
     private static ref map<string, int> s_DisconnectedPlayers = new map<string, int>();
     
+    // Keep track of the character entity ID we've attached a listener to for each player
+    private static ref map<string, EntityID> s_playerCharacterListenerMap = new map<string, EntityID>();
+    
     // Grace period for reconnection (3 minutes in seconds)
     private static const int RECONNECT_GRACE_PERIOD_SECONDS = 180;
     
@@ -26,6 +29,7 @@ class IA_PlayerRoleHandler
         s_IsInitialized = true;
         s_ProcessedPlayers = new map<string, bool>();
         s_DisconnectedPlayers = new map<string, int>();
+        s_playerCharacterListenerMap = new map<string, EntityID>();
         
         // Start periodic player checks
         GetGame().GetCallqueue().CallLater(PeriodicPlayerCheck, 2500, true);
@@ -81,6 +85,33 @@ class IA_PlayerRoleHandler
                 // Existing player - check if they need role reapplied (respawn case)
                 CheckAndReapplyPlayerRole(playerId, playerGuid);
             }
+            
+            // --- Attach death listener if player has a new character ---
+            IEntity playerEntity = playerManager.GetPlayerControlledEntity(playerId);
+            if (playerEntity)
+            {
+				EntityID currentCharacterId = playerEntity.GetID();
+				bool attachListener = true;
+	
+				if (s_playerCharacterListenerMap.Contains(playerGuid))
+				{
+					if (s_playerCharacterListenerMap.Get(playerGuid) == currentCharacterId)
+					{
+						attachListener = false; // Listener found on this character, no need to attach again.
+					}
+				}
+			
+				if (attachListener)
+				{
+					SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(playerEntity.FindComponent(SCR_CharacterControllerComponent));
+					if (ccc)
+					{
+						ccc.GetOnPlayerDeathWithParam().Insert(OnPlayerDied);
+						s_playerCharacterListenerMap.Set(playerGuid, currentCharacterId);
+						Print(string.Format("Attached death listener to player %1 (GUID: %2) on new character (ID: %3)", playerId, playerGuid, currentCharacterId), LogLevel.NORMAL);
+					}
+				}
+            }
         }
         
         // Check for players who have disconnected
@@ -100,6 +131,7 @@ class IA_PlayerRoleHandler
         foreach (string idToRemove : guidsToRemove)
         {
             s_ProcessedPlayers.Remove(idToRemove);
+            s_playerCharacterListenerMap.Remove(idToRemove); // Also remove from death listener tracking
         }
         
         // Check grace period expiration for disconnected players
@@ -129,6 +161,7 @@ class IA_PlayerRoleHandler
             // Now actually remove their role
             IA_RoleManager roleManager = IA_RoleManager.GetInstance();
             roleManager.UnregisterPlayer(expiredGuid);
+            s_playerCharacterListenerMap.Remove(expiredGuid); // Also remove from death listener tracking
             
             Print(string.Format("Grace period expired for player GUID %1. Role reservation released.", expiredGuid), LogLevel.NORMAL);
         }
@@ -142,6 +175,31 @@ class IA_PlayerRoleHandler
         // The role is still stored in the role manager, so we just need to reapply it to the character
         CheckAndReapplyPlayerRole(playerId, playerGuid);
     }
+    
+    // --- BEGIN ADDED: Player Death Callback ---
+    private static void OnPlayerDied(notnull SCR_CharacterControllerComponent victim, IEntity killerEntity, Instigator killer)
+    {
+        IEntity victimEntity = victim.GetOwner();
+        if (!victimEntity)
+            return;
+            
+        int victimPlayerId = GetGame().GetPlayerManager().GetPlayerIdFromControlledEntity(victimEntity);
+        if (victimPlayerId <= 0)
+            return;
+
+        string victimGuid = GetGame().GetBackendApi().GetPlayerUID(victimPlayerId);
+        string victimName = GetGame().GetPlayerManager().GetPlayerName(victimPlayerId);
+
+        if (victimGuid.IsEmpty())
+        {
+            Print(string.Format("OnPlayerDied: Could not get GUID for victim player ID %1", victimPlayerId), LogLevel.WARNING);
+            return;
+        }
+
+        IA_StatsManager.GetInstance().QueuePlayerDeath(victimGuid, victimName);
+        Print(string.Format("Queued PlayerDeath event for %1 (GUID: %2)", victimName, victimGuid), LogLevel.NORMAL);
+    }
+    // --- END ADDED ---
     
     // Check if a player's role needs to be reapplied to their current character
     private static void CheckAndReapplyPlayerRole(int playerId, string playerGuid)

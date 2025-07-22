@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{046BBC76CEADD41E}Scripts/ServerAdminTools-ExampleMod/UI/layouts/Menus/IA_GlobalLeaderboardMenu.layout"
+ Configurations {
+  LayoutResourceClass PC {
+  }
+  LayoutResourceClass XBOX_ONE : PC {
+  }
+  LayoutResourceClass XBOX_SERIES : PC {
+  }
+  LayoutResourceClass PS4 : PC {
+  }
+  LayoutResourceClass PS5 : PC {
+  }
+  LayoutResourceClass HEADLESS : PC {
+  }
+ }
+}
