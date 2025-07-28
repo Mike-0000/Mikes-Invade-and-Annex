@@ -75,7 +75,6 @@ VerticalLayoutWidgetClass {
                      Slot ButtonWidgetSlot "{65ED4608C59C7481}" {
                      }
                      Text "Name"
-                     "Font Size" 32
                     }
                    }
                   }
@@ -85,7 +84,7 @@ VerticalLayoutWidgetClass {
                  Name "HorizontalLayout1"
                  Slot LayoutSlot "{65EC2184C65F2446}" {
                   HorizontalAlign 2
-                  Padding 0 0 50 0
+                  Padding 0 0 30 0
                   SizeMode Fill
                  }
                  {
@@ -93,7 +92,7 @@ VerticalLayoutWidgetClass {
                    Name "Button1"
                    Slot LayoutSlot "{65EC21855373E9AA}" {
                     HorizontalAlign 2
-                    Padding 50 0 0 0
+                    Padding 25 0 0 0
                    }
                    style blank
                    {
@@ -101,8 +100,9 @@ VerticalLayoutWidgetClass {
                      Name "Name"
                      Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
                      }
-                     Text "Kills"
-                     "Font Size" 32
+                     Text "Deaths (-1)"
+                     "Font Size" 22
+                     "Min Font Size" 22
                     }
                    }
                   }
@@ -110,7 +110,7 @@ VerticalLayoutWidgetClass {
                    Name "Button0"
                    Slot LayoutSlot "{65EC21855373E9AA}" {
                     HorizontalAlign 2
-                    Padding 50 0 0 0
+                    Padding 23.2 0 0 0
                    }
                    style blank
                    {
@@ -118,8 +118,65 @@ VerticalLayoutWidgetClass {
                      Name "Name"
                      Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
                      }
-                     Text "Deaths"
-                     "Font Size" 32
+                     Text "Score"
+                     "Font Size" 28
+                    }
+                   }
+                  }
+                  ButtonWidgetClass "{65EF5EFBACCA5750}" {
+                   Name "Button2"
+                   Slot LayoutSlot "{65EC21855373E9AA}" {
+                    HorizontalAlign 2
+                    Padding 25 0 0 0
+                   }
+                   "Z Order" -1
+                   style blank
+                   {
+                    RichTextWidgetClass "{65EF5EFBACCA5751}" {
+                     Name "Name"
+                     Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
+                     }
+                     Text "Kills (+1)"
+                     "Font Size" 22
+                     "Min Font Size" 22
+                    }
+                   }
+                  }
+                  ButtonWidgetClass "{65EF5EFBB992827E}" {
+                   Name "Button3"
+                   Slot LayoutSlot "{65EC21855373E9AA}" {
+                    HorizontalAlign 2
+                    Padding 25 0 0 0
+                   }
+                   "Z Order" -2
+                   style blank
+                   {
+                    RichTextWidgetClass "{65EF5EFBB992827F}" {
+                     Name "Name"
+                     Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
+                     }
+                     Text "HVT Guard Kills (+2)"
+                     "Font Size" 18
+                     "Min Font Size" 18
+                    }
+                   }
+                  }
+                  ButtonWidgetClass "{65EF5EFBDBF998C6}" {
+                   Name "Button4"
+                   Slot LayoutSlot "{65EC21855373E9AA}" {
+                    HorizontalAlign 2
+                    Padding 25 0 0 0
+                   }
+                   "Z Order" -3
+                   style blank
+                   {
+                    RichTextWidgetClass "{65EF5EFBDBF998C7}" {
+                     Name "Name"
+                     Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
+                     }
+                     Text "HVT Kills (+25)"
+                     "Font Size" 20
+                     "Min Font Size" 20
                     }
                    }
                   }

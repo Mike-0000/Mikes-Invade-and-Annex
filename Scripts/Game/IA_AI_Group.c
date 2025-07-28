@@ -2057,7 +2057,34 @@ class IA_AiGroup
 				string playerGuid = GetGame().GetBackendApi().GetPlayerUID(playerID);
 				string playerName = GetGame().GetPlayerManager().GetPlayerName(playerID);
 				
-				IA_StatsManager.GetInstance().QueuePlayerKill(playerGuid, playerName);
+				if (m_OwningSideObjective)
+				{
+					IA_AssassinationObjective assassinObj = IA_AssassinationObjective.Cast(m_OwningSideObjective);
+					if (assassinObj)
+					{
+						// This death is part of an assassination objective
+						if (assassinObj.IsHVTGroup(this))
+						{
+							// This is the HVT's group. The HVT's death is tracked separately in IA_SideObjective.OnHVTKilled.
+							// Do nothing here to prevent logging a duplicate PlayerKill.
+						}
+						else
+						{
+							// This is a guard's group.
+							IA_StatsManager.GetInstance().QueueHVTGuardKill(playerGuid, playerName);
+						}
+					}
+					else
+					{
+						// Part of some other type of side objective. Log as a normal player kill.
+						IA_StatsManager.GetInstance().QueuePlayerKill(playerGuid, playerName);
+					}
+				}
+				else
+				{
+					// Not part of a side objective. Log as a normal player kill.
+					IA_StatsManager.GetInstance().QueuePlayerKill(playerGuid, playerName);
+				}
 			}
             
             IA_Faction playerFaction = IA_Faction.NONE;

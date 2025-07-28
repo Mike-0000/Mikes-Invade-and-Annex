@@ -236,6 +236,9 @@ class IA_StatisticsMenu : ChimeraMenuBase
                 entryController.SetPlayerName(playerStat.PlayerName);
                 entryController.SetKills(playerStat.kills.ToString());
                 entryController.SetDeaths(playerStat.deaths.ToString());
+				entryController.SetHVTKills(playerStat.hvt_kills.ToString());
+				entryController.SetHVTGuardKills(playerStat.hvt_guard_kills.ToString());
+				entryController.SetScore(playerStat.score.ToString());
                 Print("IA_StatisticsMenu::PopulateLeaderboard: Successfully created and set data for widget for player " + playerStat.PlayerName, LogLevel.NORMAL);
             }
             else

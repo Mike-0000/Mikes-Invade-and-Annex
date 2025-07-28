@@ -640,7 +640,7 @@ class IA_AssassinationObjective : IA_SideObjective
 
             if (!m_EscapeCountdownActive)
             {
-                int randMinutes = Math.RandomInt(14, 24); // 14–24 minutes inclusive - NEEDS CHANGED
+                int randMinutes = Math.RandomInt(5, 16); // 5–16 minutes
                 m_EscapeCountdownEndTime = System.GetTickCount() + (randMinutes * 60 * 1000);
                 m_EscapeCountdownActive = true;
                 m_EscapeBehaviorTriggered = true; // Lock in the escape sequence
@@ -848,7 +848,23 @@ class IA_AssassinationObjective : IA_SideObjective
 
     void OnHVTKilled(notnull SCR_CharacterControllerComponent memberCtrl, IEntity killerEntity, Instigator killer)
     {
-        Print(string.Format("HVT for objective at %1 has been killed.", m_Position.ToString()), LogLevel.NORMAL);
+        if (killer.GetInstigatorType() == InstigatorType.INSTIGATOR_PLAYER)
+        {
+            int playerID = killer.GetInstigatorPlayerID();
+            if (playerID > 0)
+            {
+                string playerGuid = GetGame().GetBackendApi().GetPlayerUID(playerID);
+                string playerName = GetGame().GetPlayerManager().GetPlayerName(playerID);
+                
+                IA_StatsManager.GetInstance().QueueHVTKill(playerGuid, playerName);
+                Print(string.Format("HVT for objective at %1 has been killed by player %2 (GUID: %3).", m_Position.ToString(), playerName, playerGuid), LogLevel.NORMAL);
+            }
+        }
+        else
+        {
+             Print(string.Format("HVT for objective at %1 has been killed by non-player.", m_Position.ToString()), LogLevel.NORMAL);
+        }
+
         _CleanupObjective(true);
     }
 	

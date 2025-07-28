@@ -3,7 +3,7 @@ class IA_StatsManager
 {
     private static ref IA_StatsManager s_Instance;
     private ref array<ref IA_StatEvent> m_aEventQue;
-    private const int BATCH_SEND_INTERVAL = 240; // seconds
+    private const int BATCH_SEND_INTERVAL = 300; // seconds
 
     private void IA_StatsManager()
     {
@@ -43,6 +43,30 @@ class IA_StatsManager
         m_aEventQue.Insert(newEvent);
     }
 
+    void QueueHVTKill(string killerId, string killerName)
+    {
+        if (!killerId || killerId == "")
+        {
+            Print("IA_StatsManager: Attempted to queue HVTKill with invalid killerId.", LogLevel.WARNING);
+            return;
+        }
+        
+        IA_HVTKillEvent newEvent = new IA_HVTKillEvent(killerId, killerName);
+        m_aEventQue.Insert(newEvent);
+    }
+
+    void QueueHVTGuardKill(string killerId, string killerName)
+    {
+        if (!killerId || killerId == "")
+        {
+            Print("IA_StatsManager: Attempted to queue HVTGuardKill with invalid killerId.", LogLevel.WARNING);
+            return;
+        }
+        
+        IA_HVTGuardKillEvent newEvent = new IA_HVTGuardKillEvent(killerId, killerName);
+        m_aEventQue.Insert(newEvent);
+    }
+
     void SendBatch()
     {
         if (m_aEventQue.IsEmpty())
@@ -59,6 +83,8 @@ class IA_StatsManager
             }
         }
         payload = payload + "]";
+        
+        Print("IA_StatsManager: Constructed payload: " + payload, LogLevel.DEBUG);
         
         IA_ApiHandler.GetInstance().SubmitStats(payload);
         

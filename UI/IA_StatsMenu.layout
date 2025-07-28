@@ -197,6 +197,26 @@ FrameWidgetClass {
         HorizontalLayoutWidgetClass "{0000000059B6DBB4}" {
          Prefab "{0000000059B6DBB4}"
          {
+          ButtonWidgetClass "{65F3451ABB6A438F}" {
+           Name "Button0"
+           Slot LayoutSlot "{65F3451ABB6A4366}" {
+           }
+           Color 1 1 1 0
+           {
+            RichTextWidgetClass "{65F3451AC1421F03}" {
+             Name "RichText0"
+             Slot ButtonWidgetSlot "{65F3451AC1421EE5}" {
+             }
+             Color 0.5271 0.5271 0.5271 1
+             Text "For your server to appear in the Server Leaderboard List; Rename the file in your server files: ./profile/MikesInvadeAndAnnex/server_name.txt"
+             "Font Size" 18
+             "Min Font Size" 16
+             FontProperties FontProperties "{65F3451A25BE97B5}" {
+              Font "{3E7733BAC8C831F6}UI/Fonts/RobotoCondensed/RobotoCondensed_Regular.fnt"
+             }
+            }
+           }
+          }
           HorizontalLayoutWidgetClass "{65E6AAD3FBCCE53F}" {
            Name "FooterLeft"
            Slot LayoutSlot "{572AC16D2158EF1F}" {

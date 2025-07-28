@@ -58,7 +58,7 @@ ButtonWidgetClass {
        Slot OverlayWidgetSlot "{65EC219057AF9029}" {
         HorizontalAlign 2
         VerticalAlign 3
-        Padding 0 0 55 0
+        Padding 0 0 145 0
        }
        {
         RichTextWidgetClass "{65EC219399E46BF6}" {
@@ -77,7 +77,7 @@ ButtonWidgetClass {
        Slot OverlayWidgetSlot "{65EC219057AF9029}" {
         HorizontalAlign 2
         VerticalAlign 3
-        Padding 0 0 180 0
+        Padding 0 0 260 0
        }
        {
         RichTextWidgetClass "{65EC21845A59A507}" {
@@ -86,6 +86,63 @@ ButtonWidgetClass {
           HorizontalAlign 1
           VerticalAlign 1
           Padding 0 0 11.5 0
+         }
+         Text "10000"
+        }
+       }
+      }
+      HorizontalLayoutWidgetClass "{65EF5EFAEB7D6584}" {
+       Name "HorizontalLayout3"
+       Slot OverlayWidgetSlot "{65EC219057AF9029}" {
+        HorizontalAlign 2
+        VerticalAlign 3
+        Padding 0 0 395 0
+       }
+       {
+        RichTextWidgetClass "{65EF5EFAEB7D6585}" {
+         Name "HVTGuardKills"
+         Slot LayoutSlot "{65EC21906D11972B}" {
+          HorizontalAlign 1
+          VerticalAlign 1
+          Padding 0 0 11.5 0
+         }
+         Text "10000"
+        }
+       }
+      }
+      HorizontalLayoutWidgetClass "{65EF5EFAF97230D0}" {
+       Name "HorizontalLayout4"
+       Slot OverlayWidgetSlot "{65EC219057AF9029}" {
+        HorizontalAlign 2
+        VerticalAlign 3
+        Padding 0 0 550 0
+       }
+       {
+        RichTextWidgetClass "{65EF5EFAF97230D1}" {
+         Name "HVTKills"
+         Slot LayoutSlot "{65EC21906D11972B}" {
+          HorizontalAlign 1
+          VerticalAlign 1
+          Padding 0 0 11.5 0
+         }
+         Text "10000"
+        }
+       }
+      }
+      HorizontalLayoutWidgetClass "{65EF5EFA21E5F97B}" {
+       Name "HorizontalLayout5"
+       Slot OverlayWidgetSlot "{65EC219057AF9029}" {
+        HorizontalAlign 2
+        VerticalAlign 3
+        Padding 0 0 20 0
+       }
+       {
+        RichTextWidgetClass "{65EF5EFA21E5F978}" {
+         Name "Score"
+         Slot LayoutSlot "{65EC21906D11972B}" {
+          HorizontalAlign 1
+          VerticalAlign 1
+          Padding 0 0 10.2 0
          }
          Text "10000"
         }

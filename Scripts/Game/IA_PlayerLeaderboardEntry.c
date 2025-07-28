@@ -6,6 +6,11 @@ class IA_PlayerLeaderboardEntry : ScriptedWidgetComponent
     private TextWidget m_PlayerName;
     private TextWidget m_Kills;
     private TextWidget m_Deaths;
+    private TextWidget m_hvt_kills;
+    private TextWidget m_hvt_guard_kills;
+    private TextWidget m_score;
+
+
 
     override void HandlerAttached(Widget w)
     {
@@ -15,6 +20,11 @@ class IA_PlayerLeaderboardEntry : ScriptedWidgetComponent
         m_PlayerName = TextWidget.Cast(w.FindAnyWidget("PlayerName"));
         m_Kills = TextWidget.Cast(w.FindAnyWidget("Kills"));
         m_Deaths = TextWidget.Cast(w.FindAnyWidget("Deaths"));
+		m_hvt_kills = TextWidget.Cast(w.FindAnyWidget("HVTKills"));
+		m_hvt_guard_kills = TextWidget.Cast(w.FindAnyWidget("HVTGuardKills"));
+		m_score = TextWidget.Cast(w.FindAnyWidget("Score"));
+
+
     }
 
     void SetRank(string rank)
@@ -29,7 +39,22 @@ class IA_PlayerLeaderboardEntry : ScriptedWidgetComponent
             m_PlayerName.SetText(name);
     }
 
-    void SetKills(string kills)
+    void SetHVTKills(string hvtkills)
+    {
+        if (hvtkills)
+            m_hvt_kills.SetText(hvtkills);
+    }
+	void SetHVTGuardKills(string hvtguardkills)
+    {
+        if (hvtguardkills)
+            m_hvt_guard_kills.SetText(hvtguardkills);
+    }
+	void SetScore(string score)
+    {
+        if (score)
+            m_score.SetText(score);
+    }
+	void SetKills(string kills)
     {
         if (m_Kills)
             m_Kills.SetText(kills);

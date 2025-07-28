@@ -91,7 +91,7 @@ class IA_ApiConfigManager
         }
         
         Print("IA_ApiConfigManager: No server name file found or it's empty. Creating a new default config.", LogLevel.NORMAL);
-        string defaultServerName = "Server Name -PLEASE RENAME IN server_name.txt, in Server Files";
+        string defaultServerName = "Default Name - PLEASE RENAME IN server_name.txt, in I&A Server Profile Folder";
 		
 		FileIO.MakeDirectory(CONFIG_DIR);
         FileHandle writeFile = FileIO.OpenFile(SERVER_NAME_PATH, FileMode.WRITE);
@@ -107,7 +107,7 @@ class IA_ApiConfigManager
 			Print("IA_ApiConfigManager: Failed to create default server name file at " + SERVER_NAME_PATH, LogLevel.ERROR);
 		}
 		
-		return "My IA Server";
+		return "Default Name - PLEASE RENAME IN server_name.txt, in I&A Server Profile Folder";
 	}
 
     static void SaveConfig()

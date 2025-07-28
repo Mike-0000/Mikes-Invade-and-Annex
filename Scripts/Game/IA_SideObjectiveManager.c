@@ -10,7 +10,7 @@ class IA_SideObjectiveManager
     
     // --- BEGIN ADDED: Startup delay ---
     protected bool m_IsInitialized = false;
-    protected const float STARTUP_DELAY_SECONDS = 12; // 5 minutes delay after mission start
+    protected const float STARTUP_DELAY_SECONDS = 240; // 5 minutes delay after mission start
     // --- END ADDED ---
     
     // To avoid picking the same marker repeatedly
