@@ -20,6 +20,13 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	protected float score_limiter_ratio = 0.02;
 	protected float m_fTimeAccumulator = 0.0;
 	
+	// -- Performance throttling for expensive queries
+	protected float m_fQueryTimeAccumulator = 0.0;
+	protected const float QUERY_INTERVAL = 1.0; // How often to run the expensive sphere query
+	protected int m_iUSCountInZone = 0;
+	protected int m_iUSSRCountInZone = 0;
+	protected ref array<IEntity> m_entitiesInZone = new array<IEntity>();
+	
     // -- Sphere radius
 	[Attribute(defvalue: "10.0", UIWidgets.Auto, "Area Group Key", category: "Number")]
     int m_areaGroup;
@@ -195,8 +202,23 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     }
 	
 	
-
+	//----------------------------------------------------------------------------------------------
+	// This is an expensive, throttled function to check players in the zone
+	void UpdatePlayerCountsInZone()
+	{
+		// Get all entities within radius
+		m_entitiesInZone.Clear();
+		IA_DictStringInt factionCounts = new IA_DictStringInt();
+		CaptureZoneQueryCallback callback = new CaptureZoneQueryCallback(factionCounts, m_entitiesInZone);
+		GetGame().GetWorld().QueryEntitiesBySphere(m_origin, m_radius, callback.OnEntityFound, null, EQueryEntitiesFlags.DYNAMIC);
 	
+		// Update the cached counts
+		m_iUSCountInZone = factionCounts.Get("US");
+		m_iUSSRCountInZone = factionCounts.Get("USSR");
+	}
+	
+	
+
 	// EOnFrame: actively scan the area around the zone
    override void EOnFrame(IEntity owner, float timeSlice)
 	{
@@ -217,11 +239,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    //int currentFrame = GetGame().GetFrameCount();
 	    
 	    // Only update if enough time has passed since last update AND we're on a new frame
-	    int currentTime = System.GetUnixTime();
+	    /*int currentTime = System.GetUnixTime();
 	    if (currentTime - m_LastScoreUpdate < SCORE_UPDATE_INTERVAL)
 	        return;
 	        
-	    m_LastScoreUpdate = currentTime;
+	    m_LastScoreUpdate = currentTime;*/
 	    
 	    // Check if this marker belongs to the active group
 	    int activeGroup = -1;
@@ -291,32 +313,18 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    {
 	        return; // Zone already captured, no need to process
 	    }
-
-	    // Get all entities within radius
-	    array<IEntity> entities = {};
-	    MIKE_QueryCallback callback = new MIKE_QueryCallback(entities);
-	    GetGame().GetWorld().QueryEntitiesBySphere(m_origin, m_radius, callback.OnEntityFound, FilterPlayerAndAI, EQueryEntitiesFlags.DYNAMIC);
 		
-	    // Count entities by faction
-	    IA_DictStringInt factionCounts = new IA_DictStringInt();
-	    for (int i = 0; i < entities.Count(); i++)
-	    {
-	        IEntity entity = entities[i];
-	        if (!FilterPlayerAndAI(entity)) continue;
-	        
-	        SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(entity);
-	        if (!character) continue;
-	        
-	        string factionKey = GetFactionOfCharacter(character);
-	        if (factionKey == "") continue;
-	        
-	        int oldCount = factionCounts.Get(factionKey);
-	        factionCounts.Set(factionKey, oldCount + 1);
-	    }
-	
-	    // Get counts for US and USSR factions
-	    int usCount = factionCounts.Get("US");
-	    int ussrCount = factionCounts.Get("USSR");
+		// --- Performance: Throttle the expensive entity query ---
+		m_fQueryTimeAccumulator += timeSlice;
+		if (m_fQueryTimeAccumulator >= QUERY_INTERVAL)
+		{
+			UpdatePlayerCountsInZone();
+			m_fQueryTimeAccumulator = Math.Mod(m_fQueryTimeAccumulator, QUERY_INTERVAL);
+		}
+
+	    // Get counts for US and USSR factions from cached data
+	    int usCount = m_iUSCountInZone;
+	    int ussrCount = m_iUSSRCountInZone;
 	    
 	    // Get current capture progress (now 0-120 seconds instead of 0-1000 points)
 	    float previousProgress = m_captureProgress;
@@ -357,15 +365,22 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        {
 	            m_isCapturing = true;
 	            m_captureStatus = "Capturing";
-	            m_captureProgress += SCORE_UPDATE_INTERVAL; // Add 1 second per update
 	            
-	            // Check if it's time to award points to players
-	            float currentGameTime = GetGame().GetWorld().GetWorldTime() / 1000.0; // Convert to seconds
-	            if (currentGameTime - m_lastScoringTime >= SCORING_INTERVAL)
-	            {
-	                AwardCapturePoints(entities);
-	                m_lastScoringTime = currentGameTime;
-	            }
+				// Increment progress and scoring accumulator by timeSlice for frame-rate independence
+				m_captureProgress += timeSlice;
+				m_fTimeAccumulator += timeSlice;
+	            
+				// If scoring interval has passed, award points
+				if (m_fTimeAccumulator >= SCORING_INTERVAL)
+				{
+					int pointsToAward = Math.Floor(m_fTimeAccumulator / SCORING_INTERVAL);
+					if (pointsToAward > 0)
+					{
+						AwardCapturePoints(m_entitiesInZone, pointsToAward);
+					}
+					// Decrement accumulator by the amount of time accounted for
+					m_fTimeAccumulator = Math.Mod(m_fTimeAccumulator, SCORING_INTERVAL);
+				}
 	        }
 	        else
 	        {
@@ -435,6 +450,21 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        
 	        // Get and log top contributors
 	        array<string> topContributors = GetTopContributors(3);
+	        
+	        // --- BEGIN MODIFIED: Queue stats for each contributor ---
+	        IA_StatsManager statsManager = IA_StatsManager.GetInstance();
+	        if (statsManager)
+	        {
+	            foreach (string playerGuid, int score : m_playerCaptureScores)
+	            {
+	                if (score > 0)
+	                {
+	                    string playerName = GetPlayerNameFromGuid(playerGuid);
+	                    statsManager.QueueCaptureContribution(playerGuid, playerName, score);
+	                }
+	            }
+	        }
+	        // --- END MODIFIED ---
 	        
 	        // Build the capture completion message with top contributors
 	        string captureMessage = m_areaName + " Captured!";
@@ -658,7 +688,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         
         return markers;
     }
-		protected bool FilterPlayerAndAI(IEntity entity) 
+	/*	protected bool FilterPlayerAndAI(IEntity entity) 
 	{	
 		if (!entity) // only humans
 			return false;
@@ -672,7 +702,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 			return false;
 		//// Print(("Character is Alive!",LogLevel.NORMAL);
 		return true;
-	}
+	}*/
 
     // Check if the zone is under attack by checking if the US faction is gaining points
     bool IsZoneUnderAttack()
@@ -869,7 +899,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     }
     
     // --- Player Scoring Methods ---
-    protected void AwardCapturePoints(array<IEntity> entities)
+    protected void AwardCapturePoints(array<IEntity> entities, int points = 1)
     {
         int playersAwarded = 0;
         
@@ -901,7 +931,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                     currentScore = m_playerCaptureScores[playerGuid];
                 }
                 
-                m_playerCaptureScores[playerGuid] = currentScore + 1;
+                m_playerCaptureScores[playerGuid] = currentScore + points;
                 playersAwarded++;
             }
         }
@@ -1033,21 +1063,46 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     }
 };
 
-class MIKE_QueryCallback
+class CaptureZoneQueryCallback
 {
-    protected array<IEntity> m_CollectedEntities;
+    protected IA_DictStringInt m_FactionCounts;
+    protected ref array<IEntity> m_CollectedLiveEntities;
 
-    // Constructor: pass in the array to fill
-    void MIKE_QueryCallback(array<IEntity> collectedEntities)
+    void CaptureZoneQueryCallback(IA_DictStringInt factionCounts, array<IEntity> collectedLiveEntities)
     {
-        m_CollectedEntities = collectedEntities;
+        m_FactionCounts = factionCounts;
+        m_CollectedLiveEntities = collectedLiveEntities;
     }
 
-    // This is the callback method for each entity found in the query
     bool OnEntityFound(IEntity entity)
     {
-        m_CollectedEntities.Insert(entity);
-        return true;  // return true to continue searching
+        // This is now the filter and the processor combined.
+		if (!entity)
+			return true;
+		
+		SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(entity);
+		if (!character)
+			return true;
+		
+		if(character.GetDamageManager().GetHealth() < 0.01 || character.GetDamageManager().IsDestroyed())
+			return true;
+        
+        // Entity is a live character, add it to the list for point scoring
+        m_CollectedLiveEntities.Insert(entity);
+
+        // Now, get faction and count it.
+        string factionKey = "";
+        Faction fac = character.GetFaction();
+        if (fac) 
+            factionKey = fac.GetFactionKey();
+
+        if (factionKey != "")
+        {
+            int oldCount = m_FactionCounts.Get(factionKey);
+            m_FactionCounts.Set(factionKey, oldCount + 1);
+        }
+        
+        return true; // continue searching
     }
 }
 

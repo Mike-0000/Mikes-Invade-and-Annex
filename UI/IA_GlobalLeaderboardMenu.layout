@@ -53,7 +53,7 @@ VerticalLayoutWidgetClass {
               HorizontalLayoutWidgetClass "{65EC2185EBCF8F0F}" {
                Name "HorizontalLayout0"
                Slot LayoutSlot "{65EC2185EBCF8FFC}" {
-                Padding 0 4 0 4
+                Padding 0 4 0 6
                }
                {
                 HorizontalLayoutWidgetClass "{65EC2184DECBA7F8}" {
@@ -88,6 +88,75 @@ VerticalLayoutWidgetClass {
                   SizeMode Fill
                  }
                  {
+                  ButtonWidgetClass "{65FE005846D9426E}" {
+                   Name "Button5"
+                   Slot LayoutSlot "{65EC21855373E9AA}" {
+                    HorizontalAlign 2
+                    Padding 25 0 0 0
+                   }
+                   "Z Order" -9
+                   style blank
+                   {
+                    RichTextWidgetClass "{65FE005846D9426F}" {
+                     Name "Name"
+                     Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
+                     }
+                     Text "HVT Kills (+25)"
+                     "Font Size" 20
+                     "Min Font Size" 20
+                    }
+                   }
+                  }
+                  VerticalLayoutWidgetClass "{65FE175BA61B7238}" {
+                   Name "TimeSpentCapping"
+                   Slot LayoutSlot "{65FE175BA61B721B}" {
+                   }
+                   "Z Order" -12
+                   {
+                    ButtonWidgetClass "{65EF5EFBDBF998C6}" {
+                     Name "Button4"
+                     Slot LayoutSlot "{65EC21855373E9AA}" {
+                      HorizontalAlign 1
+                      VerticalAlign 0
+                      Padding 25 -1 0 3.1
+                     }
+                     "Z Order" -3
+                     style blank
+                     {
+                      RichTextWidgetClass "{65EF5EFBDBF998C7}" {
+                       Name "Name"
+                       Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
+                        VerticalAlign 0
+                       }
+                       Text "Time Spent Capturing"
+                       "Font Size" 20
+                       "Min Font Size" 20
+                      }
+                     }
+                    }
+                    ButtonWidgetClass "{65FE175BF9250F64}" {
+                     Name "Button0"
+                     Slot LayoutSlot "{65EC21855373E9AA}" {
+                      HorizontalAlign 1
+                      VerticalAlign 0
+                      Padding 25 -1 0 0
+                     }
+                     "Z Order" -3
+                     style blank
+                     {
+                      RichTextWidgetClass "{65FE175BF9250F65}" {
+                       Name "Name"
+                       Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
+                        VerticalAlign 0
+                       }
+                       Text "(Minutes) (+2)"
+                       "Font Size" 20
+                       "Min Font Size" 20
+                      }
+                     }
+                    }
+                   }
+                  }
                   ButtonWidgetClass "{65EC2185747A3F20}" {
                    Name "Button1"
                    Slot LayoutSlot "{65EC21855373E9AA}" {
@@ -158,25 +227,6 @@ VerticalLayoutWidgetClass {
                      Text "HVT Guard Kills (+2)"
                      "Font Size" 18
                      "Min Font Size" 18
-                    }
-                   }
-                  }
-                  ButtonWidgetClass "{65EF5EFBDBF998C6}" {
-                   Name "Button4"
-                   Slot LayoutSlot "{65EC21855373E9AA}" {
-                    HorizontalAlign 2
-                    Padding 25 0 0 0
-                   }
-                   "Z Order" -3
-                   style blank
-                   {
-                    RichTextWidgetClass "{65EF5EFBDBF998C7}" {
-                     Name "Name"
-                     Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
-                     }
-                     Text "HVT Kills (+25)"
-                     "Font Size" 20
-                     "Min Font Size" 20
                     }
                    }
                   }

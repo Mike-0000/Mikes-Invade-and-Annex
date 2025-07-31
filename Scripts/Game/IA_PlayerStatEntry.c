@@ -18,4 +18,6 @@ class IA_PlayerStatEntry
 	
 	[Attribute("0", UIWidgets.EditBox, "Score")]
     int score;
+	[Attribute("0", UIWidgets.EditBox, "obj_score")]
+    int obj_score;
 } 

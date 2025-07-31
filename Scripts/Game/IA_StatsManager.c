@@ -3,7 +3,7 @@ class IA_StatsManager
 {
     private static ref IA_StatsManager s_Instance;
     private ref array<ref IA_StatEvent> m_aEventQue;
-    private const int BATCH_SEND_INTERVAL = 300; // seconds
+    private const int BATCH_SEND_INTERVAL = 60; // seconds
 
     private void IA_StatsManager()
     {
@@ -64,6 +64,18 @@ class IA_StatsManager
         }
         
         IA_HVTGuardKillEvent newEvent = new IA_HVTGuardKillEvent(killerId, killerName);
+        m_aEventQue.Insert(newEvent);
+    }
+
+    void QueueCaptureContribution(string playerId, string playerName, int score)
+    {
+        if (!playerId || playerId == "")
+        {
+            Print("IA_StatsManager: Attempted to queue CaptureContribution with invalid playerId.", LogLevel.WARNING);
+            return;
+        }
+        
+        IA_CaptureContributionEvent newEvent = new IA_CaptureContributionEvent(playerId, playerName, score);
         m_aEventQue.Insert(newEvent);
     }
 

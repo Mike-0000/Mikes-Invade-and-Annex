@@ -54,6 +54,15 @@ class IA_StatisticsMenu : ChimeraMenuBase
         Widget tabRoot = tabView.GetContentWidget(tabIndex);
         if (!tabRoot) return;
 
+        Widget timeSpentCappingHeader = tabRoot.FindAnyWidget("TimeSpentCapping");
+        if (timeSpentCappingHeader)
+        {
+            if (tabIndex == 2)
+                timeSpentCappingHeader.SetVisible(false);
+            else
+                timeSpentCappingHeader.SetVisible(true);
+        }
+
         m_LeaderboardContainer = VerticalLayoutWidget.Cast(tabRoot.FindAnyWidget("LeaderboardContainer"));
         
         if (m_LeaderboardContainer)
@@ -220,7 +229,7 @@ class IA_StatisticsMenu : ChimeraMenuBase
                 continue;
             }
 
-            Print(string.Format("IA_StatisticsMenu::PopulateLeaderboard: Processing entry #%1: PlayerName=%2, Kills=%3, Deaths=%4", (i + 1), playerStat.PlayerName, playerStat.kills, playerStat.deaths), LogLevel.NORMAL);
+            //Print(string.Format("IA_StatisticsMenu::PopulateLeaderboard: Processing entry #%1: PlayerName=%2, Kills=%3, Deaths=%4", (i + 1), playerStat.PlayerName, playerStat.kills, playerStat.deaths), LogLevel.NORMAL);
             
             Widget newWidget = GetGame().GetWorkspace().CreateWidgets("{87E261D76A82FA5A}UI/IA_Player_Entry.layout", m_LeaderboardContainer);
 			if (!newWidget)
@@ -238,8 +247,14 @@ class IA_StatisticsMenu : ChimeraMenuBase
                 entryController.SetDeaths(playerStat.deaths.ToString());
 				entryController.SetHVTKills(playerStat.hvt_kills.ToString());
 				entryController.SetHVTGuardKills(playerStat.hvt_guard_kills.ToString());
+				entryController.SetOBJScore(playerStat.obj_score.ToString());
 				entryController.SetScore(playerStat.score.ToString());
-                Print("IA_StatisticsMenu::PopulateLeaderboard: Successfully created and set data for widget for player " + playerStat.PlayerName, LogLevel.NORMAL);
+				
+				if (m_TabView.GetShownTab() == 2)
+					entryController.SetOBJScoreVisible(false);
+				else
+					entryController.SetOBJScoreVisible(true);
+                //Print("IA_StatisticsMenu::PopulateLeaderboard: Successfully created and set data for widget for player " + playerStat.PlayerName, LogLevel.NORMAL);
             }
             else
             {

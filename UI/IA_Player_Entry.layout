@@ -66,9 +66,9 @@ ButtonWidgetClass {
          Slot LayoutSlot "{65EC21906D11972B}" {
           HorizontalAlign 1
           VerticalAlign 1
-          Padding 0 0 10.2 0
          }
          Text "10000"
+         "Horizontal Alignment" Center
         }
        }
       }
@@ -143,6 +143,25 @@ ButtonWidgetClass {
           HorizontalAlign 1
           VerticalAlign 1
           Padding 0 0 10.2 0
+         }
+         Text "10000"
+        }
+       }
+      }
+      HorizontalLayoutWidgetClass "{65FE005935966E32}" {
+       Name "HorizontalLayout6"
+       Slot OverlayWidgetSlot "{65EC219057AF9029}" {
+        HorizontalAlign 2
+        VerticalAlign 3
+        Padding 0 0 725 0
+       }
+       {
+        RichTextWidgetClass "{65FE005935966E33}" {
+         Name "OBJScore"
+         Slot LayoutSlot "{65EC21906D11972B}" {
+          HorizontalAlign 1
+          VerticalAlign 1
+          Padding 0 0 11.5 0
          }
          Text "10000"
         }

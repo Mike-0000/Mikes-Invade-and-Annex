@@ -9,6 +9,7 @@ class IA_PlayerLeaderboardEntry : ScriptedWidgetComponent
     private TextWidget m_hvt_kills;
     private TextWidget m_hvt_guard_kills;
     private TextWidget m_score;
+	private TextWidget m_OBJScore;
 
 
 
@@ -22,6 +23,7 @@ class IA_PlayerLeaderboardEntry : ScriptedWidgetComponent
         m_Deaths = TextWidget.Cast(w.FindAnyWidget("Deaths"));
 		m_hvt_kills = TextWidget.Cast(w.FindAnyWidget("HVTKills"));
 		m_hvt_guard_kills = TextWidget.Cast(w.FindAnyWidget("HVTGuardKills"));
+		m_OBJScore = TextWidget.Cast(w.FindAnyWidget("OBJScore"));
 		m_score = TextWidget.Cast(w.FindAnyWidget("Score"));
 
 
@@ -59,10 +61,22 @@ class IA_PlayerLeaderboardEntry : ScriptedWidgetComponent
         if (m_Kills)
             m_Kills.SetText(kills);
     }
+	
+	void SetOBJScore(string score)
+    {
+        if (score)
+            m_OBJScore.SetText(score);
+    }
 
     void SetDeaths(string deaths)
     {
         if (m_Deaths)
             m_Deaths.SetText(deaths);
     }
+	
+	void SetOBJScoreVisible(bool visible)
+	{
+		if (m_OBJScore)
+			m_OBJScore.SetVisible(visible);
+	}
 } 

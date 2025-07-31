@@ -103,3 +103,29 @@ class IA_HVTGuardKillEvent : IA_StatEvent
         return json;
     }
 } 
+
+class IA_CaptureContributionEvent : IA_StatEvent
+{
+    string m_sPlayerId;
+    string m_sPlayerName;
+    int m_iScore;
+
+    void IA_CaptureContributionEvent(string playerId, string playerName, int score)
+    {
+        m_sEventType = "CaptureContribution";
+        m_sPlayerId = playerId;
+        m_sPlayerName = playerName;
+        m_iScore = score;
+    }
+
+    override string ToJson()
+    {
+        string json = "{";
+        json = json + "\"eventType\": \"" + m_sEventType + "\",";
+        json = json + "\"playerId\": \"" + m_sPlayerId + "\",";
+        json = json + "\"playerName\": \"" + m_sPlayerName + "\",";
+        json = json + "\"score\": " + m_iScore;
+        json = json + "}";
+        return json;
+    }
+} 

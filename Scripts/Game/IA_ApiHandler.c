@@ -212,8 +212,8 @@ class IA_FetchAllLeaderboardsCallback : RestCallback
 
 class IA_ApiHandler
 {
-	//string m_sApiBaseUrl = "https://invadestats-awatbsduh4hngrb6.eastus-01.azurewebsites.net/api";
-	string m_sApiBaseUrl = "https://iadev-gdcxh2dkhsceacfg.eastus-01.azurewebsites.net/api";
+	string m_sApiBaseUrl = "https://invadestats-awatbsduh4hngrb6.eastus-01.azurewebsites.net/api";
+	//string m_sApiBaseUrl = "https://iadev-gdcxh2dkhsceacfg.eastus-01.azurewebsites.net/api";
 	protected ref IA_RegisterServerCallback m_registerCallback;
 	protected ref IA_SubmitStatsCallback m_submitStatsCallback;
 	protected ref IA_FetchAllLeaderboardsCallback m_fetchAllLeaderboardsCallback;
