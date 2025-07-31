@@ -92,7 +92,7 @@ VerticalLayoutWidgetClass {
                    Name "Button5"
                    Slot LayoutSlot "{65EC21855373E9AA}" {
                     HorizontalAlign 2
-                    Padding 25 0 0 0
+                    Padding 15.1 0 0 0
                    }
                    "Z Order" -9
                    style blank
@@ -118,7 +118,7 @@ VerticalLayoutWidgetClass {
                      Slot LayoutSlot "{65EC21855373E9AA}" {
                       HorizontalAlign 1
                       VerticalAlign 0
-                      Padding 25 -1 0 3.1
+                      Padding 0 -1 0 3.1
                      }
                      "Z Order" -3
                      style blank
@@ -128,7 +128,7 @@ VerticalLayoutWidgetClass {
                        Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
                         VerticalAlign 0
                        }
-                       Text "Time Spent Capturing"
+                       Text "Minutes Spent Capturing"
                        "Font Size" 20
                        "Min Font Size" 20
                       }
@@ -139,7 +139,7 @@ VerticalLayoutWidgetClass {
                      Slot LayoutSlot "{65EC21855373E9AA}" {
                       HorizontalAlign 1
                       VerticalAlign 0
-                      Padding 25 -1 0 0
+                      Padding 0 -1 0 0
                      }
                      "Z Order" -3
                      style blank
@@ -149,7 +149,7 @@ VerticalLayoutWidgetClass {
                        Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
                         VerticalAlign 0
                        }
-                       Text "(Minutes) (+2)"
+                       Text "(+2)"
                        "Font Size" 20
                        "Min Font Size" 20
                       }
