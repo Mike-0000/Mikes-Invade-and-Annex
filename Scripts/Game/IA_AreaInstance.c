@@ -2488,8 +2488,20 @@ class IA_AreaInstance
         ////Print(string.Format("[PLAYER_SCALING] GenerateRandomAiGroups for Area %1: Original=%2, ScaledGroupsToSpawn=%3 (scale factor: %4)", 
         //    m_area.GetName(), number, scaledNumberOfGroupsToSpawn, m_aiScaleFactor), LogLevel.DEBUG);
         
-        // int strCounter = m_strength; // Strength is now updated incrementally
-        int accumulatedDelay = 0;
+        // --- BEGIN MODIFIED: Search for custom spawn points ---
+        array<IEntity> spawnPoints = new array<IEntity>();
+        array<IA_AISpawnPoint> allSpawnPoints = IA_AISpawnPoint.GetAllSpawnPoints();
+        Print(string.Format("[IA_AreaInstance] Found %1 total IA_AISpawnPoints in the world.", allSpawnPoints.Count()), LogLevel.NORMAL);
+
+        foreach (IA_AISpawnPoint spawnPoint : allSpawnPoints)
+        {
+            if (m_area.IsPositionInside(spawnPoint.GetOrigin()))
+            {
+                spawnPoints.Insert(spawnPoint);
+            }
+        }
+        Print(string.Format("[IA_AreaInstance] Found %1 spawn points inside area %2.", spawnPoints.Count(), m_area.GetName()), LogLevel.NORMAL);
+		int accumulatedDelay = 0;
 
         for (int i = 0; i < scaledNumberOfGroupsToSpawn; i = i + 1)
         {
@@ -2501,10 +2513,23 @@ class IA_AreaInstance
             
             IA_SquadType st = IA_GetRandomSquadType();
             vector pos = vector.Zero;
-            if (insideArea)
-                pos = IA_Game.rng.GenerateRandomPointInRadius(2, m_area.GetRadius() / 8, m_area.GetOrigin());
+            bool useExactPos = false;
+
+            if (!spawnPoints.IsEmpty())
+            {
+                // If custom spawn points are found, pick one at random
+                int randomIndex = Math.RandomInt(0, spawnPoints.Count());
+                pos = spawnPoints[randomIndex].GetOrigin();
+                useExactPos = true;
+            }
             else
-                pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.25, m_area.GetOrigin());
+            {
+                // Fallback to original logic if no spawn points are found
+                if (insideArea)
+                    pos = IA_Game.rng.GenerateRandomPointInRadius(2, m_area.GetRadius() / 8, m_area.GetOrigin());
+                else
+                    pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.25, m_area.GetOrigin());
+            }
             
             int unitCountBasedOnSquadType = IA_SquadCount(st, m_faction); 
             int scaledUnitCountForThisGroup = Math.Round(unitCountBasedOnSquadType * m_aiScaleFactor); // Apply scaling to unit count of *this* group
@@ -2517,7 +2542,7 @@ class IA_AreaInstance
                 continue;
             }
             
-            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction);
+            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction, useExactPos);
             ////Print(string.Format("[IA_AreaInstance.GenerateRandomAiGroups] Area %1: Scheduled group %2/%3 spawn. Pos: %4, Units: %5. Delay: %6ms",
             //    m_area.GetName(), i + 1, scaledNumberOfGroupsToSpawn, pos.ToString(), scaledUnitCountForThisGroup, accumulatedDelay), LogLevel.DEBUG);
             
@@ -2531,6 +2556,7 @@ class IA_AreaInstance
         // The first call to OnStrengthChange that makes m_strength > 0 will set m_initialTotalUnits.
         // m_maxHistoricalStrength is updated by every OnStrengthChange call if newVal is greater.
     }
+
 
     private void VehicleReinforcementsTask()
     {
@@ -4650,7 +4676,7 @@ class IA_AreaInstance
     // --- END ADDED ---
     
     // --- BEGIN ADDED: Helper to spawn a single AI group with delay and add it ---
-    private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask)
+    private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask, bool useExactPosition = false)
     {
         if (!m_area) // Ensure area instance is still valid
         {
@@ -4659,7 +4685,7 @@ class IA_AreaInstance
         }
 
         // Use the async road search version
-        IA_AiGroup.StartAsyncMilitaryGroupCreation(spawnPos, m_faction, unitCountForGroup, areaFactionForGroupTask, this);
+        IA_AiGroup.StartAsyncMilitaryGroupCreation(spawnPos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, useExactPosition);
     }
     
     // Callback for when async group creation completes

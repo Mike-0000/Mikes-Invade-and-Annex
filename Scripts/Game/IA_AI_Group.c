@@ -44,6 +44,7 @@ class IA_RoadSearchState
     int m_unitCount;
     Faction m_areaFaction;
     int m_activeGroup;
+    bool m_useExactPosition = false;
     
     // Search state
     int m_currentDistanceIndex = 0;
@@ -61,13 +62,14 @@ class IA_RoadSearchState
     IA_AreaInstance m_callbackInstance = null;
     string m_callbackMethod = "";
     
-    void IA_RoadSearchState(vector initialPos, IA_Faction faction, int unitCount, Faction areaFaction, int activeGroup)
+    void IA_RoadSearchState(vector initialPos, IA_Faction faction, int unitCount, Faction areaFaction, int activeGroup, bool useExactPosition = false)
     {
         m_initialPos = initialPos;
         m_faction = faction;
         m_unitCount = unitCount;
         m_areaFaction = areaFaction;
         m_activeGroup = activeGroup;
+        m_useExactPosition = useExactPosition;
     }
     
     void SetCallback(IA_AreaInstance instance, string methodName)
@@ -438,14 +440,14 @@ class IA_AiGroup
     // - You need the group immediately (e.g., for vehicle spawning, reinforcements)
     // - You already have a good spawn position
     // - Performance is not a concern (small number of groups)
-    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false)
+    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false)
     {
         if (unitCount <= 0)
             return null;
 
         // For backward compatibility, create the group immediately at the initial position
         // The async road search should be initiated separately by callers that want it
-        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup);
+        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup, useExactPosition);
     }
     
     // Start an async road search and group creation
@@ -453,7 +455,7 @@ class IA_AiGroup
     // - Creating multiple groups at startup (prevents frame drops)
     // - Road position is important for AI navigation
     // - You can handle the group creation callback
-    static void StartAsyncMilitaryGroupCreation(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, IA_AreaInstance callbackInstance = null)
+    static void StartAsyncMilitaryGroupCreation(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, IA_AreaInstance callbackInstance = null, bool useExactPosition = false)
     {
         if (unitCount <= 0)
             return;
@@ -461,7 +463,7 @@ class IA_AiGroup
         int activeGroup = IA_VehicleManager.GetActiveGroup();
         
         // Create search state
-        IA_RoadSearchState searchState = new IA_RoadSearchState(initialPos, faction, unitCount, AreaFaction, activeGroup);
+        IA_RoadSearchState searchState = new IA_RoadSearchState(initialPos, faction, unitCount, AreaFaction, activeGroup, useExactPosition);
         if (callbackInstance)
         {
             searchState.SetCallback(callbackInstance, "OnAsyncGroupCreated");
@@ -476,6 +478,14 @@ class IA_AiGroup
     {
         if (!searchState)
             return;
+
+        if (searchState.m_useExactPosition)
+        {
+            searchState.m_foundSpawnPos = searchState.m_initialPos;
+            searchState.m_roadFound = false; // Not technically a road, but we have our position
+            CompleteAsyncGroupCreation(searchState);
+            return;
+        }
             
         // If not trying alternatives yet
         if (!searchState.m_tryingAlternatives)
@@ -570,7 +580,7 @@ class IA_AiGroup
             
         // Create the group at the found position
         IA_AiGroup grp = CreateMilitaryGroupAtPosition(searchState.m_foundSpawnPos, searchState.m_faction, 
-            searchState.m_unitCount, searchState.m_areaFaction);
+            searchState.m_unitCount, searchState.m_areaFaction, false, searchState.m_useExactPosition);
             
         // Call the callback if set
         if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
@@ -586,14 +596,14 @@ class IA_AiGroup
 	
     
     // Create a military group at a specific position (no road search)
-    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false)
+    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false)
     {
         if (unitCount <= 0)
             return null;
 
         // --- BEGIN MODIFIED: Road Spawning for Synchronous Groups (Bypass for HVT) ---
         vector finalSpawnPos = spawnPos;
-        if (!HVTGroup)
+        if (!HVTGroup && !useExactPosition)
         {
             int activeGroup = IA_VehicleManager.GetActiveGroup();
             // Search for a road within 150m of the requested spawn position
@@ -607,7 +617,7 @@ class IA_AiGroup
         }
         else
         {
-            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] HVT spawn detected, bypassing road snapping. Spawning at exact location: %1", finalSpawnPos.ToString()), LogLevel.DEBUG);
+            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] HVT or exact position spawn detected, bypassing road snapping. Spawning at exact location: %1", finalSpawnPos.ToString()), LogLevel.DEBUG);
         }
         // --- END MODIFIED ---
 

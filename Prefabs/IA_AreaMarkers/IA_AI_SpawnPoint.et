@@ -1,0 +1,9 @@
+IA_AISpawnPoint {
+ ID "65FF29480AED0AD8"
+ components {
+  RplComponent "{65FF294C0EC9F769}" {
+  }
+ }
+ Flags 1027
+ coords 1459.293 104.294 3111.401
+}
