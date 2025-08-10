@@ -35,6 +35,7 @@ class IA_MissionInitializer : GenericEntity
 	
 	// --- BEGIN ADDED: Artillery Cooldown ---
     static int s_artilleryDisabledUntil = 0;
+    static int s_qrfDisabledUntil = 0; // global QRF cooldown end timestamp
 	// --- END ADDED ---
 	
 	[RplProp()]
@@ -518,6 +519,9 @@ class IA_MissionInitializer : GenericEntity
             {
                 m_currentAreaGroupManager.ArtilleryStrikeTask();
             }
+
+            // Always evaluate QRF independently of artillery state
+            m_currentAreaGroupManager.QRFTask();
 		}
 		
 		////Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
@@ -898,6 +902,21 @@ class IA_MissionInitializer : GenericEntity
         s_artilleryDisabledUntil = currentTime + durationSeconds;
         Print(string.Format("[IA_MissionInitializer] Artillery disabled by side objective completion for %1 seconds.", durationSeconds), LogLevel.NORMAL);
     }
+    
+    // --- BEGIN ADDED: Methods to control global QRF cooldown ---
+    static void SetQRFDisabled(int durationSeconds)
+    {
+        int currentTime = System.GetUnixTime();
+        s_qrfDisabledUntil = currentTime + durationSeconds;
+        Print(string.Format("[IA_MissionInitializer] QRF disabled for %1 seconds.", durationSeconds), LogLevel.NORMAL);
+    }
+    
+    static bool IsQRFDisabled()
+    {
+        int currentTime = System.GetUnixTime();
+        return (s_qrfDisabledUntil > 0 && currentTime < s_qrfDisabledUntil);
+    }
+    // --- END ADDED ---
 	// --- END ADDED ---
 	
 	// --- BEGIN ADDED: Defend Mission Methods ---

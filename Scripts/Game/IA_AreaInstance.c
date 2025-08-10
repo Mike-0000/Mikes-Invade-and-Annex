@@ -97,6 +97,23 @@ class IA_AreaInstance
     private ref array<ref IA_AiGroup> m_forcedReinforcementGroups = {}; 
     private ref map<IA_AiGroup, int> m_forcedReinforcementTimeouts = new map<IA_AiGroup, int>();
     private const int REINFORCEMENT_SND_TIMEOUT_SECONDS = 600; 
+    // Track per-group S&D targets and whether the forced state is infinite
+    private ref map<IA_AiGroup, vector> m_forcedReinforcementTargets = new map<IA_AiGroup, vector>();
+    private ref map<IA_AiGroup, bool> m_forcedReinforcementInfinite = new map<IA_AiGroup, bool>();
+    // --- END ADDED ---
+
+    // --- BEGIN ADDED: Public API to register forced S&D reinforcement groups ---
+    void RegisterForcedReinforcementSND(IA_AiGroup group, vector target, bool infinite = true)
+    {
+        if (!group)
+            return;
+        if (m_forcedReinforcementGroups.Find(group) == -1)
+            m_forcedReinforcementGroups.Insert(group);
+        m_forcedReinforcementTimeouts.Set(group, System.GetUnixTime());
+        if (target != vector.Zero)
+            m_forcedReinforcementTargets.Set(group, target);
+        m_forcedReinforcementInfinite.Set(group, infinite);
+    }
     // --- END ADDED ---
 
     // --- Dynamic Task Variables ---
@@ -1900,12 +1917,23 @@ class IA_AreaInstance
                 }
                 else // Group is still under "forced S&D" status
                 {
-                    //Print(string.Format("[MilitaryOrderTask] Forced S&D Group %1 is still active. Refreshing S&D to origin and skipping general re-tasking.", g.GetOrigin()), LogLevel.DEBUG);
-                    vector targetPos = m_area.GetOrigin();
-                    g.RemoveAllOrders(true); 
-                    g.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, true); 
-                    g.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true); 
-                    
+                    // Do not disturb vehicle waypoints while driving
+                    if (g.IsDriving())
+                    {
+                        continue; // Keep current driving waypointing intact
+                    }
+                    // Only refresh if they have lost their active waypoint
+                    if (!g.HasActiveWaypoint())
+                    {
+                        // Refresh the group's S&D waypoint to its locked target (or area origin fallback)
+                        vector targetPos = m_area.GetOrigin();
+                        vector lockedTarget;
+                        if (m_forcedReinforcementTargets.Find(g, lockedTarget) && lockedTarget != vector.Zero)
+                            targetPos = lockedTarget;
+                        g.RemoveAllOrders(true);
+                        g.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, true);
+                        g.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+                    }
                     continue; // Skip the rest of MilitaryOrderTask for this group
                 }
             }

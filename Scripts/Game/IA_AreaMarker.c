@@ -292,12 +292,14 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 
                 // Deactivate defense mode now that tower is gone
                 IA_Game game = IA_Game.Instantiate();
-                if (game)
+            if (game)
                 {
                     IA_AreaInstance instance = game.GetAreaInstance(m_areaName);
                     if (instance)
                         instance.SetRadioTowerDefenseActive(false);
                 }
+            // Apply a 20-minute global QRF cooldown when a radio tower is destroyed
+            IA_MissionInitializer.SetQRFDisabled(20 * 60);
 	        }
 	        return; // Skip standard scoring for Radio Tower
 	    }
@@ -881,7 +883,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         // Notify players that the objective is complete and waves have stopped
         IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
         if (initializer)
-            initializer.TriggerGlobalNotification("TaskCompleted", "Radio Tower " + m_areaName + " Destroyed. Reinforcements halted.");
+            initializer.TriggerGlobalNotification("TaskCompleted", "Radio Tower " + m_areaName + " Destroyed. Reinforcements halted. QRF disabled for 20 minutes.");
         // --- END MODIFIED ---
 
         // Set the US faction score to 1000 (maximum) to indicate completion

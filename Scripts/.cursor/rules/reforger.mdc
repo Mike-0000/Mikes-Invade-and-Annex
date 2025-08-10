@@ -1,0 +1,73 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+Project scope
+GameSources/ is read-only core game code. Never modify or propose edits in GameSources/.
+Add and edit only under Scripts/ in the project root.
+Default language is Enforce Script for Arma Reforger.
+Workspace paths (Windows)
+Core (read-only): .../IADev2/GameSources
+Mod (editable): .../Mikes Invade and Annex/Scripts
+File organization (under Scripts/)
+Scripts/Core (helpers, logging, constants)
+Scripts/Components (gameplay components)
+Scripts/Systems (systems/managers)
+Scripts/Game (game mode hooks, mission flow)
+Scripts/UI (widgets/menus)
+Scripts/Entities (entity subclasses, prefab glue)
+Name files to match class names.
+Naming
+Prefix all new mod classes with IA_ (e.g., IA_SpawnSystem).
+Classes/methods: PascalCase; fields/locals: camelCase; constants: UPPER_SNAKE_CASE.
+Explicit visibility on members; use static when appropriate.
+Extending game code
+Prefer composition and new components/systems over overriding.
+Subclass engine classes when you own the usage sites:
+class IA_MyThing : SCR_SomeClass {}
+Only when required, mod existing classes:
+modded class SCR_SomeClass { override void Method() { super.Method(); ... } }
+Never copy engine code from GameSources; reference it.
+Lifecycle and events
+Components: use EOnInit, OnActivate, OnDeactivate. Avoid heavy work in constructors.
+Use EOnFrame/EOnFixedFrame only when necessary; prefer events/timers.
+Unsubscribe timers/listeners on deactivation/destruction.
+Networking/authority
+Server-authoritative gameplay. Guard server logic with Replication.IsServer() or RplComponent.IsMaster().
+Client: prediction/FX/UI only.
+Validate all client-originating inputs on the server.
+Keep RPC payloads minimal; batch or debounce where possible.
+Performance
+Avoid allocations and complex queries inside per-frame loops.
+Cache component lookups and resource names.
+Short-circuit on null/invalid states early.
+Logging
+Provide and use a small logger in Scripts/Core (e.g., IA_Log).
+Include [IA][Subsystem] prefixes for clarity.
+One Print per early return/continue; don’t double-log the same decision 1.
+Use normal logs for flow, warnings for recoverable issues, errors when action is required.
+Assets and prefabs
+Use ResourceName for asset references; don’t hardcode engine paths.
+Spawn via prefab APIs with EntitySpawnParams; validate world and resource exist.
+Safety and correctness
+Null-check entities/components before use.
+Guard against re-entrancy and duplicate registration.
+When overriding, call super unless deliberately replacing behavior.
+Deliverables/output
+Only create/modify files under Scripts/ in appropriate subfolders.
+Provide complete class implementations with imports/includes as needed.
+Include brief docstrings for non-trivial methods (@param, @return).
+Do not propose any edits inside GameSources/; suggest modded class or subclassing under Scripts/ instead.
+PR/checklist
+Correct server/client gating.
+No heavy EOnFrame work without justification.
+Logging follows single-Print early-exit rule 1.
+File/class names and locations follow the structure.
+No TODOs; implemented or omitted.
+Short status update
+Delivered a compact Cursor rule aligned to your GameSources (read-only) vs Scripts (editable) setup, with naming, extension strategy, networking, performance, and your single-Print logging preference.
+What you got
+A paste-ready rule for guiding code generation in this Cursor workspace.
+The Ternary (:) operator is unavailable.
