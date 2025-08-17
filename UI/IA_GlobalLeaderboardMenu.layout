@@ -149,7 +149,7 @@ VerticalLayoutWidgetClass {
                        Slot ButtonWidgetSlot "{65EC2185747A3F67}" {
                         VerticalAlign 0
                        }
-                       Text "(+2)"
+                       Text "(+5)"
                        "Font Size" 20
                        "Min Font Size" 20
                       }

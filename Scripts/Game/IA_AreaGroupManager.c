@@ -47,6 +47,8 @@ class IA_AreaGroupManager
         if (!Replication.IsServer())
             return; // QRF is server-authoritative only
         int currentTime = System.GetUnixTime();
+        if (IA_MissionInitializer.IsQRFDisabled())
+            return; // QRF globally disabled
         Print(string.Format("[QRF] Running for group with %1 areas.", m_areaInstances.Count()), LogLevel.NORMAL);
 
         // 1) Check interval

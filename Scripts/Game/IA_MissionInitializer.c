@@ -907,8 +907,13 @@ class IA_MissionInitializer : GenericEntity
     static void SetQRFDisabled(int durationSeconds)
     {
         int currentTime = System.GetUnixTime();
-        s_qrfDisabledUntil = currentTime + durationSeconds;
-        Print(string.Format("[IA_MissionInitializer] QRF disabled for %1 seconds.", durationSeconds), LogLevel.NORMAL);
+        int newUntil = currentTime + durationSeconds;
+        // Only extend or start the cooldown; avoid spamming if repeatedly called
+        if (newUntil > s_qrfDisabledUntil)
+        {
+            s_qrfDisabledUntil = newUntil;
+            Print(string.Format("[IA_MissionInitializer] QRF disabled for %1 seconds.", durationSeconds), LogLevel.NORMAL);
+        }
     }
     
     static bool IsQRFDisabled()

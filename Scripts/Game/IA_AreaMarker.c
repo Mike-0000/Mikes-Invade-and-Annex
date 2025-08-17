@@ -40,6 +40,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected IEntity m_spawnedEntity;
     protected bool m_isDestroyed = false;
     protected bool m_prefabSpawned = false; // Flag to track if prefab has been spawned
+    protected bool m_qrfCooldownApplied = false; // Ensure QRF cooldown applied only once
 
     // -- For authority/proxy check
     protected RplComponent m_RplComponent;
@@ -298,8 +299,12 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                     if (instance)
                         instance.SetRadioTowerDefenseActive(false);
                 }
-            // Apply a 20-minute global QRF cooldown when a radio tower is destroyed
-            IA_MissionInitializer.SetQRFDisabled(20 * 60);
+            // Apply a 20-minute global QRF cooldown when a radio tower is destroyed (once)
+            if (!m_qrfCooldownApplied)
+            {
+                IA_MissionInitializer.SetQRFDisabled(20 * 60);
+                m_qrfCooldownApplied = true;
+            }
 	        }
 	        return; // Skip standard scoring for Radio Tower
 	    }
