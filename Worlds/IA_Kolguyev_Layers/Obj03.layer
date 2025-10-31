@@ -1,0 +1,30 @@
+IA_AreaMarker : "{7ADD348E46715524}Prefabs/IA_AreaMarkers/IA_SmallMilitary.et" {
+ coords 12301.924 2.896 10903.701
+ m_areaGroup 3
+ m_fZoneRadius 25
+ m_areaName "Experimental Military Storage Facility"
+ m_radius 33
+}
+$grp IA_AreaMarker : "{808EDC7240341FEE}Prefabs/IA_AreaMarkers/IA_Town.et" {
+ {
+  coords 12022.984 4.932 10476.406
+  m_areaGroup 3
+  m_fZoneRadius 150
+  m_areaName "Kamensk South"
+  m_radius 180
+ }
+ {
+  coords 11913.124 8.418 10835.949
+  m_areaGroup 3
+  m_fZoneRadius 150
+  m_areaName "Kamensk North"
+  m_radius 180
+ }
+}
+IA_AreaMarker : "{EB1E27CA063A3403}Prefabs/IA_AreaMarkers/IA_City.et" {
+ coords 11923.012 4.664 10666.779
+ m_areaGroup 3
+ m_fZoneRadius 170
+ m_areaName "Kamensk Central"
+ m_radius 245
+}

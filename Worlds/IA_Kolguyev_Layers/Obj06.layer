@@ -1,0 +1,20 @@
+IA_AreaMarker : "{0C868FB4A69F9BE8}Prefabs/IA_AreaMarkers/IA_Military.et" {
+ coords 6411.721 6.566 3276.249
+ m_areaName "Ugoldar Industrial"
+}
+$grp IA_AreaMarker : "{EB1E27CA063A3403}Prefabs/IA_AreaMarkers/IA_City.et" {
+ {
+  coords 6783.103 24.656 3960.161
+  m_areaGroup 6
+  m_fZoneRadius 150
+  m_areaName "Ugoldar East"
+  m_radius 180
+ }
+ {
+  coords 6544.319 24.655 3771.316
+  m_areaGroup 6
+  m_fZoneRadius 150
+  m_areaName "Ugoldar West"
+  m_radius 200
+ }
+}

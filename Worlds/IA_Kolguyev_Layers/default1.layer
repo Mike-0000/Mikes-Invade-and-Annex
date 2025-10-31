@@ -1,0 +1,28 @@
+PerceptionManager PerceptionManager : "{028DAEAD63E056BE}Prefabs/World/Game/PerceptionManager.et" {
+ coords 1891.659 11.438 1822.161
+}
+SCR_BaseGameMode GameMode_Base1 : "{094E7507AE9AA9DF}Prefabs/GameMode_IA.et" {
+ coords 5000 80.875 5000
+ m_fAutoReloadTime 10
+}
+ScriptedChatEntity : "{F69BC912AC8236F9}Prefabs/MP/ScriptedChatEntity.et" {
+ coords 1510.078 0 2870.772
+}
+IA_VehicleManager : "{07F25000A2274994}Components/VehicleManager.et" {
+ coords 9238.838 85.906 1546.349
+}
+IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
+ coords 4829.486 28.5 11737.061
+}
+SCR_SpawnPoint : "{5A2220DD0C16958B}Prefabs/MP/Spawning/SpawnPoint_US.et" {
+ coords 2717.677 24.592 5484.009
+ angles 0 91.248 0
+ m_Info SCR_UIInfo "{56B4CC4ECACA2C37}" {
+  Name "HQ"
+ }
+}
+IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
+ coords 4828.903 28.5 11735.593
+ m_numberOfGroups 7
+ m_spawnDelayMs 7000
+}

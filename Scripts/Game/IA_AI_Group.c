@@ -2589,6 +2589,15 @@ class IA_AiGroup
         // Mark this as an authoritative state change.
         SetTacticalState(IA_GroupTacticalState.InVehicle, destination, vehicle, true);
         
+        // After setting the state, add a GetInVehicle order to register the vehicle with SCR_AIGroup
+        // This is required after recent game updates - the vehicle must be registered
+        // before SCR_AIGetEmptyCompartment can find compartments for boarding
+        // We add this after SetTacticalState so it's not removed by RemoveAllOrders()
+        if (m_group)
+        {
+            AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+        }
+        
         // The call to IA_VehicleManager.UpdateVehicleWaypoint previously here is now handled
         // by the updated SetTacticalState logic for IA_GroupTacticalState.InVehicle.
     }

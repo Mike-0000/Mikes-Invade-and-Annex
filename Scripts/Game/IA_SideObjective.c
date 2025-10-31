@@ -110,6 +110,34 @@ class IA_SideObjective
         // Default no-op implementations so that subclasses only override what they need.
     }
     
+    // Helper function to ensure task has required child entity
+    protected void EnsureTaskHasChildEntity(IEntity taskEntity)
+    {
+        if (!taskEntity)
+            return;
+            
+        // Check if child entity already exists
+        // GetChildren() now returns a single IEntity (first child), so we iterate through children using GetSibling()
+        bool hasChild = false;
+        IEntity child = taskEntity.GetChildren();
+        while (child)
+        {
+            SCR_BaseFactionTriggerEntity factionTrigger = SCR_BaseFactionTriggerEntity.Cast(child);
+            if (factionTrigger)
+            {
+                hasChild = true;
+                break;
+            }
+            child = child.GetSibling();
+        }
+        
+        // If no child exists, log a warning
+        if (!hasChild)
+        {
+            Print("[WARNING] IA_SideObjective: Task entity missing required SCR_BaseFactionTriggerEntity child. The prefab may need to be updated.", LogLevel.WARNING);
+        }
+    }
+    
     protected IEntity _CreateTaskAtPosition(string title, string desc, vector pos)
     {
         Resource res = Resource.Load("{33DA4D098C409421}Prefabs/Tasks/TriggerTask.et");
@@ -118,6 +146,9 @@ class IA_SideObjective
         IEntity taskEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(pos));
         if (!taskEnt) return null;
 
+        // Ensure required child entity exists
+        EnsureTaskHasChildEntity(taskEnt);
+
         SCR_TriggerTask task = SCR_TriggerTask.Cast(taskEnt);
         if (!task)
         {
@@ -125,9 +156,13 @@ class IA_SideObjective
             return null;
         }
         
-        task.SetTitle("Side Objective: " + title);
-        task.SetDescription(desc);
-        task.Create(false); 
+        SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(task);
+        if (extendedTask)
+        {
+            extendedTask.SetTaskName("Side Objective: " + title);
+            extendedTask.SetTaskDescription(desc);
+            extendedTask.SetTaskState(SCR_ETaskState.CREATED);
+        }
         
         // Use a global notification helper to inform players
         IA_Game.S_TriggerGlobalNotification("SideTaskCreated", title);
@@ -144,7 +179,9 @@ class IA_SideObjective
     {
         if (m_PlayerTask)
         {
-            SCR_TriggerTask.Cast(m_PlayerTask).Finish();
+            SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_PlayerTask);
+            if (extendedTask)
+                extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
             IA_Game.S_TriggerGlobalNotification("SideTaskCompleted", "Side Objective Completed. The HVT has been eliminated. Enemy artillery and QRF is unavailable for 30 minutes.");
         }
     }
@@ -528,7 +565,9 @@ class IA_AssassinationObjective : IA_SideObjective
             
 			if (m_GeneratorTask)
             {
-                SCR_TriggerTask.Cast(m_GeneratorTask).Finish();
+                SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_GeneratorTask);
+                if (extendedTask)
+                    extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
                 m_GeneratorTask = null;
             }
 			
@@ -598,7 +637,9 @@ class IA_AssassinationObjective : IA_SideObjective
 		
 		if (m_GeneratorTask)
         {
-            SCR_TriggerTask.Cast(m_GeneratorTask).Finish(true);
+            SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_GeneratorTask);
+            if (extendedTask)
+                extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
             m_GeneratorTask = null;
         }
 
@@ -611,7 +652,9 @@ class IA_AssassinationObjective : IA_SideObjective
 
         if (m_EscapeTask)
         {
-            SCR_TriggerTask.Cast(m_EscapeTask).Finish(true);
+            SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_EscapeTask);
+            if (extendedTask)
+                extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
             m_EscapeTask = null;
         }
     }
@@ -883,7 +926,9 @@ class IA_AssassinationObjective : IA_SideObjective
             // Fail the main task
             if (m_PlayerTask)
             {
-                SCR_TriggerTask.Cast(m_PlayerTask).Finish(false);
+                SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_PlayerTask);
+                if (extendedTask)
+                    extendedTask.SetTaskState(SCR_ETaskState.FAILED);
                 m_PlayerTask = null;
             }
         }
@@ -905,7 +950,14 @@ class IA_AssassinationObjective : IA_SideObjective
 		
 		if (m_GeneratorTask)
         {
-            SCR_TriggerTask.Cast(m_GeneratorTask).Finish(success);
+            SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_GeneratorTask);
+            if (extendedTask)
+            {
+                if (success)
+                    extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
+                else
+                    extendedTask.SetTaskState(SCR_ETaskState.FAILED);
+            }
             m_GeneratorTask = null;
         }
 
@@ -917,7 +969,14 @@ class IA_AssassinationObjective : IA_SideObjective
 
         if (m_EscapeTask)
         {
-            SCR_TriggerTask.Cast(m_EscapeTask).Finish(success);
+            SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_EscapeTask);
+            if (extendedTask)
+            {
+                if (success)
+                    extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
+                else
+                    extendedTask.SetTaskState(SCR_ETaskState.FAILED);
+            }
             m_EscapeTask = null;
         }
 	}

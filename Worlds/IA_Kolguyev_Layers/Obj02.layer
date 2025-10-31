@@ -1,0 +1,30 @@
+IA_AreaMarker : "{0C868FB4A69F9BE8}Prefabs/IA_AreaMarkers/IA_Military.et" {
+ coords 8590.083 95.555 9319.699
+ m_areaGroup 2
+ m_fZoneRadius 65
+ m_areaName "Komsomolsk Military Base"
+ m_radius 70
+}
+$grp IA_AreaMarker : "{7ADD348E46715524}Prefabs/IA_AreaMarkers/IA_SmallMilitary.et" {
+ {
+  coords 9646.12 132.394 10003.443
+  m_areaGroup 2
+  m_fZoneRadius 65
+  m_areaName "Longonnet"
+  m_radius 65
+ }
+ {
+  coords 9815.373 55.851 9469.403
+  m_areaGroup 2
+  m_fZoneRadius 65
+  m_areaName "Meglerone"
+  m_radius 65
+ }
+}
+IA_AreaMarker : "{808EDC7240341FEE}Prefabs/IA_AreaMarkers/IA_Town.et" {
+ coords 8627.294 4.209 10175.71
+ m_areaGroup 2
+ m_fZoneRadius 65
+ m_areaName "Komsomolsk"
+ m_radius 75
+}

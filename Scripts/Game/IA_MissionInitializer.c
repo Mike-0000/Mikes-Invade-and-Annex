@@ -592,7 +592,9 @@ class IA_MissionInitializer : GenericEntity
 					string completedTaskTitle = instance.m_area.GetName();
 					//TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
 				    //Print("[DEBUG_ZONE_GROUP] Finishing task for completed zone: " + marker.GetAreaName(), LogLevel.NORMAL);
-					instance.GetCurrentTaskEntity().Finish();
+					SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(instance.GetCurrentTaskEntity());
+					if (extendedTask)
+						extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
 				}
 				
 				// Reset capture scores for next time

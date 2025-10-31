@@ -1,0 +1,21 @@
+IA_AreaMarker : "{0C868FB4A69F9BE8}Prefabs/IA_AreaMarkers/IA_Military.et" {
+ coords 5904.554 2.468 8307.06
+ m_areaGroup 5
+ m_fZoneRadius 145
+ m_areaName "Mineraly Harbor"
+ m_radius 165
+}
+IA_AreaMarker : "{808EDC7240341FEE}Prefabs/IA_AreaMarkers/IA_Town.et" {
+ coords 4371.483 4.001 8097.094
+ m_areaGroup 5
+ m_fZoneRadius 80
+ m_areaName "Sosnovy Mys"
+ m_radius 85
+}
+IA_AreaMarker : "{EB1E27CA063A3403}Prefabs/IA_AreaMarkers/IA_City.et" {
+ coords 6254.681 36.785 8044.586
+ m_areaGroup 5
+ m_fZoneRadius 155
+ m_areaName "Mineraly"
+ m_radius 175
+}

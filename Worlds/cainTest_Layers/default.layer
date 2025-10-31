@@ -1,0 +1,74 @@
+SCR_AIWorld : "{672531FAC0834C06}Prefabs/AI/SCR_AIWorld_Cain.et" {
+ components {
+  NavmeshWorldComponent "{5584F30E67F617AD}" {
+   NavmeshSettings NavmeshWorld "{50FC63BEBE3973C5}" {
+    NavmeshFilesConfig BaseNavmeshFilesConfig "{60B8A297F9E52831}" : "{FA1B76B175A8AE55}Configs/Navmesh/Navmesh_GM_Cain_Soldier.conf" {
+    }
+   }
+  }
+  NavmeshWorldComponent "{5584F30EEFEE1223}" {
+   NavmeshSettings ChimeraNavmeshWorld "{50FC63BEBE3973C5}" {
+    NavmeshFilesConfig BaseNavmeshFilesConfig "{60B8A297F3B4EE8A}" : "{0F41A96826AAE63B}Configs/Navmesh/Navmesh_GM_Cain_Vehicle.conf" {
+    }
+   }
+  }
+ }
+ coords 6396.838 450.733 6400.228
+}
+SCR_GameModeEditor GameMode_Editor_Full2 : "{DA3986AF1B5032B7}Prefabs/MP/Modes/Editor/GameMode_Editor_Full.et" {
+ components {
+  SCR_EditorCameraDefaultsComponent "{66507763AA28E1D9}" {
+   m_aPositions {
+    SCR_CameraCoordinates "{66507763AEE4D206}" {
+     m_vCameraPosition 6116.94 293.84 4789.99
+     m_vCameraAngles -18.9 169.45 0
+    }
+    SCR_CameraCoordinates "{665077634711458A}" {
+     m_vCameraPosition 6977.88 628.55 7293.98
+     m_vCameraAngles -13.8 216.25 0
+    }
+    SCR_CameraCoordinates "{66507763607186CC}" {
+     m_vCameraPosition 6311.24 115.72 8828.39
+     m_vCameraAngles -6.3 207.56 0
+    }
+    SCR_CameraCoordinates "{6650776317084636}" {
+     m_vCameraPosition 865.29 192.07 7614.01
+     m_vCameraAngles -6.6 108.56 0
+    }
+    SCR_CameraCoordinates "{6650776304976FFE}" {
+     m_vCameraPosition 3231.07 289.33 7042.52
+     m_vCameraAngles -6.6 116.65 0
+    }
+    SCR_CameraCoordinates "{6650776322302B91}" {
+     m_vCameraPosition 10129.1 275.36 10390.49
+     m_vCameraAngles -11.7 -144.95 0
+    }
+    SCR_CameraCoordinates "{66507762F4354BBF}" {
+     m_vCameraPosition 7612.59 73.11 3798.44
+     m_vCameraAngles -3.6 353.35 0
+    }
+    SCR_CameraCoordinates "{6650776292CA58C2}" {
+     m_vCameraPosition 4907.76 324.85 4368.62
+     m_vCameraAngles -19.8 114.55 0
+    }
+    SCR_CameraCoordinates "{6650776286AAFFC6}" {
+     m_vCameraPosition 5146.81 734.07 6334.98
+     m_vCameraAngles -22.2 -84.65 0
+    }
+    SCR_CameraCoordinates "{66507762A7CC02A0}" {
+     m_vCameraPosition 9195.39 190.52 9124.95
+     m_vCameraAngles -9.6 40.45 0
+    }
+   }
+  }
+ }
+ coords 6396.838 450.733 6400.228
+}
+SCR_MapLocator {
+ coords 6396.838 450.733 6400.228
+ m_WorldDirections SCR_MapLocationQuadHint "{6626ACE1C13557A9}" : "{D88D1AE761D521FB}Configs/Map/MapLocatorHints/LocationHintsKolguyev.conf" {
+ }
+}
+MusicManager : "{A867D3EE4A35D38F}Prefabs/Sounds/Music/MusicManager_Campaign_Kolguyev.et" {
+ coords 6397.123 450.733 6402.361
+}

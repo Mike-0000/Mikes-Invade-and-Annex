@@ -1,0 +1,22 @@
+$grp GenericEntity : "{7AF7C9F3DD5D34FE}Prefabs/IA_VehicleSpawns/IA_TransportHeli.et" {
+ UnarmedHeli2 {
+  coords 2637.036 24.218 5517.705
+  angles 0 -132.254 0
+ }
+ UnarmedHeli3 {
+  coords 2637.353 24.219 5467.54
+  angles 0 -132.254 0
+ }
+ UnarmedHeli5 {
+  coords 2681.625 24.219 5375.853
+  angles 0 -132.254 0
+ }
+}
+GenericEntity AttackHeli2 : "{8867E1B42D07CB26}Prefabs/IA_VehicleSpawns/IA_HQAttackHeli.et" {
+ coords 2682.861 24.219 5334.149
+ angles 0 -132.254 0
+}
+GenericEntity Heli4 : "{F5D2A161F014166B}Prefabs/IA_VehicleSpawns/IA_HQGenericHeli.et" {
+ coords 2681.855 24.219 5356.543
+ angles 0 -132.254 0
+}

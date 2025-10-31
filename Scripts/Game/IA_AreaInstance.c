@@ -321,14 +321,15 @@ class IA_AreaInstance
 	bool CompleteTaskByTitle(string taskTitle)
 	{
 		// Check if the task is currently active
-		if (m_currentTaskEntity && m_currentTaskEntity.GetTitle() == taskTitle)
+		SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
+		if (extendedTask && extendedTask.GetTaskName() == taskTitle)
 		{
 			Print(string.Format("[IA_AreaInstance] Completing current task: %1", taskTitle), LogLevel.DEBUG);
 			
 			// Trigger task completion notification
 			TriggerGlobalNotification("TaskCompleted", taskTitle);
 			
-			m_currentTaskEntity.Finish();
+			extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
 			m_currentTaskEntity = null;
 			
 			// Activate next queued task if any
@@ -336,10 +337,14 @@ class IA_AreaInstance
 			{
 				m_currentTaskEntity = m_taskQueue[0];
 				m_taskQueue.Remove(0);
-				m_currentTaskEntity.Create(false);
-				
-				string newTaskTitle = m_currentTaskEntity.GetTitle();
-				TriggerGlobalNotification("TaskCreated", newTaskTitle);
+				SCR_ExtendedTask nextTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
+				if (nextTask)
+				{
+					nextTask.SetTaskState(SCR_ETaskState.CREATED);
+					
+					string newTaskTitle = nextTask.GetTaskName();
+					TriggerGlobalNotification("TaskCreated", newTaskTitle);
+				}
 			}
 			return true;
 		}
@@ -348,7 +353,8 @@ class IA_AreaInstance
 		for (int i = 0; i < m_taskQueue.Count(); i++)
 		{
 			SCR_TriggerTask queuedTask = m_taskQueue[i];
-			if (queuedTask && queuedTask.GetTitle() == taskTitle)
+			SCR_ExtendedTask queuedExtendedTask = SCR_ExtendedTask.Cast(queuedTask);
+			if (queuedExtendedTask && queuedExtendedTask.GetTaskName() == taskTitle)
 			{
 				Print(string.Format("[IA_AreaInstance] Found and removing queued task: %1", taskTitle), LogLevel.DEBUG);
 				
@@ -417,6 +423,9 @@ class IA_AreaInstance
                 return;
             }
             
+            // Ensure required child entity exists
+            EnsureTaskHasChildEntity(taskEnt);
+            
             SCR_TriggerTask task = SCR_TriggerTask.Cast(taskEnt);
             if (!task)
             {
@@ -425,13 +434,47 @@ class IA_AreaInstance
                 return;
             }
             
-            task.SetTitle(title);
-            task.SetDescription(description);
+            SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(task);
+            if (extendedTask)
+            {
+                extendedTask.SetTaskName(title);
+                extendedTask.SetTaskDescription(description);
+            }
             m_taskQueue.Insert(task);
             //////Print("[DEBUG] Task queued. Queue length: " + m_taskQueue.Count(), LogLevel.DEBUG);
         }
     }
 
+    // Helper function to ensure task has required child entity
+    private void EnsureTaskHasChildEntity(IEntity taskEntity)
+    {
+        if (!taskEntity)
+            return;
+            
+        // Check if child entity already exists
+        // GetChildren() now returns a single IEntity (first child), so we iterate through children using GetSibling()
+        bool hasChild = false;
+        IEntity child = taskEntity.GetChildren();
+        while (child)
+        {
+            SCR_BaseFactionTriggerEntity factionTrigger = SCR_BaseFactionTriggerEntity.Cast(child);
+            if (factionTrigger)
+            {
+                hasChild = true;
+                break;
+            }
+            child = child.GetSibling();
+        }
+        
+        // If no child exists, try to find and attach one (or create if needed)
+        if (!hasChild)
+        {
+            // Try to find a base faction trigger entity prefab or create one programmatically
+            // Note: This may require the prefab to be updated in the editor, but we try to handle it here
+            Print("[WARNING] IA_AreaInstance: Task entity missing required SCR_BaseFactionTriggerEntity child. The prefab may need to be updated.", LogLevel.WARNING);
+        }
+    }
+    
     private void CreateTask(string title, string description, vector spawnOrigin)
     {
         //////Print("[DEBUG] CreateTask called with title: " + title + ", spawnOrigin: " + spawnOrigin, LogLevel.DEBUG);
@@ -449,6 +492,9 @@ class IA_AreaInstance
             return;
         }
         
+        // Ensure required child entity exists
+        EnsureTaskHasChildEntity(taskEnt);
+        
         m_currentTaskEntity = SCR_TriggerTask.Cast(taskEnt);
         if (!m_currentTaskEntity)
         {
@@ -457,9 +503,13 @@ class IA_AreaInstance
             return;
         }
         
-        m_currentTaskEntity.SetTitle(title);
-        m_currentTaskEntity.SetDescription(description);
-        m_currentTaskEntity.Create(false);
+        SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
+        if (extendedTask)
+        {
+            extendedTask.SetTaskName(title);
+            extendedTask.SetTaskDescription(description);
+            extendedTask.SetTaskState(SCR_ETaskState.CREATED);
+        }
         //////Print("[DEBUG] Task created and activated.", LogLevel.DEBUG);
 		
 		// --- BEGIN ADDED: Notify players of new task ---
@@ -473,30 +523,39 @@ class IA_AreaInstance
         if (m_currentTaskEntity)
         {
 			// --- BEGIN ADDED: Notify players of completed task ---
-			string completedTaskTitle = m_currentTaskEntity.GetTitle();
+			SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
+			string completedTaskTitle = "";
+			if (extendedTask)
+				completedTaskTitle = extendedTask.GetTaskName();
 			TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
 			// --- END ADDED ---
 			
-            m_currentTaskEntity.Finish();
+			if (extendedTask)
+				extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
             m_currentTaskEntity = null;
         }
         if (!m_taskQueue.IsEmpty())
         {
             m_currentTaskEntity = m_taskQueue[0];
             m_taskQueue.Remove(0);
-            m_currentTaskEntity.Create(false);
-            //////Print("[DEBUG] Next queued task activated.", LogLevel.DEBUG);
-			
-			// --- BEGIN ADDED: Notify players of new task from queue ---
-			string newTaskTitle = m_currentTaskEntity.GetTitle();
-			TriggerGlobalNotification("TaskCreated", newTaskTitle);
-			// --- END ADDED ---
+            SCR_ExtendedTask nextTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
+            if (nextTask)
+            {
+                nextTask.SetTaskState(SCR_ETaskState.CREATED);
+                //////Print("[DEBUG] Next queued task activated.", LogLevel.DEBUG);
+                
+                // --- BEGIN ADDED: Notify players of new task from queue ---
+                string newTaskTitle = nextTask.GetTaskName();
+                TriggerGlobalNotification("TaskCreated", newTaskTitle);
+                // --- END ADDED ---
+            }
         }
     }
 
     void UpdateTask()
     {
-        if (m_currentTaskEntity && m_currentTaskEntity.GetTaskState() == SCR_TaskState.FINISHED)
+        SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
+        if (extendedTask && extendedTask.GetTaskState() == SCR_ETaskState.COMPLETED)
         {
             CompleteCurrentTask();
         }

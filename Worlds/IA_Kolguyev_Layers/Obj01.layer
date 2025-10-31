@@ -1,0 +1,34 @@
+$grp IA_AreaMarker : "{0C868FB4A69F9BE8}Prefabs/IA_AreaMarkers/IA_Military.et" {
+ {
+  coords 8758.247 9.344 7393.812
+  m_areaGroup 1
+  m_fZoneRadius 80
+  m_areaName "Gorshkovo Military"
+  m_radius 80
+ }
+ {
+  coords 7550.689 21.204 4873.879
+  m_areaGroup 1
+  m_areaName "Ugoldar North Military"
+ }
+ {
+  coords 7650.136 23.972 5071.557
+  m_areaGroup 1
+  m_fZoneRadius 65
+  m_areaName "Ugoldar North Military - Barracks"
+  m_radius 75
+ }
+}
+IA_AreaMarker : "{808EDC7240341FEE}Prefabs/IA_AreaMarkers/IA_Town.et" {
+ coords 7670.578 210.839 6829.233
+ m_areaGroup 1
+ m_fZoneRadius 60
+ m_areaName "Nade' Mine"
+ m_radius 60
+}
+IA_AreaMarker : "{EB1E27CA063A3403}Prefabs/IA_AreaMarkers/IA_City.et" {
+ coords 8438.78 22.719 6541.85
+ m_areaGroup 1
+ m_fZoneRadius 150
+ m_radius 180
+}

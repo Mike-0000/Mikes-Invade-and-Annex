@@ -1,0 +1,27 @@
+$grp IA_AreaMarker : "{0C868FB4A69F9BE8}Prefabs/IA_AreaMarkers/IA_Military.et" {
+ {
+  coords 5066.247 695.804 6330.609
+  m_areaGroup 4
+  m_fZoneRadius 55
+  m_areaName "Kolguyev Mountain Top"
+  m_radius 65
+ }
+ {
+  coords 4723.864 434.795 5612.624
+  m_areaGroup 4
+  m_areaName "Kolguyev Mountain - South"
+ }
+}
+$grp IA_AreaMarker : "{808EDC7240341FEE}Prefabs/IA_AreaMarkers/IA_Town.et" {
+ {
+  coords 5051.67 410.686 5311.314
+  m_areaGroup 4
+  m_areaName "Soumont"
+  m_radius 99
+ }
+ {
+  coords 5566.849 438.502 6607.929
+  m_areaGroup 4
+  m_areaName "Kolguyev Mountain - North"
+ }
+}
