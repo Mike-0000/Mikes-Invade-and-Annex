@@ -250,7 +250,6 @@ VerticalLayoutWidgetClass {
                  "Ignore Cursor" 0
                  {
                   VerticalLayoutWidgetClass "{65E6AAD57B7007B8}" {
-                   Prefab "{5CD8B2C422FB3DD6}"
                    Name "LeaderboardContainer"
                    Slot LayoutSlot "{5D04D9D7CC23D0FC}" {
                    }
