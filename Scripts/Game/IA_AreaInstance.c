@@ -3062,6 +3062,15 @@ class IA_AreaInstance
 				scaledVehicles = scaledVehicles*1.5;
 				
 		}
+
+	    // --- BEGIN MODIFIED: Apply military vehicle count multiplier ---
+	    IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+	    if (config && config.m_fMilitaryVehicleCountMultiplier != 1.0)
+	    {
+	        scaledVehicles = Math.Round(scaledVehicles * config.m_fMilitaryVehicleCountMultiplier);
+	        //Print(string.Format("[IA_AreaInstance] Applied military vehicle count multiplier: %1 (Scaled: %2)", config.m_fMilitaryVehicleCountMultiplier, scaledVehicles), LogLevel.NORMAL);
+	    }
+	    // --- END MODIFIED ---
        //////Print("[PLAYER_SCALING] SpawnInitialVehicles: Base vehicles=" + baseVehicles + 
 //              ", Scaled=" + scaledVehicles + " (scale factor: " + m_aiScaleFactor + ")", LogLevel.DEBUG);
               
@@ -3121,7 +3130,29 @@ class IA_AreaInstance
             return;
         }
         
-        // Don't apply player scaling to civilians - they're always spawned at the original count
+	    // --- BEGIN MODIFIED: Check config for civilian spawning ---
+	    IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+	    if (config)
+	    {
+	        if (!config.m_bEnableCivilianSpawning)
+	        {
+	            Print(string.Format("[IA_AreaInstance] Civilian spawning disabled by config for area %1", m_area.GetName()), LogLevel.NORMAL);
+	            m_initialCivilianCount = 0;
+	            m_isInitialCivilianSpawnDone = true; // Mark as done so we don't try later
+	            return;
+	        }
+	        
+	        float scaler = config.m_fCivilianCountMultiplier;
+	        if (scaler != 1.0)
+	        {
+	            int oldNumber = number;
+	            number = Math.Round(number * scaler);
+	            Print(string.Format("[IA_AreaInstance] Applied civilian count multiplier: %1 (Original: %2, New: %3)", scaler, oldNumber, number), LogLevel.NORMAL);
+	        }
+	    }
+	    // --- END MODIFIED ---
+
+        // Don't apply player scaling to civilians - they're always spawned at the original count (unless config overrides)
         //////Print("[PLAYER_SCALING] Civilians not affected by scaling - using original count: " + number, LogLevel.DEBUG);
         
 		m_initialCivilianCount = number;
@@ -3310,6 +3341,19 @@ class IA_AreaInstance
         
         if (!m_area)
             return;
+
+        // --- BEGIN MODIFIED: Check config for civilian vehicle spawning ---
+        IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+        if (config)
+        {
+            if (!config.m_bEnableCivilianSpawning)
+            {
+                //Print(string.Format("[IA_AreaInstance] Civilian vehicle spawning disabled by config for area %1", m_area.GetName()), LogLevel.NORMAL);
+                m_maxCivVehicles = 0;
+                return;
+            }
+        }
+        // --- END MODIFIED ---
             
         // Get the area type
         IA_AreaType areaType = m_area.GetAreaType();
@@ -3351,6 +3395,14 @@ class IA_AreaInstance
         
         // Apply player scaling to max vehicle count
         m_maxCivVehicles = Math.Round(m_maxCivVehicles * m_aiScaleFactor);
+
+        // --- BEGIN MODIFIED: Apply config multiplier ---
+        if (config && config.m_fCivilianVehicleCountMultiplier != 1.0)
+        {
+             m_maxCivVehicles = Math.Round(m_maxCivVehicles * config.m_fCivilianVehicleCountMultiplier);
+             //Print(string.Format("[IA_AreaInstance] Applied civilian vehicle count multiplier: %1 (New Max: %2)", config.m_fCivilianVehicleCountMultiplier, m_maxCivVehicles), LogLevel.NORMAL);
+        }
+        // --- END MODIFIED ---
         
        //////Print("[DEBUG_CIV_VEHICLES] Area type: " + areaType + ", Max civilian vehicles: " + m_maxCivVehicles, LogLevel.DEBUG);
         

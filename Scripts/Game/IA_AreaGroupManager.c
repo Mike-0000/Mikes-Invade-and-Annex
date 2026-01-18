@@ -667,10 +667,25 @@ class IA_AreaGroupManager
         int currentTime = System.GetUnixTime();
 		Print(string.Format("[ArtilleryStrikeTask] Running for group with %1 areas.", m_areaInstances.Count()), LogLevel.NORMAL);
 
+		// Configurable values (defaults)
+		float strikeChance = ARTILLERY_STRIKE_CHANCE;
+		int cooldown = ARTILLERY_COOLDOWN;
+		int minDelay = 45;
+		int maxDelay = 70;
+
+		IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+		if (config)
+		{
+			strikeChance = config.m_fArtilleryStrikeChance;
+			cooldown = config.m_iArtilleryCooldown;
+			minDelay = config.m_iArtilleryMinDelay;
+			maxDelay = config.m_iArtilleryMaxDelay;
+		}
+
         // If a strike is active, manage its lifecycle
         if (m_isArtilleryStrikeActive)
         {
-            if (m_artillerySmokeSpawned && (currentTime - m_artilleryStrikeSmokeTime >= Math.RandomInt(45, 70)))
+            if (m_artillerySmokeSpawned && (currentTime - m_artilleryStrikeSmokeTime >= Math.RandomInt(minDelay, maxDelay)))
             {
                 // Time for impact!
                 Print(string.Format("[ArtilleryStrike] Firing artillery at %1 for area group.", m_artilleryStrikeCenter), LogLevel.NORMAL);
@@ -690,7 +705,7 @@ class IA_AreaGroupManager
                 m_artillerySmokeSpawned = false;
                 m_artilleryStrikeCenter = vector.Zero;
                 m_lastArtilleryStrikeEndTime = currentTime;
-				Print(string.Format("[ArtilleryStrike] Strike finished. Cooldown started for %1 seconds.", ARTILLERY_COOLDOWN), LogLevel.NORMAL);
+				Print(string.Format("[ArtilleryStrike] Strike finished. Cooldown started for %1 seconds.", cooldown), LogLevel.NORMAL);
             }
             return; // Don't try to start a new one
         }
@@ -725,22 +740,22 @@ class IA_AreaGroupManager
 		}
 		Print(string.Format("[ArtilleryStrike] Passed 'Under Attack' check. Area '%1' is under attack.", attackedAreaName), LogLevel.NORMAL);
 
-        // 3. Check 5-minute cooldown
-        if (currentTime - m_lastArtilleryStrikeEndTime < ARTILLERY_COOLDOWN)
+        // 3. Check cooldown
+        if (currentTime - m_lastArtilleryStrikeEndTime < cooldown)
 		{
-			Print(string.Format("[ArtilleryStrike] Check failed: On cooldown. %1 seconds remaining.", ARTILLERY_COOLDOWN - (currentTime - m_lastArtilleryStrikeEndTime)), LogLevel.NORMAL);
+			Print(string.Format("[ArtilleryStrike] Check failed: On cooldown. %1 seconds remaining.", cooldown - (currentTime - m_lastArtilleryStrikeEndTime)), LogLevel.NORMAL);
             return;
 		}
 		Print("[ArtilleryStrike] Passed cooldown check.", LogLevel.NORMAL);
 
         // 4. Random chance
 		float randomRoll = IA_Game.rng.RandFloat01();
-        if (randomRoll > ARTILLERY_STRIKE_CHANCE)
+        if (randomRoll > strikeChance)
 		{
-			Print(string.Format("[ArtilleryStrike] Check failed: Random chance not met (Rolled %1, needed <= %2).", randomRoll, ARTILLERY_STRIKE_CHANCE), LogLevel.NORMAL);
+			Print(string.Format("[ArtilleryStrike] Check failed: Random chance not met (Rolled %1, needed <= %2).", randomRoll, strikeChance), LogLevel.NORMAL);
             return;
 		}
-		Print(string.Format("[ArtilleryStrike] Passed random chance (Rolled %1, needed <= %2). Initiating strike.", randomRoll, ARTILLERY_STRIKE_CHANCE), LogLevel.NORMAL);
+		Print(string.Format("[ArtilleryStrike] Passed random chance (Rolled %1, needed <= %2). Initiating strike.", randomRoll, strikeChance), LogLevel.NORMAL);
 			
         // 5. Determine target location from *all* danger events in the group
 		vector groupCenter = vector.Zero;

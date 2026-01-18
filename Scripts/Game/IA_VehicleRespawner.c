@@ -206,6 +206,27 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			m_RespawnerSpawnedVehicle = null; // Clear the reference as it's now deleted or scheduled for deletion.
 		}
 		
+		// Check for global disable switches
+		IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+		if (config)
+		{
+			bool isHeli = (m_eVehicleSpawnType == IA_VehicleSpawnType.GENERIC_HELI || 
+						   m_eVehicleSpawnType == IA_VehicleSpawnType.ATTACK_HELI || 
+						   m_eVehicleSpawnType == IA_VehicleSpawnType.TRANSPORT_HELI);
+			
+			if (isHeli && config.m_bDisableHQHelipads)
+			{
+				Print(string.Format("IA_VehicleRespawner %1: Spawning disabled by config (HQ Helicopters).", m_RespawnerOwnerEntity), LogLevel.DEBUG);
+				return;
+			}
+			
+			if (!isHeli && config.m_bDisableHQGroundVehicles)
+			{
+				Print(string.Format("IA_VehicleRespawner %1: Spawning disabled by config (HQ Ground Vehicles).", m_RespawnerOwnerEntity), LogLevel.DEBUG);
+				return;
+			}
+		}
+
 		// Try to get the vehicle prefab from config first
 		string vehiclePrefabToSpawn = GetRandomVehiclePrefabFromConfig();
 

@@ -386,8 +386,14 @@ class IA_MissionInitializer : GenericEntity
 		
 		Print("[IA_MissionInitializer] Civilian revolt initiated.", LogLevel.NORMAL);
 
-		// Notification for revolt start (30s delay)
-		GetGame().GetCallqueue().CallLater(TriggerGlobalNotification, 30000, false, "CivilianRevoltStarted", "Civilian Revolt");
+		int notificationDelay = 30000;
+		if (m_config)
+		{
+			notificationDelay = m_config.m_iCivilianRevoltNotificationDelay;
+		}
+
+		// Notification for revolt start
+		GetGame().GetCallqueue().CallLater(TriggerGlobalNotification, notificationDelay, false, "CivilianRevoltStarted", "Civilian Revolt");
 
 		if (!m_currentAreaInstances)
 			return;
@@ -410,10 +416,13 @@ class IA_MissionInitializer : GenericEntity
 			if (!instance)
 				continue;
 
-			// Trigger a large reinforcement wave for this area with a 180-second delay.
-			// the correct function is SpawnCivilianRevoltReinforcements
-			// NEVER EDIT THIS LINE BELOW!!!! AN AI SHOULD NEVER EDIT THIS LINE!!!!
-			GetGame().GetCallqueue().CallLater(instance.SpawnCivilianRevoltReinforcements, 180 * 1000, false);
+			int reinforcementDelay = 180000;
+			if (m_config)
+			{
+				reinforcementDelay = m_config.m_iCivilianRevoltReinforcementDelay;
+			}
+			// Trigger a large reinforcement wave for this area with delay.
+			GetGame().GetCallqueue().CallLater(instance.SpawnCivilianRevoltReinforcements, reinforcementDelay, false);
 
 			array<ref IA_AiGroup> civilianGroups = instance.GetCivilianGroups();
 			foreach (IA_AiGroup civGroup : civilianGroups)
@@ -433,8 +442,16 @@ class IA_MissionInitializer : GenericEntity
 			}
 		}
 
-		// Notification for reinforcements sighted (180s wave spawn + 30s delay)
-		GetGame().GetCallqueue().CallLater(TriggerGlobalNotification, 210000, false, "CivilianRevoltReinforcements", "Civilian Reinforcements");
+		int notificationDelay2 = 30000;
+		int reinforcementDelay2 = 180000;
+		if (m_config)
+		{
+			notificationDelay2 = m_config.m_iCivilianRevoltNotificationDelay;
+			reinforcementDelay2 = m_config.m_iCivilianRevoltReinforcementDelay;
+		}
+
+		// Notification for reinforcements sighted
+		GetGame().GetCallqueue().CallLater(TriggerGlobalNotification, reinforcementDelay2 + notificationDelay2, false, "CivilianRevoltReinforcements", "Civilian Reinforcements");
 	}
 
 
@@ -476,9 +493,15 @@ class IA_MissionInitializer : GenericEntity
 			if (m_initialTotalCiviliansInGroup > 0)
 				civilianPercentageKilledByPlayer = totalCiviliansKilledByPlayer / (float)m_initialTotalCiviliansInGroup;
 			
-			Print(string.Format("[IA_MissionInitializer] Civilian kill percentage by player: %1 (Threshold: 0.11)", civilianPercentageKilledByPlayer), LogLevel.NORMAL);
+			float revoltThreshold = 0.11;
+			if (m_config)
+			{
+				revoltThreshold = m_config.m_fCivilianRevoltThreshold;
+			}
 			
-			if (civilianPercentageKilledByPlayer >= 0.11)
+			Print(string.Format("[IA_MissionInitializer] Civilian kill percentage by player: %1 (Threshold: %2)", civilianPercentageKilledByPlayer, revoltThreshold), LogLevel.NORMAL);
+			
+			if (civilianPercentageKilledByPlayer >= revoltThreshold)
 			{
 				CivilianRevoltInit();
 				// More than 16% of civilians have been killed by players.
