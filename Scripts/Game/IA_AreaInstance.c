@@ -637,6 +637,40 @@ class IA_AreaInstance
         Print(string.Format("[AreaInstance] Reinforcements for area %1 have been cancelled by an external source (e.g., generator destroyed).", m_area.GetName()), LogLevel.DEBUG);
     }
 
+    // --- BEGIN ADDED: Force Finish Method for cleanup ---
+    void ForceFinish()
+    {
+        Print(string.Format("[AreaInstance] ForceFinish called for area %1. Cleaning up tasks and entities.", m_area.GetName()), LogLevel.WARNING);
+        
+        // 1. Clear Task Queue
+        if (m_taskQueue)
+        {
+            foreach (SCR_TriggerTask task : m_taskQueue)
+            {
+                if (task) IA_Game.AddEntityToGc(task);
+            }
+            m_taskQueue.Clear();
+        }
+        
+        // 2. Remove Active Task
+        if (m_currentTaskEntity)
+        {
+            IA_Game.AddEntityToGc(m_currentTaskEntity);
+            m_currentTaskEntity = null;
+        }
+        
+        // 3. Cleanup Military AI and Vehicles (Immediate)
+        Cleanup();
+        
+        // 4. Schedule Civilian Cleanup (Immediate/Short delay)
+        ScheduleCivilianCleanup(100);
+        
+        // 5. Ensure Defend/Radio Tower modes are off
+        SetDefendMode(false);
+        SetRadioTowerDefenseActive(false);
+    }
+    // --- END ADDED ---
+
     // --- Add a group to the military list ---
     void AddMilitaryGroup(IA_AiGroup group)
     {
@@ -4581,6 +4615,26 @@ class IA_AreaInstance
                 grp.SetTacticalState(initialState, targetPos, null, true);
                 
                 AddMilitaryGroup(grp); // This will now preserve defend mode if set
+                
+                // For standard counter-attacks (not defend mode), insert a randomized staging
+                // waypoint ~300m from the OBJ center before the group advances to the objective.
+                // This must happen AFTER AddMilitaryGroup, which re-runs SetTacticalState and
+                // would otherwise wipe any waypoints set before it. We also fix m_assignedGroupStates
+                // here so MilitaryOrderTask's enforcement check (actualState != finalAssignedState)
+                // doesn't fire and wipe the queue on the next tick.
+                // PriorityMove (priority 60) outranks SearchAndDestroy (priority 35), guaranteeing
+                // the staging move executes before the OBJ attack order.
+                if (!m_isInDefendMode || m_defendTarget == vector.Zero)
+                {
+                    vector stagingPos = IA_Game.rng.GenerateRandomPointInRadius(250, 350, targetPos);
+                    stagingPos[1] = GetGame().GetWorld().GetSurfaceY(stagingPos[0], stagingPos[2]);
+                    m_assignedGroupStates.Set(grp, IA_GroupTacticalState.Attacking);
+                    grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+                    grp.RemoveAllOrders();
+                    grp.AddOrder(stagingPos, IA_AiOrder.PriorityMove, true);
+                    grp.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, false);
+                    Print(string.Format("[AreaInstance.SpawnReinforcementWave] Staging waypoint at %1 (~300m from OBJ %2).", stagingPos.ToString(), targetPos.ToString()), LogLevel.DEBUG);
+                }
                 m_reinforcementGroupsSpawned++;
                 spawnedAny = true;
                 
