@@ -41,6 +41,23 @@ class IA_MissionInitializer : GenericEntity
 	[RplProp()]
 	private bool m_bEnforceRoleRestrictionsReplicated = false;
 
+	// --- BEGIN ADDED: Replicated Config Options ---
+	[RplProp()]
+	float m_fCivilianCountMultiplier_Rpl = 1.0;
+	
+	[RplProp()]
+	float m_fAIScaleMultiplier_Rpl = 1.0;
+	
+	[RplProp()]
+	bool m_bDisableHQHelipads_Rpl = false;
+	
+	[RplProp()]
+	bool m_bDisableHQGroundVehicles_Rpl = false;
+	
+	[RplProp()]
+	int m_iArtilleryCooldown_Rpl = 300;
+	// --- END ADDED ---
+
 	// Static reference for global access
 	static IA_MissionInitializer s_instance;
 
@@ -681,27 +698,40 @@ class IA_MissionInitializer : GenericEntity
 			}
 			// --- END ADDED ---
 
-			// --- BEGIN ADDED: Trigger RTB notification only when actually proceeding to next zone ---
-			// Only send RTB notification if we're not starting a defend mission
-			TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area");
-			// --- END ADDED ---
-			
-			if (m_currentAreaGroupManager)
-			{
-				delete m_currentAreaGroupManager;
-				m_currentAreaGroupManager = null;
-			}
-
-			m_currentIndex++;
-			if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
-			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Stop checking this group
-			GetGame().GetCallqueue().CallLater(ProceedToNextZone, Math.RandomInt(45,90)*1000, false); // Start next group
+			SuccessZoneComplete(currentGroup);
 		}
 		else {
 			//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " still needs " + (amountOfZones - actualCompletedZones) + " more zones to complete. Will re-check.", LogLevel.NORMAL);
 			// Callqueue will call this method again.
 		}
 	}
+	
+	// --- BEGIN ADDED: Extracted success logic for reuse ---
+	void SuccessZoneComplete(int currentGroup, int delayMs = -1)
+	{
+		// --- BEGIN ADDED: Trigger RTB notification only when actually proceeding to next zone ---
+		// Only send RTB notification if we're not starting a defend mission
+		TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area");
+		// --- END ADDED ---
+		
+		if (m_currentAreaGroupManager)
+		{
+			delete m_currentAreaGroupManager;
+			m_currentAreaGroupManager = null;
+		}
+
+		m_currentIndex++;
+		if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
+		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Stop checking this group
+		
+		int finalDelay = delayMs;
+		if (finalDelay < 0)
+		    finalDelay = Math.RandomInt(45,90)*1000;
+		    
+		GetGame().GetCallqueue().CallLater(ProceedToNextZone, finalDelay, false); // Start next group
+	
+	}
+	// --- END ADDED ---
 
 	// --- BEGIN ADDED: Method to trigger global area completed notification ---
 	void TriggerGlobalNotification(string messageType, string taskTitle)
@@ -739,6 +769,18 @@ class IA_MissionInitializer : GenericEntity
         // Set this instance as the reference for IA_AreaMarker
         IA_AreaMarker.SetMissionInitializer(this);
 
+		// --- BEGIN ADDED: Initialize Replicated Config ---
+		if (m_config)
+		{
+			m_fCivilianCountMultiplier_Rpl = m_config.m_fCivilianCountMultiplier;
+			m_fAIScaleMultiplier_Rpl = m_config.m_fAIScaleMultiplier;
+			m_bDisableHQHelipads_Rpl = m_config.m_bDisableHQHelipads;
+			m_bDisableHQGroundVehicles_Rpl = m_config.m_bDisableHQGroundVehicles;
+			m_iArtilleryCooldown_Rpl = m_config.m_iArtilleryCooldown;
+			Replication.BumpMe();
+		}
+		// --- END ADDED ---
+
         // 1) Check that IA_ReplicationWorkaround is present.
         if (!IA_ReplicationWorkaround.Instance())
         {
@@ -760,6 +802,7 @@ class IA_MissionInitializer : GenericEntity
 		
 		
 		GetGame().GetCallqueue().CallLater(InitializeNow, 200, false);
+		
 		
 		
       
@@ -797,6 +840,7 @@ class IA_MissionInitializer : GenericEntity
         float radius = marker.GetRadius();
 
         Print("[DEBUG_ZONE_GROUP_DELAYED] Initializing zone: " + name + " in group " + currentGroup, LogLevel.NORMAL);
+		
 
         IA_Area area = IA_Area.Create(name, marker.GetAreaType(), pos, radius);
 		
@@ -859,6 +903,71 @@ class IA_MissionInitializer : GenericEntity
         IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR, nextAreaFaction);
     }
 
+	// --- BEGIN ADDED: Config Update RPC ---
+	// Public wrapper for RPC call
+	void UpdateConfig(float civCount, float aiScale, bool disableHeli, bool disableGround, int artyCooldown)
+	{
+		Rpc(RPC_UpdateConfig, civCount, aiScale, disableHeli, disableGround, artyCooldown);
+	}
+
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	void RPC_UpdateConfig(float civCount, float aiScale, bool disableHeli, bool disableGround, int artyCooldown)
+	{
+		Print(string.Format("[IA_MissionInitializer] RPC_UpdateConfig received: Civ%1, AI%2, Heli%3, Gnd%4, Arty%5", civCount, aiScale, disableHeli, disableGround, artyCooldown), LogLevel.NORMAL);
+		
+		if (m_config)
+		{
+			m_config.m_fCivilianCountMultiplier = civCount;
+			m_config.m_fAIScaleMultiplier = aiScale;
+			m_config.m_bDisableHQHelipads = disableHeli;
+			m_config.m_bDisableHQGroundVehicles = disableGround;
+			m_config.m_iArtilleryCooldown = artyCooldown;
+		}
+		
+		m_fCivilianCountMultiplier_Rpl = civCount;
+		m_fAIScaleMultiplier_Rpl = aiScale;
+		m_bDisableHQHelipads_Rpl = disableHeli;
+		m_bDisableHQGroundVehicles_Rpl = disableGround;
+		m_iArtilleryCooldown_Rpl = artyCooldown;
+		
+		Replication.BumpMe();
+	}
+	
+	// Public wrapper for RPC call
+	void ForceCompleteZone()
+	{
+		Rpc(RPC_ForceCompleteZone);
+	}
+	
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RPC_ForceCompleteZone()
+	{
+		Print("[IA_MissionInitializer] RPC_ForceCompleteZone received. Forcing zone completion.", LogLevel.WARNING);
+		
+		// Ensure ProceedToNextZone logic can run
+		if (m_currentAreaInstances)
+		{
+			foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
+			{
+				if (instance)
+				{
+					instance.ForceFinish(); 
+				}
+			}
+		}
+
+		int groupID = -1;
+		
+		// If groupsArray is accessible
+		if (groupsArray && groupsArray.IsIndexValid(m_currentIndex))
+			groupID = groupsArray[m_currentIndex];
+		else 
+			groupID = m_currentIndex; // Fallback
+
+		SuccessZoneComplete(groupID, 2000); // 2 second delay for forced completion
+	}
+	// --- END ADDED ---
+
 	void LoadConfig()
 	{
 		if (m_configResource.IsEmpty())
@@ -907,7 +1016,26 @@ class IA_MissionInitializer : GenericEntity
 	static IA_Config GetGlobalConfig()
 	{
 		if (s_instance)
-			return s_instance.GetConfig();
+		{
+			if (Replication.IsServer())
+			{
+				return s_instance.m_config;
+			}
+			else
+			{
+				// On client, construct a transient config object with replicated values
+				IA_Config clientConfig = new IA_Config();
+				clientConfig.m_fCivilianCountMultiplier = s_instance.m_fCivilianCountMultiplier_Rpl;
+				clientConfig.m_fAIScaleMultiplier = s_instance.m_fAIScaleMultiplier_Rpl;
+				clientConfig.m_bDisableHQHelipads = s_instance.m_bDisableHQHelipads_Rpl;
+				clientConfig.m_bDisableHQGroundVehicles = s_instance.m_bDisableHQGroundVehicles_Rpl;
+				clientConfig.m_iArtilleryCooldown = s_instance.m_iArtilleryCooldown_Rpl;
+				// Config isn't fully replicated, so arrays will be empty on client, 
+				// but that's fine as Spawners run on Server usually.
+				// If client needs arrays, we'd need more complex replication.
+				return clientConfig;
+			}
+		}
 		return null;
 	}
 	

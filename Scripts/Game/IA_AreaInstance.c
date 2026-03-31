@@ -75,8 +75,8 @@ class IA_AreaInstance
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
     private int m_reinforcementGroupsSpawned = 0;     // Groups spawned in this attack cycle
     private int m_reinforcementWaveDelayTimer = 0;    // Ticks until next wave
-    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = Math.RandomInt(8,16);
-    private const int REINFORCEMENT_WAVE_DELAY_TICKS = Math.RandomInt(10,19);   
+    private const int INITIAL_REINFORCEMENT_DELAY_TICKS = Math.RandomInt(3,6);
+    private const int REINFORCEMENT_WAVE_DELAY_TICKS = Math.RandomInt(4,8);   
     // --- END ADDED ---
 
     // --- Vehicle Reinforcement System ---
@@ -853,7 +853,7 @@ class IA_AreaInstance
 
         // --- BEGIN ADDED: Calculate scaled groups per wave ---
         float scaleFactor = IA_Game.GetAIScaleFactor();
-        const int baseGroupsPerWave = 1;
+        const int baseGroupsPerWave = 2;
         int scaledGroupsToAttempt = Math.Max(1, Math.Round(baseGroupsPerWave * (2*scaleFactor)));
         // --- END ADDED ---
 
@@ -872,13 +872,15 @@ class IA_AreaInstance
 
                 if (initialWaveSpawned)
                 {
-                     // First wave spawned successfully
-                     m_reinforcements = IA_ReinforcementState.Done;
+                    // First wave spawned — keep sending waves until the quota is exhausted
+                    m_reinforcements = IA_ReinforcementState.SpawningWaves;
+                    m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS;
                 }
                 else
                 {
-                     // Initial wave failed (e.g., no safe spot).
-                     m_reinforcements = IA_ReinforcementState.Done; // Ensure it's Done even if the wave fails, per one-attempt logic
+                    // Initial wave failed to find a safe spawn spot — retry on the next countdown
+                    m_reinforcements = IA_ReinforcementState.SpawningWaves;
+                    m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS;
                 }
                 m_reinforcementTimer = 0; // Reset initial countdown timer regardless
             }
@@ -1535,6 +1537,16 @@ class IA_AreaInstance
             int groupAliveCount = g.GetAliveCount();
             totalAliveUnits += groupAliveCount;
 
+            // Approaching groups count as Attackers for role-balance purposes so the
+            // distribution system doesn't try to fill "missing attacker" slots by
+            // converting defenders while the approaching group is still en route.
+            if (assignedState == IA_GroupTacticalState.Approaching)
+            {
+                currentAttackers++;
+                attackingAliveUnits += groupAliveCount;
+                continue;
+            }
+
             // Skip groups already marked for updates due to peril
             if (needsRoleUpdate.Contains(g)) 
             {
@@ -2035,7 +2047,32 @@ class IA_AreaInstance
             IA_GroupTacticalState finalAssignedState = m_assignedGroupStates.Get(g); // Get final role for this cycle
             IA_GroupTacticalState actualState = g.GetTacticalState();
             vector targetForState = primaryThreatLocation; // Default
-            
+
+            // --- Approaching → Attacking auto-transition ---
+            // When an Approaching group has consumed all its arc/staging waypoints it is at the
+            // jump-off point and ready to assault.  Promote it to Attacking so normal combat
+            // logic takes over and issues a fresh S&D toward the current threat position.
+            if (finalAssignedState == IA_GroupTacticalState.Approaching && !g.HasActiveWaypoint())
+            {
+                vector assaultTarget;
+                if (primaryThreatLocation != vector.Zero)
+                    assaultTarget = primaryThreatLocation;
+                else
+                    assaultTarget = m_area.GetOrigin();
+                m_assignedGroupStates.Set(g, IA_GroupTacticalState.Attacking);
+                m_stateStartTimes.Set(g, currentTime);
+                m_stateStability.Set(g, 0);
+                g.SetTacticalState(IA_GroupTacticalState.Attacking, assaultTarget, null, true);
+                Print(string.Format("[MilitaryOrderTask] Approaching group at %1 reached jump-off, transitioning to Attacking toward %2.",
+                    g.GetOrigin().ToString(), assaultTarget.ToString()), LogLevel.DEBUG);
+                continue;
+            }
+
+            // Skip all further processing for groups still in the Approaching phase —
+            // they manage their own waypoints until the transition above fires.
+            if (finalAssignedState == IA_GroupTacticalState.Approaching)
+                continue;
+
             // --- BEGIN ADDED: Special handling for attacker reinforcement ---
             // Check if we're critically short on attackers and this group could help
             if (g.GetAliveCount() >= 3 && isUnderAttack && actualState != IA_GroupTacticalState.Attacking)
@@ -2067,8 +2104,11 @@ class IA_AreaInstance
             // --- END ADDED ---
 
             // --- BEGIN ADDED: Threat position update for attackers and flankers ---
-            // Check if this group is currently an attacker or flanker with valid threat data
+            // Check if this group is currently an attacker or flanker with valid threat data.
+            // Approaching groups are excluded — they follow their pre-planned arc route and
+            // must not have their waypoints redirected mid-approach.
             if ((actualState == IA_GroupTacticalState.Attacking || actualState == IA_GroupTacticalState.Flanking) && 
+                actualState != IA_GroupTacticalState.Approaching &&
                 isUnderAttack && validThreatLocation)
             {
                 // Get the currently assigned threat position
@@ -2393,9 +2433,13 @@ class IA_AreaInstance
             }
 
             
-            // Random order refresh time between 35-55 seconds instead of fixed 45
+            // Random order refresh time between 35-55 seconds instead of fixed 45.
+            // Only fire when the group has NO active waypoints — wiping mid-execution would
+            // destroy multi-step approach sequences (arc routing + staging + S&D) before they
+            // complete. Groups with live waypoints are doing something intentional; let them finish.
+            // The threat-update block above already handles re-ordering once waypoints are exhausted.
             int randomOrderRefresh = 35 + IA_Game.rng.RandInt(0, 20);
-            if (g.TimeSinceLastOrder() >= randomOrderRefresh)
+            if (!g.HasActiveWaypoint() && g.TimeSinceLastOrder() >= randomOrderRefresh)
             {
                 g.RemoveAllOrders();
             }
@@ -2473,11 +2517,13 @@ class IA_AreaInstance
         {
             if (!g || g.GetAliveCount() == 0 || g.IsDriving()) continue;
             
-            // Get the current state and check for attacking/flanking groups
+            // Get the current state and check for attacking/flanking groups.
+            // Approaching groups are fully protected from contact-timeout conversion —
+            // they have their own route and will self-transition to Attacking when done.
             IA_GroupTacticalState currentGrpState = g.GetTacticalState();
             bool isOffensive = (currentGrpState == IA_GroupTacticalState.Attacking || currentGrpState == IA_GroupTacticalState.Flanking);
             
-            if (isOffensive)
+            if (isOffensive && currentGrpState != IA_GroupTacticalState.Approaching)
             {
                 // Check when this group was last under fire
                 int lastFireTime = 0;
@@ -3575,6 +3621,12 @@ class IA_AreaInstance
         {
             if (!group || !group.IsSpawned() || group.GetAliveCount() == 0 || group.IsDriving())
                 continue;
+            
+            if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
+            {
+                processedGroups.Insert(group, true);
+                continue;
+            }
                 
             // Check if the group already has active orders and has been stable in its state
             // If it's been in a tactical state for a while, we may want to avoid disrupting it
@@ -3689,6 +3741,9 @@ class IA_AreaInstance
     {
 		
         if (!group)
+            return;
+        
+        if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
             return;
         
         // --- BEGIN ADDED: Skip groups in defend mode ---
@@ -3826,6 +3881,9 @@ class IA_AreaInstance
         if (!group)
             return;
         
+        if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
+            return;
+        
         // --- BEGIN ADDED: Skip groups in defend mode ---
         if (m_isInDefendMode && group.IsInDefendMode())
         {
@@ -3910,6 +3968,9 @@ class IA_AreaInstance
     private void ApplyGroupMemberKilledReactionToGroup(IA_AiGroup group, IA_AIReactionState reaction)
     {
         if (!group || !reaction)
+            return;
+        
+        if (group.GetTacticalState() == IA_GroupTacticalState.Approaching && group.GetAliveCount() > 2)
             return;
         
         // Update legacy engagement system
@@ -4498,8 +4559,8 @@ class IA_AreaInstance
                 
                 // 1. Calculate potential Spawn Position (inside attempt loop)
                 // Increase search radius with each attempt
-                float spawnMinRadius = 90 + (attempt*40);
-                float spawnMaxRadius = 320 + (attempt*40);
+                float spawnMinRadius = 220 + (attempt*40);
+                float spawnMaxRadius = 420 + (attempt*40);
                 
                 // --- BEGIN MODIFIED: Use defend target as center when in defend mode ---
                 vector center;
@@ -4616,24 +4677,93 @@ class IA_AreaInstance
                 
                 AddMilitaryGroup(grp); // This will now preserve defend mode if set
                 
-                // For standard counter-attacks (not defend mode), insert a randomized staging
-                // waypoint ~300m from the OBJ center before the group advances to the objective.
-                // This must happen AFTER AddMilitaryGroup, which re-runs SetTacticalState and
-                // would otherwise wipe any waypoints set before it. We also fix m_assignedGroupStates
-                // here so MilitaryOrderTask's enforcement check (actualState != finalAssignedState)
-                // doesn't fire and wipe the queue on the next tick.
-                // PriorityMove (priority 60) outranks SearchAndDestroy (priority 35), guaranteeing
-                // the staging move executes before the OBJ attack order.
+                // For standard counter-attacks (not defend mode), route the group around the OBJ
+                // perimeter to a random staging point ~300m out before assaulting the objective.
+                // This must happen AFTER AddMilitaryGroup (which re-runs SetTacticalState and would
+                // wipe any earlier waypoints). We also fix m_assignedGroupStates so MilitaryOrderTask's
+                // enforcement check (actualState != finalAssignedState) stays false on the next tick.
+                //
+                // Arc routing: we compute how many degrees the group needs to sweep around the OBJ
+                // from its spawn angle to its staging angle. If that arc is > 90° the direct path
+                // cuts through the AO, so we add 1 or 2 intermediate waypoints at a slightly wider
+                // radius (380m) to keep the group on the outside of the objective zone the whole time.
                 if (!m_isInDefendMode || m_defendTarget == vector.Zero)
                 {
+                    // Random staging angle – full 360°
                     vector stagingPos = IA_Game.rng.GenerateRandomPointInRadius(250, 350, targetPos);
                     stagingPos[1] = GetGame().GetWorld().GetSurfaceY(stagingPos[0], stagingPos[2]);
-                    m_assignedGroupStates.Set(grp, IA_GroupTacticalState.Attacking);
-                    grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+
+                    // Normalized 2D direction vectors (X, Z plane) from OBJ center outward
+                    float spawnDX = spawnPos[0] - targetPos[0];
+                    float spawnDZ = spawnPos[2] - targetPos[2];
+                    float spawnLen = Math.Sqrt(spawnDX * spawnDX + spawnDZ * spawnDZ);
+                    if (spawnLen < 1) spawnLen = 1;
+                    float sx = spawnDX / spawnLen;
+                    float sz = spawnDZ / spawnLen;
+
+                    float stagDX = stagingPos[0] - targetPos[0];
+                    float stagDZ = stagingPos[2] - targetPos[2];
+                    float stagLen = Math.Sqrt(stagDX * stagDX + stagDZ * stagDZ);
+                    if (stagLen < 1) stagLen = 1;
+                    float ex = stagDX / stagLen;
+                    float ez = stagDZ / stagLen;
+
+                    // Dot product → magnitude of arc angle (0..PI)
+                    float dot = sx * ex + sz * ez;
+                    if (dot > 1.0) dot = 1.0;
+                    if (dot < -1.0) dot = -1.0;
+                    float totalAngle = Math.Acos(dot);
+
+                    // Cross product (2D) gives rotation sign: > 0 = CCW, < 0 = CW
+                    float cross = sx * ez - sz * ex;
+                    float signedAngle;
+                    if (cross >= 0)
+                        signedAngle = totalAngle;
+                    else
+                        signedAngle = -totalAngle;
+
+                    // Routing radius sits just outside the staging zone so groups arc clear of the AO
+                    float routingRadius = 400;
+
+                    // Approaching is a dedicated state that bypasses all MilitaryOrderTask
+                    // interference (contact timeouts, threat re-ordering, enforcement) while the
+                    // group follows its arc routing to the jump-off point.  It auto-transitions
+                    // to Attacking once waypoints are exhausted (handled in MilitaryOrderTask).
+                    m_assignedGroupStates.Set(grp, IA_GroupTacticalState.Approaching);
+                    grp.SetTacticalState(IA_GroupTacticalState.Approaching, targetPos, null, true);
                     grp.RemoveAllOrders();
+
+                    // Add arc waypoints when the direct path would cut through the objective zone
+                    int numArcPoints = 0;
+                    if (totalAngle > Math.PI * 0.833)       // > ~150°: two arc points
+                        numArcPoints = 2;
+                    else if (totalAngle > Math.PI * 0.5)    // >  ~90°: one arc point
+                        numArcPoints = 1;
+
+                    for (int arcIdx = 1; arcIdx <= numArcPoints; arcIdx++)
+                    {
+                        float t = arcIdx / (numArcPoints + 1.0);
+                        float arcAngle = signedAngle * t;
+                        float cosA = Math.Cos(arcAngle);
+                        float sinA = Math.Sin(arcAngle);
+
+                        // Rotate spawn direction by arcAngle to get intermediate direction
+                        float rx = sx * cosA - sz * sinA;
+                        float rz = sx * sinA + sz * cosA;
+
+                        vector arcPos;
+                        arcPos[0] = targetPos[0] + rx * routingRadius;
+                        arcPos[2] = targetPos[2] + rz * routingRadius;
+                        arcPos[1] = GetGame().GetWorld().GetSurfaceY(arcPos[0], arcPos[2]);
+                        grp.AddOrder(arcPos, IA_AiOrder.PriorityMove, true);
+                    }
+
+                    // Final staging position, then assault the OBJ
                     grp.AddOrder(stagingPos, IA_AiOrder.PriorityMove, true);
                     grp.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, false);
-                    Print(string.Format("[AreaInstance.SpawnReinforcementWave] Staging waypoint at %1 (~300m from OBJ %2).", stagingPos.ToString(), targetPos.ToString()), LogLevel.DEBUG);
+
+                    Print(string.Format("[SpawnReinforcementWave] Staging at %1 (~300m from OBJ), arc: %2° (%3 routing pts).",
+                        stagingPos.ToString(), Math.Round(totalAngle * 180.0 / Math.PI), numArcPoints), LogLevel.DEBUG);
                 }
                 m_reinforcementGroupsSpawned++;
                 spawnedAny = true;

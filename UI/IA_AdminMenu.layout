@@ -1,0 +1,466 @@
+FrameWidgetClass {
+ Name "Root"
+ {
+  BlurWidgetClass "{686635B33679E8D7}" : "{352322057FD78AE1}UI/layouts/WidgetLibrary/BaseElements/WLib_Blur.layout" {
+   Name "Blur1"
+   Slot FrameWidgetSlot "{5A2CA7C4E49A8180}" {
+    Anchor 0 0 1 1
+    PositionX 0
+    OffsetLeft 0
+    PositionY 0
+    OffsetTop 0
+    SizeX -1675.2
+    OffsetRight 0
+    SizeY -956
+    OffsetBottom 0
+   }
+   "Z Order" -1
+   Opacity 0.98
+   Color 0.044 0.044 0.044 1
+   Intensity 0.4
+   "Smooth Border" 0 0 0 0
+  }
+  ImageWidgetClass "{686635B3219AB151}" {
+   Name "Image0"
+   Slot FrameWidgetSlot "{686635B3219AB05E}" {
+    PositionX 0
+    OffsetLeft 0
+    PositionY 0
+    OffsetTop 0
+    SizeX 1920.52
+    OffsetRight -1920.52
+    SizeY 46.689
+    OffsetBottom -46.689
+   }
+   "Is Visible" 0
+   Color 0 0 0 1
+  }
+  VerticalLayoutWidgetClass "{686635B307F19346}" {
+   Name "VerticalLayout0"
+   Slot FrameWidgetSlot "{686635B307F18B12}" {
+    Anchor 0 0.05 0.05 0.95
+    PositionX 0
+    PositionY 945.965
+    SizeX 4
+    OffsetRight 0
+    SizeY -1941.97
+    OffsetBottom 0
+   }
+   {
+    ImageWidgetClass "{686635B37AEB08D9}" {
+     Name "Image0"
+     Slot LayoutSlot "{68663E293B2C4617}" {
+     }
+     "Is Visible" 0
+    }
+    FrameWidgetClass "{686635B37B2146BF}" {
+     Name "Frame0"
+     Slot LayoutSlot "{68663E293B2C4625}" {
+     }
+     "Is Visible" 0
+    }
+   }
+  }
+  VerticalLayoutWidgetClass "{68663E290EA49CF0}" {
+   Name "VerticalLayout1"
+   Slot FrameWidgetSlot "{68663E290EA4E2F7}" {
+    Anchor 0.95 0.05 1 0.95
+    PositionX -1824
+    OffsetLeft 0
+    PositionY -54
+    OffsetTop 0
+    SizeX 4
+    OffsetRight 0
+    SizeY -942
+    OffsetBottom 0
+   }
+  }
+  VerticalLayoutWidgetClass "{68663E295882E538}" {
+   Name "VerticalLayout2"
+   Slot FrameWidgetSlot "{68663E295882E5B3}" {
+    Anchor 0.05 0.05 0.95 0.95
+    PositionX 3.312
+    OffsetLeft 3.312
+    PositionY -0.89
+    OffsetTop -0.89
+    SizeX 0
+    OffsetRight -3.312
+    SizeY 8.956
+    OffsetBottom -8.066
+   }
+   {
+    SizeLayoutWidgetClass "{68663E29A69B9C53}" {
+     Name "SizeLayout0"
+     Slot LayoutSlot "{68664C48366E8EED}" {
+      HorizontalAlign 1
+      VerticalAlign 1
+     }
+     {
+      OverlayWidgetClass "{68663E29939761BD}" {
+       Name "Overlay0"
+       Slot AlignableSlot "{68663E2993976025}" {
+        HorizontalAlign 3
+        VerticalAlign 3
+       }
+       {
+        TextWidgetClass "{68663E2982D69E0C}" {
+         Name "Text0"
+         Slot OverlayWidgetSlot "{68664C48366E8EAF}" {
+          HorizontalAlign 0
+         }
+         Text "Invade & Annex Config"
+         "Font Size" 32
+         "Min Font Size" 32
+         FontProperties FontProperties "{68663E29F757F022}" {
+          Font "{CD2634D279AB011A}UI/Fonts/Roboto/Roboto_Bold.fnt"
+         }
+        }
+       }
+      }
+     }
+    }
+    FrameWidgetClass "{68664C4A27E9705C}" {
+     Name "Frame0"
+     Slot LayoutSlot "{68664C4075E7AA3B}" {
+      Padding 0 0 0 30
+     }
+    }
+    HorizontalLayoutWidgetClass "{68663E2B0D9098D1}" {
+     Name "HorizontalLayout0"
+     Slot LayoutSlot "{68663E2B0D9098B6}" {
+     }
+     {
+      VerticalLayoutWidgetClass "{68663E29DD14A4AF}" {
+       Name "VerticalLayout0"
+       Slot LayoutSlot "{68664C48366E8177}" {
+        SizeMode Fill
+       }
+       {
+        HorizontalLayoutWidgetClass "{68664C4BEBEB05B3}" {
+         Name "HorizontalLayout0"
+         Slot LayoutSlot "{68664C4BEBEB0594}" {
+          HorizontalAlign 1
+         }
+         {
+          VerticalLayoutWidgetClass "{68663E29DD14A4A8}" {
+           Name "Content0"
+           Slot LayoutSlot "{68664C4075E7AA42}" {
+           }
+           {
+            TextWidgetClass "{68663E29DD14A4A6}" {
+             Name "Text0"
+             Slot LayoutSlot {
+             }
+             Color 1 1 1 1
+             Text "Civilian Count Multiplier"
+             "Font Size" 18
+             "Min Font Size" 18
+            }
+            TextWidgetClass "{68663E29DD14A4A4}" {
+             Name "Text1"
+             Slot LayoutSlot "{686635B59B84759F}" {
+              Padding 0 10 0 0
+             }
+             Color 1 1 1 1
+             Text "AI Scale Multiplier"
+             "Font Size" 18
+             "Min Font Size" 18
+            }
+            TextWidgetClass "{68663E2A28211058}" {
+             Name "Text3"
+             Slot LayoutSlot "{686635B59B84759F}" {
+              Padding 0 10 0 0
+             }
+             Color 1 1 1 1
+             Text "Disable HQ Helicopter Spawns"
+             "Font Size" 18
+             "Min Font Size" 18
+            }
+            TextWidgetClass "{68663E2A23EA87D3}" {
+             Name "Text4"
+             Slot LayoutSlot "{686635B59B84759F}" {
+              Padding 0 10 0 0
+             }
+             Color 1 1 1 1
+             Text "Disable HQ Ground Vehicle Spawns"
+             "Font Size" 18
+             "Min Font Size" 18
+            }
+            TextWidgetClass "{68663E29DD170803}" {
+             Name "Text2"
+             Slot LayoutSlot "{686635B59B846B09}" {
+              Padding 0 10 0 0
+             }
+             Color 1 1 1 1
+             Text "Artillery Cooldown (seconds)"
+             "Font Size" 18
+             "Min Font Size" 18
+            }
+           }
+          }
+          VerticalLayoutWidgetClass "{68663E2B076309A2}" {
+           Name "Content"
+           Slot LayoutSlot "{68664C4075E7AAE6}" {
+           }
+           {
+            EditBoxWidgetClass "{68663E2B0763C3A9}" {
+             Name "IACivCountEdit"
+             Slot LayoutSlot {
+             }
+             "Use placeholder text" 1
+             "Placeholder text" "1"
+             "Horizontal alignment" Center
+             FontProperties FontProperties "{68663E2D6342232A}" {
+             }
+            }
+            FrameWidgetClass "{68663E2AC3DE6F79}" {
+             Name "Frame0"
+             Slot LayoutSlot "{68663E2AC3DE609F}" {
+              Padding 0 0 0 10
+             }
+            }
+            EditBoxWidgetClass "{68663E2B077C6884}" {
+             Name "IAAIScaleEdit"
+             Slot LayoutSlot "{68663E2B076322BD}" {
+             }
+             "Use placeholder text" 1
+             "Placeholder text" "1"
+             "Horizontal alignment" Center
+             FontProperties FontProperties "{68663E28E334C87E}" {
+              Font "{E2CBA6F76AAA42AF}UI/Fonts/Roboto/Roboto_Regular.fnt"
+             }
+            }
+            CheckBoxWidgetClass "{68663E2B077C6887}" {
+             Name "IADisableHQHeliCheck"
+             Slot LayoutSlot "{686635B59B846CDC}" {
+              HorizontalAlign 1
+              Padding 30 10 -20 10
+              SizeMode Fill
+             }
+             text " "
+             FontProperties FontProperties "{68664C40D871617F}" {
+              Font "{E2CBA6F76AAA42AF}UI/Fonts/Roboto/Roboto_Regular.fnt"
+             }
+            }
+            CheckBoxWidgetClass "{68663E2B077C41F4}" {
+             Name "IADisableHQGroundCheck"
+             Slot LayoutSlot "{686635B59B846BEE}" {
+              HorizontalAlign 1
+              Padding 30 0 -20 10
+              SizeMode Fill
+             }
+             text " "
+             FontProperties FontProperties "{68664C40EE8FF5C5}" {
+              Font "{E2CBA6F76AAA42AF}UI/Fonts/Roboto/Roboto_Regular.fnt"
+             }
+            }
+            EditBoxWidgetClass "{68663E2B077C3928}" {
+             Name "IAArtyCooldownEdit"
+             Color 0.1 0.1 0.1 1
+             "Use placeholder text" 1
+             "Placeholder color" 0.552 0.552 0.552 1
+             "Placeholder text" "300"
+             "Horizontal alignment" Center
+             FontProperties FontProperties "{68664C4B020E1518}" {
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+  HorizontalLayoutWidgetClass "{68663E2CAF1B1186}" {
+   Name "Footer"
+   Slot FrameWidgetSlot "{68663E2CAF1BD9DA}" {
+    Anchor 0.05 0.95 0.95 0.99
+    PositionX 0
+    OffsetLeft 0
+    PositionY 0
+    OffsetTop 0
+    SizeX -14.44
+    OffsetRight 14.44
+    SizeY 0
+    OffsetBottom 0
+   }
+   {
+    ButtonWidgetClass "{68663E2CAF1B1185}" {
+     Name "IACloseButton"
+     Slot LayoutSlot "{5CD8CDC57BE754E8}" {
+      Padding 0 0 25 0
+     }
+     Opacity 0.8
+     Clipping False
+     Color 0 0 0 0
+     components {
+      SCR_InputButtonComponent "{5CD8CE083234EBE9}" {
+       m_sActionName "MenuBack"
+       m_sLabel "Close"
+      }
+     }
+     "no focus" 1
+     {
+      SizeLayoutWidgetClass "{68663E2CAF1B1184}" {
+       Name "SizeLayout"
+       Slot ButtonWidgetSlot "{5CD8CDC5677C8502}" {
+        HorizontalAlign 3
+        VerticalAlign 3
+       }
+       {
+        OverlayWidgetClass "{68663E2CAF1B1183}" {
+         Name "Overlay"
+         Slot AlignableSlot "{5CD8CDC56A5833E9}" {
+          VerticalAlign 3
+          Padding 2 2 2 2
+         }
+         {
+          ImageWidgetClass "{68663E2CAF1B1182}" {
+           Name "Background"
+           Slot OverlayWidgetSlot "{5CD8CE0879873B3F}" {
+            HorizontalAlign 3
+            VerticalAlign 3
+           }
+           Color 0 0 0 0.42
+          }
+          TextWidgetClass "{68663E2CAF1BDBF4}" {
+           Name "Text"
+           Slot OverlayWidgetSlot "{5CD8CE0879873B3F}" {
+            HorizontalAlign 3
+            VerticalAlign 3
+            Padding 25 0 25 0
+           }
+           Text "Close"
+           "Font Size" 20
+           "Horizontal Alignment" Center
+           "Vertical Alignment" Center
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+    ButtonWidgetClass "{68663E2CAF1BDBF7}" {
+     Name "IASaveButton"
+     Slot LayoutSlot "{5CD8CDC57BE754E9}" {
+      Padding 10 0 12 0
+     }
+     Opacity 0.8
+     Clipping False
+     Color 0 0 0 0
+     components {
+      SCR_InputButtonComponent "{5CD8CE083234EBEA}" {
+       m_sActionName "MenuSelect"
+       m_sLabel "Save"
+      }
+     }
+     "no focus" 1
+     {
+      SizeLayoutWidgetClass "{68663E2CAF1BDBF6}" {
+       Name "SizeLayout"
+       Slot ButtonWidgetSlot "{5CD8CDC5677C8503}" {
+        HorizontalAlign 3
+        VerticalAlign 3
+       }
+       {
+        OverlayWidgetClass "{68663E2CAF1BDBF9}" {
+         Name "Overlay"
+         Slot AlignableSlot "{5CD8CDC56A5833EA}" {
+          HorizontalAlign 3
+          VerticalAlign 3
+          Padding 2 2 2 2
+         }
+         {
+          ImageWidgetClass "{68663E2CAF1BEFB6}" {
+           Name "Background"
+           Slot OverlayWidgetSlot "{5CD8CE0879873B40}" {
+            HorizontalAlign 3
+            VerticalAlign 3
+           }
+           Color 0 0 0 0.42
+          }
+          TextWidgetClass "{68663E2CAF1BEFB7}" {
+           Name "Text"
+           Slot OverlayWidgetSlot "{5CD8CE0879873B40}" {
+            HorizontalAlign 3
+            VerticalAlign 3
+            Padding 25 0 25 0
+           }
+           Text "Save"
+           "Font Size" 20
+           "Horizontal Alignment" Center
+           "Vertical Alignment" Center
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+    ButtonWidgetClass "{68664C4870687C09}" {
+     Name "IACompleteMissionButton"
+     Slot LayoutSlot "{5CD8CDC57BE754E9}" {
+      HorizontalAlign 2
+      Padding 0 0 12 0
+      SizeMode Fill
+     }
+     Opacity 0.8
+     Clipping False
+     Color 0 0 0 0
+     components {
+      SCR_InputButtonComponent "{5CD8CE083234EBEA}" {
+       m_sActionName "MenuSelect"
+       m_sLabel "Save"
+      }
+     }
+     "no focus" 1
+     {
+      SizeLayoutWidgetClass "{68664C4870687C16}" {
+       Name "SizeLayout"
+       Slot ButtonWidgetSlot "{5CD8CDC5677C8503}" {
+        HorizontalAlign 3
+        VerticalAlign 3
+       }
+       {
+        OverlayWidgetClass "{68664C4870687C17}" {
+         Name "Overlay"
+         Slot AlignableSlot "{5CD8CDC56A5833EA}" {
+          HorizontalAlign 3
+          VerticalAlign 3
+          Padding 2 2 2 2
+         }
+         {
+          ImageWidgetClass "{68664C4870687C14}" {
+           Name "Background"
+           Slot OverlayWidgetSlot "{5CD8CE0879873B40}" {
+            HorizontalAlign 3
+            VerticalAlign 3
+           }
+           Color 0.4135 0 0 1
+          }
+          TextWidgetClass "{68664C4870687C15}" {
+           Name "Text"
+           Slot OverlayWidgetSlot "{5CD8CE0879873B40}" {
+            HorizontalAlign 3
+            VerticalAlign 3
+            Padding 25 0 25 0
+           }
+           Text "FORCE COMPLETE ALL CURRENT OBJECTIVES"
+           "Font Size" 20
+           "Horizontal Alignment" Center
+           "Vertical Alignment" Center
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

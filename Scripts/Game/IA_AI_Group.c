@@ -20,6 +20,7 @@ enum IA_GroupTacticalState
     DefendPatrol,    // Patrol behavior using defend orders
     InVehicle,       // Group is currently assigned to a vehicle
 	Escaping,      // Unconditionally moving to an escape point, ignoring combat
+    Approaching,   // Counter-attack staging approach: following arc routing to jump-off point before assaulting
 }
 
 
@@ -2665,11 +2666,19 @@ class IA_AiGroup
         m_tacticalState = newState;
         m_tacticalStateTarget = targetPos;
         
-        // Apply orders based on the state
-        RemoveAllOrders();
+        // Apply orders based on the state.
+        // Approaching is the exception: arc routing waypoints were already queued externally,
+        // so we must NOT wipe them here. All other states get a clean slate.
+        if (m_tacticalState != IA_GroupTacticalState.Approaching)
+            RemoveAllOrders();
         
         switch (m_tacticalState)
         {
+            case IA_GroupTacticalState.Approaching:
+                // Waypoints are managed externally (arc routing + staging + S&D).
+                // Do not add or remove any orders here.
+                break;
+                
             case IA_GroupTacticalState.Attacking:
                 if (targetPos != vector.Zero)
                 {

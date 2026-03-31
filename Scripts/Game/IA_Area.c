@@ -110,16 +110,16 @@ static IA_Area CreateTransient(string nm, IA_AreaType t, vector org, float rad)
         // Define total reinforcement groups per area type
         switch (m_type)
         {
-            case IA_AreaType.City:       return 6;
-            case IA_AreaType.Town:       return 4;
-            case IA_AreaType.Military:   return 4;
-            case IA_AreaType.SmallMilitary: return 2;
-            case IA_AreaType.Airport:    return 4;
-            case IA_AreaType.Assassination:    return 4;
-            case IA_AreaType.Docks:      return 3;
-            case IA_AreaType.Property:   return 1;
-            case IA_AreaType.RadioTower: return 2; // Moderate reinforcements for radio tower
-            default:                     return 4; // Default fallback
+            case IA_AreaType.City:          return 12;
+            case IA_AreaType.Town:          return 8;
+            case IA_AreaType.Military:      return 8;
+            case IA_AreaType.SmallMilitary: return 4;
+            case IA_AreaType.Airport:       return 8;
+            case IA_AreaType.Assassination: return 6;
+            case IA_AreaType.Docks:         return 6;
+            case IA_AreaType.Property:      return 2;
+            case IA_AreaType.RadioTower:    return 4;
+            default:                        return 8;
         }
         return 0; // Should not be reached
     }
