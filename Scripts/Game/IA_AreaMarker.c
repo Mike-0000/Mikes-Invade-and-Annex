@@ -831,6 +831,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             
         // Create the entity from the prefab
         EntitySpawnParams params = new EntitySpawnParams();
+        params.TransformMode = ETransformMode.WORLD;
         params.Transform[3] = m_origin; // Set position to marker origin
         
         // Try to spawn the entity
@@ -849,16 +850,16 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         }
         
         // Set up damage event handlers for the spawned entity
-        SCR_DestructibleBuildingComponent destructionComp = SCR_DestructibleBuildingComponent.Cast(m_spawnedEntity.FindComponent(SCR_DestructibleBuildingComponent));
-        if (destructionComp)
+        SCR_DamageManagerComponent damageManager = SCR_DamageManagerComponent.Cast(m_spawnedEntity.FindComponent(SCR_DamageManagerComponent));
+        if (damageManager)
         {
             // Register for the OnDestroyed event using a member function
-            destructionComp.GetOnDamageStateChanged().Insert(OnPrefabDestroyed);
+            damageManager.GetOnDamageStateChanged().Insert(OnPrefabDestroyed);
             Print("[INFO] Radio Tower prefab spawned with destruction tracking at " + m_origin, LogLevel.NORMAL);
         }
         else
         {
-            Print("[WARNING] Radio Tower prefab does not have a destruction component: " + m_prefabToSpawn, LogLevel.WARNING);
+            Print("[WARNING] Radio Tower prefab does not have a damage manager component: " + m_prefabToSpawn, LogLevel.WARNING);
         }
     }
     

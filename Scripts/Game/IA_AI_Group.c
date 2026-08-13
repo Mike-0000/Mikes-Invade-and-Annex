@@ -2620,7 +2620,14 @@ class IA_AiGroup
 
         if (m_group)
         {
-            m_group.DeactivateAllMembers();
+            array<AIAgent> agents = {};
+            m_group.GetAgents(agents);
+            foreach (AIAgent agent : agents)
+            {
+                if (agent)
+                    agent.DeactivateAI();
+            }
+            m_group.DeactivateAI();
         }
         RemoveAllOrders();
         IA_Game.AddEntityToGc(m_group);
