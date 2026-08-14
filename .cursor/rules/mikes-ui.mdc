@@ -1,0 +1,138 @@
+---
+description: Complete Mike's UI (MUI) architecture, APIs, constraints, and known pitfalls. Read this before changing UI instead of rediscovering the compositor. Library lives at F:\Mikes-UI; I&A only consumes it.
+alwaysApply: true
+---
+
+# Mike's UI (MUI)
+
+Workshop-safe custom UI compositor for Arma Reforger. Enfusion has no WebView. MUI is a retained node graph; Enfusion widgets are only the compositor.
+
+**Library:** `F:\Mikes-UI` (addon ID `MikesUI`, GUID `B3F91C6A4E275D08`). Must depend on Arma Reforger `58D0FB3206B6F859`. Edit MUI **there**, not in I&A.
+**Consumer:** this repo (`F:\Mikes-Invade-and-Annex`, GUID `6556458885927F2F`) depends on MikesUI in `addon.gproj`.
+**Consumers:** `IA_AdminConfigMenu`, `IA_StatisticsMenu` (interactive menus via `IA_MikesMenuHost`), `IA_NotificationDisplay` (HUD via `MountPassive`). Pause menu stays vanilla.
+**Prefix:** `MUI_` in the addon, `IA_` in I&A. Never edit GameSources.
+
+Enforce: no ternary. Every `new` script object must live in a `ref` (member, local, or `ref array<ref T>`). Factories `Retain()` into `MUI_Runtime.m_aOwned` before return. No `?:`. Call `super` unless replacing. Server-authoritative gameplay stays in I&A; MUI is client UI.
+
+## I&A consumer pattern
+
+Menus use `IA_MikesMenuHost` (`Scripts/Game/UI/IA_MikesMenuHost.c`) to create the fullscreen host Frame, `Mount`, hide legacy layout children, Tick + `MenuWithEditorContext`, and Unmount. Build Overlay → FxBackdrop → Card with staggered `SetIntro`. Store every control as `protected ref MUI_*`.
+
+HUD toasts (`IA_NotificationDisplay`) do **not** use the menu host. They `MountPassive` on a host with `IGNORE_CURSOR`, build a pass-through overlay → Card, and Tick from `DisplayUpdate`. Never activate `MenuWithEditorContext` on the HUD.
+
+When adding I&A UI: prefer MUI factories over new `.layout` composition. Do not re-investigate MUI internals; use the APIs below. If a compositor bug needs a fix, change `F:\Mikes-UI\Scripts\Game\`.
+
+## Architecture
+
+```
+ChimeraMenuBase.OnMenuUpdate
+  → MUI_Runtime.Tick(dt)          // always paints while mounted
+      Tick tree (intro/hover/focus anim)
+      Layout if dirty (MUI_LayoutEngine)
+      Paint tree onto MUI_RenderSurface
+```
+
+Each `MUI_RenderSurface` = Frame + **CanvasWidget** (fills/strokes/circles) + **pooled TextWidget** layer (glyphs). Clip/scroll nodes get extra surfaces (`CLIPCHILDREN` frames). Hidden **EditBoxWidget** (`MUI_EditBridge`) is the only typing/IME/console VK path.
+
+**Layers (z-order):** backdrop surface (FxBackdrop) → **BlurWidget** under each `MUI_Card` → chrome surface (cards/controls) → clip surfaces (scroll content). Cards use frosted `DeepFrost` fill so the blurred FX shows through. Toggle with `card.SetBlurEnabled(false)` / `SetBlurIntensity(0..1)`.
+
+Layout space = reference/unscaled pixels (`DPIUnscale(GetScreenSize)`). Canvas vertices are **screen pixels** (`workspace.DPIScale`). Text `FrameSlot` stays unscaled. Clip frames use `node.DrawX/Y()` so they follow intro slide.
+
+## Files (`F:\Mikes-UI\Scripts\Game\`)
+
+| Path | Role |
+|---|---|
+| Core/`MUI_Runtime` | Mount / MountPassive / Unmount, Tick, factories, focusables, back, prompts, MeasureText |
+| Core/`MUI_Node` | Scene graph, style helpers, intro/hover/focus, AddChild / ClearChildren, Paint/Tick |
+| Core/`MUI_Style` `MUI_Theme` `MUI_Rect` `MUI_Log` `MUI_Ease` `MUI_ColorUtil` | Style, colors (linear Color via FromSRGBA), easing, Fade/Mix |
+| Layout/`MUI_LayoutKind` `MUI_LayoutEngine` | Overlay / StackVertical / StackHorizontal; Fill/Hug/Exact |
+| Render/`MUI_RenderSurface` `MUI_CanvasRenderer` `MUI_TextRenderer` | Draw API, tessellation, text pool |
+| Input/`MUI_InputRouter` `MUI_EditBridge` | Mouse + MenuUp/Down/Left/Right/Select/Back; hidden EditBox |
+| Components/`MUI_Panel` `MUI_Label` `MUI_Button` `MUI_Toggle` `MUI_TextField` `MUI_ScrollView` `MUI_Row` | Controls |
+| Components/`MUI_Card` `MUI_FxBackdrop` `MUI_LiveHeader` `MUI_Hairline` | Experimental command-uplink look |
+
+## Bootstrapping a menu
+
+Prefer `IA_MikesMenuHost.Open(root, logTag)` in I&A. Manual path:
+
+```
+m_wHost = workspace.CreateWidget(FrameWidgetTypeID, ..., m_wRoot);
+FrameSlot.SetAnchorMin/Max(host, 0,0, 1,1); SetOffsets(0,0,0,0);
+m_Runtime = new MUI_Runtime();
+m_Runtime.Mount(m_wHost);           // interactive menus
+// OR m_Runtime.MountPassive(m_wHost); // HUD: no input, edit bridge, or prompts
+// build tree with Create* factories; store controls as protected ref
+m_Runtime.SetRoot(overlay);
+m_Runtime.GetOnBack().Insert(OnClose);  // menus only
+// every frame (menus):
+m_Runtime.Tick(tDelta);
+GetGame().GetInputManager().ActivateContext("MenuWithEditorContext");
+// OnMenuClose / DisplayStopDraw: Unmount, RemoveFromHierarchy host
+```
+
+Factories (all Retain): `CreatePanel` `CreateLabel` `CreateButton` `CreateToggle` `CreateTextField` `CreateScrollView` `CreateRow` `CreateFxBackdrop` `CreateCard` `CreateLiveHeader` `CreateHairline`.
+
+Consumer members **must** be `protected ref MUI_TextField m_civField;` and locals `ref MUI_Panel overlay = ...`. Missing `ref` → GC → `NULL pointer ... Variable 'child'` in `AddChild`.
+
+## Layout
+
+`MUI_SizeMode`: Fill, Hug, Exact. `MUI_LayoutKind`: Overlay, StackVertical, StackHorizontal.
+
+Measure treats **main-axis Fill as Hug**, then Arrange distributes leftover by `m_fGrow` (Fill with grow 0 counts as flex 1). Cross-axis Fill stretches.
+
+- Vertical stack: width Fill = stretch to parent; height Fill = share leftover.
+- Horizontal stack: height Fill = stretch; width Fill/Grow = share leftover.
+- Overlay: Fill child sizes to inner box; `SetAlign(ax, ay)` 0..1 positions it (0.5,0.5 = center).
+- `MakeOverlay()` — dimmed fullscreen, blocks hits (menus).
+- `MakePassThroughOverlay()` — transparent, does not block hits (HUD).
+
+`SetWidth`/`SetHeight` set Exact. Buttons default Hug width + Grow 1 (equal share in a row). Do **not** set button Width Fill (each would measure as 100% of the row). `MakeDefault()` / `MakeAccent()` / `MakeDanger()` for button variants (tabs use Accent for active, Default for others).
+
+`MUI_Label.SetColor(Color)` for severity tinting. `MUI_Node.ClearChildren()` for rebuilding lists (leaderboard rows).
+
+`MUI_ScrollView` clips children (`m_bClipChildren` + clip `RenderSurface` with `CLIPCHILDREN` / `INHERIT_CLIPPING`). Default Hug height; for lists use **`SetViewportHeight(h)`** (exact, stable parent size) or **`SetMaxViewportHeight(h)`** (hug until max, then scroll). Do not rely on raw `m_fMaxHeight` alone for long data — prefer `SetViewportHeight` so cards/footers never get covered by unscrolled paint.
+
+## Drawing
+
+`MUI_RenderSurface`: `FillRect` `StrokeRect` `DrawLine` `FillCircle` `StrokeCircle` `DrawArc` `FillGradientV` `DrawText`. Colors via `MUI_ColorUtil.Fade(c, opacity)` — never pass two `Fade()` results that would share one scratch; Fade copies. `Create(..., ignoreCursor)` — **required true for HUD/`MountPassive`**: Canvas without `IGNORE_CURSOR` on `ALWAYS_TOP` steals all mouse clicks from native UI.
+
+**Color space:** Enfusion `Color` is **linear**. Author theme tokens with `Color.FromSRGBA(r,g,b,a)` (sRGB bytes), matching vanilla `UIColors`. Never `new Color(0.93, …)` with sRGB floats — that stores sRGB-as-linear and washes midtones when `PackToInt()` encodes linear→sRGB for Canvas/Text.
+
+**Degenerate polygons:** Canvas `DrawPolygon triangulation failed` happens when rounded-rect radius ≥ half the short side (pill/circle collapse). `MUI_CanvasRenderer` clamps radius to `min(w,h)*0.5 - 1`, skips tiny fills (`w/h < 0.75`, circles `r < 1.25`), drops duplicate corner verts. Do not pass radius == half height. Thin bars (2–4px) use radius 0.
+
+Text is bitmap `.fnt` (Roboto Condensed). `MUI_TextRenderer` uses outline+shadow, `SetSharpness(0.35)`, `SetBold(false)` (bold = bold font file), pixel-snapped `FrameSlot`. Sizes in `MUI_Theme`: TITLE 32, BODY 20, SMALL 16.
+
+Paint with `DrawX()`/`DrawY()`/`GetDrawOpacity()`, not raw `m_World`, so intro slide/fade apply.
+
+## Animation
+
+`SetIntro(delay, duration, fromY)` — fromY > 24 uses BackOut else CubicOut. `Tick` lerps hover (also when focused), press, focus, ripple. `GetTime()` is runtime seconds. Runtime **always paints** while mounted (FX). `PlayRipple()` on `HandleActivate`.
+
+## Input
+
+Focusables = `AcceptsClick()` (visible, enabled, `m_bInteractive`). Overlay/panel `m_bBlockHit` eats hits without being a focus target. `MountPassive` skips the input router entirely (HUD-safe).
+
+- Mouse: hit-test, click, wheel on nearest clip/scroll ancestor.
+- Gamepad: `UIConstants.MENU_ACTION_*` (MenuUp/Down/Left/Right/Select/Back, Back_WB). Up/down by Y; left/right by X in the same row. Left/right on `MUI_Toggle` flips it. Select activates; on `MUI_TextField` calls `BeginEditing` (virtual keyboard). Back: `StopEditing` first, else `GetOnBack()`.
+- KBM: focusing a text field attaches EditBox immediately. Gamepad: Select attaches. Prompts are RichText `<action name='MenuSelect'/>` at the bottom of the host.
+
+`GetOnBack().Insert(closeHandler)` from the menu.
+
+## Adding a control
+
+1. New class `MUI_Foo : MUI_Node` in `F:\Mikes-UI\Scripts\Game\Components\MUI_Foo.c`. Set size modes, `m_bInteractive`, colors in constructor (parent `MUI_Node()` runs first, `m_Style` exists).
+2. Override `MeasureIntrinsic` if Hug; `Paint` or `PaintForeground`; `OnClicked` / `OnTick` as needed.
+3. Use `DrawX/Y`, `GetDrawOpacity()`, `PaintFocusRing` for gamepad focus.
+4. Add `CreateFoo` on `MUI_Runtime` that `new`s into a `ref` local, `Retain`, returns.
+5. Consumers store `protected ref MUI_Foo`.
+
+## Do not
+
+- Draw HTML/CSS/WebView, write pixel buffers, or ship a companion exe.
+- Copy engine UI code out of GameSources; reference it.
+- `new MUI_Node()` without `ref` / Retain / AddChild into `ref array<ref MUI_Node>`.
+- TessellateRoundedRectangle (unused vanilla API; we tessellate ourselves).
+- Heavy per-frame `new` without pooling (commands rebuild each paint; nodes/colors must stay ref-rooted).
+- Assume canvas coords = FrameSlot coords without `Px()`/`DPIScale`.
+- Rebuild MUI inside I&A. Consume factories; patch the library in `F:\Mikes-UI`.
+- Use interactive `Mount` + `MenuWithEditorContext` on HUD overlays.
