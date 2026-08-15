@@ -29,6 +29,7 @@ class IA_StatsManager
         
         IA_PlayerKillEvent newEvent = new IA_PlayerKillEvent(killerId, killerName);
         m_aEventQue.Insert(newEvent);
+        AwardSessionKill(killerId, killerName);
     }
     
     void QueuePlayerDeath(string victimId, string victimName)
@@ -41,6 +42,7 @@ class IA_StatsManager
         
         IA_PlayerDeathEvent newEvent = new IA_PlayerDeathEvent(victimId, victimName);
         m_aEventQue.Insert(newEvent);
+        AwardSessionDeath(victimId, victimName);
     }
 
     void QueueHVTKill(string killerId, string killerName)
@@ -53,6 +55,7 @@ class IA_StatsManager
         
         IA_HVTKillEvent newEvent = new IA_HVTKillEvent(killerId, killerName);
         m_aEventQue.Insert(newEvent);
+        AwardSessionHvt(killerId, killerName);
     }
 
     void QueueHVTGuardKill(string killerId, string killerName)
@@ -65,6 +68,7 @@ class IA_StatsManager
         
         IA_HVTGuardKillEvent newEvent = new IA_HVTGuardKillEvent(killerId, killerName);
         m_aEventQue.Insert(newEvent);
+        AwardSessionHvtGuard(killerId, killerName);
     }
 
     void QueueCaptureContribution(string playerId, string playerName, int score)
@@ -77,6 +81,7 @@ class IA_StatsManager
         
         IA_CaptureContributionEvent newEvent = new IA_CaptureContributionEvent(playerId, playerName, score);
         m_aEventQue.Insert(newEvent);
+        AwardSessionCapture(playerId, playerName, score);
     }
 
     void SendBatch()
@@ -104,5 +109,50 @@ class IA_StatsManager
 
         // Clear the queue after sending
         m_aEventQue.Clear();
+    }
+
+    protected void AwardSessionKill(string playerId, string playerName)
+    {
+        if (!Replication.IsServer())
+            return;
+        IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+        if (session)
+            session.AwardKill(playerId, playerName);
+    }
+
+    protected void AwardSessionDeath(string playerId, string playerName)
+    {
+        if (!Replication.IsServer())
+            return;
+        IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+        if (session)
+            session.AwardDeath(playerId, playerName);
+    }
+
+    protected void AwardSessionHvt(string playerId, string playerName)
+    {
+        if (!Replication.IsServer())
+            return;
+        IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+        if (session)
+            session.AwardHvtKill(playerId, playerName);
+    }
+
+    protected void AwardSessionHvtGuard(string playerId, string playerName)
+    {
+        if (!Replication.IsServer())
+            return;
+        IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+        if (session)
+            session.AwardHvtGuardKill(playerId, playerName);
+    }
+
+    protected void AwardSessionCapture(string playerId, string playerName, int score)
+    {
+        if (!Replication.IsServer())
+            return;
+        IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+        if (session)
+            session.AwardCapture(playerId, playerName, score);
     }
 } 

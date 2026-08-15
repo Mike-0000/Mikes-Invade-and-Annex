@@ -5,6 +5,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 {
 	protected ref MUI_Tabs m_Tabs;
 	protected ref MUI_Panel m_HeaderRow;
+	protected ref IA_LeaderboardRow m_Header;
 	protected ref MUI_ScrollView m_Scroll;
 	protected ref array<ref IA_LeaderboardRow> m_aRows;
 	protected int m_iActiveTab;
@@ -45,18 +46,20 @@ class IA_StatisticsMenu : MUI_MenuBase
 			runtime,
 			"LEADERBOARD",
 			"COMMAND UPLINK",
-			"Server  •  Global  •  Global by server",
+			"Session  •  Server  •  Global  •  Global by server",
 			1100
 		);
 
 		m_Tabs = runtime.CreateTabs("tabs");
 		m_Tabs.SetIntro(0.28, 0.4, 16);
+		m_Tabs.AddTab("Session");
 		m_Tabs.AddTab("Server");
 		m_Tabs.AddTab("Global");
 		m_Tabs.AddTab("Global by Server");
 		m_Tabs.GetOnChanged().Insert(OnTabsChanged);
 
 		ref IA_LeaderboardRow headerRow = IA_LeaderboardRow.Create(runtime, "hdr", true);
+		m_Header = headerRow;
 		m_HeaderRow = headerRow.GetRow();
 		headerRow.SetObjVisible(true);
 		m_HeaderRow.SetIntro(0.36, 0.35, 10);
@@ -83,7 +86,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 		shell.GetCard().AddChild(m_Scroll);
 		shell.AddFooter(
 			runtime,
-			"Set ./profile/MikesInvadeAndAnnex/server_name.txt for the server board",
+			"Session board is local to this restart. Set ./profile/MikesInvadeAndAnnex/server_name.txt for the server board",
 			buttons
 		);
 		shell.Mount(runtime);
@@ -105,14 +108,38 @@ class IA_StatisticsMenu : MUI_MenuBase
 			m_Tabs.SetIndex(tabIndex);
 
 		bool showObj = true;
-		if (tabIndex == 2)
+		bool showGrade = false;
+		if (tabIndex == 3)
 			showObj = false;
+		if (tabIndex == 0)
+			showGrade = true;
 
-		if (m_aRows.Count() > 0 && m_aRows[0])
-			m_aRows[0].SetObjVisible(showObj);
+		if (m_Header)
+		{
+			m_Header.SetObjVisible(showObj);
+			m_Header.SetGradeVisible(showGrade);
+			if (showGrade)
+				m_Header.SetScoreHeader("XP");
+			else
+				m_Header.SetScoreHeader("SCORE");
+		}
 
 		DetachLeaderboardCallbacks();
 		ClearDataRows();
+
+		if (tabIndex == 0)
+		{
+			IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+			if (!session)
+			{
+				Print("[IA_StatisticsMenu] Could not find IA_SessionRankManagerComponent.", LogLevel.ERROR);
+				return;
+			}
+
+			session.GetOnUpdated().Insert(this.PopulateSessionRank);
+			PopulateSessionRank(session.GetCachedJson());
+			return;
+		}
 
 		IA_LeaderboardManagerComponent manager = IA_LeaderboardManagerComponent.GetInstance();
 		if (!manager)
@@ -122,17 +149,17 @@ class IA_StatisticsMenu : MUI_MenuBase
 		}
 
 		string cachedData = "";
-		if (tabIndex == 0)
+		if (tabIndex == 1)
 		{
 			cachedData = manager.GetCachedServerLeaderboardData();
 			manager.GetOnServerLeaderboardDataUpdated().Insert(this.PopulateLeaderboardMikes);
 		}
-		else if (tabIndex == 1)
+		else if (tabIndex == 2)
 		{
 			cachedData = manager.GetCachedLeaderboardData();
 			manager.GetOnLeaderboardDataUpdated().Insert(this.PopulateLeaderboardMikes);
 		}
-		else if (tabIndex == 2)
+		else if (tabIndex == 3)
 		{
 			cachedData = manager.GetCachedGlobalServerLeaderboardData();
 			manager.GetOnGlobalServerLeaderboardDataUpdated().Insert(this.PopulateLeaderboardMikes);
@@ -155,6 +182,10 @@ class IA_StatisticsMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	protected void DetachLeaderboardCallbacks()
 	{
+		IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+		if (session)
+			session.GetOnUpdated().Remove(this.PopulateSessionRank);
+
 		IA_LeaderboardManagerComponent manager = IA_LeaderboardManagerComponent.GetInstance();
 		if (!manager)
 			return;
@@ -191,7 +222,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 
 		MUI_Runtime runtime = GetRuntime();
 		bool showObj = true;
-		if (m_iActiveTab == 2)
+		if (m_iActiveTab == 3)
 			showObj = false;
 
 		float topScore = 1;
@@ -223,6 +254,75 @@ class IA_StatisticsMenu : MUI_MenuBase
 			);
 			row.SetObjVisible(showObj);
 			row.SetRankHighlight(i);
+			float ratio = 0;
+			if (topScore > 0)
+				ratio = playerStat.score / topScore;
+			row.SetScoreRatio(ratio);
+			m_Scroll.AddChild(row.GetRow());
+			m_aRows.Insert(row);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void PopulateSessionRank(string jsonData)
+	{
+		if (!GetRuntime() || !m_Scroll)
+			return;
+
+		ClearDataRows();
+
+		if (!jsonData || jsonData.IsEmpty() || jsonData == "[]")
+			return;
+
+		JsonLoadContext jsonContext = new JsonLoadContext();
+		if (!jsonContext.LoadFromString(jsonData))
+		{
+			Print("[IA_StatisticsMenu] Failed to import session JSON.", LogLevel.ERROR);
+			return;
+		}
+
+		ref array<ref IA_SessionRankEntry> playerStats = new array<ref IA_SessionRankEntry>();
+		if (!jsonContext.ReadValue("", playerStats))
+		{
+			Print("[IA_StatisticsMenu] Failed to read session stats from JSON.", LogLevel.ERROR);
+			return;
+		}
+
+		if (playerStats.IsEmpty())
+			return;
+
+		MUI_Runtime runtime = GetRuntime();
+		float topScore = 1;
+		int i;
+		for (i = 0; i < playerStats.Count(); i++)
+		{
+			if (!playerStats[i])
+				continue;
+			if (playerStats[i].score > topScore)
+				topScore = playerStats[i].score;
+		}
+
+		for (i = 0; i < playerStats.Count(); i++)
+		{
+			IA_SessionRankEntry playerStat = playerStats[i];
+			if (!playerStat)
+				continue;
+
+			ref IA_LeaderboardRow row = IA_LeaderboardRow.Create(runtime, "s" + i.ToString(), false);
+			row.SetValues(
+				(i + 1).ToString() + ".",
+				playerStat.PlayerName,
+				playerStat.kills.ToString(),
+				playerStat.deaths.ToString(),
+				playerStat.hvt_kills.ToString(),
+				playerStat.hvt_guard_kills.ToString(),
+				playerStat.obj_score.ToString(),
+				playerStat.score.ToString()
+			);
+			row.SetGradeVisible(true);
+			row.SetGrade(IA_SessionRankLadder.GetShortName(playerStat.rankId));
+			row.SetRankHighlight(i);
+
 			float ratio = 0;
 			if (topScore > 0)
 				ratio = playerStat.score / topScore;

@@ -30,6 +30,18 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void IA_AskPromoteSelf()
+	{
+		if (Replication.IsServer())
+		{
+			IA_PromoteSelfIfAdmin();
+			return;
+		}
+
+		Rpc(RpcAsk_IA_PromoteSelf);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
 	protected void RpcAsk_IA_UpdateAdminConfig(string packed)
 	{
@@ -41,6 +53,13 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_ForceCompleteZone()
 	{
 		IA_ForceCompleteZoneIfAdmin();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_PromoteSelf()
+	{
+		IA_PromoteSelfIfAdmin();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -76,6 +95,25 @@ modded class SCR_PlayerController
 			return;
 
 		init.ServerForceCompleteZone();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_PromoteSelfIfAdmin()
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Promote self rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+		if (!session)
+		{
+			Print("[IA] Promote self rejected: session rank manager missing", LogLevel.ERROR);
+			return;
+		}
+
+		session.PromotePlayer(GetPlayerId());
 	}
 
 	//------------------------------------------------------------------------------------------------

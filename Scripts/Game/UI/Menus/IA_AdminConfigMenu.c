@@ -189,6 +189,9 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		saveBtn.MakeAccent();
 		saveBtn.GetOnClicked().Insert(OnMikesSave);
 
+		ref MUI_Button promoteBtn = runtime.CreateButton("Promote Self", "promote");
+		promoteBtn.GetOnClicked().Insert(OnMikesPromoteSelf);
+
 		ref MUI_Button completeBtn = runtime.CreateButton("Complete Zone", "complete");
 		completeBtn.MakeDanger();
 		completeBtn.GetOnClicked().Insert(OnMikesComplete);
@@ -197,12 +200,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		closeBtn.GetOnClicked().Insert(OnMUIBack);
 
 		buttons.AddChild(saveBtn);
+		buttons.AddChild(promoteBtn);
 		buttons.AddChild(completeBtn);
 		buttons.AddChild(closeBtn);
 
 		shell.GetCard().AddChild(m_Tabs);
 		shell.GetCard().AddChild(scroll);
-		shell.AddFooter(runtime, "Save writes to the server config  •  Faction override affects future enemy picks", buttons);
+		shell.AddFooter(runtime, "Promote Self is +1 session grade  •  Save writes to the server config", buttons);
 		shell.Mount(runtime);
 
 		ShowAdminPage(0);
@@ -381,6 +385,15 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			artyMax,
 			factionKey
 		);
+		GetGame().GetMenuManager().CloseMenu(this);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnMikesPromoteSelf()
+	{
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+			pc.IA_AskPromoteSelf();
 		GetGame().GetMenuManager().CloseMenu(this);
 	}
 

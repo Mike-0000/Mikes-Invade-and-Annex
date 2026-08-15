@@ -8,6 +8,7 @@ class IA_LeaderboardRow
 	protected ref MUI_Panel m_Root;
 	protected ref MUI_Row m_Row;
 	protected ref MUI_Label m_Rank;
+	protected ref MUI_Label m_Grade;
 	protected ref MUI_Label m_Name;
 	protected ref MUI_Label m_Kills;
 	protected ref MUI_Label m_Deaths;
@@ -44,6 +45,8 @@ class IA_LeaderboardRow
 		m_Row.GetStyle().m_fMinHeight = 32;
 
 		m_Rank = MakeCol(runtime, "#", "rank_" + nameSuffix, 44, header);
+		m_Grade = MakeCol(runtime, "RANK", "grade_" + nameSuffix, 64, header);
+		m_Grade.SetVisible(false);
 		m_Name = MakeCol(runtime, "NAME", "name_" + nameSuffix, 220, header);
 		m_Name.SetFillWidth();
 		m_Name.SetGrow(1);
@@ -55,6 +58,7 @@ class IA_LeaderboardRow
 		m_Score = MakeCol(runtime, "SCORE", "score_" + nameSuffix, 72, header);
 
 		m_Row.AddChild(m_Rank);
+		m_Row.AddChild(m_Grade);
 		m_Row.AddChild(m_Name);
 		m_Row.AddChild(m_Kills);
 		m_Row.AddChild(m_Deaths);
@@ -124,6 +128,32 @@ class IA_LeaderboardRow
 	{
 		if (m_Obj)
 			m_Obj.SetVisible(visible);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetGradeVisible(bool visible)
+	{
+		if (m_Grade)
+			m_Grade.SetVisible(visible);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetGrade(string grade)
+	{
+		if (!m_Grade)
+			return;
+		m_Grade.SetText(grade);
+		if (m_bHeader)
+			return;
+		m_Grade.SetBold(true);
+		m_Grade.SetColor(m_Grade.GetTheme().Cyan);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetScoreHeader(string text)
+	{
+		if (m_bHeader && m_Score)
+			m_Score.SetText(text);
 	}
 
 	//------------------------------------------------------------------------------------------------

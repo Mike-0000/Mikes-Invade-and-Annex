@@ -654,12 +654,13 @@ class IA_MissionInitializer : GenericEntity
 				actualCompletedZones++;
 				zoneCompletionStatus[currentZoneIndex] = true; // Update status array
 					
-				// If there's an active task for this completed zone, finish it.
+				// Finish the zone task without a toast. Capture and radio-tower
+				// already notified; CompleteCurrentTask skips a second one when
+				// it later consumes this COMPLETED task.
 				if (instance.GetCurrentTaskEntity()) {
-					string completedTaskTitle = instance.m_area.GetName();
-					//TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
-				    //Print("[DEBUG_ZONE_GROUP] Finishing task for completed zone: " + marker.GetAreaName(), LogLevel.NORMAL);
-					instance.GetCurrentTaskEntity().SetTaskState(SCR_ETaskState.COMPLETED);
+					SCR_ETaskState zoneTaskState = instance.GetCurrentTaskEntity().GetTaskState();
+					if (zoneTaskState != SCR_ETaskState.COMPLETED)
+						instance.GetCurrentTaskEntity().SetTaskState(SCR_ETaskState.COMPLETED);
 				}
 				
 				// Reset capture scores for next time
@@ -1197,6 +1198,11 @@ class IA_MissionInitializer : GenericEntity
 		return s_instance;
 	}
 
+	IA_AreaGroupManager GetCurrentAreaGroupManager()
+	{
+		return m_currentAreaGroupManager;
+	}
+
 	// Static getter for config
 	static IA_Config GetGlobalConfig()
 	{
@@ -1309,7 +1315,7 @@ class IA_MissionInitializer : GenericEntity
 		}
 		
 		// Random chance (80%) to trigger defend mission
-		if (Math.RandomFloat01() > 1)
+		if (Math.RandomFloat01() > 0.8)
 		{
 			Print("[IA_MissionInitializer] Defend objectives found but random chance failed for group " + completedGroup, LogLevel.DEBUG);
 			return false;

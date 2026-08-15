@@ -6,6 +6,8 @@ SCR_BaseGameMode : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
   }
   IA_LeaderboardManagerComponent "{65EC21982326B88F}" {
   }
+  IA_SessionRankManagerComponent "{66A15C8E2F4B91D0}" {
+  }
   SCR_CampaignBuildingManagerComponent "{658D08F10A28404C}" {
    m_sFreeRoamBuildingClientTrigger "{5E191CEAF4B95816}Prefabs/MP/FreeRoamBuildingClientTrigger.et"
    m_iCompositionRefundPercentage 50

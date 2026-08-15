@@ -196,6 +196,69 @@ IA_SquadType IA_GetRandomSquadType()
     return IA_SquadType.Riflemen;
 }
 
+//! Weighted fireteam size for defend / radio-tower / side-obj assault waves.
+//! Bias: 60% 4-man, 20% 5-man, 15% 8-9 squad, 5% 2-man pair.
+int IA_GetDefendFireteamUnitCount()
+{
+    float roll = IA_Game.rng.RandFloat01();
+    if (roll < 0.60)
+        return 4;
+    else if (roll < 0.80)
+        return 5;
+    else if (roll < 0.95)
+    {
+        if (IA_Game.rng.RandFloat01() < 0.5)
+            return 8;
+        return 9;
+    }
+    return 2;
+}
+
+//! Total AI entities per defend-style wave: Max(8, Round(12 * (scale * 1.4)^2)).
+//! Keeps wave mass stable; fireteam split still creates chaotic movement.
+int IA_GetDefendWaveUnitBudget(float scaleFactor)
+{
+    float scaled = scaleFactor * 1.4;
+    int budget = Math.Round(12 * (scaled * scaled));
+    if (budget < 8)
+        budget = 8;
+    return budget;
+}
+
+//! Spend a unit budget as weighted fireteams. Sizes are appended to outSizes.
+void IA_BuildDefendFireteamSizes(int unitBudget, out array<int> outSizes)
+{
+    outSizes.Clear();
+    int remaining = unitBudget;
+    if (remaining < 2)
+        return;
+
+    const int MAX_GROUPS = 12;
+    while (remaining >= 2 && outSizes.Count() < MAX_GROUPS)
+    {
+        int size = IA_GetDefendFireteamUnitCount();
+        if (size > remaining)
+        {
+            if (remaining >= 4)
+                size = 4;
+            else
+                size = remaining;
+        }
+
+        // Avoid leaving a stranded single unit
+        if ((remaining - size) == 1)
+        {
+            if (size > 2)
+                size = size - 1;
+            else
+                size = remaining;
+        }
+
+        outSizes.Insert(size);
+        remaining = remaining - size;
+    }
+}
+
 int IA_FactionToInt(IA_Faction f)
 {
     //Print("[DEBUG] IA_FactionToInt called with faction: " + f, LogLevel.NORMAL);

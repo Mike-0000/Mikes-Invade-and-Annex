@@ -167,6 +167,8 @@ class IA_AiGroup
     // Defend mission mode
     private bool m_isInDefendMode = false;
     private vector m_defendTarget = vector.Zero;
+    // True when spawned by a defend / radio-tower / side-obj assault wave (not leftover garrison).
+    private bool m_isDefendWaveGroup = false;
     
     // Staggered spawning state
     private int m_pendingUnitsToSpawn = 0;
@@ -3016,11 +3018,28 @@ class IA_AiGroup
             Print("[IA_AiGroup] Setting defend mode OFF for group", LogLevel.NORMAL);
         }
     }
+
+    //! Mark defend-mode tracking without clearing existing vehicle/move orders.
+    void EnableDefendModeTracking(bool enable, vector defendPoint = vector.Zero)
+    {
+        m_isInDefendMode = enable;
+        m_defendTarget = defendPoint;
+    }
     
     // Add getter for defend mode
     bool IsInDefendMode()
     {
         return m_isInDefendMode;
+    }
+
+    void SetDefendWaveGroup(bool isWaveGroup)
+    {
+        m_isDefendWaveGroup = isWaveGroup;
+    }
+
+    bool IsDefendWaveGroup()
+    {
+        return m_isDefendWaveGroup;
     }
 
     // Add a public setter for the assigned area

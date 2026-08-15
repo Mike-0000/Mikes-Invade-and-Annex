@@ -6,4 +6,8 @@ IA_AISpawnPoint {
  }
  Flags 1027
  coords 1459.293 104.294 3111.401
+ TriggerShapeType Sphere
+ SphereRadius 25
+ PeriodicQueries 0
+ m_fSpawnRadius 25
 }

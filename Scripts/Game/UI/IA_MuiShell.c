@@ -10,6 +10,7 @@ class IA_MuiShell
 	protected ref MUI_LiveHeader m_Header;
 	protected ref MUI_Label m_Subtitle;
 	protected ref MUI_Hairline m_LineTop;
+	protected ref MUI_Label m_Foot;
 
 	//------------------------------------------------------------------------------------------------
 	static IA_MuiShell Create(notnull MUI_Runtime runtime, string title, string kicker, string subtitle, float cardWidth)
@@ -56,6 +57,26 @@ class IA_MuiShell
 	}
 
 	//------------------------------------------------------------------------------------------------
+	MUI_LiveHeader GetHeader()
+	{
+		return m_Header;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetSubtitle(string text)
+	{
+		if (m_Subtitle)
+			m_Subtitle.SetText(text);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetFooterText(string text)
+	{
+		if (m_Foot)
+			m_Foot.SetText(text);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	MUI_Card GetCard()
 	{
 		return m_Card;
@@ -73,14 +94,14 @@ class IA_MuiShell
 		ref MUI_Hairline lineBottom = runtime.CreateHairline("lineBottom");
 		lineBottom.SetIntro(0.50, 0.35, 8);
 
-		ref MUI_Label foot = runtime.CreateLabel(footText, "foot");
-		foot.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		foot.SetMuted(true);
-		foot.SetIntro(0.58, 0.4, 10);
+		m_Foot = runtime.CreateLabel(footText, "foot");
+		m_Foot.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		m_Foot.SetMuted(true);
+		m_Foot.SetIntro(0.58, 0.4, 10);
 
 		m_Card.AddChild(lineBottom);
 		m_Card.AddChild(buttons);
-		m_Card.AddChild(foot);
+		m_Card.AddChild(m_Foot);
 	}
 
 	//------------------------------------------------------------------------------------------------

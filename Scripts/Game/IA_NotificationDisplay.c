@@ -33,6 +33,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected ref MUI_HudHost m_HudHost;
 	protected MUI_Runtime m_Runtime;
 	protected ref IA_NotificationToast m_Toast;
+	protected ref IA_RankHudPanel m_RankHud;
 
 	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
 	protected bool m_bIsDisplaying = false;
@@ -106,6 +107,12 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			m_Toast.GetOnFinished().Remove(OnToastFinished);
 			m_Toast.Abort();
 		}
+		if (m_RankHud)
+		{
+			m_RankHud.GetOnPromoted().Remove(this.OnLocalPromoted);
+			m_RankHud.Unbind();
+			m_RankHud = null;
+		}
 		if (m_HudHost)
 		{
 			m_HudHost.Close();
@@ -119,13 +126,18 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	{
 		ref MUI_Panel overlay = m_Runtime.CreatePanel("overlay");
 		overlay.MakePassThroughOverlay();
-		overlay.GetStyle().m_fPadT = 58;
+		overlay.SetPaddingTRBL(26, 24, 0, 24);
 
 		m_Toast = IA_NotificationToast.Create(m_Runtime);
 		m_Toast.GetOnFinished().Insert(OnToastFinished);
 
+		m_RankHud = IA_RankHudPanel.Create(m_Runtime);
+
 		overlay.AddChild(m_Toast);
+		overlay.AddChild(m_RankHud.GetRoot());
 		m_Runtime.SetRoot(overlay);
+		m_RankHud.GetOnPromoted().Insert(this.OnLocalPromoted);
+		m_RankHud.Bind();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -294,6 +306,14 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		if (!taskName.IsEmpty() && taskName != "All objectives in current area")
 			body = taskName;
 		QueueNotificationKind(body, "", 12000, IA_NotificationKind.AreaCompleted);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnLocalPromoted(int rankId)
+	{
+		string fullName = IA_SessionRankLadder.GetFullName(rankId);
+		string shortName = IA_SessionRankLadder.GetShortName(rankId);
+		QueueNotificationKind("Promoted to " + fullName + "  //  " + shortName, "green", 7000, IA_NotificationKind.Promotion);
 	}
 
 	//------------------------------------------------------------------------------------------------

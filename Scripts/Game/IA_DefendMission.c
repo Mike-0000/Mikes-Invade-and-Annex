@@ -5,25 +5,32 @@ class IA_DefendMission
 {
     private vector m_defendPoint;
     private int m_startTime;
-    private int m_duration = Math.RandomInt(9, 14)*100000;
+    private int m_duration = Math.RandomInt(9, 14) * 60000; // 9-13 minutes
+    private int m_durationMinutes = 0;
     private int m_targetAICount;
     private bool m_isActive = false;
     private int m_groupID;
     private ref array<IA_AreaInstance> m_affectedAreas = {};
     private int m_lastWaveSpawnTime = 0;
-    private int m_waveSpawnInterval = 15000; // 15 seconds between waves
+    private int m_waveSpawnInterval = 25000; // 25 seconds between waves (multi-fireteam waves need room)
     private Faction m_defendFaction = null; // Store the faction once for all waves
     private string m_defendMarkerName = ""; // Store the marker name for notifications
+    private bool m_vehicleBeatSpawned = false;
+    private int m_lastVehicleBeatAttempt = 0;
+    private ref IA_AreaGroupManager m_ownedQrfManager; // kept alive for truck arrival CallLaters if needed
     
     private void IA_DefendMission(vector defendPoint, int groupID, string markerName = "")
     {
         m_defendPoint = defendPoint;
         m_groupID = groupID;
         m_defendMarkerName = markerName;
+        m_durationMinutes = Math.Round(m_duration / 60000.0);
+        if (m_durationMinutes < 1)
+            m_durationMinutes = 1;
         m_targetAICount = CalculateTargetAICount();
         
-        Print(string.Format("[IA_DefendMission] Created defend mission at %1 (%2) for group %3, target AI count: %4", 
-            m_defendPoint.ToString(), m_defendMarkerName, m_groupID, m_targetAICount), LogLevel.NORMAL);
+        Print(string.Format("[IA_DefendMission] Created defend mission at %1 (%2) for group %3, target AI count: %4, duration: %5 min", 
+            m_defendPoint.ToString(), m_defendMarkerName, m_groupID, m_targetAICount, m_durationMinutes), LogLevel.NORMAL);
     }
     
     static IA_DefendMission Create(vector defendPoint, int groupID, string markerName = "")
@@ -65,15 +72,26 @@ class IA_DefendMission
         // Check if mission duration is complete
         if (currentTime - m_startTime >= m_duration)
         {
-            Print("[IA_DefendMission] 10 minute duration complete - ending mission", LogLevel.NORMAL);
+            Print(string.Format("[IA_DefendMission] %1 minute duration complete - ending mission", m_durationMinutes), LogLevel.NORMAL);
             EndDefendMission();
             return;
         }
         
-        // REMOVED: Continuously update all AI to target defend point
-        // This was causing waypoint spam - AI should be set once and left alone
-        // UpdateAllAIDefendTargets();
-        
+        // Mid-hold vehicle / QRF beat (~40% elapsed). Retry every 30s until success.
+        if (!m_vehicleBeatSpawned)
+        {
+            int beatThreshold = Math.Round(m_duration * 0.4);
+            if (currentTime - m_startTime >= beatThreshold)
+            {
+                if (m_lastVehicleBeatAttempt == 0 || currentTime - m_lastVehicleBeatAttempt >= 30000)
+                {
+                    m_lastVehicleBeatAttempt = currentTime;
+                    if (TrySpawnVehicleBeat())
+                        m_vehicleBeatSpawned = true;
+                }
+            }
+        }
+
         // Spawn new waves if needed
         if (currentTime - m_lastWaveSpawnTime >= m_waveSpawnInterval)
         {
@@ -136,6 +154,7 @@ class IA_DefendMission
         }
         
         m_affectedAreas.Clear();
+        m_ownedQrfManager = null;
         
         // Notify IA_Game and mission initializer that defend mission is complete
         IA_Game gameInstance = IA_Game.Instantiate();
@@ -153,10 +172,9 @@ class IA_DefendMission
     
     private int CalculateTargetAICount()
     {
-        // Use existing player scaling logic
         float scaleFactor = IA_Game.GetAIScaleFactor();
-        
-        int targetCount = Math.Round(5 * ((scaleFactor*1.9) * (scaleFactor*1.9)));
+        float scaled = scaleFactor * 1.9;
+        int targetCount = Math.Round(9 * (scaled * scaled));
         Print(string.Format("[IA_DefendMission] Calculated target AI count: %1 (scale factor: %2)", targetCount, scaleFactor), LogLevel.NORMAL);
         
         return targetCount;
@@ -243,7 +261,7 @@ class IA_DefendMission
             taskTitle = "Defend Position";
         else
             taskTitle = "Defend " + m_defendMarkerName;
-        string taskDesc = "Hold the position for 10 minutes against enemy attacks";
+        string taskDesc = string.Format("Hold the position for %1 minutes against enemy attacks", m_durationMinutes);
         
         Print(string.Format("[IA_DefendMission] Creating defend task for area %1 at position %2", 
             firstArea.m_area.GetName(), m_defendPoint.ToString()), LogLevel.NORMAL);
@@ -331,11 +349,18 @@ class IA_DefendMission
         }
         
         float scaleFactor = IA_Game.GetAIScaleFactor();
-        //int groupsToSpawn = Math.Max(2, Math.Round(1.85 * ((scaleFactor*1.5) * (scaleFactor*1.5))));
-        int groupsToSpawn = 1;
+        int unitBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
+        int room = m_targetAICount - GetCurrentAICount();
+        if (room < unitBudget)
+            unitBudget = room;
+        if (unitBudget < 2)
+        {
+            Print(string.Format("[IA_DefendMission] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.DEBUG);
+            return;
+        }
 
-        Print(string.Format("[IA_DefendMission] Spawning defend wave: %1 groups from area %2", 
-            groupsToSpawn, targetArea.m_area.GetName()), LogLevel.NORMAL);
+        Print(string.Format("[IA_DefendMission] Spawning defend wave: budget %1 units from area %2 (cap room %3)", 
+            unitBudget, targetArea.m_area.GetName(), room), LogLevel.NORMAL);
             
         // --- BEGIN MODIFIED: Use stored faction or get it once ---
         // If we haven't set the faction for this defend mission yet, get it now and store it
@@ -351,7 +376,8 @@ class IA_DefendMission
         
         if (m_defendFaction)
         {
-            targetArea.SpawnReinforcementWave(groupsToSpawn, m_defendFaction, true); // true = forDefendMission
+            // First arg is unit budget when forDefendMission == true
+            targetArea.SpawnReinforcementWave(unitBudget, m_defendFaction, true);
         }
         else
         {
@@ -359,7 +385,59 @@ class IA_DefendMission
         }
         // --- END MODIFIED ---
     }
+
+    private bool TrySpawnVehicleBeat()
+    {
+        if (m_affectedAreas.IsEmpty())
+        {
+            Print("[IA_DefendMission] Vehicle beat skipped: no affected areas", LogLevel.WARNING);
+            return false;
+        }
+
+        IA_AreaInstance targetArea = m_affectedAreas[0];
+        if (!targetArea)
+            return false;
+
+        if (!m_defendFaction)
+        {
+            IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
+            if (initializer)
+                m_defendFaction = initializer.GetRandomEnemyFaction();
+        }
+        if (!m_defendFaction)
+        {
+            Print("[IA_DefendMission] Vehicle beat skipped: no enemy faction", LogLevel.WARNING);
+            return false;
+        }
+
+        IA_AreaGroupManager qrfManager = null;
+        IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+        if (init)
+            qrfManager = init.GetCurrentAreaGroupManager();
+
+        // Fallback if the group manager was cleared: keep a owned manager alive for vehicle CallLaters
+        if (!qrfManager)
+        {
+            if (!m_ownedQrfManager)
+            {
+                ref array<ref IA_AreaInstance> areas = new array<ref IA_AreaInstance>();
+                areas.Insert(targetArea);
+                m_ownedQrfManager = new IA_AreaGroupManager(areas);
+            }
+            qrfManager = m_ownedQrfManager;
+            Print("[IA_DefendMission] Vehicle beat using owned AreaGroupManager", LogLevel.NORMAL);
+        }
+
+        bool spawned = qrfManager.SpawnDefendVehicleBeat(targetArea, m_defendPoint, m_defendFaction);
+        if (spawned)
+            Print("[IA_DefendMission] Mid-hold vehicle QRF beat spawned", LogLevel.NORMAL);
+        else
+            Print("[IA_DefendMission] Mid-hold vehicle QRF beat failed; will retry", LogLevel.WARNING);
+
+        return spawned;
+    }
     
+    //! Counts only wave-spawned defend attackers; leftover garrison does not fill the cap.
     private int GetCurrentAICount()
     {
         int totalAI = 0;
@@ -371,7 +449,7 @@ class IA_DefendMission
                 array<ref IA_AiGroup> militaryGroups = area.GetMilitaryGroups();
                 foreach (IA_AiGroup group : militaryGroups)
                 {
-                    if (group && group.IsSpawned())
+                    if (group && group.IsSpawned() && group.IsDefendWaveGroup())
                     {
                         totalAI += group.GetAliveCount();
                     }
@@ -391,4 +469,4 @@ class IA_DefendMission
     {
         return m_groupID;
     }
-} 
+}

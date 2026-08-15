@@ -132,7 +132,7 @@ class IA_AreaInstance
     private bool m_isRadioTowerDefenseActive = false;
     private int m_radioTowerTargetAICount = 0;
     private int m_radioTowerLastWaveSpawnTime = 0;
-    private const int RADIO_TOWER_WAVE_INTERVAL = 15000; // 15 seconds
+    private const int RADIO_TOWER_WAVE_INTERVAL = 25000; // 25 seconds (multi-fireteam waves need room)
     private Faction m_radioTowerDefenseFaction = null;
     private bool m_radioTowerDestroyed = false;
     // --- END ADDED ---
@@ -511,9 +511,16 @@ class IA_AreaInstance
         //////Print("[DEBUG] CompleteCurrentTask called.", LogLevel.DEBUG);
         if (m_currentTaskEntity)
         {
-			string completedTaskTitle = m_currentTaskEntity.GetTaskName();
-			TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
-			m_currentTaskEntity.SetTaskState(SCR_ETaskState.COMPLETED);
+			// Capture / radio-tower already toast when the zone finishes, then
+			// CheckCurrentZoneComplete marks this task COMPLETED. UpdateTask
+			// later lands here — skip a second TaskCompleted toast.
+			SCR_ETaskState taskState = m_currentTaskEntity.GetTaskState();
+			if (taskState != SCR_ETaskState.COMPLETED)
+			{
+				string completedTaskTitle = m_currentTaskEntity.GetTaskName();
+				TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
+				m_currentTaskEntity.SetTaskState(SCR_ETaskState.COMPLETED);
+			}
             m_currentTaskEntity = null;
         }
         if (!m_taskQueue.IsEmpty())
@@ -2631,18 +2638,9 @@ class IA_AreaInstance
         ////Print(string.Format("[PLAYER_SCALING] GenerateRandomAiGroups for Area %1: Original=%2, ScaledGroupsToSpawn=%3 (scale factor: %4)", 
         //    m_area.GetName(), number, scaledNumberOfGroupsToSpawn, m_aiScaleFactor), LogLevel.DEBUG);
         
-        // --- BEGIN MODIFIED: Search for custom spawn points ---
-        array<IEntity> spawnPoints = new array<IEntity>();
-        array<IA_AISpawnPoint> allSpawnPoints = IA_AISpawnPoint.GetAllSpawnPoints();
-        Print(string.Format("[IA_AreaInstance] Found %1 total IA_AISpawnPoints in the world.", allSpawnPoints.Count()), LogLevel.NORMAL);
-
-        foreach (IA_AISpawnPoint spawnPoint : allSpawnPoints)
-        {
-            if (m_area.IsPositionInside(spawnPoint.GetOrigin()))
-            {
-                spawnPoints.Insert(spawnPoint);
-            }
-        }
+        // Manual IA_AISpawnPoint markers inside this area override default scatter.
+        // If none exist, keep the original random-in-area spawn.
+        ref array<IA_AISpawnPoint> spawnPoints = IA_AISpawnPoint.GetSpawnPointsInArea(m_area);
         Print(string.Format("[IA_AreaInstance] Found %1 spawn points inside area %2.", spawnPoints.Count(), m_area.GetName()), LogLevel.NORMAL);
 		int accumulatedDelay = 0;
 
@@ -2660,14 +2658,15 @@ class IA_AreaInstance
 
             if (!spawnPoints.IsEmpty())
             {
-                // If custom spawn points are found, pick one at random
                 int randomIndex = Math.RandomInt(0, spawnPoints.Count());
-                pos = spawnPoints[randomIndex].GetOrigin();
+                IA_AISpawnPoint chosenPoint = spawnPoints[randomIndex];
+                if (chosenPoint)
+                    pos = chosenPoint.GetRandomSpawnPosition();
+
                 useExactPos = true;
             }
             else
             {
-                // Fallback to original logic if no spawn points are found
                 if (insideArea)
                     pos = IA_Game.rng.GenerateRandomPointInRadius(2, m_area.GetRadius() / 8, m_area.GetOrigin());
                 else
@@ -4484,11 +4483,18 @@ class IA_AreaInstance
         }
 		
         int actualSpawnCount;
+        ref array<int> defendFireteamSizes = null;
         if (forDefendMission)
         {
-            // For defend missions, use the requested count directly (no quota limit)
-            actualSpawnCount = groupsToSpawn;
-            Print(string.Format("[AreaInstance.SpawnReinforcementWave] DEFEND MISSION: Using direct spawn count %1", actualSpawnCount), LogLevel.DEBUG);
+            // groupsToSpawn is reinterpreted as a unit budget for defend-style waves
+            int unitBudget = groupsToSpawn;
+            if (unitBudget < 2)
+                unitBudget = IA_GetDefendWaveUnitBudget(IA_Game.GetAIScaleFactor());
+
+            defendFireteamSizes = new array<int>();
+            IA_BuildDefendFireteamSizes(unitBudget, defendFireteamSizes);
+            actualSpawnCount = defendFireteamSizes.Count();
+            Print(string.Format("[AreaInstance.SpawnReinforcementWave] DEFEND MISSION: unit budget %1 -> %2 fireteams", unitBudget, actualSpawnCount), LogLevel.DEBUG);
         }
         else
         {
@@ -4515,24 +4521,29 @@ class IA_AreaInstance
 
         for (int i = 0; i < actualSpawnCount; i++)
         {
-			GetGame().GetCallqueue().CallLater(this.SpawnReinforcementEnactor, Math.RandomInt(2500,5000), false, MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission);
-			//SpawnReinforcementEnactor(MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission);
+			int sectorIndex = i % 4;
+			int unitCountOverride = -1;
+			if (forDefendMission && defendFireteamSizes)
+				unitCountOverride = defendFireteamSizes[i];
+			GetGame().GetCallqueue().CallLater(this.SpawnReinforcementEnactor, Math.RandomInt(2500,5000), false, MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission, sectorIndex, unitCountOverride);
         }
         
         return spawnedAny;
     }
     // --- END ADDED ---
 
-	bool SpawnReinforcementEnactor(int MAX_SPAWN_ATTEMPTS, array<vector> playerPositions, float SAFE_SPAWN_RADIUS_SQ, Faction AreaFaction, bool forDefendMission = false){
+	bool SpawnReinforcementEnactor(int MAX_SPAWN_ATTEMPTS, array<vector> playerPositions, float SAFE_SPAWN_RADIUS_SQ, Faction AreaFaction, bool forDefendMission = false, int sectorIndex = 0, int unitCountOverride = -1){
 	
 		    vector spawnPos = vector.Zero;
             bool safeSpawnFound = false;
 			bool spawnedAny = false;
 
+			// Sector wedge for defend-style waves (4 compass sectors, 90° each)
+			float sectorStartAngle = sectorIndex * (Math.PI2 * 0.25);
+			float sectorEndAngle = sectorStartAngle + (Math.PI2 * 0.25);
+
             for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)
             {
-                // //Print(string.Format("[SpawnReinforcementWave] Attempt %1/%2 to find safe spawn location...", attempt + 1, MAX_SPAWN_ATTEMPTS), LogLevel.DEBUG);
-                
                 // 1. Calculate potential Spawn Position (inside attempt loop)
                 // Increase search radius with each attempt
                 float spawnMinRadius = 220 + (attempt*40);
@@ -4558,21 +4569,54 @@ class IA_AreaInstance
                 if (activeGroup < 0) activeGroup = IA_VehicleManager.GetActiveGroup();
                 vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(center, spawnMaxRadius, activeGroup, spawnMinRadius); 
                 
+				bool usedSectorFallback = false;
                 if (roadPos != vector.Zero)
                 {
-                    spawnPos = roadPos;
+					if (forDefendMission)
+					{
+						// Only accept roads that fall inside this fireteam's 90° sector
+						float roadDX = roadPos[0] - center[0];
+						float roadDZ = roadPos[2] - center[2];
+						float roadAngle = Math.Atan2(roadDZ, roadDX);
+						if (roadAngle < 0)
+							roadAngle = roadAngle + Math.PI2;
+
+						bool inSector = false;
+						if (roadAngle >= sectorStartAngle && roadAngle < sectorEndAngle)
+							inSector = true;
+
+						if (inSector)
+							spawnPos = roadPos;
+						else
+							usedSectorFallback = true;
+					}
+					else
+					{
+                    	spawnPos = roadPos;
+					}
                 }
                 else 
                 { 
-                    // Fallback to random point in the ring - PURE RANDOM, no bias
-                    float angle = IA_Game.rng.RandFloat01() * Math.PI2;
+					usedSectorFallback = true;
+                }
+
+				if (usedSectorFallback)
+				{
+					float angle;
+					if (forDefendMission)
+					{
+						// Constrain spawn angle to this group's compass sector
+						angle = sectorStartAngle + (IA_Game.rng.RandFloat01() * (sectorEndAngle - sectorStartAngle));
+					}
+					else
+					{
+                    	angle = IA_Game.rng.RandFloat01() * Math.PI2;
+					}
                     float dist = IA_Game.rng.RandFloatXY(spawnMinRadius, spawnMaxRadius);
                     spawnPos[0] = center[0] + Math.Cos(angle) * dist;
                     spawnPos[2] = center[2] + Math.Sin(angle) * dist;
                     spawnPos[1] = GetGame().GetWorld().GetSurfaceY(spawnPos[0], spawnPos[2]);
                 }
-
-                //Print(string.Format("[SpawnReinforcementWave Attempt %1] Candidate spawnPos: %2", attempt + 1, spawnPos.ToString()), LogLevel.DEBUG);
 
                 // 2. Check distance to players
                 bool isSafe = true;
@@ -4581,53 +4625,56 @@ class IA_AreaInstance
                     if (vector.DistanceSq(spawnPos, playerPos) < SAFE_SPAWN_RADIUS_SQ)
                     {
                         isSafe = false;
-                        //Print(string.Format("[SpawnReinforcementWave Attempt %1] UNSAFE: Spawn candidate %2 is too close to player at %3 (DistSq < %4).", 
-//                            attempt + 1, spawnPos.ToString(), playerPos.ToString(), SAFE_SPAWN_RADIUS_SQ), LogLevel.DEBUG);
-                        break; // No need to check other players for this spot
+                        break;
                     }
                 }
 
                 // 3. If safe, proceed and break attempt loop
                 if (isSafe)
                 {
-                    ////Print(string.Format("[SpawnReinforcementWave Attempt %1] SAFE: Found safe spawn location at %2.", attempt + 1, spawnPos.ToString()), LogLevel.DEBUG);
                     safeSpawnFound = true;
-                    break; // Found a safe spot, exit attempt loop
-                }
-                
-                // If last attempt failed, log it
-                if (attempt == MAX_SPAWN_ATTEMPTS - 1)
-                {
-                    //Print(string.Format("[SpawnReinforcementWave] Failed to find safe spawn location near %1 after %2 attempts. Skipping group.", spawnPos.ToString(), MAX_SPAWN_ATTEMPTS), LogLevel.WARNING);
+                    break;
                 }
             } // End of attempt loop
 
             // If no safe spawn was found after all attempts, skip this group
             if (!safeSpawnFound)
             {
-                return false; // Move to the next group index in the wave
+                return false;
             }
 
             // 4. Create Group (with scaling) - Only if safe spot found
-            IA_SquadType st = IA_GetRandomSquadType();
-            
-            int unitCount = IA_SquadCount(st, IA_Faction.USSR); 
-            int scaledUnitCount = Math.Round(unitCount * m_aiScaleFactor); // Use current scale factor
-            if (scaledUnitCount < 1) scaledUnitCount = 1; 
-            scaledUnitCount = scaledUnitCount * 1.5; // Make reinforcement groups 3x larger
-			scaledUnitCount = Math.RandomInt(scaledUnitCount*0.8, scaledUnitCount*1.7);
+            int scaledUnitCount;
+            IA_SquadType st = IA_SquadType.Firesquad;
+            if (forDefendMission)
+            {
+                // Predetermined fireteam size from wave unit budget (fallback to picker)
+                if (unitCountOverride > 0)
+                    scaledUnitCount = unitCountOverride;
+                else
+                    scaledUnitCount = IA_GetDefendFireteamUnitCount();
+            }
+            else
+            {
+                st = IA_GetRandomSquadType();
+                int unitCount = IA_SquadCount(st, IA_Faction.USSR); 
+                scaledUnitCount = Math.Round(unitCount * m_aiScaleFactor);
+                if (scaledUnitCount < 1) scaledUnitCount = 1; 
+                scaledUnitCount = scaledUnitCount * 1.5;
+                scaledUnitCount = Math.RandomInt(scaledUnitCount*0.8, scaledUnitCount*1.7);
+            }
 
             IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, scaledUnitCount, AreaFaction);
 
             // 5. Spawn and Integrate
             if (grp)
             {
-                // --- BEGIN ADDED: Explicitly set the assigned area for reinforcement groups ---
-                // Set the assigned area BEFORE spawning to prevent automatic area detection
                 grp.SetAssignedArea(m_area);
                 Print(string.Format("[AreaInstance.SpawnReinforcementWave] Explicitly assigned reinforcement group to area %1", m_area.GetName()), LogLevel.DEBUG);
-                // --- END ADDED ---
                 
+                if (forDefendMission)
+                    grp.SetDefendWaveGroup(true);
+
                 grp.Spawn();
 
                 // Give initial orders based on defend mode or normal mode
@@ -4636,7 +4683,6 @@ class IA_AreaInstance
                 
                 if (m_isInDefendMode && m_defendTarget != vector.Zero)
                 {
-                    // In defend mode: all reinforcements target the defend point with attacking
                     targetPos = m_defendTarget;
                     initialState = IA_GroupTacticalState.Attacking;
                     grp.SetDefendMode(true, m_defendTarget);
@@ -4644,32 +4690,45 @@ class IA_AreaInstance
                 }
                 else
                 {
-                    // Normal mode: target area origin for attacking
                     targetPos = m_area.GetOrigin();
                     initialState = IA_GroupTacticalState.Attacking;
                 }
                 
                 grp.SetTacticalState(initialState, targetPos, null, true);
                 
-                AddMilitaryGroup(grp); // This will now preserve defend mode if set
+                AddMilitaryGroup(grp);
                 
-                // For standard counter-attacks (not defend mode), route the group around the OBJ
-                // perimeter to a random staging point ~300m out before assaulting the objective.
-                // This must happen AFTER AddMilitaryGroup (which re-runs SetTacticalState and would
-                // wipe any earlier waypoints). We also fix m_assignedGroupStates so MilitaryOrderTask's
-                // enforcement check (actualState != finalAssignedState) stays false on the next tick.
-                //
-                // Arc routing: we compute how many degrees the group needs to sweep around the OBJ
-                // from its spawn angle to its staging angle. If that arc is > 90° the direct path
-                // cuts through the AO, so we add 1 or 2 intermediate waypoints at a slightly wider
-                // radius (380m) to keep the group on the outside of the objective zone the whole time.
-                if (!m_isInDefendMode || m_defendTarget == vector.Zero)
+                // Defend fireteams: ~70% bee-line assault, ~30% flank via neighboring sector staging
+                if (forDefendMission && m_isInDefendMode && m_defendTarget != vector.Zero)
                 {
-                    // Random staging angle – full 360°
+                    if (IA_Game.rng.RandFloat01() < 0.30)
+                    {
+                        int flankSector = (sectorIndex + 1) % 4;
+                        float flankStart = flankSector * (Math.PI2 * 0.25);
+                        float flankEnd = flankStart + (Math.PI2 * 0.25);
+                        float flankAngle = flankStart + (IA_Game.rng.RandFloat01() * (flankEnd - flankStart));
+                        float flankDist = IA_Game.rng.RandFloatXY(250, 350);
+
+                        vector stagingPos;
+                        stagingPos[0] = targetPos[0] + Math.Cos(flankAngle) * flankDist;
+                        stagingPos[2] = targetPos[2] + Math.Sin(flankAngle) * flankDist;
+                        stagingPos[1] = GetGame().GetWorld().GetSurfaceY(stagingPos[0], stagingPos[2]);
+
+                        // SetDefendMode already added S&D; replace with Move then S&D
+                        grp.RemoveAllOrders();
+                        grp.AddOrder(stagingPos, IA_AiOrder.PriorityMove, true);
+                        grp.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, false);
+
+                        Print(string.Format("[SpawnReinforcementWave] Defend flank fireteam staging at %1 (sector %2 -> %3).",
+                            stagingPos.ToString(), sectorIndex, flankSector), LogLevel.DEBUG);
+                    }
+                }
+                // For standard counter-attacks (not defend mode), route around the OBJ
+                else if (!m_isInDefendMode || m_defendTarget == vector.Zero)
+                {
                     vector stagingPos = IA_Game.rng.GenerateRandomPointInRadius(250, 350, targetPos);
                     stagingPos[1] = GetGame().GetWorld().GetSurfaceY(stagingPos[0], stagingPos[2]);
 
-                    // Normalized 2D direction vectors (X, Z plane) from OBJ center outward
                     float spawnDX = spawnPos[0] - targetPos[0];
                     float spawnDZ = spawnPos[2] - targetPos[2];
                     float spawnLen = Math.Sqrt(spawnDX * spawnDX + spawnDZ * spawnDZ);
@@ -4684,13 +4743,11 @@ class IA_AreaInstance
                     float ex = stagDX / stagLen;
                     float ez = stagDZ / stagLen;
 
-                    // Dot product → magnitude of arc angle (0..PI)
                     float dot = sx * ex + sz * ez;
                     if (dot > 1.0) dot = 1.0;
                     if (dot < -1.0) dot = -1.0;
                     float totalAngle = Math.Acos(dot);
 
-                    // Cross product (2D) gives rotation sign: > 0 = CCW, < 0 = CW
                     float cross = sx * ez - sz * ex;
                     float signedAngle;
                     if (cross >= 0)
@@ -4698,22 +4755,16 @@ class IA_AreaInstance
                     else
                         signedAngle = -totalAngle;
 
-                    // Routing radius sits just outside the staging zone so groups arc clear of the AO
                     float routingRadius = 400;
 
-                    // Approaching is a dedicated state that bypasses all MilitaryOrderTask
-                    // interference (contact timeouts, threat re-ordering, enforcement) while the
-                    // group follows its arc routing to the jump-off point.  It auto-transitions
-                    // to Attacking once waypoints are exhausted (handled in MilitaryOrderTask).
                     m_assignedGroupStates.Set(grp, IA_GroupTacticalState.Approaching);
                     grp.SetTacticalState(IA_GroupTacticalState.Approaching, targetPos, null, true);
                     grp.RemoveAllOrders();
 
-                    // Add arc waypoints when the direct path would cut through the objective zone
                     int numArcPoints = 0;
-                    if (totalAngle > Math.PI * 0.833)       // > ~150°: two arc points
+                    if (totalAngle > Math.PI * 0.833)
                         numArcPoints = 2;
-                    else if (totalAngle > Math.PI * 0.5)    // >  ~90°: one arc point
+                    else if (totalAngle > Math.PI * 0.5)
                         numArcPoints = 1;
 
                     for (int arcIdx = 1; arcIdx <= numArcPoints; arcIdx++)
@@ -4723,7 +4774,6 @@ class IA_AreaInstance
                         float cosA = Math.Cos(arcAngle);
                         float sinA = Math.Sin(arcAngle);
 
-                        // Rotate spawn direction by arcAngle to get intermediate direction
                         float rx = sx * cosA - sz * sinA;
                         float rz = sx * sinA + sz * cosA;
 
@@ -4734,7 +4784,6 @@ class IA_AreaInstance
                         grp.AddOrder(arcPos, IA_AiOrder.PriorityMove, true);
                     }
 
-                    // Final staging position, then assault the OBJ
                     grp.AddOrder(stagingPos, IA_AiOrder.PriorityMove, true);
                     grp.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, false);
 
@@ -5079,7 +5128,8 @@ class IA_AreaInstance
 			return; // Don't activate defense on a destroyed tower
 		
 		float scaleFactor = IA_Game.GetAIScaleFactor();
-		m_radioTowerTargetAICount = Math.Round(3.75 * ((scaleFactor*1.9) * (scaleFactor*1.9)));
+		float scaled = scaleFactor * 1.9;
+		m_radioTowerTargetAICount = Math.Round(6 * (scaled * scaled));
         if (m_isRadioTowerDefenseActive == active)
             return;
 
@@ -5145,7 +5195,8 @@ class IA_AreaInstance
             int currentAICount = 0;
             foreach (IA_AiGroup group : m_military)
             {
-                if (group) currentAICount += group.GetAliveCount();
+                if (group && group.IsDefendWaveGroup())
+                    currentAICount += group.GetAliveCount();
             }
 
             Print(string.Format("[IA_AreaInstance] Radio Tower Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_radioTowerTargetAICount), LogLevel.DEBUG);
@@ -5168,13 +5219,27 @@ class IA_AreaInstance
         }
 
         float scaleFactor = IA_Game.GetAIScaleFactor();
-        //int groupsToSpawn = Math.Max(2, Math.Round(1.5 * ((scaleFactor*1.5) * (scaleFactor*1.5))));
-		int groupsToSpawn = 1;
-        Print(string.Format("[IA_AreaInstance] Spawning radio tower defense wave: %1 groups for area %2.", groupsToSpawn, m_area.GetName()), LogLevel.DEBUG);
+        int unitBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
+
+        int currentWaveAI = 0;
+        foreach (IA_AiGroup group : m_military)
+        {
+            if (group && group.IsDefendWaveGroup())
+                currentWaveAI += group.GetAliveCount();
+        }
+        int room = m_radioTowerTargetAICount - currentWaveAI;
+        if (room < unitBudget)
+            unitBudget = room;
+        if (unitBudget < 2)
+        {
+            Print(string.Format("[IA_RadioTowerDefense] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.DEBUG);
+            return;
+        }
+
+        Print(string.Format("[IA_AreaInstance] Spawning radio tower defense wave: budget %1 units for area %2.", unitBudget, m_area.GetName()), LogLevel.DEBUG);
         
-        // Use existing wave spawning logic with forDefendMission = true
-        // This makes it use the defend point (the tower origin) and bypasses normal reinforcement quotas
-        SpawnReinforcementWave(groupsToSpawn, m_radioTowerDefenseFaction, true);
+        // First arg is unit budget when forDefendMission == true
+        SpawnReinforcementWave(unitBudget, m_radioTowerDefenseFaction, true);
     }
 
     void SetRadioTowerDestroyed()
@@ -5351,12 +5416,27 @@ class IA_AreaInstance
 		}
 	
 		float scaleFactor = IA_Game.GetAIScaleFactor();
-		int groupsToSpawn = Math.Max(1, Math.Round(1.2 * ((scaleFactor*1.2) * (scaleFactor*1.2))));
-		Print(string.Format("[IA_AreaInstance] Spawning side objective defense wave: %1 groups for area %2.", groupsToSpawn, m_area.GetName()), LogLevel.DEBUG);
+		int unitBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
+
+		int currentAICount = 0;
+		foreach (IA_AiGroup group : m_military)
+		{
+			if (group)
+				currentAICount += group.GetAliveCount();
+		}
+		int room = m_sideObjectiveTargetAICount - currentAICount;
+		if (room < unitBudget)
+			unitBudget = room;
+		if (unitBudget < 2)
+		{
+			Print(string.Format("[IA_SideObjectiveDefense] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.DEBUG);
+			return;
+		}
+
+		Print(string.Format("[IA_AreaInstance] Spawning side objective defense wave: budget %1 units for area %2.", unitBudget, m_area.GetName()), LogLevel.DEBUG);
 		
-		// Use existing wave spawning logic with forDefendMission = true
-		// This makes it use the defend point (the objective origin) and bypasses normal reinforcement quotas
-		SpawnReinforcementWave(groupsToSpawn, m_sideObjectiveDefenseFaction, true);
+		// First arg is unit budget when forDefendMission == true
+		SpawnReinforcementWave(unitBudget, m_sideObjectiveDefenseFaction, true);
 	}
 
 	private void SideObjectiveDefenseTask()

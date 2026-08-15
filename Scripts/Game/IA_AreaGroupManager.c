@@ -124,7 +124,7 @@ class IA_AreaGroupManager
         Print(string.Format("[QRF] Selected %1; closest area '%2'; final target %3. Attempting spawn...",
             QRFTypeToString(selectedType), closestArea.GetArea().GetName(), finalTarget.ToString()), LogLevel.NORMAL);
 
-        bool spawned = SpawnQRF(selectedType, finalTarget);
+        bool spawned = SpawnQRFForTarget(selectedType, finalTarget, closestArea, null, false);
         if (spawned)
         {
             m_lastQRFTime = currentTime;
@@ -141,6 +141,42 @@ class IA_AreaGroupManager
             case IA_QRFType.Armoured:   return "Armoured QRF";
         }
         return "QRF";
+    }
+
+    //! One mid-hold vehicle pulse for Defend missions. Biased truck/APC; rare armour. No pure infantry.
+    bool SpawnDefendVehicleBeat(IA_AreaInstance areaInst, vector defendPoint, Faction enemyFaction)
+    {
+        if (!Replication.IsServer())
+            return false;
+        if (!areaInst)
+            return false;
+
+        if (!enemyFaction)
+        {
+            IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
+            if (initializer)
+                enemyFaction = initializer.GetRandomEnemyFaction();
+        }
+        if (!enemyFaction)
+        {
+            Print("[QRF] Defend vehicle beat aborted: no enemy faction.", LogLevel.WARNING);
+            return false;
+        }
+
+        // Motorized ~55%, Mechanized ~35%, Armoured ~10%
+        float roll = IA_Game.rng.RandFloat01();
+        IA_QRFType type;
+        if (roll < 0.55)
+            type = IA_QRFType.Motorized;
+        else if (roll < 0.90)
+            type = IA_QRFType.Mechanized;
+        else
+            type = IA_QRFType.Armoured;
+
+        Print(string.Format("[QRF] Defend vehicle beat selected %1 toward %2",
+            QRFTypeToString(type), defendPoint.ToString()), LogLevel.NORMAL);
+
+        return SpawnQRFForTarget(type, defendPoint, areaInst, enemyFaction, true);
     }
 
     // Determine the target position for QRF using the same logic and constraints as the artillery system
@@ -222,33 +258,43 @@ class IA_AreaGroupManager
 
     private bool SpawnQRF(IA_QRFType type, vector targetPos)
     {
-        if (!Replication.IsServer())
-            return false;
-
-        // Resolve faction context
-        IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
-        if (!initializer)
-            return false;
-        Faction enemyGameFaction = initializer.GetRandomEnemyFaction();
-        if (!enemyGameFaction)
-            return false;
-
-        // Find the nearest area instance to the final target to integrate groups
         IA_AreaInstance targetAreaInst = null;
         ResolveClosestAreaTarget(targetPos, targetAreaInst);
         if (!targetAreaInst)
             return false;
 
+        return SpawnQRFForTarget(type, targetPos, targetAreaInst, null, false);
+    }
+
+    private bool SpawnQRFForTarget(IA_QRFType type, vector targetPos, IA_AreaInstance targetAreaInst, Faction enemyGameFaction, bool forDefendMission)
+    {
+        if (!Replication.IsServer())
+            return false;
+        if (!targetAreaInst)
+            return false;
+
+        if (!enemyGameFaction)
+        {
+            IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
+            if (!initializer)
+                return false;
+            enemyGameFaction = initializer.GetRandomEnemyFaction();
+        }
+        if (!enemyGameFaction)
+            return false;
+
         string areaName = targetAreaInst.GetArea().GetName();
 
-        // Compute a shared spawn anchor so all units in this QRF spawn together
+        // Spawn relative to the defend/fight point when provided, else area origin
+        vector spawnCenter = targetPos;
+        if (spawnCenter == vector.Zero)
+            spawnCenter = targetAreaInst.GetArea().GetOrigin();
+
         int activeGroup = IA_VehicleManager.GetActiveGroup();
-        vector areaOrigin = targetAreaInst.GetArea().GetOrigin();
-        vector qrfAnchor = FindSafeRoadSpawnPos(areaOrigin, activeGroup, 300, 450);
+        vector qrfAnchor = FindSafeRoadSpawnPos(spawnCenter, activeGroup, 300, 450);
         if (qrfAnchor == vector.Zero)
         {
-            // Fallback to area origin if no road found
-            qrfAnchor = areaOrigin;
+            qrfAnchor = spawnCenter;
             qrfAnchor[1] = GetGame().GetWorld().GetSurfaceY(qrfAnchor[0], qrfAnchor[2]);
         }
 
@@ -257,34 +303,30 @@ class IA_AreaGroupManager
         {
             case IA_QRFType.Infantry:
             {
-                // Minimum 2 infantry groups
-                bool s1 = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(qrfAnchor, 0));
-                bool s2 = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(qrfAnchor, 1));
+                bool s1 = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(qrfAnchor, 0), forDefendMission);
+                bool s2 = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(qrfAnchor, 1), forDefendMission);
                 success = (s1 || s2);
                 break;
             }
             case IA_QRFType.Motorized:
             {
-                // Minimum: 1 filled truck and 1 infantry
-                bool v = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, /*preferAPC*/ false, /*allowTrucks*/ true, /*armourOnly*/ false, ComputeClusterPos(qrfAnchor, 0));
-                bool inf = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(qrfAnchor, 1));
+                bool v = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, false, true, false, ComputeClusterPos(qrfAnchor, 0), forDefendMission);
+                bool inf = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(qrfAnchor, 1), forDefendMission);
                 success = (v || inf);
                 break;
             }
             case IA_QRFType.Mechanized:
             {
-                // Minimum: 1 APC and 1 filled truck
-                bool apc = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, /*preferAPC*/ true, /*allowTrucks*/ false, /*armourOnly*/ false, ComputeClusterPos(qrfAnchor, 0));
-                bool truck = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, /*preferAPC*/ false, /*allowTrucks*/ true, /*armourOnly*/ false, ComputeClusterPos(qrfAnchor, 1));
+                bool apc = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, true, false, false, ComputeClusterPos(qrfAnchor, 0), forDefendMission);
+                bool truck = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, false, true, false, ComputeClusterPos(qrfAnchor, 1), forDefendMission);
                 success = (apc || truck);
                 break;
             }
             case IA_QRFType.Armoured:
             {
-                // Minimum: 2 APCs/Armor and 1 Infantry
-                bool a1 = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, /*preferAPC*/ true, /*allowTrucks*/ false, /*armourOnly*/ true, ComputeClusterPos(qrfAnchor, 0));
-                bool a2 = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, /*preferAPC*/ true, /*allowTrucks*/ false, /*armourOnly*/ true, ComputeClusterPos(qrfAnchor, 1));
-                bool inf = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(qrfAnchor, 2));
+                bool a1 = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, true, false, true, ComputeClusterPos(qrfAnchor, 0), forDefendMission);
+                bool a2 = SpawnVehicleQRF(targetAreaInst, enemyGameFaction, targetPos, true, false, true, ComputeClusterPos(qrfAnchor, 1), forDefendMission);
+                bool inf = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(qrfAnchor, 2), forDefendMission);
                 success = (a1 || a2 || inf);
                 break;
             }
@@ -292,10 +334,14 @@ class IA_AreaGroupManager
 
         if (success)
         {
-            // Notify players (reuse existing ReinforcementsCalled notification channel)
-            string notif = QRFTypeToString(type) + " inbound at " + areaName + "!";
+            string notif;
+            if (forDefendMission)
+                notif = QRFTypeToString(type) + " counterattack inbound!";
+            else
+                notif = QRFTypeToString(type) + " inbound at " + areaName + "!";
             IA_Game.S_TriggerGlobalNotification("ReinforcementsCalled", notif);
-            Print(string.Format("[QRF] %1 spawned towards %2 at %3", QRFTypeToString(type), areaName, targetPos.ToString()), LogLevel.NORMAL);
+            Print(string.Format("[QRF] %1 spawned towards %2 at %3 (defendBeat=%4)",
+                QRFTypeToString(type), areaName, targetPos.ToString(), forDefendMission), LogLevel.NORMAL);
         }
         else
         {
@@ -304,7 +350,7 @@ class IA_AreaGroupManager
         return success;
     }
 
-    private bool SpawnInfantryQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, vector preferredSpawn)
+    private bool SpawnInfantryQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, vector preferredSpawn, bool forDefendMission = false)
     {
         float scale = IA_Game.GetAIScaleFactor();
         int unitCount = Math.Clamp(Math.Round(6 * scale), 4, 10);
@@ -327,6 +373,8 @@ class IA_AreaGroupManager
             return false;
 
         grp.SetAssignedArea(areaInst.GetArea());
+        if (forDefendMission)
+            grp.SetDefendMode(true, targetPos);
         grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
         // If no waypoint exists yet, add one explicitly
         if (!grp.HasActiveWaypoint())
@@ -354,7 +402,7 @@ class IA_AreaGroupManager
         return true;
     }
 
-    private bool SpawnVehicleQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool preferAPC, bool allowTrucks, bool armourOnly, vector preferredSpawn)
+    private bool SpawnVehicleQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool preferAPC, bool allowTrucks, bool armourOnly, vector preferredSpawn, bool forDefendMission = false)
     {
         // Determine a road-based spawn near the target
         int activeGroup = IA_VehicleManager.GetActiveGroup();
@@ -395,12 +443,14 @@ class IA_AreaGroupManager
             return false;
         }
 
-        // Destination: pick a road near the objective to drive to (APC/Armor must use road move waypoints)
+        // Destination: road near the fight/defend point (not just the parent area origin)
         int driveGroup = IA_VehicleManager.GetActiveGroup();
-        vector areaOrigin = areaInst.GetArea().GetOrigin();
-        vector driveTarget = IA_VehicleManager.FindRandomRoadPointForVehiclePatrol(areaOrigin, 400, driveGroup);
+        vector objectivePos = targetPos;
+        if (objectivePos == vector.Zero)
+            objectivePos = areaInst.GetArea().GetOrigin();
+        vector driveTarget = IA_VehicleManager.FindRandomRoadPointForVehiclePatrol(objectivePos, 400, driveGroup);
         if (driveTarget == vector.Zero)
-            driveTarget = areaOrigin;
+            driveTarget = objectivePos;
 
         IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(selectedVehicle, IA_Faction.USSR, driveTarget, areaInst, enemyGameFaction);
         if (!vehicleGroup)
@@ -411,6 +461,9 @@ class IA_AreaGroupManager
 
         // Ensure assigned area for proper integration
         vehicleGroup.SetAssignedArea(areaInst.GetArea());
+        // Track as defend-mode without wiping vehicle drive orders
+        if (forDefendMission)
+            vehicleGroup.EnableDefendModeTracking(true, objectivePos);
 
         // Branch behavior by vehicle class: trucks dismount and defend; APC/Armor lock to S&D
         bool vIsTruck = false; bool vIsAPC = false; bool vIsArmored = false;
@@ -435,8 +488,8 @@ class IA_AreaGroupManager
                 }
             }
 
-            // Poll until arrival, then order dismount and S&D after 30s
-            GetGame().GetCallqueue().CallLater(this.QRF_PollTruckArrival, 3000, false, selectedVehicle, vehicleGroup, areaInst, areaOrigin, driveTarget);
+            // Poll until arrival, then order dismount and assault the objective
+            GetGame().GetCallqueue().CallLater(this.QRF_PollTruckArrival, 3000, false, selectedVehicle, vehicleGroup, areaInst, objectivePos, driveTarget);
         }
         else
         {
@@ -658,8 +711,16 @@ class IA_AreaGroupManager
     private void QRF_AddDefendAfterDisembark(IA_AiGroup group, vector defendPos)
     {
         if (!group) return;
-        group.AddOrder(defendPos, IA_AiOrder.Defend, true);
-        group.SetTacticalState(IA_GroupTacticalState.Defending, defendPos, null, true);
+        if (group.IsInDefendMode())
+        {
+            group.AddOrder(defendPos, IA_AiOrder.SearchAndDestroy, true);
+            group.SetTacticalState(IA_GroupTacticalState.Attacking, defendPos, null, true);
+        }
+        else
+        {
+            group.AddOrder(defendPos, IA_AiOrder.Defend, true);
+            group.SetTacticalState(IA_GroupTacticalState.Defending, defendPos, null, true);
+        }
     }
 
     void ArtilleryStrikeTask()

@@ -11,7 +11,8 @@ enum IA_NotificationKind
 	TaskCompleted,
 	AreaCompleted,
 	Alert,
-	Success
+	Success,
+	Promotion
 }
 
 enum IA_NotificationAnim
@@ -155,6 +156,8 @@ class IA_NotificationToast : MUI_Surface
 			m_fIntroDur = 0.98;
 		else if (kind == IA_NotificationKind.Success)
 			m_fIntroDur = 0.78;
+		else if (kind == IA_NotificationKind.Promotion)
+			m_fIntroDur = 0.88;
 
 		float total = durationMs;
 		total = total * 0.001;
@@ -608,6 +611,8 @@ class IA_NotificationToast : MUI_Surface
 			extra = 6;
 		else if (m_eKind == IA_NotificationKind.Success)
 			extra = 4;
+		else if (m_eKind == IA_NotificationKind.Promotion)
+			extra = 10;
 		else if (IsAlertKind())
 			extra = 3;
 
@@ -741,6 +746,8 @@ class IA_NotificationToast : MUI_Surface
 			return "PRIORITY ALERT";
 		if (kind == IA_NotificationKind.Success)
 			return "UPLINK CONFIRMED";
+		if (kind == IA_NotificationKind.Promotion)
+			return "PROMOTION";
 		return "COMMAND UPLINK";
 	}
 
@@ -759,6 +766,8 @@ class IA_NotificationToast : MUI_Surface
 			return "WARN";
 		if (kind == IA_NotificationKind.Success)
 			return "LIVE";
+		if (kind == IA_NotificationKind.Promotion)
+			return "RANK";
 		return "UPLINK";
 	}
 
@@ -777,6 +786,8 @@ class IA_NotificationToast : MUI_Surface
 			return theme.Live;
 		if (m_eKind == IA_NotificationKind.Success)
 			return theme.Live;
+		if (m_eKind == IA_NotificationKind.Promotion)
+			return theme.Accent;
 		if (m_sColor == "red")
 			return theme.Danger;
 		if (m_sColor == "yellow")
@@ -812,6 +823,8 @@ class IA_NotificationToast : MUI_Surface
 		if (m_eKind == IA_NotificationKind.AreaCompleted)
 			return true;
 		if (m_eKind == IA_NotificationKind.Success)
+			return true;
+		if (m_eKind == IA_NotificationKind.Promotion)
 			return true;
 		if (m_eKind == IA_NotificationKind.TaskCompleted)
 			return true;
