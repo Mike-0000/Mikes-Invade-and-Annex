@@ -1,15 +1,20 @@
 //------------------------------------------------------------------------------------------------
+//! HUD sector toasts. Mike's UI path uses IA_NotificationToast (custom MUI_Node).
+//! Legacy layout remains if HUD mount fails.
+//------------------------------------------------------------------------------------------------
 class IA_NotificationInfo
 {
 	string m_sMessage;
 	string m_sColor;
 	int m_iDuration;
+	IA_NotificationKind m_eKind;
 
-	void IA_NotificationInfo(string message, string color, int duration)
+	void IA_NotificationInfo(string message, string color, int duration, IA_NotificationKind kind)
 	{
 		m_sMessage = message;
 		m_sColor = color;
 		m_iDuration = duration;
+		m_eKind = kind;
 	}
 }
 
@@ -18,6 +23,7 @@ class IA_NotificationInfo
 class IA_NotificationDisplay : SCR_InfoDisplayExtended
 {
 	protected static const bool USE_MIKES_UI = true;
+	protected static const int QUEUE_GAP_MS = 380;
 
 	protected RichTextWidget m_wInfoText;
 	protected RichTextWidget m_RedText;
@@ -26,12 +32,11 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 
 	protected ref MUI_HudHost m_HudHost;
 	protected MUI_Runtime m_Runtime;
-	protected ref MUI_Surface m_ToastSurface;
-	protected ref MUI_Label m_ToastHeader;
-	protected ref MUI_Label m_ToastMessage;
+	protected ref IA_NotificationToast m_Toast;
 
 	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
 	protected bool m_bIsDisplaying = false;
+	protected bool m_bSuppressFinish = false;
 
 	//------------------------------------------------------------------------------------------------
 	override void DisplayStartDraw(IEntity owner)
@@ -96,73 +101,40 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected void CloseMikesUI()
 	{
 		m_Runtime = null;
+		if (m_Toast)
+		{
+			m_Toast.GetOnFinished().Remove(OnToastFinished);
+			m_Toast.Abort();
+		}
 		if (m_HudHost)
 		{
 			m_HudHost.Close();
 			m_HudHost = null;
 		}
-		m_ToastSurface = null;
-		m_ToastHeader = null;
-		m_ToastMessage = null;
+		m_Toast = null;
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void BuildToastUI()
 	{
-		MUI_ThemeData theme = m_Runtime.GetTheme();
-
 		ref MUI_Panel overlay = m_Runtime.CreatePanel("overlay");
 		overlay.MakePassThroughOverlay();
-		overlay.GetStyle().m_fPadT = 72;
-		overlay.SetIntro(0, 0.01, 0);
+		overlay.GetStyle().m_fPadT = 58;
 
-		m_ToastSurface = m_Runtime.CreateCard("toast");
-		m_ToastSurface.SetWidth(780);
-		m_ToastSurface.SetHugHeight();
-		m_ToastSurface.SetPaddingTRBL(16, 22, 24, 22);
-		m_ToastSurface.SetGap(8);
-		m_ToastSurface.SetAlign(0.5, 0.0);
-		m_ToastSurface.GetStyle().m_bBlockHit = false;
-		m_ToastSurface.SetVisible(false);
+		m_Toast = IA_NotificationToast.Create(m_Runtime);
+		m_Toast.GetOnFinished().Insert(OnToastFinished);
 
-		m_ToastHeader = m_Runtime.CreateLabel("SECTOR ALERT", "toastHeader");
-		m_ToastHeader.SetFontSize(theme.FONT_SMALL);
-		m_ToastHeader.SetBold(true);
-
-		m_ToastMessage = m_Runtime.CreateLabel("", "message");
-		m_ToastMessage.SetFontSize(theme.FONT_BODY);
-		m_ToastMessage.SetBold(true);
-
-		m_ToastSurface.AddChild(m_ToastHeader);
-		m_ToastSurface.AddChild(m_ToastMessage);
-
-		overlay.AddChild(m_ToastSurface);
+		overlay.AddChild(m_Toast);
 		m_Runtime.SetRoot(overlay);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void ShowHUD(bool show, string color)
 	{
-		if (m_Runtime && m_ToastSurface)
+		if (m_Runtime && m_Toast)
 		{
-			if (!show)
-			{
-				m_ToastSurface.SetVisible(false);
-				return;
-			}
-
-			Color textColor = ResolveToastColor(color);
-			if (m_ToastHeader)
-				m_ToastHeader.SetColor(textColor);
-			if (m_ToastMessage)
-				m_ToastMessage.SetColor(textColor);
-
-			m_ToastSurface.SetVisible(true);
-			m_ToastSurface.SetIntro(0, 0.4, -36);
-			if (m_ToastHeader)
-				m_ToastHeader.SetIntro(0.05, 0.35, -18);
-			if (m_ToastMessage)
-				m_ToastMessage.SetIntro(0.1, 0.35, -14);
+			if (!show && m_Toast.IsPlaying())
+				m_Toast.Dismiss();
 			return;
 		}
 
@@ -190,31 +162,46 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected Color ResolveToastColor(string color)
-	{
-		ref MUI_ThemeData theme;
-		if (m_Runtime)
-			theme = m_Runtime.GetTheme();
-		else
-			theme = MUI_ThemeData.CreateUplink();
-
-		if (color == "red")
-			return theme.Danger;
-		if (color == "yellow")
-			return theme.Accent;
-		return theme.Live;
-	}
-
-	//------------------------------------------------------------------------------------------------
 	void QueueNotification(string message, string color, int duration, bool show = true)
 	{
 		if (!show)
 			return;
 
-		m_notificationQueue.Insert(new IA_NotificationInfo(message, color, duration));
+		m_notificationQueue.Insert(new IA_NotificationInfo(message, color, duration, InferKind(message, color)));
 
 		if (!m_bIsDisplaying)
 			ProcessNotificationQueue();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void QueueNotificationKind(string message, string color, int duration, IA_NotificationKind kind)
+	{
+		m_notificationQueue.Insert(new IA_NotificationInfo(message, color, duration, kind));
+
+		if (!m_bIsDisplaying)
+			ProcessNotificationQueue();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected IA_NotificationKind InferKind(string message, string color)
+	{
+		if (message.IndexOf("New Side Objective") != -1)
+			return IA_NotificationKind.SideTaskCreated;
+		if (message.IndexOf("New Objective") != -1)
+			return IA_NotificationKind.TaskCreated;
+		if (message.IndexOf("Objective Completed") != -1)
+			return IA_NotificationKind.TaskCompleted;
+		if (message.IndexOf("Area Completed") != -1)
+			return IA_NotificationKind.AreaCompleted;
+		if (message.IndexOf("RTB") != -1)
+			return IA_NotificationKind.AreaCompleted;
+		if (color == "red")
+			return IA_NotificationKind.Alert;
+		if (color == "yellow")
+			return IA_NotificationKind.Generic;
+		if (color == "green")
+			return IA_NotificationKind.Success;
+		return IA_NotificationKind.Generic;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -228,21 +215,19 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		IA_NotificationInfo info = m_notificationQueue[0];
 		m_notificationQueue.Remove(0);
 
-		_InternalShowNotification(info.m_sMessage, true, info.m_sColor);
-
-		GetGame().GetCallqueue().CallLater(this.HideCurrentAndProcessNext, info.m_iDuration);
+		_InternalShowNotification(info.m_sMessage, true, info.m_sColor, info.m_eKind, info.m_iDuration);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void _InternalShowNotification(string message, bool show, string color)
+	protected void _InternalShowNotification(string message, bool show, string color, IA_NotificationKind kind, int durationMs)
 	{
-		if (m_Runtime && m_ToastMessage)
+		if (m_Runtime && m_Toast)
 		{
 			if (show)
-				m_ToastMessage.SetText(message);
+				m_Toast.Present(message, color, durationMs, kind);
 			else
-				m_ToastMessage.SetText("");
-			ShowHUD(show, color);
+				m_Toast.Dismiss();
+			m_bIsEnabled = true;
 			return;
 		}
 
@@ -257,16 +242,29 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			m_YellowText.SetText(message);
 			ShowHUD(show, "yellow");
 			m_bIsEnabled = show;
+			if (show)
+				GetGame().GetCallqueue().CallLater(this.HideCurrentAndProcessNext, durationMs);
 			return;
 		}
 		ShowHUD(show, color);
 		m_bIsEnabled = show;
+		if (show)
+			GetGame().GetCallqueue().CallLater(this.HideCurrentAndProcessNext, durationMs);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnToastFinished()
+	{
+		if (m_bSuppressFinish)
+			return;
+		m_bIsDisplaying = false;
+		GetGame().GetCallqueue().CallLater(this.ProcessNotificationQueue, QUEUE_GAP_MS);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void HideCurrentAndProcessNext()
 	{
-		_InternalShowNotification("", false, "");
+		_InternalShowNotification("", false, "", IA_NotificationKind.Generic, 0);
 		m_bIsDisplaying = false;
 		GetGame().GetCallqueue().CallLater(this.ProcessNotificationQueue, 1000);
 	}
@@ -274,33 +272,41 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	//------------------------------------------------------------------------------------------------
 	void DisplayTaskCreatedNotification(string taskName)
 	{
-		QueueNotification("New Objective: " + taskName, "red", 5000);
+		QueueNotificationKind(taskName, "red", 5000, IA_NotificationKind.TaskCreated);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void DisplaySideTaskCreatedNotification(string taskName)
 	{
-		QueueNotification("New Side Objective: " + taskName, "red", 5000);
+		QueueNotificationKind(taskName, "red", 5000, IA_NotificationKind.SideTaskCreated);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void DisplayTaskCompletedNotification(string taskName)
 	{
-		QueueNotification("Objective Completed: " + taskName, "yellow", 9000);
+		QueueNotificationKind(taskName, "yellow", 9000, IA_NotificationKind.TaskCompleted);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void DisplayAreaCompletedNotification(string taskName)
 	{
-		QueueNotification("Objective Area Completed, RTB and await tasking.", "", 12000);
+		string body = "Return to base and await further tasking.";
+		if (!taskName.IsEmpty() && taskName != "All objectives in current area")
+			body = taskName;
+		QueueNotificationKind(body, "", 12000, IA_NotificationKind.AreaCompleted);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void HideNotification()
 	{
 		m_notificationQueue.Clear();
-		_InternalShowNotification("", false, "");
 		m_bIsDisplaying = false;
+		m_bSuppressFinish = true;
+		if (m_Toast)
+			m_Toast.Abort();
+		else
+			ShowHUD(false, "");
+		m_bSuppressFinish = false;
 		GetGame().GetCallqueue().Remove(this.ProcessNotificationQueue);
 		GetGame().GetCallqueue().Remove(this.HideCurrentAndProcessNext);
 	}

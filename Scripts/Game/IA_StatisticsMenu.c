@@ -44,7 +44,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 		ref IA_MuiShell shell = IA_MuiShell.Create(
 			runtime,
 			"LEADERBOARD",
-			"COMMAND UPLINK  //  SECTOR IA",
+			"COMMAND UPLINK",
 			"Server  •  Global  •  Global by server",
 			1100
 		);
