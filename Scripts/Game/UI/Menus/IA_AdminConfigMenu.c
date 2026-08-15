@@ -56,7 +56,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		ref IA_MuiShell shell = IA_MuiShell.Create(
 			runtime,
 			"ADMIN CONFIG",
-			"COMMAND UPLINK  //  SECTOR IA",
+			"COMMAND UPLINK",
 			"Live mission tuning  •  Changes apply on Save",
 			640
 		);

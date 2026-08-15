@@ -736,7 +736,7 @@ class IA_MissionInitializer : GenericEntity
 	{
 		// --- BEGIN ADDED: Trigger RTB notification only when actually proceeding to next zone ---
 		// Only send RTB notification if we're not starting a defend mission
-		TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area");
+		TriggerGlobalNotification("AreaGroupCompleted", "Return to base and await further tasking.");
 		// --- END ADDED ---
 		
 		if (m_currentAreaGroupManager)
@@ -1356,7 +1356,7 @@ class IA_MissionInitializer : GenericEntity
 		Print("[IA_MissionInitializer] Defend mission completed, proceeding to next zone", LogLevel.NORMAL);
 		
 		// Trigger RTB notification just like normal area group completion
-		TriggerGlobalNotification("AreaGroupCompleted", "All objectives in current area");
+		TriggerGlobalNotification("AreaGroupCompleted", "Return to base and await further tasking.");
 		
 		// Clean up current area instances
 		m_civilianRevoltActive = false;
