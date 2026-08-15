@@ -24,10 +24,10 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected RichTextWidget m_YellowText;
 	protected Widget m_wNotificationOverlay;
 
-	protected Widget m_wHost;
-	protected ref MUI_Runtime m_Runtime;
-	protected ref MUI_Card m_ToastCard;
-	protected ref MUI_Label m_ToastKicker;
+	protected ref MUI_HudHost m_HudHost;
+	protected MUI_Runtime m_Runtime;
+	protected ref MUI_Surface m_ToastSurface;
+	protected ref MUI_Label m_ToastHeader;
 	protected ref MUI_Label m_ToastMessage;
 
 	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
@@ -63,8 +63,8 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	override void DisplayUpdate(IEntity owner, float timeSlice)
 	{
 		super.DisplayUpdate(owner, timeSlice);
-		if (m_Runtime)
-			m_Runtime.Tick(timeSlice);
+		if (m_HudHost)
+			m_HudHost.Tick(timeSlice);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -80,33 +80,14 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		if (!m_wRoot)
 			return false;
 
-		WorkspaceWidget workspace = GetGame().GetWorkspace();
-		if (!workspace)
-			return false;
-
-		m_wHost = workspace.CreateWidget(WidgetType.FrameWidgetTypeID, WidgetFlags.VISIBLE | WidgetFlags.IGNORE_CURSOR, Color.FromInt(Color.WHITE), 50, m_wRoot);
-		if (!m_wHost)
-			return false;
-
-		FrameSlot.SetAnchorMin(m_wHost, 0, 0);
-		FrameSlot.SetAnchorMax(m_wHost, 1, 1);
-		FrameSlot.SetOffsets(m_wHost, 0, 0, 0, 0);
-		// HUD manager sets IGNORE_CURSOR on layout roots; child canvases must too or they eat all clicks.
-		m_wHost.SetFlags(WidgetFlags.IGNORE_CURSOR);
-		if (m_wRoot)
-			m_wRoot.SetFlags(WidgetFlags.IGNORE_CURSOR);
-
-		m_Runtime = new MUI_Runtime();
-		if (!m_Runtime.MountPassive(m_wHost))
+		m_HudHost = new MUI_HudHost();
+		if (!m_HudHost.Open(m_wRoot, "IA_NotificationDisplay"))
 		{
-			m_Runtime.Unmount();
-			m_Runtime = null;
-			m_wHost.RemoveFromHierarchy();
-			m_wHost = null;
+			m_HudHost = null;
 			return false;
 		}
 
-		HideLegacyChildren();
+		m_Runtime = m_HudHost.GetRuntime();
 		BuildToastUI();
 		return true;
 	}
@@ -114,91 +95,72 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	//------------------------------------------------------------------------------------------------
 	protected void CloseMikesUI()
 	{
-		if (m_Runtime)
+		m_Runtime = null;
+		if (m_HudHost)
 		{
-			m_Runtime.Unmount();
-			m_Runtime = null;
+			m_HudHost.Close();
+			m_HudHost = null;
 		}
-		if (m_wHost)
-		{
-			m_wHost.RemoveFromHierarchy();
-			m_wHost = null;
-		}
-		m_ToastCard = null;
-		m_ToastKicker = null;
+		m_ToastSurface = null;
+		m_ToastHeader = null;
 		m_ToastMessage = null;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void HideLegacyChildren()
-	{
-		if (!m_wRoot)
-			return;
-
-		Widget child = m_wRoot.GetChildren();
-		while (child)
-		{
-			Widget next = child.GetSibling();
-			if (child != m_wHost)
-				child.SetVisible(false);
-			child = next;
-		}
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void BuildToastUI()
 	{
+		MUI_ThemeData theme = m_Runtime.GetTheme();
+
 		ref MUI_Panel overlay = m_Runtime.CreatePanel("overlay");
 		overlay.MakePassThroughOverlay();
 		overlay.GetStyle().m_fPadT = 72;
 		overlay.SetIntro(0, 0.01, 0);
 
-		m_ToastCard = m_Runtime.CreateCard("toast");
-		m_ToastCard.SetWidth(720);
-		m_ToastCard.SetPadding(20);
-		m_ToastCard.GetStyle().m_fPadT = 16;
-		m_ToastCard.GetStyle().m_fPadB = 16;
-		m_ToastCard.SetGap(8);
-		m_ToastCard.SetAlign(0.5, 0.0);
-		m_ToastCard.GetStyle().m_bBlockHit = false;
-		m_ToastCard.SetVisible(false);
+		m_ToastSurface = m_Runtime.CreateCard("toast");
+		m_ToastSurface.SetWidth(780);
+		m_ToastSurface.SetHugHeight();
+		m_ToastSurface.SetPaddingTRBL(16, 22, 24, 22);
+		m_ToastSurface.SetGap(8);
+		m_ToastSurface.SetAlign(0.5, 0.0);
+		m_ToastSurface.GetStyle().m_bBlockHit = false;
+		m_ToastSurface.SetVisible(false);
 
-		m_ToastKicker = m_Runtime.CreateLabel("SECTOR ALERT", "kicker");
-		m_ToastKicker.SetFontSize(MUI_Theme.FONT_SMALL);
-		m_ToastKicker.SetMuted(true);
+		m_ToastHeader = m_Runtime.CreateLabel("SECTOR ALERT", "toastHeader");
+		m_ToastHeader.SetFontSize(theme.FONT_SMALL);
+		m_ToastHeader.SetBold(true);
 
 		m_ToastMessage = m_Runtime.CreateLabel("", "message");
-		m_ToastMessage.SetFontSize(MUI_Theme.FONT_BODY);
+		m_ToastMessage.SetFontSize(theme.FONT_BODY);
 		m_ToastMessage.SetBold(true);
 
-		m_ToastCard.AddChild(m_ToastKicker);
-		m_ToastCard.AddChild(m_ToastMessage);
+		m_ToastSurface.AddChild(m_ToastHeader);
+		m_ToastSurface.AddChild(m_ToastMessage);
 
-		overlay.AddChild(m_ToastCard);
+		overlay.AddChild(m_ToastSurface);
 		m_Runtime.SetRoot(overlay);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void ShowHUD(bool show, string color)
 	{
-		if (m_Runtime && m_ToastCard)
+		if (m_Runtime && m_ToastSurface)
 		{
 			if (!show)
 			{
-				m_ToastCard.SetVisible(false);
+				m_ToastSurface.SetVisible(false);
 				return;
 			}
 
 			Color textColor = ResolveToastColor(color);
+			if (m_ToastHeader)
+				m_ToastHeader.SetColor(textColor);
 			if (m_ToastMessage)
 				m_ToastMessage.SetColor(textColor);
-			if (m_ToastKicker)
-				m_ToastKicker.SetColor(textColor);
 
-			m_ToastCard.SetVisible(true);
-			m_ToastCard.SetIntro(0, 0.4, -36);
-			if (m_ToastKicker)
-				m_ToastKicker.SetIntro(0.05, 0.35, -18);
+			m_ToastSurface.SetVisible(true);
+			m_ToastSurface.SetIntro(0, 0.4, -36);
+			if (m_ToastHeader)
+				m_ToastHeader.SetIntro(0.05, 0.35, -18);
 			if (m_ToastMessage)
 				m_ToastMessage.SetIntro(0.1, 0.35, -14);
 			return;
@@ -230,11 +192,17 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	//------------------------------------------------------------------------------------------------
 	protected Color ResolveToastColor(string color)
 	{
+		ref MUI_ThemeData theme;
+		if (m_Runtime)
+			theme = m_Runtime.GetTheme();
+		else
+			theme = MUI_ThemeData.CreateUplink();
+
 		if (color == "red")
-			return MUI_Theme.Danger;
+			return theme.Danger;
 		if (color == "yellow")
-			return MUI_Theme.Accent;
-		return MUI_Theme.Live;
+			return theme.Accent;
+		return theme.Live;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -336,4 +304,4 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		GetGame().GetCallqueue().Remove(this.ProcessNotificationQueue);
 		GetGame().GetCallqueue().Remove(this.HideCurrentAndProcessNext);
 	}
-};
+}

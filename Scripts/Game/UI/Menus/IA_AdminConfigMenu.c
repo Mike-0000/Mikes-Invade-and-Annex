@@ -1,138 +1,185 @@
 //------------------------------------------------------------------------------------------------
-class IA_AdminConfigMenu : ChimeraMenuBase
+//! Runtime admin tuning for IA_Config. Uses MUI blank layout (no legacy widget path).
+//------------------------------------------------------------------------------------------------
+class IA_AdminConfigMenu : MUI_MenuBase
 {
-	protected static const bool USE_MIKES_UI = true;
+	protected ref MUI_Tabs m_Tabs;
+	protected ref MUI_Panel m_PageScaling;
+	protected ref MUI_Panel m_PageCiv;
+	protected ref MUI_Panel m_PageArty;
+	protected ref MUI_Panel m_PageHq;
 
-	protected Widget m_wRoot;
-	protected ref IA_MikesMenuHost m_Host;
-	protected ref MUI_TextField m_civField;
-	protected ref MUI_TextField m_AIField;
-	protected ref MUI_TextField m_artyField;
+	protected ref MUI_NumericField m_AIField;
+	protected ref MUI_NumericField m_StaticAIField;
+	protected ref MUI_NumericField m_MilVehField;
+
+	protected ref MUI_NumericField m_civField;
+	protected ref MUI_NumericField m_CivVehField;
+	protected ref MUI_NumericField m_RevoltField;
+	protected ref MUI_Toggle m_CivSpawnToggle;
+
+	protected ref MUI_NumericField m_artyField;
+	protected ref MUI_NumericField m_ArtyMinField;
+	protected ref MUI_NumericField m_ArtyMaxField;
+	protected ref MUI_Slider m_ArtyChanceSlider;
+	protected ref MUI_Label m_ArtyChanceLabel;
+	protected ref MUI_Progress m_ArtyChanceProgress;
+
 	protected ref MUI_Toggle m_heliToggle;
 	protected ref MUI_Toggle m_groundToggle;
-
-	protected EditBoxWidget m_civCountEdit;
-	protected EditBoxWidget m_AIScaleEdit;
-	protected CheckBoxWidget m_disableHQHeliCheck;
-	protected CheckBoxWidget m_disableHQGroundCheck;
-	protected EditBoxWidget m_artyCooldownEdit;
+	protected ref MUI_Toggle m_RolesToggle;
+	protected ref MUI_Dropdown m_FactionDrop;
 
 	//------------------------------------------------------------------------------------------------
 	override void OnMenuOpen()
 	{
 		super.OnMenuOpen();
-		m_wRoot = GetRootWidget();
-		if (!m_wRoot)
-			return;
-
-		if (USE_MIKES_UI)
-			OpenMikesUI();
-		else
-			OpenLegacy();
+		if (IsMUIOpen())
+			PopulateFromConfig();
 	}
 
 	//------------------------------------------------------------------------------------------------
-	override void OnMenuUpdate(float tDelta)
+	override void OnMUIMountFailed()
 	{
-		super.OnMenuUpdate(tDelta);
-		if (!USE_MIKES_UI)
-			return;
-		if (m_Host)
-			m_Host.Tick(tDelta);
+		Print("[IA_AdminConfigMenu] MUI mount failed — blank layout required.", LogLevel.ERROR);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	override void OnMenuFocusLost()
+	override string GetMUILogTag()
 	{
-		super.OnMenuFocusLost();
-		if (m_Host)
-			m_Host.Blur();
+		return "IA_AdminConfigMenu";
 	}
 
 	//------------------------------------------------------------------------------------------------
-	override void OnMenuClose()
+	override void BuildUI(notnull MUI_Runtime runtime)
 	{
-		if (m_Host)
-		{
-			m_Host.Close();
-			m_Host = null;
-		}
-		super.OnMenuClose();
-	}
+		ref IA_MuiShell shell = IA_MuiShell.Create(
+			runtime,
+			"ADMIN CONFIG",
+			"COMMAND UPLINK  //  SECTOR IA",
+			"Live mission tuning  •  Changes apply on Save",
+			640
+		);
 
-	//------------------------------------------------------------------------------------------------
-	protected void OpenMikesUI()
-	{
-		m_Host = new IA_MikesMenuHost();
-		if (!m_Host.Open(m_wRoot, "IA_AdminConfigMenu"))
-		{
-			m_Host = null;
-			OpenLegacy();
-			return;
-		}
-
-		BuildAdminUI();
-		PopulateFromConfig();
-		m_Host.GetRuntime().GetOnBack().Insert(OnMikesClose);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void BuildAdminUI()
-	{
-		MUI_Runtime runtime = m_Host.GetRuntime();
-
-		ref MUI_Panel overlay = runtime.CreatePanel("overlay");
-		overlay.MakeOverlay();
-		overlay.GetStyle().m_Fill = Color.FromInt(0);
-		overlay.SetIntro(0, 0.35, 0);
-
-		ref MUI_FxBackdrop fx = runtime.CreateFxBackdrop("fx");
-		fx.SetIntro(0, 0.55, 0);
-
-		ref MUI_Card card = runtime.CreateCard("card");
-		card.SetWidth(600);
-		card.SetPadding(28);
-		card.GetStyle().m_fPadT = 22;
-		card.SetGap(12);
-		card.SetAlign(0.5, 0.5);
-		card.SetIntro(0.06, 0.55, 46);
-
-		ref MUI_LiveHeader header = runtime.CreateLiveHeader("ADMIN CONFIG", "header");
-		header.SetKicker("COMMAND UPLINK  //  SECTOR IA");
-		header.SetIntro(0.16, 0.4, 18);
-
-		ref MUI_Label subtitle = runtime.CreateLabel("MIKE'S UI   •   CANVAS COMPOSITOR   •   EXPERIMENTAL BUILD", "subtitle");
-		subtitle.SetFontSize(MUI_Theme.FONT_SMALL);
-		subtitle.SetMuted(true);
-		subtitle.SetIntro(0.22, 0.4, 14);
-
-		ref MUI_Hairline lineA = runtime.CreateHairline("lineA");
-		lineA.SetIntro(0.26, 0.35, 8);
+		m_Tabs = runtime.CreateTabs("tabs");
+		m_Tabs.SetIntro(0.28, 0.4, 16);
+		m_Tabs.AddTab("Scaling");
+		m_Tabs.AddTab("Civilians");
+		m_Tabs.AddTab("Artillery");
+		m_Tabs.AddTab("HQ");
+		m_Tabs.GetOnChanged().Insert(OnAdminTabChanged);
 
 		ref MUI_ScrollView scroll = runtime.CreateScrollView("scroll");
-		scroll.SetMaxViewportHeight(420);
+		scroll.SetViewportHeight(420);
 		scroll.SetGap(12);
-		scroll.SetIntro(0.28, 0.4, 16);
+		scroll.SetIntro(0.32, 0.4, 16);
 
-		m_civField = runtime.CreateTextField("Civilian count multiplier", "civ");
-		m_civField.SetIntro(0.32, 0.4, 16);
-		m_AIField = runtime.CreateTextField("AI scale multiplier", "ai");
-		m_AIField.SetIntro(0.36, 0.4, 16);
-		m_artyField = runtime.CreateTextField("Artillery cooldown (seconds)", "arty");
-		m_artyField.SetIntro(0.40, 0.4, 16);
+		m_PageScaling = MakePage(runtime, "pageScaling");
+		m_PageCiv = MakePage(runtime, "pageCiv");
+		m_PageArty = MakePage(runtime, "pageArty");
+		m_PageHq = MakePage(runtime, "pageHq");
+
+		m_AIField = runtime.CreateNumericField("AI scale multiplier", "ai");
+		m_AIField.SetRange(0.1, 10);
+		m_AIField.SetStep(0.1);
+		m_AIField.SetDecimals(2);
+
+		m_StaticAIField = runtime.CreateNumericField("Static AI scale override (0 = dynamic)", "staticAi");
+		m_StaticAIField.SetRange(0, 20);
+		m_StaticAIField.SetStep(0.1);
+		m_StaticAIField.SetDecimals(2);
+
+		m_MilVehField = runtime.CreateNumericField("Military vehicle count multiplier", "milVeh");
+		m_MilVehField.SetRange(0, 10);
+		m_MilVehField.SetStep(0.1);
+		m_MilVehField.SetDecimals(2);
+
+		m_PageScaling.AddChild(m_AIField);
+		m_PageScaling.AddChild(m_StaticAIField);
+		m_PageScaling.AddChild(m_MilVehField);
+
+		m_civField = runtime.CreateNumericField("Civilian count multiplier", "civ");
+		m_civField.SetRange(0, 100);
+		m_civField.SetStep(0.1);
+		m_civField.SetDecimals(2);
+
+		m_CivVehField = runtime.CreateNumericField("Civilian vehicle multiplier", "civVeh");
+		m_CivVehField.SetRange(0, 10);
+		m_CivVehField.SetStep(0.1);
+		m_CivVehField.SetDecimals(2);
+
+		m_RevoltField = runtime.CreateNumericField("Revolt threshold (0–1)", "revolt");
+		m_RevoltField.SetRange(0, 1);
+		m_RevoltField.SetStep(0.01);
+		m_RevoltField.SetDecimals(2);
+
+		m_CivSpawnToggle = runtime.CreateToggle("Enable civilian spawning", "civSpawn");
+
+		m_PageCiv.AddChild(m_civField);
+		m_PageCiv.AddChild(m_CivVehField);
+		m_PageCiv.AddChild(m_RevoltField);
+		m_PageCiv.AddChild(m_CivSpawnToggle);
+
+		m_artyField = runtime.CreateNumericField("Artillery cooldown (seconds)", "arty");
+		m_artyField.SetRange(0, 3600);
+		m_artyField.SetStep(10);
+		m_artyField.SetDecimals(0);
+
+		m_ArtyMinField = runtime.CreateNumericField("Strike min delay (seconds)", "artyMin");
+		m_ArtyMinField.SetRange(0, 600);
+		m_ArtyMinField.SetStep(1);
+		m_ArtyMinField.SetDecimals(0);
+
+		m_ArtyMaxField = runtime.CreateNumericField("Strike max delay (seconds)", "artyMax");
+		m_ArtyMaxField.SetRange(0, 600);
+		m_ArtyMaxField.SetStep(1);
+		m_ArtyMaxField.SetDecimals(0);
+
+		m_ArtyChanceLabel = runtime.CreateLabel("Strike chance  18%", "artyChanceLbl");
+		m_ArtyChanceLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		m_ArtyChanceLabel.SetMuted(true);
+
+		m_ArtyChanceSlider = runtime.CreateSlider("artyChance");
+		m_ArtyChanceSlider.SetRange(0, 1);
+		m_ArtyChanceSlider.SetStep(0.01);
+		m_ArtyChanceSlider.SetValue(0.18);
+		m_ArtyChanceSlider.GetOnChanged().Insert(OnArtyChanceChanged);
+
+		m_ArtyChanceProgress = runtime.CreateProgress("artyChanceBar");
+		m_ArtyChanceProgress.SetValue(0.18);
+
+		m_PageArty.AddChild(m_artyField);
+		m_PageArty.AddChild(m_ArtyMinField);
+		m_PageArty.AddChild(m_ArtyMaxField);
+		m_PageArty.AddChild(m_ArtyChanceLabel);
+		m_PageArty.AddChild(m_ArtyChanceSlider);
+		m_PageArty.AddChild(m_ArtyChanceProgress);
+
 		m_heliToggle = runtime.CreateToggle("Disable HQ helipads", "heli");
-		m_heliToggle.SetIntro(0.44, 0.4, 14);
 		m_groundToggle = runtime.CreateToggle("Disable HQ ground vehicles", "ground");
-		m_groundToggle.SetIntro(0.48, 0.4, 14);
+		m_RolesToggle = runtime.CreateToggle("Enforce pilot role restrictions", "roles");
 
-		scroll.AddChild(m_civField);
-		scroll.AddChild(m_AIField);
-		scroll.AddChild(m_artyField);
-		scroll.AddChild(m_heliToggle);
-		scroll.AddChild(m_groundToggle);
+		ref MUI_Label factionLbl = runtime.CreateLabel("Preferred enemy faction (future spawns)", "factionLbl");
+		factionLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		factionLbl.SetMuted(true);
 
-		ref MUI_Hairline lineB = runtime.CreateHairline("lineB");
-		lineB.SetIntro(0.50, 0.35, 8);
+		m_FactionDrop = runtime.CreateDropdown("faction");
+		m_FactionDrop.AddItem("Keep current");
+		m_FactionDrop.AddItem("USSR");
+		m_FactionDrop.AddItem("US");
+		m_FactionDrop.AddItem("FIA");
+		m_FactionDrop.SetIndex(0);
+
+		m_PageHq.AddChild(m_heliToggle);
+		m_PageHq.AddChild(m_groundToggle);
+		m_PageHq.AddChild(m_RolesToggle);
+		m_PageHq.AddChild(factionLbl);
+		m_PageHq.AddChild(m_FactionDrop);
+
+		scroll.AddChild(m_PageScaling);
+		scroll.AddChild(m_PageCiv);
+		scroll.AddChild(m_PageArty);
+		scroll.AddChild(m_PageHq);
 
 		ref MUI_Row buttons = runtime.CreateRow("buttons");
 		buttons.SetGap(12);
@@ -140,66 +187,131 @@ class IA_AdminConfigMenu : ChimeraMenuBase
 
 		ref MUI_Button saveBtn = runtime.CreateButton("Save", "save");
 		saveBtn.MakeAccent();
-		saveBtn.SetIntro(0.54, 0.4, 14);
 		saveBtn.GetOnClicked().Insert(OnMikesSave);
 
 		ref MUI_Button completeBtn = runtime.CreateButton("Complete Zone", "complete");
 		completeBtn.MakeDanger();
-		completeBtn.SetIntro(0.58, 0.4, 14);
 		completeBtn.GetOnClicked().Insert(OnMikesComplete);
 
 		ref MUI_Button closeBtn = runtime.CreateButton("Close", "close");
-		closeBtn.SetIntro(0.62, 0.4, 14);
-		closeBtn.GetOnClicked().Insert(OnMikesClose);
+		closeBtn.GetOnClicked().Insert(OnMUIBack);
 
 		buttons.AddChild(saveBtn);
 		buttons.AddChild(completeBtn);
 		buttons.AddChild(closeBtn);
 
-		ref MUI_Label foot = runtime.CreateLabel("RENDER GRAPH  •  TEXT POOL  •  EDIT BRIDGE  •  ANIM CLOCK", "foot");
-		foot.SetFontSize(MUI_Theme.FONT_SMALL);
-		foot.SetMuted(true);
-		foot.SetIntro(0.66, 0.4, 10);
+		shell.GetCard().AddChild(m_Tabs);
+		shell.GetCard().AddChild(scroll);
+		shell.AddFooter(runtime, "Save writes to the server config  •  Faction override affects future enemy picks", buttons);
+		shell.Mount(runtime);
 
-		card.AddChild(header);
-		card.AddChild(subtitle);
-		card.AddChild(lineA);
-		card.AddChild(scroll);
-		card.AddChild(lineB);
-		card.AddChild(buttons);
-		card.AddChild(foot);
+		ShowAdminPage(0);
+	}
 
-		overlay.AddChild(fx);
-		overlay.AddChild(card);
-		runtime.SetRoot(overlay);
+	//------------------------------------------------------------------------------------------------
+	protected MUI_Panel MakePage(notnull MUI_Runtime runtime, string name)
+	{
+		ref MUI_Panel page = runtime.CreatePanel(name);
+		page.GetStyle().m_Fill = Color.FromInt(0);
+		page.GetStyle().m_fRadius = 0;
+		page.GetStyle().m_fGap = 12;
+		page.GetStyle().m_bBlockHit = false;
+		page.SetFillWidth();
+		return page;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnAdminTabChanged()
+	{
+		if (!m_Tabs)
+			return;
+		ShowAdminPage(m_Tabs.GetIndex());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ShowAdminPage(int index)
+	{
+		if (m_PageScaling)
+			m_PageScaling.SetVisible(index == 0);
+		if (m_PageCiv)
+			m_PageCiv.SetVisible(index == 1);
+		if (m_PageArty)
+			m_PageArty.SetVisible(index == 2);
+		if (m_PageHq)
+			m_PageHq.SetVisible(index == 3);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnArtyChanceChanged()
+	{
+		if (!m_ArtyChanceSlider)
+			return;
+		float v = m_ArtyChanceSlider.GetValue();
+		if (m_ArtyChanceProgress)
+			m_ArtyChanceProgress.SetValue(v);
+		if (m_ArtyChanceLabel)
+			m_ArtyChanceLabel.SetText(string.Format("Strike chance  %1%%", Math.Round(v * 100.0)));
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void PopulateFromConfig()
 	{
-		IA_MissionInitializer missionInit = IA_MissionInitializer.GetInstance();
-		if (!missionInit)
-			return;
-		if (!missionInit.GetConfig())
+		IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+		if (!cfg)
 			return;
 
 		if (m_civField)
-			m_civField.SetText(missionInit.GetConfig().m_fCivilianCountMultiplier.ToString());
+			m_civField.SetValue(cfg.m_fCivilianCountMultiplier);
 		if (m_AIField)
-			m_AIField.SetText(missionInit.GetConfig().m_fAIScaleMultiplier.ToString());
+			m_AIField.SetValue(cfg.m_fAIScaleMultiplier);
+		if (m_StaticAIField)
+			m_StaticAIField.SetValue(cfg.m_fStaticAIScaleOverride);
+		if (m_MilVehField)
+			m_MilVehField.SetValue(cfg.m_fMilitaryVehicleCountMultiplier);
+		if (m_CivVehField)
+			m_CivVehField.SetValue(cfg.m_fCivilianVehicleCountMultiplier);
+		if (m_RevoltField)
+			m_RevoltField.SetValue(cfg.m_fCivilianRevoltThreshold);
+		if (m_CivSpawnToggle)
+			m_CivSpawnToggle.SetChecked(cfg.m_bEnableCivilianSpawning);
 		if (m_artyField)
-			m_artyField.SetText(missionInit.GetConfig().m_iArtilleryCooldown.ToString());
+			m_artyField.SetValue(cfg.m_iArtilleryCooldown);
+		if (m_ArtyMinField)
+			m_ArtyMinField.SetValue(cfg.m_iArtilleryMinDelay);
+		if (m_ArtyMaxField)
+			m_ArtyMaxField.SetValue(cfg.m_iArtilleryMaxDelay);
+		if (m_ArtyChanceSlider)
+		{
+			m_ArtyChanceSlider.SetValue(cfg.m_fArtilleryStrikeChance);
+			OnArtyChanceChanged();
+		}
 		if (m_heliToggle)
-			m_heliToggle.SetChecked(missionInit.GetConfig().m_bDisableHQHelipads);
+			m_heliToggle.SetChecked(cfg.m_bDisableHQHelipads);
 		if (m_groundToggle)
-			m_groundToggle.SetChecked(missionInit.GetConfig().m_bDisableHQGroundVehicles);
+			m_groundToggle.SetChecked(cfg.m_bDisableHQGroundVehicles);
+		if (m_RolesToggle)
+			m_RolesToggle.SetChecked(cfg.m_bEnforceRoleRestrictions);
+
+		if (m_FactionDrop && cfg.m_sDesiredEnemyFactionKeys && cfg.m_sDesiredEnemyFactionKeys.Count() > 0)
+		{
+			string key = cfg.m_sDesiredEnemyFactionKeys[0];
+			if (key == "USSR")
+				m_FactionDrop.SetIndex(1);
+			else if (key == "US")
+				m_FactionDrop.SetIndex(2);
+			else if (key == "FIA")
+				m_FactionDrop.SetIndex(3);
+			else
+				m_FactionDrop.SetIndex(0);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void OnMikesSave()
 	{
 		IA_MissionInitializer missionInit = IA_MissionInitializer.GetInstance();
-		if (!missionInit)
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (!missionInit && !pc)
 		{
 			Print("[IA_AdminConfigMenu] ERROR: IA_MissionInitializer instance not found!", LogLevel.ERROR);
 			return;
@@ -207,198 +319,75 @@ class IA_AdminConfigMenu : ChimeraMenuBase
 
 		float civCount = 1.0;
 		float aiScale = 1.0;
+		float staticAi = 0;
+		float milVeh = 1.0;
+		float civVeh = 1.0;
+		float revolt = 0.11;
 		int artyCooldown = 300;
+		int artyMin = 45;
+		int artyMax = 70;
+		float artyChance = 0.18;
 		bool disableHeli = false;
 		bool disableGround = false;
+		bool enableCiv = true;
+		bool enforceRoles = false;
+		string factionKey = "";
 
 		if (m_civField)
-		{
-			string s = m_civField.GetText();
-			if (!s.IsEmpty())
-				civCount = s.ToFloat();
-		}
+			civCount = m_civField.GetValue();
 		if (m_AIField)
-		{
-			string s = m_AIField.GetText();
-			if (!s.IsEmpty())
-				aiScale = s.ToFloat();
-		}
+			aiScale = m_AIField.GetValue();
+		if (m_StaticAIField)
+			staticAi = m_StaticAIField.GetValue();
+		if (m_MilVehField)
+			milVeh = m_MilVehField.GetValue();
+		if (m_CivVehField)
+			civVeh = m_CivVehField.GetValue();
+		if (m_RevoltField)
+			revolt = m_RevoltField.GetValue();
 		if (m_artyField)
-		{
-			string s = m_artyField.GetText();
-			if (!s.IsEmpty())
-				artyCooldown = s.ToInt();
-		}
+			artyCooldown = m_artyField.GetText().ToInt();
+		if (m_ArtyMinField)
+			artyMin = m_ArtyMinField.GetText().ToInt();
+		if (m_ArtyMaxField)
+			artyMax = m_ArtyMaxField.GetText().ToInt();
+		if (m_ArtyChanceSlider)
+			artyChance = m_ArtyChanceSlider.GetValue();
 		if (m_heliToggle)
 			disableHeli = m_heliToggle.IsChecked();
 		if (m_groundToggle)
 			disableGround = m_groundToggle.IsChecked();
+		if (m_CivSpawnToggle)
+			enableCiv = m_CivSpawnToggle.IsChecked();
+		if (m_RolesToggle)
+			enforceRoles = m_RolesToggle.IsChecked();
+		if (m_FactionDrop && m_FactionDrop.GetIndex() > 0)
+			factionKey = m_FactionDrop.GetText();
 
-		Print(string.Format("[IA_AdminConfigMenu] Saving Config: Civ=%1, AI=%2, Heli=%3, Ground=%4, Arty=%5", civCount, aiScale, disableHeli, disableGround, artyCooldown), LogLevel.NORMAL);
-		missionInit.UpdateConfig(civCount, aiScale, disableHeli, disableGround, artyCooldown);
+		IA_MissionInitializer.UpdateConfig(
+			civCount,
+			aiScale,
+			disableHeli,
+			disableGround,
+			artyCooldown,
+			staticAi,
+			milVeh,
+			civVeh,
+			revolt,
+			enableCiv,
+			enforceRoles,
+			artyChance,
+			artyMin,
+			artyMax,
+			factionKey
+		);
 		GetGame().GetMenuManager().CloseMenu(this);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void OnMikesComplete()
 	{
-		IA_MissionInitializer missionInit = IA_MissionInitializer.GetInstance();
-		if (!missionInit)
-			return;
-		missionInit.ForceCompleteZone();
+		IA_MissionInitializer.ForceCompleteZone();
 		GetGame().GetMenuManager().CloseMenu(this);
 	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void OnMikesClose()
-	{
-		GetGame().GetMenuManager().CloseMenu(this);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void OpenLegacy()
-	{
-		Widget w;
-
-		w = m_wRoot.FindAnyWidget("IACivCountEdit");
-		if (w)
-			m_civCountEdit = EditBoxWidget.Cast(w);
-		else
-			Print("[IA_AdminConfigMenu] ERROR: IACivCountEdit not found!", LogLevel.ERROR);
-
-		w = m_wRoot.FindAnyWidget("IAAIScaleEdit");
-		if (w)
-			m_AIScaleEdit = EditBoxWidget.Cast(w);
-		else
-			Print("[IA_AdminConfigMenu] ERROR: IAAIScaleEdit not found!", LogLevel.ERROR);
-
-		w = m_wRoot.FindAnyWidget("IADisableHQHeliCheck");
-		if (w)
-			m_disableHQHeliCheck = CheckBoxWidget.Cast(w);
-		else
-			Print("[IA_AdminConfigMenu] ERROR: IADisableHQHeliCheck not found!", LogLevel.ERROR);
-
-		w = m_wRoot.FindAnyWidget("IADisableHQGroundCheck");
-		if (w)
-			m_disableHQGroundCheck = CheckBoxWidget.Cast(w);
-		else
-			Print("[IA_AdminConfigMenu] ERROR: IADisableHQGroundCheck not found!", LogLevel.ERROR);
-
-		w = m_wRoot.FindAnyWidget("IAArtyCooldownEdit");
-		if (w)
-			m_artyCooldownEdit = EditBoxWidget.Cast(w);
-		else
-			Print("[IA_AdminConfigMenu] ERROR: IAArtyCooldownEdit not found!", LogLevel.ERROR);
-
-		Widget closeW = m_wRoot.FindAnyWidget("IACloseButton");
-		if (closeW)
-		{
-			SCR_InputButtonComponent closeButton = SCR_InputButtonComponent.Cast(closeW.FindHandler(SCR_InputButtonComponent));
-			if (closeButton)
-				closeButton.m_OnActivated.Insert(OnIAMenuClose);
-		}
-		else
-			Print("[IA_AdminConfigMenu] ERROR: IACloseButton not found!", LogLevel.ERROR);
-
-		Widget saveW = m_wRoot.FindAnyWidget("IASaveButton");
-		if (saveW)
-		{
-			SCR_InputButtonComponent saveButton = SCR_InputButtonComponent.Cast(saveW.FindHandler(SCR_InputButtonComponent));
-			if (saveButton)
-				saveButton.m_OnActivated.Insert(OnIASaveConfig);
-		}
-		else
-			Print("[IA_AdminConfigMenu] ERROR: IASaveButton not found!", LogLevel.ERROR);
-
-		Widget completeW = m_wRoot.FindAnyWidget("IACompleteMissionButton");
-		if (completeW)
-		{
-			SCR_InputButtonComponent completeButton = SCR_InputButtonComponent.Cast(completeW.FindHandler(SCR_InputButtonComponent));
-			if (completeButton)
-				completeButton.m_OnActivated.Insert(OnIAForceCompleteMission);
-		}
-		else
-			Print("[IA_AdminConfigMenu] ERROR: IACompleteMissionButton not found!", LogLevel.ERROR);
-
-		IA_MissionInitializer missionInit = IA_MissionInitializer.GetInstance();
-		if (missionInit && missionInit.GetConfig())
-		{
-			if (m_civCountEdit)
-				m_civCountEdit.SetText(missionInit.GetConfig().m_fCivilianCountMultiplier.ToString());
-			if (m_AIScaleEdit)
-				m_AIScaleEdit.SetText(missionInit.GetConfig().m_fAIScaleMultiplier.ToString());
-			if (m_disableHQHeliCheck)
-				m_disableHQHeliCheck.SetChecked(missionInit.GetConfig().m_bDisableHQHelipads);
-			if (m_disableHQGroundCheck)
-				m_disableHQGroundCheck.SetChecked(missionInit.GetConfig().m_bDisableHQGroundVehicles);
-			if (m_artyCooldownEdit)
-				m_artyCooldownEdit.SetText(missionInit.GetConfig().m_iArtilleryCooldown.ToString());
-		}
-	}
-
-	//------------------------------------------------------------------------------------------------
-	void OnIAForceCompleteMission(SCR_InputButtonComponent comp)
-	{
-		Print("[IA_AdminConfigMenu] OnIAForceCompleteMission clicked", LogLevel.NORMAL);
-		IA_MissionInitializer missionInit = IA_MissionInitializer.GetInstance();
-		if (!missionInit)
-			return;
-
-		missionInit.ForceCompleteZone();
-		GetGame().GetMenuManager().CloseMenu(this);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	void OnIASaveConfig(SCR_InputButtonComponent comp)
-	{
-		Print("[IA_AdminConfigMenu] OnIASaveConfig clicked", LogLevel.NORMAL);
-		IA_MissionInitializer missionInit = IA_MissionInitializer.GetInstance();
-		if (!missionInit)
-		{
-			Print("[IA_AdminConfigMenu] ERROR: IA_MissionInitializer instance not found!", LogLevel.ERROR);
-			return;
-		}
-
-		float civCount = 1.0;
-		if (m_civCountEdit)
-		{
-			string s = m_civCountEdit.GetText();
-			if (!s.IsEmpty())
-				civCount = s.ToFloat();
-		}
-
-		float aiScale = 1.0;
-		if (m_AIScaleEdit)
-		{
-			string s = m_AIScaleEdit.GetText();
-			if (!s.IsEmpty())
-				aiScale = s.ToFloat();
-		}
-
-		bool disableHeli = false;
-		if (m_disableHQHeliCheck)
-			disableHeli = m_disableHQHeliCheck.IsChecked();
-
-		bool disableGround = false;
-		if (m_disableHQGroundCheck)
-			disableGround = m_disableHQGroundCheck.IsChecked();
-
-		int artyCooldown = 300;
-		if (m_artyCooldownEdit)
-		{
-			string s = m_artyCooldownEdit.GetText();
-			if (!s.IsEmpty())
-				artyCooldown = s.ToInt();
-		}
-
-		Print(string.Format("[IA_AdminConfigMenu] Saving Config: Civ=%1, AI=%2, Heli=%3, Ground=%4, Arty=%5", civCount, aiScale, disableHeli, disableGround, artyCooldown), LogLevel.NORMAL);
-		missionInit.UpdateConfig(civCount, aiScale, disableHeli, disableGround, artyCooldown);
-		GetGame().GetMenuManager().CloseMenu(this);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	void OnIAMenuClose(SCR_InputButtonComponent comp)
-	{
-		GetGame().GetMenuManager().CloseMenu(this);
-	}
-};
+}

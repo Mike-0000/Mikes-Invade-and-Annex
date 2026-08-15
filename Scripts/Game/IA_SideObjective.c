@@ -155,14 +155,10 @@ class IA_SideObjective
             IA_Game.AddEntityToGc(taskEnt);
             return null;
         }
-        
-        SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(task);
-        if (extendedTask)
-        {
-            extendedTask.SetTaskName("Side Objective: " + title);
-            extendedTask.SetTaskDescription(desc);
-            extendedTask.SetTaskState(SCR_ETaskState.CREATED);
-        }
+
+        task.SetTaskName("Side Objective: " + title);
+        task.SetTaskDescription(desc);
+        task.SetTaskState(SCR_ETaskState.CREATED);
         
         // Use a global notification helper to inform players
         IA_Game.S_TriggerGlobalNotification("SideTaskCreated", title);
@@ -896,7 +892,7 @@ class IA_AssassinationObjective : IA_SideObjective
             int playerID = killer.GetInstigatorPlayerID();
             if (playerID > 0)
             {
-                string playerGuid = GetGame().GetBackendApi().GetPlayerUID(playerID);
+                string playerGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerID);
                 string playerName = GetGame().GetPlayerManager().GetPlayerName(playerID);
                 
                 IA_StatsManager.GetInstance().QueueHVTKill(playerGuid, playerName);

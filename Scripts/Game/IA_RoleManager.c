@@ -116,7 +116,7 @@ class IA_RoleManager
             return false;
         }
         
-        string playerGuid = GetGame().GetBackendApi().GetPlayerIdentityId(playerId);
+        string playerGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerId);
         if (playerGuid.IsEmpty())
         {
             Print(string.Format("Could not get GUID for player %1. Role assignment failed.", playerId), LogLevel.WARNING);
@@ -227,7 +227,7 @@ class IA_RoleManager
     // Get the role for a specific player
     IA_PlayerRole GetPlayerRole(int playerId)
     {
-		string playerGuid = GetGame().GetBackendApi().GetPlayerIdentityId(playerId);
+		string playerGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerId);
         if (playerGuid.IsEmpty())
             return IA_PlayerRole.NONE;
 			

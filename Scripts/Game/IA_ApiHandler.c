@@ -120,103 +120,13 @@ class IA_ApiRegisterServerResponse
     }
 }
 
-class IA_RegisterServerCallback : RestCallback
-{
-    override void OnSuccess(string data, int dataSize)
-    {
-		
-        Print("IA API: Registration successful. Data = " + data, LogLevel.NORMAL);
-        IA_ApiRegisterServerResponse response = IA_ApiRegisterServerResponse.FromJson(data);
-        if (response && response.serverGuid != "")
-        {
-            IA_ApiConfig config = IA_ApiConfigManager.GetConfig();
-            if (config)
-            {
-                config.m_sServerGuid = response.serverGuid;
-                IA_ApiConfigManager.SaveConfig();
-                Print("IA API: Server GUID " + response.serverGuid + " saved to config.", LogLevel.NORMAL);
-				
-				// Now that we are registered, lets get the initial leaderboard data
-				IA_ApiHandler.GetInstance().FetchAllLeaderboards();
-            }
-        }
-        else
-        {
-            Print("IA API: Registration response did not contain a valid serverGuid. Response: " + response, LogLevel.ERROR);
-        }
-    }
-
-    override void OnError(int errorCode)
-    {
-        Print("IA API: Registration failed with error code: " + errorCode, LogLevel.ERROR);
-    }
-
-    override void OnTimeout()
-    {
-        Print("IA API: Registration request timed out.", LogLevel.ERROR);
-    }
-}
-
-class IA_SubmitStatsCallback : RestCallback
-{
-    override void OnSuccess(string data, int dataSize)
-    {
-        Print("IA API: Statistics submitted successfully.", LogLevel.NORMAL);
-		GetGame().GetCallqueue().CallLater(IA_ApiHandler.GetInstance().FetchAllLeaderboards, 5000, false);
-    }
-
-    override void OnError(int errorCode)
-    {
-        Print("IA API: Statistics submission failed with error code: " + errorCode, LogLevel.ERROR);
-    }
-
-    override void OnTimeout()
-    {
-        Print("IA API: Statistics submission request timed out.", LogLevel.ERROR);
-    }
-}
-
-class IA_FetchAllLeaderboardsCallback : RestCallback
-{
-    override void OnSuccess(string data, int dataSize)
-    {
-        Print("IA API: All leaderboard data received successfully.", LogLevel.NORMAL);
-        
-        IA_LeaderboardManagerComponent manager = IA_LeaderboardManagerComponent.GetInstance();
-        if (manager)
-        {
-            string globalPlayerData = _GetJsonArrayForKey(data, "globalPlayerLeaderboard");
-            string serverPlayerData = _GetJsonArrayForKey(data, "serverPlayerLeaderboard");
-            string globalServerData = _GetJsonArrayForKey(data, "globalServerLeaderboard");
-            
-            manager.UpdateLeaderboardData(globalPlayerData);
-            manager.UpdateServerLeaderboardData(serverPlayerData);
-            manager.UpdateGlobalServerLeaderboardData(globalServerData);
-        }
-        else
-        {
-            Print("IA API Error: Could not find IA_LeaderboardManagerComponent instance to update data.", LogLevel.ERROR);
-        }
-    }
-
-    override void OnError(int errorCode)
-    {
-        Print("IA API: All leaderboards request FAILED with error code: " + errorCode, LogLevel.ERROR);
-    }
-
-    override void OnTimeout()
-    {
-        Print("IA API: All leaderboards request TIMED OUT.", LogLevel.ERROR);
-    }
-}
-
 class IA_ApiHandler
 {
 	string m_sApiBaseUrl = "https://invadestats-awatbsduh4hngrb6.eastus-01.azurewebsites.net/api";
 	//string m_sApiBaseUrl = "https://iadev-gdcxh2dkhsceacfg.eastus-01.azurewebsites.net/api";
-	protected ref IA_RegisterServerCallback m_registerCallback;
-	protected ref IA_SubmitStatsCallback m_submitStatsCallback;
-	protected ref IA_FetchAllLeaderboardsCallback m_fetchAllLeaderboardsCallback;
+	protected ref RestCallback m_registerCallback;
+	protected ref RestCallback m_submitStatsCallback;
+	protected ref RestCallback m_fetchAllLeaderboardsCallback;
 
     private static ref IA_ApiHandler s_Instance;
     private ref IA_ApiConfig m_Config;
@@ -243,6 +153,81 @@ class IA_ApiHandler
 		}
     }
 
+    void OnRegisterSuccess(RestCallback cb)
+    {
+        string data = cb.GetData();
+        Print("IA API: Registration successful. Data = " + data, LogLevel.NORMAL);
+        IA_ApiRegisterServerResponse response = IA_ApiRegisterServerResponse.FromJson(data);
+        if (response && response.serverGuid != "")
+        {
+            IA_ApiConfig config = IA_ApiConfigManager.GetConfig();
+            if (config)
+            {
+                config.m_sServerGuid = response.serverGuid;
+                IA_ApiConfigManager.SaveConfig();
+                Print("IA API: Server GUID " + response.serverGuid + " saved to config.", LogLevel.NORMAL);
+
+                FetchAllLeaderboards();
+            }
+        }
+        else
+        {
+            Print("IA API: Registration response did not contain a valid serverGuid. Response: " + response, LogLevel.ERROR);
+        }
+    }
+
+    void OnRegisterError(RestCallback cb)
+    {
+        if (cb.GetRestResult() == ERestResult.EREST_ERROR_TIMEOUT)
+            Print("IA API: Registration request timed out.", LogLevel.ERROR);
+        else
+            Print("IA API: Registration failed with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
+    }
+
+    void OnSubmitStatsSuccess(RestCallback cb)
+    {
+        Print("IA API: Statistics submitted successfully.", LogLevel.NORMAL);
+        GetGame().GetCallqueue().CallLater(FetchAllLeaderboards, 5000, false);
+    }
+
+    void OnSubmitStatsError(RestCallback cb)
+    {
+        if (cb.GetRestResult() == ERestResult.EREST_ERROR_TIMEOUT)
+            Print("IA API: Statistics submission request timed out.", LogLevel.ERROR);
+        else
+            Print("IA API: Statistics submission failed with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
+    }
+
+    void OnFetchAllLeaderboardsSuccess(RestCallback cb)
+    {
+        string data = cb.GetData();
+        Print("IA API: All leaderboard data received successfully.", LogLevel.NORMAL);
+
+        IA_LeaderboardManagerComponent manager = IA_LeaderboardManagerComponent.GetInstance();
+        if (manager)
+        {
+            string globalPlayerData = _GetJsonArrayForKey(data, "globalPlayerLeaderboard");
+            string serverPlayerData = _GetJsonArrayForKey(data, "serverPlayerLeaderboard");
+            string globalServerData = _GetJsonArrayForKey(data, "globalServerLeaderboard");
+
+            manager.UpdateLeaderboardData(globalPlayerData);
+            manager.UpdateServerLeaderboardData(serverPlayerData);
+            manager.UpdateGlobalServerLeaderboardData(globalServerData);
+        }
+        else
+        {
+            Print("IA API Error: Could not find IA_LeaderboardManagerComponent instance to update data.", LogLevel.ERROR);
+        }
+    }
+
+    void OnFetchAllLeaderboardsError(RestCallback cb)
+    {
+        if (cb.GetRestResult() == ERestResult.EREST_ERROR_TIMEOUT)
+            Print("IA API: All leaderboards request TIMED OUT.", LogLevel.ERROR);
+        else
+            Print("IA API: All leaderboards request FAILED with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
+    }
+
     void SubmitStats(string jsonData)
     {
         if (!m_Config || m_Config.m_sServerGuid == "")
@@ -253,44 +238,50 @@ class IA_ApiHandler
 
         RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
         ctx.SetHeaders("Content-Type,application/json");
-		
-		string serverName = IA_ApiConfigManager.GetServerNameFromFile();
-		
+
+        string serverName = IA_ApiConfigManager.GetServerNameFromFile();
+
         IA_ApiSubmitStatsRequest requestData = new IA_ApiSubmitStatsRequest(m_Config.m_sServerGuid, serverName, jsonData);
-        
-        m_submitStatsCallback = new IA_SubmitStatsCallback();
+
+        m_submitStatsCallback = new RestCallback();
+        m_submitStatsCallback.SetOnSuccess(OnSubmitStatsSuccess);
+        m_submitStatsCallback.SetOnError(OnSubmitStatsError);
         ctx.POST(m_submitStatsCallback, "/submitStats", requestData.ToJson());
         Print("IA API: Submitting statistics for server: " + serverName + " with payload: " + requestData.ToJson(), LogLevel.NORMAL);
     }
-    
-	void FetchAllLeaderboards()
+
+    void FetchAllLeaderboards()
     {
-		if (!m_Config || m_Config.m_sServerGuid == "")
+        if (!m_Config || m_Config.m_sServerGuid == "")
         {
             Print("IA API: Cannot fetch leaderboards, server GUID is missing.", LogLevel.ERROR);
             return;
         }
-		
+
         RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
-        m_fetchAllLeaderboardsCallback = new IA_FetchAllLeaderboardsCallback();
-		string url = "/getAllLeaderboards?serverGuid=" + m_Config.m_sServerGuid;
+        m_fetchAllLeaderboardsCallback = new RestCallback();
+        m_fetchAllLeaderboardsCallback.SetOnSuccess(OnFetchAllLeaderboardsSuccess);
+        m_fetchAllLeaderboardsCallback.SetOnError(OnFetchAllLeaderboardsError);
+        string url = "/getAllLeaderboards?serverGuid=" + m_Config.m_sServerGuid;
         ctx.GET(m_fetchAllLeaderboardsCallback, url);
         Print("IA API: Server is fetching all leaderboards.", LogLevel.NORMAL);
     }
-	
+
     private void _RegisterServer()
     {
         if (!m_Config)
             return;
-		m_registerCallback = new IA_RegisterServerCallback();
+
+        m_registerCallback = new RestCallback();
+        m_registerCallback.SetOnSuccess(OnRegisterSuccess);
+        m_registerCallback.SetOnError(OnRegisterError);
         RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
         ctx.SetHeaders("Content-Type,application/json");
-		
-		string serverName = IA_ApiConfigManager.GetServerNameFromFile();
+
+        string serverName = IA_ApiConfigManager.GetServerNameFromFile();
         IA_ApiRegisterServerRequest requestData = new IA_ApiRegisterServerRequest(serverName, m_Config.m_sOwnerEmail);
 
-     
-		Print("Request URL: "+ m_sApiBaseUrl + " requestData In JSON: " + requestData.ToJson() ,LogLevel.NORMAL);
+        Print("Request URL: "+ m_sApiBaseUrl + " requestData In JSON: " + requestData.ToJson() ,LogLevel.NORMAL);
         ctx.POST(m_registerCallback, "/registerServer", requestData.ToJson());
         Print("IA API: Attempting to register server...", LogLevel.NORMAL);
     }

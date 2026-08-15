@@ -1533,8 +1533,6 @@ class IA_AiGroup
         
         // Calculate the combined danger level from all events
         float dangerLevel = 0.0;
-        vector dangerCenterSum = vector.Zero;
-        float totalWeight = 0.0;
         
         // First collect only weapon fire events for position calculation
         // Collect relevant positions for median calculation
@@ -2065,7 +2063,7 @@ class IA_AiGroup
 			int playerID = killer.GetInstigatorPlayerID();
 			if (playerID > 0)
 			{
-				string playerGuid = GetGame().GetBackendApi().GetPlayerUID(playerID);
+				string playerGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerID);
 				string playerName = GetGame().GetPlayerManager().GetPlayerName(playerID);
 				
 				if (m_OwningSideObjective)

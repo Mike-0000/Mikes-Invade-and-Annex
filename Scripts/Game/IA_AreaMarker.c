@@ -97,7 +97,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         if (!character) return 0;
 
 
-        RplId id = Replication.FindId(character);
+        RplId id = Replication.FindItemId(character);
         return id; 
     }
 
@@ -478,7 +478,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        
 	        if (!topContributors.IsEmpty())
 	        {
-	            captureMessage += " Top contributors: ";
+	            captureMessage += "\nTop contributors: ";
 	            
 	            for (int i = 0; i < topContributors.Count(); i++)
 	            {
@@ -925,7 +925,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             if (playerId > 0)
             {
                 // Get player GUID
-                string playerGuid = GetGame().GetBackendApi().GetPlayerIdentityId(playerId);
+                string playerGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerId);
                 if (!playerGuid || playerGuid == "")
                 {
                     Print(string.Format("[CAPTURE_SCORING] Could not get GUID for player %1", playerId), LogLevel.WARNING);

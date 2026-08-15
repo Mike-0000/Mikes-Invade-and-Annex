@@ -56,6 +56,33 @@ class IA_MissionInitializer : GenericEntity
 	
 	[RplProp()]
 	int m_iArtilleryCooldown_Rpl = 300;
+
+	[RplProp()]
+	float m_fStaticAIScaleOverride_Rpl = 0;
+
+	[RplProp()]
+	float m_fMilitaryVehicleCountMultiplier_Rpl = 1.0;
+
+	[RplProp()]
+	float m_fCivilianVehicleCountMultiplier_Rpl = 1.0;
+
+	[RplProp()]
+	float m_fCivilianRevoltThreshold_Rpl = 0.11;
+
+	[RplProp()]
+	bool m_bEnableCivilianSpawning_Rpl = true;
+
+	[RplProp()]
+	float m_fArtilleryStrikeChance_Rpl = 0.18;
+
+	[RplProp()]
+	int m_iArtilleryMinDelay_Rpl = 45;
+
+	[RplProp()]
+	int m_iArtilleryMaxDelay_Rpl = 70;
+
+	[RplProp()]
+	string m_sDesiredEnemyFactionKey_Rpl = "";
 	// --- END ADDED ---
 
 	// Static reference for global access
@@ -632,9 +659,7 @@ class IA_MissionInitializer : GenericEntity
 					string completedTaskTitle = instance.m_area.GetName();
 					//TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
 				    //Print("[DEBUG_ZONE_GROUP] Finishing task for completed zone: " + marker.GetAreaName(), LogLevel.NORMAL);
-					SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(instance.GetCurrentTaskEntity());
-					if (extendedTask)
-						extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
+					instance.GetCurrentTaskEntity().SetTaskState(SCR_ETaskState.COMPLETED);
 				}
 				
 				// Reset capture scores for next time
@@ -770,15 +795,7 @@ class IA_MissionInitializer : GenericEntity
         IA_AreaMarker.SetMissionInitializer(this);
 
 		// --- BEGIN ADDED: Initialize Replicated Config ---
-		if (m_config)
-		{
-			m_fCivilianCountMultiplier_Rpl = m_config.m_fCivilianCountMultiplier;
-			m_fAIScaleMultiplier_Rpl = m_config.m_fAIScaleMultiplier;
-			m_bDisableHQHelipads_Rpl = m_config.m_bDisableHQHelipads;
-			m_bDisableHQGroundVehicles_Rpl = m_config.m_bDisableHQGroundVehicles;
-			m_iArtilleryCooldown_Rpl = m_config.m_iArtilleryCooldown;
-			Replication.BumpMe();
-		}
+		PushConfigToReplication();
 		// --- END ADDED ---
 
         // 1) Check that IA_ReplicationWorkaround is present.
@@ -904,17 +921,119 @@ class IA_MissionInitializer : GenericEntity
     }
 
 	// --- BEGIN ADDED: Config Update RPC ---
-	// Public wrapper for RPC call
-	void UpdateConfig(float civCount, float aiScale, bool disableHeli, bool disableGround, int artyCooldown)
+	// Rpc has a hard param limit — pack fields into one string.
+	static void UpdateConfig(
+		float civCount,
+		float aiScale,
+		bool disableHeli,
+		bool disableGround,
+		int artyCooldown,
+		float staticAiScale,
+		float milVehMult,
+		float civVehMult,
+		float revoltThresh,
+		bool enableCiv,
+		bool enforceRoles,
+		float artyChance,
+		int artyMinDelay,
+		int artyMaxDelay,
+		string enemyFactionKey
+	)
 	{
-		Rpc(RPC_UpdateConfig, civCount, aiScale, disableHeli, disableGround, artyCooldown);
+		int heliI = 0;
+		if (disableHeli)
+			heliI = 1;
+		int groundI = 0;
+		if (disableGround)
+			groundI = 1;
+		int civI = 0;
+		if (enableCiv)
+			civI = 1;
+		int rolesI = 0;
+		if (enforceRoles)
+			rolesI = 1;
+
+		string packed = "v1";
+		packed = packed + "|" + civCount.ToString();
+		packed = packed + "|" + aiScale.ToString();
+		packed = packed + "|" + heliI.ToString();
+		packed = packed + "|" + groundI.ToString();
+		packed = packed + "|" + artyCooldown.ToString();
+		packed = packed + "|" + staticAiScale.ToString();
+		packed = packed + "|" + milVehMult.ToString();
+		packed = packed + "|" + civVehMult.ToString();
+		packed = packed + "|" + revoltThresh.ToString();
+		packed = packed + "|" + civI.ToString();
+		packed = packed + "|" + rolesI.ToString();
+		packed = packed + "|" + artyChance.ToString();
+		packed = packed + "|" + artyMinDelay.ToString();
+		packed = packed + "|" + artyMaxDelay.ToString();
+		packed = packed + "|" + enemyFactionKey;
+
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+		{
+			pc.IA_AskUpdateAdminConfig(packed);
+			return;
+		}
+
+		if (Replication.IsServer())
+		{
+			IA_MissionInitializer init = GetInstance();
+			if (init)
+				init.ApplyPackedAdminConfig(packed);
+		}
 	}
 
-	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
-	void RPC_UpdateConfig(float civCount, float aiScale, bool disableHeli, bool disableGround, int artyCooldown)
+	void ServerApplyAdminConfig(string packed)
 	{
-		Print(string.Format("[IA_MissionInitializer] RPC_UpdateConfig received: Civ%1, AI%2, Heli%3, Gnd%4, Arty%5", civCount, aiScale, disableHeli, disableGround, artyCooldown), LogLevel.NORMAL);
-		
+		if (!Replication.IsServer())
+			return;
+		ApplyPackedAdminConfig(packed);
+	}
+
+	void ServerForceCompleteZone()
+	{
+		if (!Replication.IsServer())
+			return;
+		RPC_ForceCompleteZone();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyPackedAdminConfig(string packed)
+	{
+		ref array<string> tokens = new array<string>();
+		packed.Split("|", tokens, false);
+		if (tokens.Count() < 15)
+		{
+			Print("[IA_MissionInitializer] RPC_UpdateConfig: bad payload (" + tokens.Count().ToString() + " tokens)", LogLevel.ERROR);
+			return;
+		}
+
+		// tokens[0] = v1
+		float civCount = tokens[1].ToFloat();
+		float aiScale = tokens[2].ToFloat();
+		bool disableHeli = tokens[3].ToInt() != 0;
+		bool disableGround = tokens[4].ToInt() != 0;
+		int artyCooldown = tokens[5].ToInt();
+		float staticAiScale = tokens[6].ToFloat();
+		float milVehMult = tokens[7].ToFloat();
+		float civVehMult = tokens[8].ToFloat();
+		float revoltThresh = tokens[9].ToFloat();
+		bool enableCiv = tokens[10].ToInt() != 0;
+		bool enforceRoles = tokens[11].ToInt() != 0;
+		float artyChance = tokens[12].ToFloat();
+		int artyMinDelay = tokens[13].ToInt();
+		int artyMaxDelay = tokens[14].ToInt();
+		string enemyFactionKey = "";
+		if (tokens.Count() > 15)
+			enemyFactionKey = tokens[15];
+
+		Print(string.Format(
+			"[IA_MissionInitializer] RPC_UpdateConfig: Civ=%1 AI=%2 Heli=%3 Gnd=%4 Arty=%5 Chance=%6 Faction=%7",
+			civCount, aiScale, disableHeli, disableGround, artyCooldown, artyChance, enemyFactionKey
+		), LogLevel.NORMAL);
+
 		if (m_config)
 		{
 			m_config.m_fCivilianCountMultiplier = civCount;
@@ -922,24 +1041,90 @@ class IA_MissionInitializer : GenericEntity
 			m_config.m_bDisableHQHelipads = disableHeli;
 			m_config.m_bDisableHQGroundVehicles = disableGround;
 			m_config.m_iArtilleryCooldown = artyCooldown;
+			m_config.m_fStaticAIScaleOverride = staticAiScale;
+			m_config.m_fMilitaryVehicleCountMultiplier = milVehMult;
+			m_config.m_fCivilianVehicleCountMultiplier = civVehMult;
+			m_config.m_fCivilianRevoltThreshold = revoltThresh;
+			m_config.m_bEnableCivilianSpawning = enableCiv;
+			m_config.m_bEnforceRoleRestrictions = enforceRoles;
+			m_config.m_fArtilleryStrikeChance = artyChance;
+			m_config.m_iArtilleryMinDelay = artyMinDelay;
+			m_config.m_iArtilleryMaxDelay = artyMaxDelay;
+
+			if (enemyFactionKey != "")
+			{
+				if (!m_config.m_sDesiredEnemyFactionKeys)
+					m_config.m_sDesiredEnemyFactionKeys = new array<string>();
+				m_config.m_sDesiredEnemyFactionKeys.Clear();
+				m_config.m_sDesiredEnemyFactionKeys.Insert(enemyFactionKey);
+			}
 		}
-		
+
 		m_fCivilianCountMultiplier_Rpl = civCount;
 		m_fAIScaleMultiplier_Rpl = aiScale;
 		m_bDisableHQHelipads_Rpl = disableHeli;
 		m_bDisableHQGroundVehicles_Rpl = disableGround;
 		m_iArtilleryCooldown_Rpl = artyCooldown;
-		
+		m_fStaticAIScaleOverride_Rpl = staticAiScale;
+		m_fMilitaryVehicleCountMultiplier_Rpl = milVehMult;
+		m_fCivilianVehicleCountMultiplier_Rpl = civVehMult;
+		m_fCivilianRevoltThreshold_Rpl = revoltThresh;
+		m_bEnableCivilianSpawning_Rpl = enableCiv;
+		m_bEnforceRoleRestrictionsReplicated = enforceRoles;
+		m_fArtilleryStrikeChance_Rpl = artyChance;
+		m_iArtilleryMinDelay_Rpl = artyMinDelay;
+		m_iArtilleryMaxDelay_Rpl = artyMaxDelay;
+		if (enemyFactionKey != "")
+			m_sDesiredEnemyFactionKey_Rpl = enemyFactionKey;
+
+		Replication.BumpMe();
+	}
+
+	protected void PushConfigToReplication()
+	{
+		if (m_config)
+		{
+			m_fCivilianCountMultiplier_Rpl = m_config.m_fCivilianCountMultiplier;
+			m_fAIScaleMultiplier_Rpl = m_config.m_fAIScaleMultiplier;
+			m_bDisableHQHelipads_Rpl = m_config.m_bDisableHQHelipads;
+			m_bDisableHQGroundVehicles_Rpl = m_config.m_bDisableHQGroundVehicles;
+			m_iArtilleryCooldown_Rpl = m_config.m_iArtilleryCooldown;
+			m_fStaticAIScaleOverride_Rpl = m_config.m_fStaticAIScaleOverride;
+			m_fMilitaryVehicleCountMultiplier_Rpl = m_config.m_fMilitaryVehicleCountMultiplier;
+			m_fCivilianVehicleCountMultiplier_Rpl = m_config.m_fCivilianVehicleCountMultiplier;
+			m_fCivilianRevoltThreshold_Rpl = m_config.m_fCivilianRevoltThreshold;
+			m_bEnableCivilianSpawning_Rpl = m_config.m_bEnableCivilianSpawning;
+			m_bEnforceRoleRestrictionsReplicated = m_config.m_bEnforceRoleRestrictions;
+			m_fArtilleryStrikeChance_Rpl = m_config.m_fArtilleryStrikeChance;
+			m_iArtilleryMinDelay_Rpl = m_config.m_iArtilleryMinDelay;
+			m_iArtilleryMaxDelay_Rpl = m_config.m_iArtilleryMaxDelay;
+
+			m_sDesiredEnemyFactionKey_Rpl = "";
+			if (m_config.m_sDesiredEnemyFactionKeys && m_config.m_sDesiredEnemyFactionKeys.Count() > 0)
+				m_sDesiredEnemyFactionKey_Rpl = m_config.m_sDesiredEnemyFactionKeys[0];
+		}
+
 		Replication.BumpMe();
 	}
 	
 	// Public wrapper for RPC call
-	void ForceCompleteZone()
+	static void ForceCompleteZone()
 	{
-		Rpc(RPC_ForceCompleteZone);
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+		{
+			pc.IA_AskForceCompleteZone();
+			return;
+		}
+
+		IA_MissionInitializer init = GetInstance();
+		if (!init)
+			return;
+
+		if (Replication.IsServer())
+			init.RPC_ForceCompleteZone();
 	}
 	
-	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
 	protected void RPC_ForceCompleteZone()
 	{
 		Print("[IA_MissionInitializer] RPC_ForceCompleteZone received. Forcing zone completion.", LogLevel.WARNING);
@@ -1023,16 +1208,29 @@ class IA_MissionInitializer : GenericEntity
 			}
 			else
 			{
-				// On client, construct a transient config object with replicated values
-				IA_Config clientConfig = new IA_Config();
+				ref IA_Config clientConfig = new IA_Config();
 				clientConfig.m_fCivilianCountMultiplier = s_instance.m_fCivilianCountMultiplier_Rpl;
 				clientConfig.m_fAIScaleMultiplier = s_instance.m_fAIScaleMultiplier_Rpl;
 				clientConfig.m_bDisableHQHelipads = s_instance.m_bDisableHQHelipads_Rpl;
 				clientConfig.m_bDisableHQGroundVehicles = s_instance.m_bDisableHQGroundVehicles_Rpl;
 				clientConfig.m_iArtilleryCooldown = s_instance.m_iArtilleryCooldown_Rpl;
-				// Config isn't fully replicated, so arrays will be empty on client, 
-				// but that's fine as Spawners run on Server usually.
-				// If client needs arrays, we'd need more complex replication.
+				clientConfig.m_fStaticAIScaleOverride = s_instance.m_fStaticAIScaleOverride_Rpl;
+				clientConfig.m_fMilitaryVehicleCountMultiplier = s_instance.m_fMilitaryVehicleCountMultiplier_Rpl;
+				clientConfig.m_fCivilianVehicleCountMultiplier = s_instance.m_fCivilianVehicleCountMultiplier_Rpl;
+				clientConfig.m_fCivilianRevoltThreshold = s_instance.m_fCivilianRevoltThreshold_Rpl;
+				clientConfig.m_bEnableCivilianSpawning = s_instance.m_bEnableCivilianSpawning_Rpl;
+				clientConfig.m_bEnforceRoleRestrictions = s_instance.m_bEnforceRoleRestrictionsReplicated;
+				clientConfig.m_fArtilleryStrikeChance = s_instance.m_fArtilleryStrikeChance_Rpl;
+				clientConfig.m_iArtilleryMinDelay = s_instance.m_iArtilleryMinDelay_Rpl;
+				clientConfig.m_iArtilleryMaxDelay = s_instance.m_iArtilleryMaxDelay_Rpl;
+
+				if (s_instance.m_sDesiredEnemyFactionKey_Rpl != "")
+				{
+					ref array<string> keys = new array<string>();
+					keys.Insert(s_instance.m_sDesiredEnemyFactionKey_Rpl);
+					clientConfig.m_sDesiredEnemyFactionKeys = keys;
+				}
+
 				return clientConfig;
 			}
 		}

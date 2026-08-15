@@ -1,7 +1,11 @@
 //------------------------------------------------------------------------------------------------
 //! Composes a single leaderboard row from MUI_Row + MUI_Label columns (not a MUI widget).
+//! Pattern for consumer composites: factory Create(runtime), keep `protected ref` columns,
+//! expose GetRow() so the parent can AddChild. Do not add this class to Mikes-UI.
+//------------------------------------------------------------------------------------------------
 class IA_LeaderboardRow
 {
+	protected ref MUI_Panel m_Root;
 	protected ref MUI_Row m_Row;
 	protected ref MUI_Label m_Rank;
 	protected ref MUI_Label m_Name;
@@ -11,6 +15,8 @@ class IA_LeaderboardRow
 	protected ref MUI_Label m_Guard;
 	protected ref MUI_Label m_Obj;
 	protected ref MUI_Label m_Score;
+	protected ref MUI_Progress m_ScoreBar;
+	protected bool m_bHeader;
 
 	//------------------------------------------------------------------------------------------------
 	static IA_LeaderboardRow Create(notnull MUI_Runtime runtime, string nameSuffix, bool header)
@@ -23,6 +29,15 @@ class IA_LeaderboardRow
 	//------------------------------------------------------------------------------------------------
 	protected void Build(notnull MUI_Runtime runtime, string nameSuffix, bool header)
 	{
+		m_bHeader = header;
+
+		m_Root = runtime.CreatePanel("lbRoot_" + nameSuffix);
+		m_Root.GetStyle().m_Fill = Color.FromInt(0);
+		m_Root.GetStyle().m_fRadius = 0;
+		m_Root.GetStyle().m_fGap = 2;
+		m_Root.GetStyle().m_bBlockHit = false;
+		m_Root.SetFillWidth();
+
 		m_Row = runtime.CreateRow("lbRow_" + nameSuffix);
 		m_Row.SetGap(8);
 		m_Row.SetHeight(32);
@@ -47,6 +62,15 @@ class IA_LeaderboardRow
 		m_Row.AddChild(m_Guard);
 		m_Row.AddChild(m_Obj);
 		m_Row.AddChild(m_Score);
+
+		m_Root.AddChild(m_Row);
+
+		if (!header)
+		{
+			m_ScoreBar = runtime.CreateProgress("lbBar_" + nameSuffix);
+			m_ScoreBar.SetValue(0);
+			m_Root.AddChild(m_ScoreBar);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -54,7 +78,7 @@ class IA_LeaderboardRow
 	{
 		ref MUI_Label label = runtime.CreateLabel(text, name);
 		label.SetWidth(width);
-		label.SetFontSize(MUI_Theme.FONT_SMALL);
+		label.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		if (header)
 		{
 			label.SetBold(true);
@@ -68,9 +92,10 @@ class IA_LeaderboardRow
 	}
 
 	//------------------------------------------------------------------------------------------------
-	MUI_Row GetRow()
+	//! Parent should AddChild this (includes optional score bar).
+	MUI_Panel GetRow()
 	{
-		return m_Row;
+		return m_Root;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -99,5 +124,56 @@ class IA_LeaderboardRow
 	{
 		if (m_Obj)
 			m_Obj.SetVisible(visible);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! rankIndex 0 = first place. Uses runtime theme accents.
+	void SetRankHighlight(int rankIndex)
+	{
+		if (m_bHeader || !m_Rank)
+			return;
+
+		MUI_ThemeData theme = m_Rank.GetTheme();
+		if (rankIndex == 0)
+		{
+			m_Rank.SetColor(theme.Accent);
+			m_Rank.SetBold(true);
+			if (m_Name)
+			{
+				m_Name.SetColor(theme.Accent);
+				m_Name.SetBold(true);
+			}
+		}
+		else if (rankIndex == 1)
+		{
+			m_Rank.SetColor(theme.Cyan);
+			m_Rank.SetBold(true);
+			if (m_Name)
+				m_Name.SetColor(theme.Text);
+		}
+		else if (rankIndex == 2)
+		{
+			m_Rank.SetColor(theme.CyanDim);
+			m_Rank.SetBold(true);
+			if (m_Name)
+				m_Name.SetColor(theme.Text);
+		}
+		else
+		{
+			m_Rank.SetColor(theme.Text);
+			m_Rank.SetBold(false);
+			if (m_Name)
+			{
+				m_Name.SetColor(theme.Text);
+				m_Name.SetBold(false);
+			}
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetScoreRatio(float ratio)
+	{
+		if (m_ScoreBar)
+			m_ScoreBar.SetValue(ratio);
 	}
 }

@@ -57,7 +57,7 @@ class IA_PlayerRoleHandler
         // Check for new players that we haven't processed yet, and reapply roles for existing players
         foreach (int playerId : currentPlayers)
         {
-            string playerGuid = GetGame().GetBackendApi().GetPlayerIdentityId(playerId);
+            string playerGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerId);
             if (playerGuid.IsEmpty())
                 continue;
             
@@ -187,7 +187,7 @@ class IA_PlayerRoleHandler
         if (victimPlayerId <= 0)
             return;
 
-        string victimGuid = GetGame().GetBackendApi().GetPlayerUID(victimPlayerId);
+        string victimGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(victimPlayerId);
         string victimName = GetGame().GetPlayerManager().GetPlayerName(victimPlayerId);
 
         if (victimGuid.IsEmpty())

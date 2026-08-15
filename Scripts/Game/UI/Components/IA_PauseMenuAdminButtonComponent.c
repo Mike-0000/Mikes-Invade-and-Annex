@@ -3,32 +3,38 @@ class IA_PauseMenuAdminButtonComponent : SCR_ButtonTextComponent
 	override void HandlerAttached(Widget w)
 	{
 		super.HandlerAttached(w);
-		
+
 		if (SCR_Global.IsEditMode())
 			return;
+
+		m_OnClicked.Insert(OpenIAAdminConfigMenu);
 
 		if (!IsAdmin())
 		{
 			w.SetVisible(false);
 			w.SetEnabled(false);
-			return;
 		}
-			
-		m_OnClicked.Insert(OpenIAAdminConfigMenu);
 	}
-	
+
 	bool IsAdmin()
 	{
-		// Check if player is admin
+		if (!Replication.IsRunning())
+			return true;
+
 		PlayerController pc = GetGame().GetPlayerController();
-		if (!pc) return false;
-		
-		// Generic check for now, can be improved with specific admin tools component check if needed
-		int playerId = GetGame().GetPlayerManager().GetPlayerIdFromControlledEntity(pc.GetControlledEntity());
-		return SCR_Global.IsAdmin(playerId);
+		if (!pc)
+			return false;
+
+		// Use the controller id, not the possessed entity — deploy/map/spectator has no character.
+		return SCR_Global.IsAdmin(pc.GetPlayerId());
 	}
-	
-	void OpenIAAdminConfigMenu() {
+
+	void OpenIAAdminConfigMenu()
+	{
+		if (!IsAdmin())
+			return;
+
 		GetGame().GetMenuManager().OpenMenu(ChimeraMenuPreset.IA_AdminConfigMenu);
 	}
 };
+

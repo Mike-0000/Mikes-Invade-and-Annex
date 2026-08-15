@@ -321,15 +321,14 @@ class IA_AreaInstance
 	bool CompleteTaskByTitle(string taskTitle)
 	{
 		// Check if the task is currently active
-		SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
-		if (extendedTask && extendedTask.GetTaskName() == taskTitle)
+		if (m_currentTaskEntity && m_currentTaskEntity.GetTaskName() == taskTitle)
 		{
 			Print(string.Format("[IA_AreaInstance] Completing current task: %1", taskTitle), LogLevel.DEBUG);
 			
 			// Trigger task completion notification
 			TriggerGlobalNotification("TaskCompleted", taskTitle);
 			
-			extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
+			m_currentTaskEntity.SetTaskState(SCR_ETaskState.COMPLETED);
 			m_currentTaskEntity = null;
 			
 			// Activate next queued task if any
@@ -337,12 +336,11 @@ class IA_AreaInstance
 			{
 				m_currentTaskEntity = m_taskQueue[0];
 				m_taskQueue.Remove(0);
-				SCR_ExtendedTask nextTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
-				if (nextTask)
+				if (m_currentTaskEntity)
 				{
-					nextTask.SetTaskState(SCR_ETaskState.CREATED);
+					m_currentTaskEntity.SetTaskState(SCR_ETaskState.CREATED);
 					
-					string newTaskTitle = nextTask.GetTaskName();
+					string newTaskTitle = m_currentTaskEntity.GetTaskName();
 					TriggerGlobalNotification("TaskCreated", newTaskTitle);
 				}
 			}
@@ -353,8 +351,7 @@ class IA_AreaInstance
 		for (int i = 0; i < m_taskQueue.Count(); i++)
 		{
 			SCR_TriggerTask queuedTask = m_taskQueue[i];
-			SCR_ExtendedTask queuedExtendedTask = SCR_ExtendedTask.Cast(queuedTask);
-			if (queuedExtendedTask && queuedExtendedTask.GetTaskName() == taskTitle)
+			if (queuedTask && queuedTask.GetTaskName() == taskTitle)
 			{
 				Print(string.Format("[IA_AreaInstance] Found and removing queued task: %1", taskTitle), LogLevel.DEBUG);
 				
@@ -434,12 +431,8 @@ class IA_AreaInstance
                 return;
             }
             
-            SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(task);
-            if (extendedTask)
-            {
-                extendedTask.SetTaskName(title);
-                extendedTask.SetTaskDescription(description);
-            }
+            task.SetTaskName(title);
+            task.SetTaskDescription(description);
             m_taskQueue.Insert(task);
             //////Print("[DEBUG] Task queued. Queue length: " + m_taskQueue.Count(), LogLevel.DEBUG);
         }
@@ -503,13 +496,9 @@ class IA_AreaInstance
             return;
         }
         
-        SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
-        if (extendedTask)
-        {
-            extendedTask.SetTaskName(title);
-            extendedTask.SetTaskDescription(description);
-            extendedTask.SetTaskState(SCR_ETaskState.CREATED);
-        }
+        m_currentTaskEntity.SetTaskName(title);
+        m_currentTaskEntity.SetTaskDescription(description);
+        m_currentTaskEntity.SetTaskState(SCR_ETaskState.CREATED);
         //////Print("[DEBUG] Task created and activated.", LogLevel.DEBUG);
 		
 		// --- BEGIN ADDED: Notify players of new task ---
@@ -522,40 +511,27 @@ class IA_AreaInstance
         //////Print("[DEBUG] CompleteCurrentTask called.", LogLevel.DEBUG);
         if (m_currentTaskEntity)
         {
-			// --- BEGIN ADDED: Notify players of completed task ---
-			SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
-			string completedTaskTitle = "";
-			if (extendedTask)
-				completedTaskTitle = extendedTask.GetTaskName();
+			string completedTaskTitle = m_currentTaskEntity.GetTaskName();
 			TriggerGlobalNotification("TaskCompleted", completedTaskTitle);
-			// --- END ADDED ---
-			
-			if (extendedTask)
-				extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
+			m_currentTaskEntity.SetTaskState(SCR_ETaskState.COMPLETED);
             m_currentTaskEntity = null;
         }
         if (!m_taskQueue.IsEmpty())
         {
             m_currentTaskEntity = m_taskQueue[0];
             m_taskQueue.Remove(0);
-            SCR_ExtendedTask nextTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
-            if (nextTask)
+            if (m_currentTaskEntity)
             {
-                nextTask.SetTaskState(SCR_ETaskState.CREATED);
-                //////Print("[DEBUG] Next queued task activated.", LogLevel.DEBUG);
-                
-                // --- BEGIN ADDED: Notify players of new task from queue ---
-                string newTaskTitle = nextTask.GetTaskName();
+                m_currentTaskEntity.SetTaskState(SCR_ETaskState.CREATED);
+                string newTaskTitle = m_currentTaskEntity.GetTaskName();
                 TriggerGlobalNotification("TaskCreated", newTaskTitle);
-                // --- END ADDED ---
             }
         }
     }
 
     void UpdateTask()
     {
-        SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_currentTaskEntity);
-        if (extendedTask && extendedTask.GetTaskState() == SCR_ETaskState.COMPLETED)
+        if (m_currentTaskEntity && m_currentTaskEntity.GetTaskState() == SCR_ETaskState.COMPLETED)
         {
             CompleteCurrentTask();
         }
@@ -4394,10 +4370,10 @@ class IA_AreaInstance
         {
             defenderPercentage = 0.65;
         }
-        int targetDefenders = Math.Max(1, Math.Round(totalAvailableGroups * defenderPercentage));
-        int targetAttackers = totalAvailableGroups - targetDefenders;
+        targetDefenders = Math.Max(1, Math.Round(totalAvailableGroups * defenderPercentage));
+        targetAttackers = totalAvailableGroups - targetDefenders;
         // --- BEGIN ADDED: Calculate target flankers for capping logic ---
-        int targetFlankers = 0; // Initialize
+        targetFlankers = 0;
 		float flankerRatio = 0.2;
         if(targetAttackers > 0 && validThreatLocation && m_allowFlankingOperations) {
              
