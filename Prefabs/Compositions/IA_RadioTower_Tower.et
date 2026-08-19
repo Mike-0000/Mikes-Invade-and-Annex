@@ -1,0 +1,28 @@
+StaticModelEntity : "{DBCDEC45DB834E8A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01.et" {
+ ID "B8E4C17A6D392F41"
+ components {
+  SCR_DestructionMultiPhaseComponent "{6724D34460116DB6}" {
+   Enabled 1
+   "Additional hit zones" {
+    SCR_HitZone Default {
+     ColliderNames {
+      "UTM_transmittertower_FireGeo" "USP_Explosion_01" "USP_Explosion_02" "USP_Explosion_03" "USP_Explosion_04" "USP_Explosion_05" "USP_Explosion_06" "USP_Explosion_07" "USP_Explosion_08" "USP_Explosion_09" "USP_Explosion_10" "USP_Explosion_11" "USP_Explosion_12" "USP_Explosion_13" "USP_Explosion_14" "USP_Explosion_15" "USP_Explosion_16" "USP_Explosion_17" "USP_Explosion_18" "USP_Explosion_19" "USP_Explosion_20"
+     }
+     MaxHealth 1500
+     DamageReduction 40
+     DamageThreshold 10
+     "Melee multiplier" 0
+     "Fragmentation multiplier" 0
+     "Explosive multiplier" 35
+    }
+   }
+   m_fBaseHealth 1500
+   m_bDeleteAfterFinalPhase 0
+   m_aDamagePhases {
+    SCR_DamagePhaseData "{6724D344790BE0D0}" {
+     m_fPhaseHealth 700
+    }
+   }
+  }
+ }
+}
