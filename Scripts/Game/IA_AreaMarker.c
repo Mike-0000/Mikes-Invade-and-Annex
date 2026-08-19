@@ -52,6 +52,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected static const float MORTAR_YAW_SPREAD_DEG = 18.0;
     protected static const int MORTAR_GRID_MIN = 2;
     protected static const int MORTAR_GRID_MAX = 8;
+    // Unique-GUID composition. Do not instance vanilla TransmitterTower_01 with extra
+    // Rpl/destruction — those extras key off the vanilla GUID and kick JIP clients
+    // (RplCreationError item-count mismatch / REPLICATION SYSTEM_FAILURE).
     protected static const ResourceName RADIO_TOWER_COMPOSITION = "{B8E4C17A6D392F05}Prefabs/Compositions/IA_RadioTower_01.et";
     protected bool m_isDestroyed = false;
     protected bool m_prefabSpawned = false; // Flag to track if prefab has been spawned
@@ -988,7 +991,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         return null;
     }
 
-    // Spawn the radio-tower composition (replicated GenericEntity root + tower child).
+    // Spawn IA_RadioTower_01 (unique GUID). The destructible tower is
+    // IA_RadioTower_Tower.et so clients never instantiate vanilla TransmitterTower_01
+    // with extra Rpl/destruction components.
     protected void SpawnPrefabEntity()
     {
         if (GetAreaType() != IA_AreaType.RadioTower)
