@@ -17,7 +17,7 @@ class IA_PlayerKillEvent : IA_StatEvent
     {
         m_sEventType = "PlayerKill"; // Set event type directly
         m_sKillerPlayerId = killerId;
-        m_sKillerPlayerName = killerName;
+        m_sKillerPlayerName = IA_SanitizePlayerName(killerName);
     }
 
     override string ToJson()
@@ -25,8 +25,8 @@ class IA_PlayerKillEvent : IA_StatEvent
         // Manual JSON serialization
         string json = "{";
         json = json + "\"eventType\": \"" + m_sEventType + "\",";
-        json = json + "\"killerPlayerId\": \"" + m_sKillerPlayerId + "\",";
-        json = json + "\"killerPlayerName\": \"" + m_sKillerPlayerName + "\"";
+        json = json + "\"killerPlayerId\": \"" + IA_JsonEscape(m_sKillerPlayerId) + "\",";
+        json = json + "\"killerPlayerName\": \"" + IA_JsonEscape(m_sKillerPlayerName) + "\"";
         json = json + "}";
         return json;
     }
@@ -41,7 +41,7 @@ class IA_PlayerDeathEvent : IA_StatEvent
     {
         m_sEventType = "PlayerDeath";
         m_sVictimPlayerId = victimId;
-        m_sVictimPlayerName = victimName;
+        m_sVictimPlayerName = IA_SanitizePlayerName(victimName);
     }
 
     override string ToJson()
@@ -49,8 +49,8 @@ class IA_PlayerDeathEvent : IA_StatEvent
         // Manual JSON serialization
         string json = "{";
         json = json + "\"eventType\": \"" + m_sEventType + "\",";
-        json = json + "\"victimPlayerId\": \"" + m_sVictimPlayerId + "\",";
-        json = json + "\"victimPlayerName\": \"" + m_sVictimPlayerName + "\"";
+        json = json + "\"victimPlayerId\": \"" + IA_JsonEscape(m_sVictimPlayerId) + "\",";
+        json = json + "\"victimPlayerName\": \"" + IA_JsonEscape(m_sVictimPlayerName) + "\"";
         json = json + "}";
         return json;
     }
@@ -65,7 +65,7 @@ class IA_HVTKillEvent : IA_StatEvent
     {
         m_sEventType = "HVTKill";
         m_sKillerPlayerId = killerId;
-        m_sKillerPlayerName = killerName;
+        m_sKillerPlayerName = IA_SanitizePlayerName(killerName);
     }
 
     override string ToJson()
@@ -73,8 +73,8 @@ class IA_HVTKillEvent : IA_StatEvent
         // Manual JSON serialization
         string json = "{";
         json = json + "\"eventType\": \"" + m_sEventType + "\",";
-        json = json + "\"killerPlayerId\": \"" + m_sKillerPlayerId + "\",";
-        json = json + "\"killerPlayerName\": \"" + m_sKillerPlayerName + "\"";
+        json = json + "\"killerPlayerId\": \"" + IA_JsonEscape(m_sKillerPlayerId) + "\",";
+        json = json + "\"killerPlayerName\": \"" + IA_JsonEscape(m_sKillerPlayerName) + "\"";
         json = json + "}";
         return json;
     }
@@ -89,7 +89,7 @@ class IA_HVTGuardKillEvent : IA_StatEvent
     {
         m_sEventType = "HVTGuardKill";
         m_sKillerPlayerId = killerId;
-        m_sKillerPlayerName = killerName;
+        m_sKillerPlayerName = IA_SanitizePlayerName(killerName);
     }
 
     override string ToJson()
@@ -97,8 +97,8 @@ class IA_HVTGuardKillEvent : IA_StatEvent
         // Manual JSON serialization
         string json = "{";
         json = json + "\"eventType\": \"" + m_sEventType + "\",";
-        json = json + "\"killerPlayerId\": \"" + m_sKillerPlayerId + "\",";
-        json = json + "\"killerPlayerName\": \"" + m_sKillerPlayerName + "\"";
+        json = json + "\"killerPlayerId\": \"" + IA_JsonEscape(m_sKillerPlayerId) + "\",";
+        json = json + "\"killerPlayerName\": \"" + IA_JsonEscape(m_sKillerPlayerName) + "\"";
         json = json + "}";
         return json;
     }
@@ -114,7 +114,7 @@ class IA_CaptureContributionEvent : IA_StatEvent
     {
         m_sEventType = "CaptureContribution";
         m_sPlayerId = playerId;
-        m_sPlayerName = playerName;
+        m_sPlayerName = IA_SanitizePlayerName(playerName);
         m_iScore = score;
     }
 
@@ -122,8 +122,8 @@ class IA_CaptureContributionEvent : IA_StatEvent
     {
         string json = "{";
         json = json + "\"eventType\": \"" + m_sEventType + "\",";
-        json = json + "\"playerId\": \"" + m_sPlayerId + "\",";
-        json = json + "\"playerName\": \"" + m_sPlayerName + "\",";
+        json = json + "\"playerId\": \"" + IA_JsonEscape(m_sPlayerId) + "\",";
+        json = json + "\"playerName\": \"" + IA_JsonEscape(m_sPlayerName) + "\",";
         json = json + "\"score\": " + m_iScore;
         json = json + "}";
         return json;

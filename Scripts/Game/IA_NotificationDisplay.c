@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------------------------
-//! HUD sector toasts. Mike's UI path uses IA_NotificationToast (custom MUI_Node).
-//! Legacy layout remains if HUD mount fails.
+//! HUD sector toasts plus a persistent capture readout. Mike's UI path uses
+//! IA_NotificationToast and IA_CaptureHud (custom MUI_Node). Capture progress
+//! never occupies the toast queue. Legacy layout remains if HUD mount fails.
 //------------------------------------------------------------------------------------------------
 class IA_NotificationInfo
 {
@@ -34,6 +35,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected MUI_Runtime m_Runtime;
 	protected ref IA_NotificationToast m_Toast;
 	protected ref IA_RankHudPanel m_RankHud;
+	protected ref IA_CaptureHud m_CaptureHud;
 
 	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
 	protected bool m_bIsDisplaying = false;
@@ -107,6 +109,9 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			m_Toast.GetOnFinished().Remove(OnToastFinished);
 			m_Toast.Abort();
 		}
+		if (m_CaptureHud)
+			m_CaptureHud.Abort();
+		IA_LocalOptions.Get().GetOnChanged().Remove(this.ApplyLocalOptions);
 		if (m_RankHud)
 		{
 			m_RankHud.GetOnPromoted().Remove(this.OnLocalPromoted);
@@ -119,6 +124,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			m_HudHost = null;
 		}
 		m_Toast = null;
+		m_CaptureHud = null;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -126,18 +132,49 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	{
 		ref MUI_Panel overlay = m_Runtime.CreatePanel("overlay");
 		overlay.MakePassThroughOverlay();
-		overlay.SetPaddingTRBL(26, 24, 0, 24);
+		overlay.SetPaddingTRBL(26, 24, 36, 24);
 
 		m_Toast = IA_NotificationToast.Create(m_Runtime);
 		m_Toast.GetOnFinished().Insert(OnToastFinished);
 
+		m_CaptureHud = IA_CaptureHud.Create(m_Runtime);
 		m_RankHud = IA_RankHudPanel.Create(m_Runtime);
 
 		overlay.AddChild(m_Toast);
+		overlay.AddChild(m_CaptureHud);
 		overlay.AddChild(m_RankHud.GetRoot());
 		m_Runtime.SetRoot(overlay);
 		m_RankHud.GetOnPromoted().Insert(this.OnLocalPromoted);
 		m_RankHud.Bind();
+		IA_LocalOptions.Get().GetOnChanged().Insert(this.ApplyLocalOptions);
+		ApplyLocalOptions();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyLocalOptions()
+	{
+		IA_LocalOptions options = IA_LocalOptions.Get();
+		if (m_RankHud)
+			m_RankHud.SetHudVisible(!options.HideRankHud());
+
+		if (options.HidePromotionNotifications())
+			DropQueuedPromotions();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void DropQueuedPromotions()
+	{
+		int i = m_notificationQueue.Count() - 1;
+		while (i >= 0)
+		{
+			IA_NotificationInfo info = m_notificationQueue[i];
+			if (info && info.m_eKind == IA_NotificationKind.Promotion)
+				m_notificationQueue.Remove(i);
+			i = i - 1;
+		}
+
+		if (m_Toast && m_Toast.IsPlaying() && m_Toast.GetKind() == IA_NotificationKind.Promotion)
+			m_Toast.Dismiss();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -188,6 +225,9 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	//------------------------------------------------------------------------------------------------
 	protected void QueueNotificationKind(string message, string color, int duration, IA_NotificationKind kind)
 	{
+		if (kind == IA_NotificationKind.Promotion && IA_LocalOptions.Get().HidePromotionNotifications())
+			return;
+
 		m_notificationQueue.Insert(new IA_NotificationInfo(message, color, duration, kind));
 
 		if (!m_bIsDisplaying)
@@ -222,12 +262,20 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		if (m_bIsDisplaying || m_notificationQueue.IsEmpty())
 			return;
 
-		m_bIsDisplaying = true;
+		IA_NotificationInfo info;
+		while (!m_notificationQueue.IsEmpty())
+		{
+			info = m_notificationQueue[0];
+			m_notificationQueue.Remove(0);
+			if (!info)
+				continue;
+			if (info.m_eKind == IA_NotificationKind.Promotion && IA_LocalOptions.Get().HidePromotionNotifications())
+				continue;
 
-		IA_NotificationInfo info = m_notificationQueue[0];
-		m_notificationQueue.Remove(0);
-
-		_InternalShowNotification(info.m_sMessage, true, info.m_sColor, info.m_eKind, info.m_iDuration);
+			m_bIsDisplaying = true;
+			_InternalShowNotification(info.m_sMessage, true, info.m_sColor, info.m_eKind, info.m_iDuration);
+			return;
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -282,6 +330,12 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	}
 
 	//------------------------------------------------------------------------------------------------
+	bool IsCaptureHudActive()
+	{
+		return m_CaptureHud != null;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void DisplayTaskCreatedNotification(string taskName)
 	{
 		QueueNotificationKind(taskName, "red", 5000, IA_NotificationKind.TaskCreated);
@@ -311,6 +365,9 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	//------------------------------------------------------------------------------------------------
 	protected void OnLocalPromoted(int rankId)
 	{
+		if (IA_LocalOptions.Get().HidePromotionNotifications())
+			return;
+
 		string fullName = IA_SessionRankLadder.GetFullName(rankId);
 		string shortName = IA_SessionRankLadder.GetShortName(rankId);
 		QueueNotificationKind("Promoted to " + fullName + "  //  " + shortName, "green", 7000, IA_NotificationKind.Promotion);

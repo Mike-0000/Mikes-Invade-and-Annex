@@ -114,6 +114,13 @@ class IA_RankHudPanel
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void SetHudVisible(bool visible)
+	{
+		if (m_Root)
+			m_Root.SetVisible(visible);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	ScriptInvoker GetOnPromoted()
 	{
 		if (!m_OnPromoted)
@@ -209,9 +216,12 @@ class IA_RankHudPanel
 
 		if (m_bHasRankSample && rankId > m_iLastRankId)
 		{
-			if (m_Root)
-				m_Root.SetIntro(0, 0.32, -10);
-			GetOnPromoted().Invoke(rankId);
+			if (!IA_LocalOptions.Get().HidePromotionNotifications())
+			{
+				if (m_Root)
+					m_Root.SetIntro(0, 0.32, -10);
+				GetOnPromoted().Invoke(rankId);
+			}
 		}
 
 		m_iLastRankId = rankId;

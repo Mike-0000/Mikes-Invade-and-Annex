@@ -1,0 +1,197 @@
+---
+description: Living Enfusion / Enforce Script knowledge for Arma Reforger mods. Update this file whenever an engine fact is proven. Do not invent APIs — search GameSources first.
+alwaysApply: true
+---
+
+# Enfusion + Enforce (living)
+
+This is the **workspace-wide** engine handbook. Addon feature recipes stay in that addon's `AGENTS.md` / consumer rule (`IA_`, `MUI_`, `MMH_`, `MHJ_`). This file is language, VM, lifecycle, replication, prefabs, and Workbench.
+
+**Read-only core:** `D:\ReforgerGameSources`. Never edit it. Never copy engine files into a mod. Subclass, `modded class`, or new components under the addon's `Scripts/`.
+
+## Grow this file (mandatory)
+
+Whenever this session **proves** a new Enfusion/Enforce fact, **edit this file before the turn ends**. Do not wait to be asked. A future agent will not see the chat.
+
+**Counts as a discovery:** compiler error, crash, NULL-from-GC, replication surprise, Workbench formatter finding, or a GameSources comment/signature that contradicts an assumption.
+
+**Does not count:** one-off feature bugs, addon-specific recipes, or guesses.
+
+**How to add**
+
+1. Search this file. Update an existing bullet if the topic is already here.
+2. Put the fact under the matching heading. New heading only if nothing fits.
+3. One bullet: **Claim.** Consequence. Evidence (`GameSources path`, `compiler: …`, or `runtime: …`).
+4. Prepend a line to **Changelog**.
+5. If this file exceeds **400 lines**, extract one topic into `.cursor/rules/enfusion-<topic>.mdc` (globs, `alwaysApply: false`) and leave a 3-line pointer here.
+
+Sibling addons: if this workspace is not open, still treat `F:\Mikes-Invade-and-Annex\.cursor\rules\enfusion-enforce.mdc` as canonical.
+
+## Lookup first
+
+Do not invent method names, base classes, or RPC signatures. Search GameSources, then this repo, then implement.
+
+| Need | Where |
+|---|---|
+| Language / VM / `proto` | `D:\ReforgerGameSources\core\data\scripts\Core\proto\` |
+| Generated engine bindings | `...\GameLib\generated\` and `...\data\data007\scripts\Game\generated\` |
+| Bohemia game scripts (`SCR_`) | `D:\ReforgerGameSources\data\data007\scripts\Game\` |
+| Game-code script surface | `...\scripts\GameCode\` |
+| Workbench style findings | `...\WorkbenchGame\ScriptEditor\SCR_BasicCodeFormatterPlugin.c` |
+
+Prefer **`SCR_`** types over thinner native/`GameCode` types — they have the methods mods actually need. Match inheritance exactly (`ScriptComponent` vs `GameComponent` vs `SCR_BaseGameModeComponent`). Match lifecycle names exactly (`OnPostInit` vs `EOnInit` vs `OnGameModeStart`).
+
+## Language
+
+- **No ternary** (`?:`). Use `if / else`. Enforce does not have it.
+- **Every `new` lives in a `ref`** — member (`protected ref T m_x;`), local (`ref T x = new T();`), or `ref array<ref T>`. Missing `ref` on a `Managed` instance → ARC drops it → `NULL pointer` later (often in `AddChild` or the next frame).
+- **`autoptr` is legacy.** Bohemia formatter: remove it on ordinary locals, or replace with `ref` on member arrays. New code uses `ref`.
+- **No `auto`.** Name the type.
+- **`Class` is the super-root. `Managed` is GC'd.** Downcast with `T.Cast(obj)`, then null-check. `IsInherited(typename)`.
+- **`notnull` in a signature is a contract**, not a runtime gift. Still validate at trust boundaries.
+- **`out` / `inout` / `owned`** are real. `out` = callee writes; `inout` = read then write; `owned` on proto returns = VM must not release the string/array.
+- **`proto` / `native` / `volatile`** mark C++ bindings. Do not invent `proto` methods in addon code.
+- **`sealed class` cannot be extended.** If you need a hook, find a non-sealed owner or a `modded class` further up.
+- **`foreach (T x : container)`** and `foreach (K k, V v : map)` work. Always brace loops. Cache `Count()` — do not call it as the `for` bound every iteration.
+- **`string.Format("%1 …", a)`** and `PrintFormat`. `Print(x, LogLevel.XXX)` — bare `Print()` is a formatter finding.
+- **`vector`** is `<x,y,z>`; index `[0] [1] [2]`. Y is up. `Vector(x,y,z)` constructs. `GetGame().GetWorld().GetSurfaceY(x, z)` for ground.
+- **Colors:** `Color.FromSRGBA(r,g,b,a)` (sRGB bytes) or `Color.FromInt`. Do not `new Color(0.93, …)` with sRGB floats.
+- **No lambdas** as a design habit. Use named methods, `func`, or `ScriptInvoker` / `ScriptInvokerBase<>`.
+- **One class per file**, file name = class name. Companion `MyThingClass : ScriptComponentClass` stays in the same file as `MyThing`.
+
+```
+// BAD — ternary, missing ref, autoptr
+int a = flag ? 1 : 0;
+MUI_Panel p = new MUI_Panel();
+
+// GOOD
+int a;
+if (flag)
+	a = 1;
+else
+	a = 0;
+ref MUI_Panel p = new MUI_Panel();
+```
+
+## Extending the game
+
+Order of preference:
+
+1. **New class** you own (`class IA_Foo : SCR_Bar`) when you control spawn/prefab sites.
+2. **Composition** — new `ScriptComponent` on a prefab rather than overriding a huge vanilla class.
+3. **`modded class`** only when you must inject into a type you do not own.
+
+```
+modded class SCR_SomeClass
+{
+	override void Method()
+	{
+		super.Method();
+		// additive behavior
+	}
+}
+
+modded enum ChimeraMenuPreset
+{
+	MyMenu
+}
+```
+
+- Always **`super`** unless the method is an intentional full replacement.
+- **`modded class` merges** into the original. Keep overrides tiny. Do not paste GameSources bodies.
+- **`modded enum`** adds values. Do not re-list existing values.
+- Generated files (`Do not modify, this script is generated`) are bindings. Mod them only when there is no scripted `SCR_` wrapper.
+
+## Components and lifecycle
+
+Scripted components inherit **`ScriptComponent`** (`GenericComponent`). Game-mode extras inherit **`SCR_BaseGameModeComponent`** and must sit on a GameMode entity. **`GameComponent`** is a thinner generated type — do not pick it just because the name sounds right.
+
+Every attachable component needs a companion prefab-data class:
+
+```
+[ComponentEditorProps(category: "MyMod/Components", description: "…")]
+class MyCompClass : ScriptComponentClass
+{
+}
+
+class MyComp : ScriptComponent
+{
+	override void OnPostInit(IEntity owner)
+	{
+		super.OnPostInit(owner);
+		SetEventMask(owner, EntityEvent.INIT);
+	}
+}
+```
+
+- **`SetEventMask` in the constructor does not stick** on the parent entity. Set it in `OnComponentInsert` / `OnPostInit`. Evidence: `GenericComponent.c`.
+- Events fire only if the mask bit is set: `EOnInit` needs `EntityEvent.INIT`, `EOnFrame` needs `FRAME`, etc.
+- **`OnPostInit`** = all components on that entity are in. **`EOnInit`** = `EV_INIT` registered. **`OnGameModeStart`** is a game-mode callback, not a component init alias.
+- Avoid **`EOnFrame` / `EOnFixedFrame`** unless nothing else works. Prefer events, timers, invokers. Unsubscribe on deactivate/delete.
+- Constructors stay cheap. No world queries, no RPC, no spawn in `void MyComp()`.
+
+Cast components: `RplComponent.Cast(owner.FindComponent(RplComponent))`. Cache the pointer. Null-check every time at a trust boundary.
+
+## Replication
+
+Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsServer()` or `RplComponent.IsMaster()`. `IsProxy()` means this machine is not authority for that entity.
+
+- Client: prediction, FX, UI. Validate every client-originating request on the server.
+- RPCs: `[RplRpc(RplChannel.Reliable, RplRcver.Server)]` (or `Broadcast` / owner). Invoke with `Rpc(RpcAsk_Foo, args)` — **same name**, max **8** parameters (`GenericComponent.Rpc`).
+- Replicated properties: `[RplProp(onRplName: "OnChanged")]`. Keep payloads small; debounce where possible.
+- `RplLoad` / `RplSave` on `ScriptComponent` are the JIP path. If a late joiner must see state, put it here or on an `RplProp`.
+- Do not use `Replication.FindItem` after an entity's RplId is gone (vanilla comments call this out on task removal).
+- **`RplCreationError: Number of items mismatch`** on join is fatal: client kick `group=1 REPLICATION reason=1 SYSTEM_FAILURE`. expected=N is the authority layout, created=M is the local prefab. Do not GUID-override vanilla replicated prefabs to add/remove `RplComponent` children; put I&A-only Rpl/destruction on the composition instance. Evidence: `runtime: TransmitterTower_01.xob expected=4 created=5` (`ScriptedRadioComponent` extra on client), KickDialogs `REPLICATION_SYSTEM_FAILURE`.
+- **`RplComponent.GiveExt` on a script-moved cargo vehicle** makes the owner client `rplOwner=1` while `Replication.IsServer()` is still true on dedicated. Server `SetWorldTransform` plus client physics plus Broadcast pose snaps double-simulate and jitter the seated camera. Board via the player-controller RPC; do not transfer canopy ownership. Evidence: `runtime: [MHJ] Canopy GetIn … rplOwner=1` with canopy origin ~6 m from jumper (`logs_2026-08-17_22-17-01`).
+- **A client can only send `RplRcver.Server` RPCs on a node it owns.** On a server-owned entity (`RplComponent.IsOwner()` false on the client) the call is silently dropped — no warning, the server just never sees input. Route client input through a client-owned node, normally `SCR_PlayerController`, and have the server resolve the target entity. Evidence: `runtime: [MHJ] Canopy diag … srv=1 turn=0 pitchIn=0` every frame while the client held steer, `rplOwner=0` (`logs_2026-08-17_22-32-57`).
+- **`StartCommand_Vehicle` on the server pawn is not GetIn** on the owning client. Treating `GetCommandVehicle()` as seated lets the server fly the replica away from a still-standing client pawn (duplicate chute, fall graph). Gate aero on `slot.IsOccupied()` / `CompartmentAccessComponent` occupancy. Evidence: same log, `haloCmd=0 jumping=1` then `GetIn ok tries=4`.
+
+## Character input, commands, attachments
+
+- **Never `ResetContext` / `ActivateContext` an `InputManager` context on a tick.** Both wipe the accumulated action state, so a press never survives to be consumed: movement (held axis) still works while every press action — weapon draw, reload, fire, ADS, stance — silently dies. Do the context repair on an event, then stop. Evidence: `runtime:` post-landing "movement works, nothing else does" from a per-frame `MHJ_KeepOnFootControls` (`logs_2026-08-17_22-45-22`).
+- **Writing `CharacterInputContext.SetAimingAngles` / `SetHeadingAngle` every frame eats the live mouse delta.** The player's yaw is folded and zeroed before the turn machinery sees it, so the head moves and the body never turns. Any "fold leftover look into heading" recovery is one-shot, never a tick. Same log.
+- **A recovery flag whose exit test can be permanently true never exits.** `InputManager.IsContextActive("CharacterFreelookMouseContext")` is true during normal on-foot play, so using it as "freelook is stuck" pinned a landing recovery forever. Test controller state (`IsFreeLookForced`, `IsFreeLookEnabled` without `GetFreeLookInput`) and always bound the window with a countdown. Same log.
+- **`CallCommand(BindCommand("CMD_Locomotion_Fall"), -1, 0)` still starts the fall clip; `-1` does not cancel it.** The player graph transitions on `IsCommand(CMD_Locomotion_Fall)` and does not inspect the integer payload, so any call wins the Falling transition. Stop issuing the command; then assert `CMD_Vehicle_StartControl` while the vehicle command is active, because `Locomotion.agf` enters `VehicleAttachment` on `CMD_Vehicle_GetIn` / `CMD_Vehicle_StartControl`. Evidence: `data/anims/workspaces/player/Locomotion.agf`; runtime had `cmd=23 vehCmd=1 seat=1` while still rendering fall.
+- **`StartCommand_Vehicle` must run *before* the seat registers.** The get-in only completes once the vehicle command is up, so gating the command on `slot.IsOccupied()` / `access.IsInCompartment()` deadlocks boarding: occupancy waits on the command, the command waits on occupancy. The pawn then hangs in the fall graph, and a server that gates its sim on `HasOccupant()` freezes the vehicle on top of it. Re-assert the command every frame while boarding and let it early-out once `GetCommandVehicle()` is live. Evidence: `runtime:` occupancy gate produced "still falling, stuck in midair, no motion at all"; the previous build started the command unconditionally and reached `GetIn ok tries=4`.
+- **`SubhandlerStatesBegin` / `SubhandlerStatesEnd` only run while a scripted command owns the pawn.** GameSources calls them "callback for handling scripted commands from default command handler". Any countdown or recovery ticked there stops the moment your `ScriptedCommand` ends, so flags stay latched for the rest of the character's life. Post-command work belongs on the call queue or in a `Handle*` override, which the pipeline calls every frame. Evidence: `runtime: [MHJ] Canopy land check … suppress=1` still set 400 ms after landing with `veh=0 move=1`, the exact condition the tick clears (`logs_2026-08-17_23-10-52`).
+- **Do not call `InterruptVehicleActionQueue` to “finish” a GetOut.** Its generated API comment says it interrupts the get-in/get-out process; calling it immediately after `GetOutVehicle*`, issuing duplicate GetOuts, or manually `RemoveChild`-ing the pawn before `IsGettingOut()` clears bypasses the vehicle-exit cleanup that restores infantry state. Issue one exit, wait until both `IsInCompartment()` and `IsGettingOut()` are false, then recover locomotion. Evidence: `CompartmentAccessComponent.c`; runtime emitted four owner GetOut calls in one frame before leaving controls broken (`logs_2026-08-17_23-21-55`).
+- **`SetTransferFreeaimAfterFreelookRequest(true)` asks the controller to retain free aim after freelook.** Do not set it during an on-foot restoration intended to return mouse yaw to body turning; use `false`, clear freelook once, and avoid delayed repeated aim-angle writes. Evidence: generated `CharacterInputContext.c` API and runtime `free=1` five seconds after landing (`logs_2026-08-17_23-21-55`).
+- **`IEntity.GetOrigin()` is parent relative.** A character seated in a compartment is a child of the vehicle, so `GetOrigin()` / `GetTransform()` is the seat offset, not a world pose. `GetOutVehicle_NoDoor` must use `GetWorldTransform` plus `ChimeraCharacter.AimingPosition()` (vanilla `GetOutOwner` in `SCR_CompartmentAccessComponent.c`). Passing seat-local coords as the exit teleport leaves `PhysicsIsLinked` and `IsInVehicle` set.
+- **`StartCommand_Move` / `StartCommand_Fall` while still seated aborts GetOut.** The vehicle command is required for compartment exit. Interrupting it leaves `PhysicsIsLinked`: `CharacterCamera1stPerson` then sets `m_fUseHeading = 0` so mouse only turns the head; `HandleWeapons` stays blocked if the HALO handler still sees a canopy seat; `PerceivableComponent.IsInCompartment()` stays true so group AI skips the pawn as an infantry target and individual AI aims at the head (`EAimPointType.WEAK`) without firing small arms. Working parachutes call `AskOwnerToGetOutFromVehicle(EGetOutType.TELEPORT, …)` once and delete the chute; they do not `RemoveChild` or inject Fall/Move until occupancy is clear. Evidence: `SCR_CompartmentAccessComponent.c`, `SCR_AIGroupPerception.c`, `SCR_AIUpdateTargetAttackData.c`, `CharacterCamera1stPerson.c`; `ArmaReforgerParachutes` `ParachuteComponent.Rpc_ServerExitParachute`.
+- **`Locomotion.agf` leaves `VehicleAttachment` only on `CMD_Vehicle_EndControl`.** Enter is `CMD_Vehicle_GetIn` / `CMD_Vehicle_StartControl`. `CharacterCommandVehicle` re-issues StartControl in PreAnim, so a handler `CallCommand(EndControl)` is discarded until `StartCommand_Move` replaces that command. Sitting pose plus no infantry weapons after a canopy GetOut means EndControl never won a frame. Evidence: `data/data/anims/workspaces/player/Locomotion.agf`; `BaseAnimPhysComponent.c` notes that command PreAnim overwrites manually set graph commands.
+- **A child entity hand-added to a character (`AddChild`) stops rendering once the compartment re-parents the pawn into a vehicle.** For local-only cosmetics, spawn unparented (`ETransformMode.WORLD`) and drive `SetWorldTransform` + `Update()` each frame from the anchor's world matrix. Evidence: chute logged `Canopy visual attached` yet was never visible after `GetIn ok` (`logs_2026-08-17_22-45-22`); the freefall path already world-drove the same mesh.
+
+## Prefabs, configs, resources
+
+- Assets are **`ResourceName`**, usually `{GUID}path/to/file.et`. Do not hardcode raw filesystem paths.
+- Spawn with prefab APIs + `EntitySpawnParams`. Validate world + resource before spawn.
+- Prefabs `.et`, configs `.conf`, layouts `.layout`. Addon identity is `addon.gproj` (`ID`, `GUID`, `Dependencies`).
+- Engine dependency GUID: **`58D0FB3206B6F859`**. Mike's UI: **`B3F91C6A4E275D08`**. Map HUD: **`D8E4A1C07B359F26`**.
+- `[Attribute("default", UIWidgets.X, desc: "…")]` is Workbench-visible prefab data. That is how designers configure your component — not hardcoded magics in `EOnInit`.
+
+## UI (engine)
+
+Enfusion has **no WebView**. Widgets are the compositor (Canvas, text, EditBox). Feature menus belong in the **consuming addon**, subclassing `MUI_MenuBase`. HUD: `MUI_HudHost` + pass-through overlay. Do not use `MenuWithEditorContext` on HUD. Native `MapWidget` stays in a layout; Mike's UI does not host it.
+
+Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer rule / `F:\Mikes-UI\README.md`.
+
+## Safety
+
+- Null-check entities and components before use. Early-return on invalid state.
+- Guard re-entrancy and duplicate registration (static registries, invoker subscribe).
+- No allocations / queries in per-frame loops. Cache `FindComponent` and `ResourceName`.
+- Do not leave `TODO` stubs. Implement or omit.
+
+## Changelog
+
+- 2026-08-18 — `VehicleAttachment` exits only on `CMD_Vehicle_EndControl` after Move has replaced `CharacterCommandVehicle`; otherwise the sit pose and infantry weapons stay dead after canopy GetOut.
+- 2026-08-18 — Canopy GetOut must be one owner TELEPORT (`AskOwnerToGetOutFromVehicle`) using world `AimingPosition`; `StartCommand_Move`/`Fall` or `RemoveChild` while seated leaves `PhysicsIsLinked` (head-only look, no equipment, AI aim-but-no-fire). Dedicated land must restore gravity on the server pawn.
+- 2026-08-17 — Animation command payload `-1` is not cancellation when the graph tests `IsCommand`; vehicle attachment needs StartControl/GetIn asserted.
+- 2026-08-17 — Vehicle exit must complete without queue interruption/manual unparenting; freeaim transfer must be disabled when restoring body-turn mouse control.
+- 2026-08-17 — `Subhandler*` states only tick under a scripted command; latched recovery flags never clear once it ends.
+- 2026-08-17 — Corrected: `StartCommand_Vehicle` must precede seat registration (gating it on occupancy deadlocks boarding). `GetOrigin()` is parent relative.
+- 2026-08-17 — Character input / commands / attachments: per-frame context and aim writes kill infantry input; `CMD_Locomotion_Fall` starts the fall; character children stop rendering after a compartment re-parent.
+- 2026-08-17 — Client `RplRcver.Server` RPCs are dropped on nodes the client does not own; route input via the player controller.
+- 2026-08-17 — `GiveExt` on a script-moved vehicle plus `GetCommandVehicle()` as “seated” double-simulates dedicated canopy flight.
+- 2026-08-17 — `RplCreationError` item-count mismatch on a replicated prefab kicks the joining client (`REPLICATION` / `SYSTEM_FAILURE`).
+- 2026-08-17 — Seeded from GameSources `proto.c`, `Types.c`, `ScriptComponent.c`, `GenericComponent.c`, `SCR_BaseGameModeComponent.c`, `SCR_BasicCodeFormatterPlugin.c`, and proven workspace constraints (no ternary, `ref`+ARC, GameSources read-only).

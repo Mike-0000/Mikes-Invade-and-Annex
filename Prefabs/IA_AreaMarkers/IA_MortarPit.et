@@ -1,0 +1,9 @@
+IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
+ ID "64F935A1015AFBEE"
+ coords 0 0 0
+ m_areaGroup 0
+ m_fZoneRadius 40
+ m_areaName "Mortar Pit"
+ m_areaType "MortarPit"
+ m_radius 40
+}

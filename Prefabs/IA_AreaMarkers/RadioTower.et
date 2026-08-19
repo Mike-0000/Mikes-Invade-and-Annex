@@ -4,7 +4,7 @@ IA_AreaMarker : "{61B9AD559D2CE12D}Components/Area_Marker.et" {
  angleY 52.387
  m_areaGroup 9
  m_fZoneRadius 30
- m_prefabToSpawn "{DBCDEC45DB834E8A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01.et"
+ m_prefabToSpawn "{B8E4C17A6D392F05}Prefabs/Compositions/IA_RadioTower_01.et"
  m_areaName "Laruns Radio Tower"
  m_areaType "RadioTower"
  m_radius 30

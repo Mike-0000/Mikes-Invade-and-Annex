@@ -1,5 +1,5 @@
 MetaFileClass {
- Name "{DBCDEC45DB834E8A}Prefabs/Structures/Infrastructure/Towers/TransmitterTower_01/TransmitterTower_01.et"
+ Name "{B8E4C17A6D392F05}Prefabs/Compositions/IA_RadioTower_01.et"
  Configurations {
   EntityTemplateResourceClass PC {
   }

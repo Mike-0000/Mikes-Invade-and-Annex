@@ -137,6 +137,12 @@ class IA_NotificationToast : MUI_Surface
 	}
 
 	//------------------------------------------------------------------------------------------------
+	IA_NotificationKind GetKind()
+	{
+		return m_eKind;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	//! @param message Body copy (prefixes like "New Objective:" are stripped).
 	//! @param color Legacy tone key: red / yellow / green / empty.
 	//! @param durationMs Total on-screen time including intro and outro.

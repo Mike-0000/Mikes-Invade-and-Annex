@@ -214,12 +214,12 @@ int IA_GetDefendFireteamUnitCount()
     return 2;
 }
 
-//! Total AI entities per defend-style wave: Max(8, Round(12 * (scale * 1.4)^2)).
+//! Total AI entities per defend-style wave: Max(8, Round(12 * (scale * 1.4)^2 * 1.6)).
 //! Keeps wave mass stable; fireteam split still creates chaotic movement.
 int IA_GetDefendWaveUnitBudget(float scaleFactor)
 {
     float scaled = scaleFactor * 1.4;
-    int budget = Math.Round(12 * (scaled * scaled));
+    int budget = Math.Round(12 * (scaled * scaled) * 1.6);
     if (budget < 8)
         budget = 8;
     return budget;
@@ -233,7 +233,7 @@ void IA_BuildDefendFireteamSizes(int unitBudget, out array<int> outSizes)
     if (remaining < 2)
         return;
 
-    const int MAX_GROUPS = 12;
+    const int MAX_GROUPS = 20;
     while (remaining >= 2 && outSizes.Count() < MAX_GROUPS)
     {
         int size = IA_GetDefendFireteamUnitCount();
@@ -281,6 +281,54 @@ IA_Faction IA_FactionFromInt(int i)
     else if (i == 3)
         return IA_Faction.CIV;
     return IA_Faction.NONE;
+}
+
+//! Strip NUL / control chars that GetPlayerName() can leave on Workbench identities.
+string IA_SanitizePlayerName(string value)
+{
+    if (!value || value.IsEmpty())
+        return "";
+
+    string cleaned = "";
+    int len = value.Length();
+    int i;
+    for (i = 0; i < len; i++)
+    {
+        string ch = value.Get(i);
+        int ascii = ch.ToAscii();
+        if (ascii < 32)
+            continue;
+        cleaned = cleaned + ch;
+    }
+    return cleaned;
+}
+
+//! JSON string contents: no control chars, escaped quotes and backslashes.
+string IA_JsonEscape(string value)
+{
+    string cleaned = IA_SanitizePlayerName(value);
+    if (cleaned.IsEmpty())
+        return "";
+
+    string escaped = "";
+    int len = cleaned.Length();
+    int i;
+    for (i = 0; i < len; i++)
+    {
+        string ch = cleaned.Get(i);
+        if (ch == "\"")
+        {
+            escaped = escaped + "\\\"";
+            continue;
+        }
+        if (ch == "\\")
+        {
+            escaped = escaped + "\\\\";
+            continue;
+        }
+        escaped = escaped + ch;
+    }
+    return escaped;
 }
 
 ///////////////////////////////////////////////////////////////////////

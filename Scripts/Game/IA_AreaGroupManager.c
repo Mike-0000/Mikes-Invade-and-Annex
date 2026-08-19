@@ -22,7 +22,8 @@ class IA_AreaGroupManager
     private const int ARTILLERY_COOLDOWN = 300; // 5+ minutes
     private const float ARTILLERY_STRIKE_CHANCE = 0.18; // 25% chance per check
     private const ResourceName RED_SMOKE_EFFECT_PREFAB = "{002FEEDB0213777D}Prefabs/EffectsModuleEntities/EffectModule_Particle_Smoke_Red.et";
-    private const ResourceName ARTILLERY_STRIKE_PREFAB = "{11B2A636F321AD68}PrefabsEditable/EffectsModules/Mortar/IA_EffectModule_Zoned_MortarBarrage_Large.et";
+    private const int ARTILLERY_MIN_SHOTS = 6;
+    private const int ARTILLERY_MAX_SHOTS = 12;
 
     void IA_AreaGroupManager(array<ref IA_AreaInstance> instances)
     {
@@ -748,18 +749,18 @@ class IA_AreaGroupManager
         {
             if (m_artillerySmokeSpawned && (currentTime - m_artilleryStrikeSmokeTime >= Math.RandomInt(minDelay, maxDelay)))
             {
-                // Time for impact!
-                Print(string.Format("[ArtilleryStrike] Firing artillery at %1 for area group.", m_artilleryStrikeCenter), LogLevel.NORMAL);
-                
-                Resource res = Resource.Load(ARTILLERY_STRIKE_PREFAB);
-                if (res)
+                Print(string.Format("[ArtilleryStrike] Issuing fire mission at %1 for area group.", m_artilleryStrikeCenter), LogLevel.NORMAL);
+
+                IA_AreaInstance pit = FindMortarPitInstance();
+                bool fired = false;
+                if (pit)
                 {
-                    GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(m_artilleryStrikeCenter));
+                    int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
+                    fired = pit.IssueMortarFireMission(m_artilleryStrikeCenter, shotCount);
                 }
-                else
-                {
-                    Print(string.Format("[ArtilleryStrike] FAILED to load artillery prefab: %1", ARTILLERY_STRIKE_PREFAB), LogLevel.ERROR);
-                }
+
+                if (!fired)
+                    Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
 
                 // Strike is finished, reset state and start cooldown
                 m_isArtilleryStrikeActive = false;
@@ -772,6 +773,14 @@ class IA_AreaGroupManager
         }
 
         // --- New Strike Checks ---
+
+        // 0. Need a live, uncaptured mortar pit with a crew
+        IA_AreaInstance mortarPit = FindMortarPitInstance();
+        if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
+        {
+            Print("[ArtilleryStrike] Check failed: No usable mortar pit crew in this AO group.", LogLevel.NORMAL);
+            return;
+        }
 
         // 1. Check main 60-second timer
         if (currentTime - m_lastArtilleryStrikeCheckTime < ARTILLERY_CHECK_INTERVAL)
@@ -920,5 +929,17 @@ class IA_AreaGroupManager
         m_isArtilleryStrikeActive = true;
         m_artillerySmokeSpawned = true;
         m_artilleryStrikeSmokeTime = currentTime;
+    }
+
+    protected IA_AreaInstance FindMortarPitInstance()
+    {
+        if (!m_areaInstances)
+            return null;
+        foreach (IA_AreaInstance instance : m_areaInstances)
+        {
+            if (instance && instance.IsMortarPitArea())
+                return instance;
+        }
+        return null;
     }
 }; 

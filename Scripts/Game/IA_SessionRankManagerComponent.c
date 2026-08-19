@@ -274,7 +274,7 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 		if (existing)
 		{
 			if (!playerName.IsEmpty())
-				existing.PlayerName = playerName;
+				existing.PlayerName = IA_SanitizePlayerName(playerName);
 			if (existing.netId <= 0)
 				existing.netId = ResolveNetId(playerId);
 			return existing;
@@ -282,7 +282,7 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 
 		ref IA_SessionRankEntry entry = new IA_SessionRankEntry();
 		entry.playerId = playerId;
-		entry.PlayerName = playerName;
+		entry.PlayerName = IA_SanitizePlayerName(playerName);
 		entry.kills = 0;
 		entry.deaths = 0;
 		entry.hvt_kills = 0;
@@ -427,8 +427,8 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 				json = json + ",";
 
 			json = json + "{";
-			json = json + "\"playerId\": \"" + Sanitize(e.playerId) + "\",";
-			json = json + "\"PlayerName\": \"" + Sanitize(e.PlayerName) + "\",";
+			json = json + "\"playerId\": \"" + IA_JsonEscape(e.playerId) + "\",";
+			json = json + "\"PlayerName\": \"" + IA_JsonEscape(e.PlayerName) + "\",";
 			json = json + "\"kills\": " + e.kills.ToString() + ",";
 			json = json + "\"deaths\": " + e.deaths.ToString() + ",";
 			json = json + "\"hvt_kills\": " + e.hvt_kills.ToString() + ",";
@@ -442,14 +442,5 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 
 		json = json + "]";
 		return json;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected string Sanitize(string value)
-	{
-		if (value.IsEmpty())
-			return "";
-		value.Replace("\"", "'");
-		return value;
 	}
 }

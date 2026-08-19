@@ -174,7 +174,7 @@ class IA_DefendMission
     {
         float scaleFactor = IA_Game.GetAIScaleFactor();
         float scaled = scaleFactor * 1.9;
-        int targetCount = Math.Round(9 * (scaled * scaled));
+        int targetCount = Math.Round(9 * (scaled * scaled) * 1.6);
         Print(string.Format("[IA_DefendMission] Calculated target AI count: %1 (scale factor: %2)", targetCount, scaleFactor), LogLevel.NORMAL);
         
         return targetCount;

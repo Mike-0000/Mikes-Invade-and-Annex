@@ -3,10 +3,21 @@
 //------------------------------------------------------------------------------------------------
 class IA_StatisticsMenu : MUI_MenuBase
 {
+	protected static const int TAB_OPTIONS = 4;
+	protected static const string FOOT_LEADERBOARD = "Session board is local to this restart. Set ./profile/MikesInvadeAndAnnex/server_name.txt for the server board";
+	protected static const string FOOT_OPTIONS = "Stored in ./profile/MikesInvadeAndAnnex/local_options.json  •  This machine only";
+	protected static const string SUB_LEADERBOARD = "Session  •  Server  •  Global  •  Global by server  •  Options";
+	protected static const string SUB_OPTIONS = "Local HUD settings  •  This machine only";
+
+	protected ref IA_MuiShell m_Shell;
 	protected ref MUI_Tabs m_Tabs;
 	protected ref MUI_Panel m_HeaderRow;
 	protected ref IA_LeaderboardRow m_Header;
+	protected ref MUI_Divider m_HeaderDiv;
 	protected ref MUI_ScrollView m_Scroll;
+	protected ref MUI_ScrollView m_OptionsScroll;
+	protected ref MUI_Toggle m_HideRankToggle;
+	protected ref MUI_Toggle m_HidePromoToggle;
 	protected ref array<ref IA_LeaderboardRow> m_aRows;
 	protected int m_iActiveTab;
 
@@ -42,11 +53,11 @@ class IA_StatisticsMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	override void BuildUI(notnull MUI_Runtime runtime)
 	{
-		ref IA_MuiShell shell = IA_MuiShell.Create(
+		m_Shell = IA_MuiShell.Create(
 			runtime,
 			"LEADERBOARD",
 			"COMMAND UPLINK",
-			"Session  •  Server  •  Global  •  Global by server",
+			SUB_LEADERBOARD,
 			1100
 		);
 
@@ -56,6 +67,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 		m_Tabs.AddTab("Server");
 		m_Tabs.AddTab("Global");
 		m_Tabs.AddTab("Global by Server");
+		m_Tabs.AddTab("Options");
 		m_Tabs.GetOnChanged().Insert(OnTabsChanged);
 
 		ref IA_LeaderboardRow headerRow = IA_LeaderboardRow.Create(runtime, "hdr", true);
@@ -65,12 +77,14 @@ class IA_StatisticsMenu : MUI_MenuBase
 		m_HeaderRow.SetIntro(0.36, 0.35, 10);
 		m_aRows.Insert(headerRow);
 
-		ref MUI_Divider headerDiv = runtime.CreateDivider("headerDiv");
+		m_HeaderDiv = runtime.CreateDivider("headerDiv");
 
 		m_Scroll = runtime.CreateScrollView("scroll");
 		m_Scroll.SetViewportHeight(420);
 		m_Scroll.SetGap(4);
 		m_Scroll.SetIntro(0.38, 0.4, 16);
+
+		BuildOptionsPage(runtime);
 
 		ref MUI_Row buttons = runtime.CreateRow("buttons");
 		buttons.SetGap(12);
@@ -80,16 +94,99 @@ class IA_StatisticsMenu : MUI_MenuBase
 		closeBtn.GetOnClicked().Insert(OnMikesClose);
 		buttons.AddChild(closeBtn);
 
-		shell.GetCard().AddChild(m_Tabs);
-		shell.GetCard().AddChild(m_HeaderRow);
-		shell.GetCard().AddChild(headerDiv);
-		shell.GetCard().AddChild(m_Scroll);
-		shell.AddFooter(
-			runtime,
-			"Session board is local to this restart. Set ./profile/MikesInvadeAndAnnex/server_name.txt for the server board",
-			buttons
-		);
-		shell.Mount(runtime);
+		m_Shell.GetCard().AddChild(m_Tabs);
+		m_Shell.GetCard().AddChild(m_HeaderRow);
+		m_Shell.GetCard().AddChild(m_HeaderDiv);
+		m_Shell.GetCard().AddChild(m_Scroll);
+		m_Shell.GetCard().AddChild(m_OptionsScroll);
+		m_Shell.AddFooter(runtime, FOOT_LEADERBOARD, buttons);
+		m_Shell.Mount(runtime);
+
+		ShowOptionsPage(false);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void BuildOptionsPage(notnull MUI_Runtime runtime)
+	{
+		m_OptionsScroll = runtime.CreateScrollView("options");
+		m_OptionsScroll.SetViewportHeight(420);
+		m_OptionsScroll.SetGap(12);
+		m_OptionsScroll.SetIntro(0.38, 0.4, 16);
+
+		ref MUI_Label intro = runtime.CreateLabel("These options apply only on this machine. They do not sync to the server or other players.", "optIntro");
+		intro.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		intro.SetMuted(true);
+
+		IA_LocalOptions options = IA_LocalOptions.Get();
+
+		m_HideRankToggle = runtime.CreateToggle("Hide ranking HUD", "hideRank");
+		m_HideRankToggle.SetChecked(options.HideRankHud());
+		m_HideRankToggle.GetOnChanged().Insert(OnHideRankChanged);
+
+		ref MUI_Label rankHint = runtime.CreateLabel("Hides the session rank chip in the top-right of the HUD.", "hideRankHint");
+		rankHint.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		rankHint.SetMuted(true);
+
+		m_HidePromoToggle = runtime.CreateToggle("Hide promotion notifications", "hidePromo");
+		m_HidePromoToggle.SetChecked(options.HidePromotionNotifications());
+		m_HidePromoToggle.GetOnChanged().Insert(OnHidePromoChanged);
+
+		ref MUI_Label promoHint = runtime.CreateLabel("Skips the on-screen toast when you are promoted.", "hidePromoHint");
+		promoHint.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		promoHint.SetMuted(true);
+
+		m_OptionsScroll.AddChild(intro);
+		m_OptionsScroll.AddChild(m_HideRankToggle);
+		m_OptionsScroll.AddChild(rankHint);
+		m_OptionsScroll.AddChild(m_HidePromoToggle);
+		m_OptionsScroll.AddChild(promoHint);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnHideRankChanged()
+	{
+		if (!m_HideRankToggle)
+			return;
+		IA_LocalOptions.Get().SetHideRankHud(m_HideRankToggle.IsChecked());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnHidePromoChanged()
+	{
+		if (!m_HidePromoToggle)
+			return;
+		IA_LocalOptions.Get().SetHidePromotionNotifications(m_HidePromoToggle.IsChecked());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ShowOptionsPage(bool show)
+	{
+		if (m_HeaderRow)
+			m_HeaderRow.SetVisible(!show);
+		if (m_HeaderDiv)
+			m_HeaderDiv.SetVisible(!show);
+		if (m_Scroll)
+			m_Scroll.SetVisible(!show);
+		if (m_OptionsScroll)
+			m_OptionsScroll.SetVisible(show);
+
+		if (!m_Shell)
+			return;
+
+		MUI_LiveHeader header = m_Shell.GetHeader();
+		if (show)
+		{
+			if (header)
+				header.SetTitle("OPTIONS");
+			m_Shell.SetSubtitle(SUB_OPTIONS);
+			m_Shell.SetFooterText(FOOT_OPTIONS);
+			return;
+		}
+
+		if (header)
+			header.SetTitle("LEADERBOARD");
+		m_Shell.SetSubtitle(SUB_LEADERBOARD);
+		m_Shell.SetFooterText(FOOT_LEADERBOARD);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -106,6 +203,15 @@ class IA_StatisticsMenu : MUI_MenuBase
 		m_iActiveTab = tabIndex;
 		if (m_Tabs && m_Tabs.GetIndex() != tabIndex)
 			m_Tabs.SetIndex(tabIndex);
+
+		if (tabIndex == TAB_OPTIONS)
+		{
+			DetachLeaderboardCallbacks();
+			ShowOptionsPage(true);
+			return;
+		}
+
+		ShowOptionsPage(false);
 
 		bool showObj = true;
 		bool showGrade = false;

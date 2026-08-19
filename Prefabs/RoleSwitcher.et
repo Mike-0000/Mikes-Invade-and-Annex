@@ -66,6 +66,11 @@ GenericEntity {
     }
    }
    additionalActions {
+    MHJ_HaloJumpUserAction "{654F7B28C4E8A27B}" {
+     ParentContextList {
+      "main"
+     }
+    }
     IA_ChangeRoleUserAction "{6549634281765587}" {
      ParentContextList {
       "main"

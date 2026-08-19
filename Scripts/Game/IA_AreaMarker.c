@@ -33,14 +33,30 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     [Attribute(defvalue: "10.0", UIWidgets.EditBox, "Radius of sphere query", category: "Zone", params: "0.1 99999")]
     protected float m_fZoneRadius;
     
-    // -- Radio Tower specific attributes
-    [Attribute("", UIWidgets.ResourceNamePicker, "Prefab to spawn for Radio Tower area type", category: "Radio Tower", params: "et")]
+    // -- Radio Tower / Mortar Pit composition spawn
+    [Attribute("", UIWidgets.ResourceNamePicker, "Prefab to spawn for Radio Tower or Mortar Pit area types", category: "Spawn Prefab", params: "et")]
     protected ResourceName m_prefabToSpawn;
     
     protected IEntity m_spawnedEntity;
+    protected IEntity m_towerEntity;
+    protected bool m_towerDamageBound = false;
+    protected IEntity m_mortarEntity;
+    protected int m_mortarCount = 0;
+    protected ref array<IEntity> m_mortarEntities = new array<IEntity>();
+    protected ref array<IEntity> m_mortarPitCompositions = new array<IEntity>();
+    protected static const float MORTAR_GRID_SPACING_M = 13.0;
+    protected static const float MORTAR_SPACING_VARIANCE_M = 2.0;
+    protected static const float MORTAR_JITTER_M = 4.0;
+    protected static const float MORTAR_MIN_SEP_M = 10.0;
+    protected static const float MORTAR_ROW_STAGGER_FRAC = 0.38;
+    protected static const float MORTAR_YAW_SPREAD_DEG = 18.0;
+    protected static const int MORTAR_GRID_MIN = 2;
+    protected static const int MORTAR_GRID_MAX = 8;
+    protected static const ResourceName RADIO_TOWER_COMPOSITION = "{B8E4C17A6D392F05}Prefabs/Compositions/IA_RadioTower_01.et";
     protected bool m_isDestroyed = false;
     protected bool m_prefabSpawned = false; // Flag to track if prefab has been spawned
     protected bool m_qrfCooldownApplied = false; // Ensure QRF cooldown applied only once
+    protected bool m_runtimeConfigured = false;
 
     // -- For authority/proxy check
     protected RplComponent m_RplComponent;
@@ -63,6 +79,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected float m_lastScoringTime = 0;
     protected const float SCORING_INTERVAL = 1.0; // Award points every 1 second
     protected bool m_isCaptured = false; // Track if zone has been captured
+    protected float m_fHudPublishAcc = 0;
+    protected const float HUD_PUBLISH_INTERVAL = 0.75;
     
     // Static reference to the mission initializer
     static IA_MissionInitializer s_missionInitializer = null;
@@ -138,6 +156,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                 marker.ResetForNewCapture();
             }
         }
+
+        IA_MissionInitializer.PublishCaptureHud("", IA_CaptureHudState.Hidden, 0);
         
         Print("[IA_AreaMarker] Reset all markers for new zone group", LogLevel.DEBUG);
     }
@@ -178,7 +198,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     [Attribute(defvalue: "CaptureZone", desc: "Name of the capture area.")]
     protected string m_areaName;
     
-    [Attribute(defvalue: "City", desc: "Type of area (Town, City, Property, Airport, Docks, Military).")]
+    [Attribute(defvalue: "City", desc: "Type of area (Town, City, Property, Airport, Docks, Military, SmallMilitary, RadioTower, DefendObjective, MortarPit).")]
     protected string m_areaType;
     
     [Attribute(defvalue: "500", desc: "Radius of the area.")]
@@ -261,18 +281,15 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        return;
 	    }
 	    
-	    // Spawn Radio Tower prefab if it's the active group, not yet spawned, and not already destroyed
-	    if (GetAreaType() == IA_AreaType.RadioTower && !m_prefabSpawned && !m_isDestroyed)
+	    // Mortar pits still spawn from the first active-group frame. Radio towers spawn
+	    // from IA_MissionInitializer via EnsureRadioTowersForGroup.
+	    if (!m_prefabSpawned && !m_isDestroyed)
 	    {
-	        SpawnPrefabEntity();
-	        if (m_spawnedEntity) // Check if spawning was successful
+	        if (GetAreaType() == IA_AreaType.MortarPit)
 	        {
-	            m_prefabSpawned = true;
-	            // Print("[INFO] Radio Tower prefab " + m_prefabToSpawn + " spawned for active group " + m_areaGroup + " at " + m_origin, LogLevel.NORMAL);
-	        }
-	        else
-	        {
-	            // Print("[WARNING] Failed to spawn Radio Tower prefab " + m_prefabToSpawn + " for active group " + m_areaGroup + " in EOnFrame. Will retry next frame.", LogLevel.WARNING);
+	            SpawnMortarPitComposition();
+	            if (m_spawnedEntity)
+	                m_prefabSpawned = true;
 	        }
 	    }
 	    
@@ -350,7 +367,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        // Check if we need to send pause notification before exiting
 	        if (wasCapturing && m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
 	        {
-	            // Zone is now empty but capture was in progress
+	            PublishCaptureHudState(IA_CaptureHudState.Paused);
 	            TriggerCaptureNotification("CapturePaused", m_areaName + " capture paused");
 	            Print(string.Format("[CAPTURE] Zone %1 - PAUSED (empty zone) - Progress: %2/%3 seconds", 
 	                m_areaName, Math.Round(m_captureProgress), CAPTURE_TIME_SECONDS), LogLevel.WARNING);
@@ -395,14 +412,12 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	            m_captureStatus = "Captured";
 	        }
 	        
-	        // Handle notifications
 	        if (!wasCapturing)
 	        {
-	            // Capture just started
+	            PublishCaptureHudState(IA_CaptureHudState.Capturing);
 	            TriggerCaptureNotification("CaptureStarted", m_areaName + " capture started");
 	        }
 	        
-	        // Check 50% threshold
 	        if (!m_hasReached50Percent && m_captureProgress >= CAPTURE_TIME_SECONDS * 0.5)
 	        {
 	            m_hasReached50Percent = true;
@@ -419,10 +434,12 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        else
 	            m_captureStatus = "Neutral";
 	        
-	        // Handle pause notification
 	        if (wasCapturing && m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
 	        {
-	            // Capture was in progress but now paused
+	            if (ussrCount > usCount)
+	                PublishCaptureHudState(IA_CaptureHudState.Contested);
+	            else
+	                PublishCaptureHudState(IA_CaptureHudState.Paused);
 	            TriggerCaptureNotification("CapturePaused", m_areaName + " capture paused");
 	        }
 	    }
@@ -436,6 +453,21 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    m_FactionScores.Set("US", scaledScore);
 	    
 	    // Debug logging
+	    m_fHudPublishAcc = m_fHudPublishAcc + timeSlice;
+	    if (m_fHudPublishAcc >= HUD_PUBLISH_INTERVAL)
+	    {
+	        m_fHudPublishAcc = 0;
+	        if (m_isCapturing)
+	            PublishCaptureHudState(IA_CaptureHudState.Capturing);
+	        else if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
+	        {
+	            if (ussrCount > usCount)
+	                PublishCaptureHudState(IA_CaptureHudState.Contested);
+	            else
+	                PublishCaptureHudState(IA_CaptureHudState.Paused);
+	        }
+	    }
+
 	    if (m_isCapturing)
 	    {
 	        int remainingTime = Math.Ceil(CAPTURE_TIME_SECONDS - m_captureProgress);
@@ -452,6 +484,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    {
 	        m_isCaptured = true; // Mark as captured to prevent repeated logging
 	        m_isCapturing = false; // Stop capturing state
+	        PublishCaptureHudState(IA_CaptureHudState.Complete);
 	        
 	        Print(string.Format("[CAPTURE] Zone %1 - CAPTURED! Top contributors being calculated...", m_areaName), LogLevel.NORMAL);
 	        
@@ -511,6 +544,17 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		
 		m_RplComponent = RplComponent.Cast(owner.FindComponent(RplComponent));
 		m_origin = owner.GetOrigin();
+
+		if (GetAreaType() == IA_AreaType.MortarPit)
+		{
+			int count = EnsureMortarCount();
+			float neededRadius = 40.0 + (count * 4.0);
+			if (m_radius < neededRadius)
+			{
+				m_radius = neededRadius;
+				m_fZoneRadius = neededRadius;
+			}
+		}
 		
 		// Print(("[DEBUG] IA_AreaMarker.EOnInit called for " + m_areaName + " at " + m_origin, LogLevel.NORMAL);
 		
@@ -653,7 +697,133 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             return IA_AreaType.RadioTower;
         else if (m_areaType == "DefendObjective")
             return IA_AreaType.DefendObjective;
+        else if (m_areaType == "MortarPit")
+            return IA_AreaType.MortarPit;
         return IA_AreaType.Property; // Fallback
+    }
+
+    // Runtime setup for auto-placed mortar pit markers (after SpawnEntityPrefab).
+    void ConfigureRuntime(int areaGroup, string areaName, float radius)
+    {
+        m_areaGroup = areaGroup;
+        m_areaName = areaName;
+        m_areaType = "MortarPit";
+        m_radius = radius;
+        m_fZoneRadius = radius;
+        m_origin = GetOrigin();
+        m_runtimeConfigured = true;
+        EnsureMortarCount();
+
+        if (Replication.IsServer() && s_areaMarkers && s_areaMarkers.Find(this) == -1)
+            s_areaMarkers.Insert(this);
+
+        Print(string.Format("[IA_AreaMarker] ConfigureRuntime MortarPit '%1' group %2 count %3 at %4", m_areaName, m_areaGroup, m_mortarCount, m_origin), LogLevel.NORMAL);
+    }
+
+    int EnsureMortarCount()
+    {
+        if (m_mortarCount >= MORTAR_GRID_MIN && m_mortarCount <= MORTAR_GRID_MAX)
+            return m_mortarCount;
+
+        m_mortarCount = IA_Game.rng.RandInt(MORTAR_GRID_MIN, MORTAR_GRID_MAX + 1);
+        return m_mortarCount;
+    }
+
+    void SetMortarCount(int count)
+    {
+        if (count < MORTAR_GRID_MIN)
+            count = MORTAR_GRID_MIN;
+        if (count > MORTAR_GRID_MAX)
+            count = MORTAR_GRID_MAX;
+        m_mortarCount = count;
+    }
+
+    int GetPlannedMortarCount()
+    {
+        return EnsureMortarCount();
+    }
+
+    IEntity GetSpawnedEntity()
+    {
+        return m_spawnedEntity;
+    }
+
+    IEntity GetMortarEntity()
+    {
+        if (m_mortarEntity)
+            return m_mortarEntity;
+        if (m_mortarEntities && !m_mortarEntities.IsEmpty())
+            return m_mortarEntities[0];
+        return null;
+    }
+
+    array<IEntity> GetMortarEntities()
+    {
+        int planned = m_mortarCount;
+        if (planned >= MORTAR_GRID_MIN)
+        {
+            int have = 0;
+            if (m_mortarEntities)
+                have = m_mortarEntities.Count();
+            if (have < planned)
+                RefreshMortarEntities();
+        }
+        return m_mortarEntities;
+    }
+
+    ResourceName GetPrefabToSpawn()
+    {
+        return m_prefabToSpawn;
+    }
+
+    void SetPrefabToSpawn(ResourceName prefab)
+    {
+        m_prefabToSpawn = prefab;
+    }
+
+    static IA_AreaMarker GetMortarPitMarkerForGroup(int groupNumber)
+    {
+        foreach (IA_AreaMarker marker : s_areaMarkers)
+        {
+            if (!marker)
+                continue;
+            if (marker.m_areaGroup == groupNumber && marker.GetAreaType() == IA_AreaType.MortarPit)
+                return marker;
+        }
+        return null;
+    }
+
+    static bool HasMortarPitMarkerForGroup(int groupNumber)
+    {
+        return GetMortarPitMarkerForGroup(groupNumber) != null;
+    }
+
+    static void EnsureRadioTowersForGroup(int groupNumber)
+    {
+        if (!Replication.IsServer())
+            return;
+
+        array<IA_AreaMarker> markers = GetAreaMarkersByGroup(groupNumber);
+        foreach (IA_AreaMarker marker : markers)
+        {
+            if (!marker)
+                continue;
+            marker.EnsureRadioTowerSpawned();
+        }
+    }
+
+    void EnsureRadioTowerSpawned()
+    {
+        if (!Replication.IsServer())
+            return;
+        if (GetAreaType() != IA_AreaType.RadioTower)
+            return;
+        if (m_prefabSpawned || m_spawnedEntity || m_isDestroyed)
+            return;
+
+        SpawnPrefabEntity();
+        if (m_spawnedEntity)
+            m_prefabSpawned = true;
     }
     
 
@@ -818,48 +988,415 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         return null;
     }
 
-    // Method to spawn the prefab entity for Radio Tower areas
+    // Spawn the radio-tower composition (replicated GenericEntity root + tower child).
     protected void SpawnPrefabEntity()
     {
-        // Skip if not a radio tower or no prefab specified
-        if (GetAreaType() != IA_AreaType.RadioTower || m_prefabToSpawn == "")
+        if (GetAreaType() != IA_AreaType.RadioTower)
             return;
-            
-        // Only spawn on server
         if (!Replication.IsServer())
             return;
-            
-        // Create the entity from the prefab
-        EntitySpawnParams params = new EntitySpawnParams();
-        params.TransformMode = ETransformMode.WORLD;
-        params.Transform[3] = m_origin; // Set position to marker origin
-        
-        // Try to spawn the entity
-        Resource res = Resource.Load(m_prefabToSpawn);
+        if (m_spawnedEntity)
+            return;
+
+        ResourceName towerPrefab = m_prefabToSpawn;
+        if (towerPrefab == "")
+            towerPrefab = ResolveDefaultRadioTowerPrefab();
+
+        Resource res = Resource.Load(towerPrefab);
         if (!res)
         {
-            Print("[ERROR] Failed to load Radio Tower prefab resource: " + m_prefabToSpawn, LogLevel.ERROR);
+            Print("[ERROR] Failed to load Radio Tower composition: " + towerPrefab, LogLevel.ERROR);
             return;
         }
-        
-        m_spawnedEntity = GetGame().SpawnEntityPrefab(res, null, params);
+
+        m_origin = GetOrigin();
+        vector pos = m_origin;
+        pos[1] = GetGame().GetWorld().GetSurfaceY(pos[0], pos[2]);
+
+        vector yawPitchRoll = GetYawPitchRoll();
+        vector mat[4];
+        Math3D.MatrixIdentity4(mat);
+        Math3D.AnglesToMatrix(Vector(yawPitchRoll[0], 0, 0), mat);
+        mat[3] = pos;
+        SCR_TerrainHelper.SnapToTerrain(mat, GetGame().GetWorld());
+
+        ref EntitySpawnParams params = new EntitySpawnParams();
+        params.TransformMode = ETransformMode.WORLD;
+        Math3D.MatrixCopy(mat, params.Transform);
+
+        m_spawnedEntity = GetGame().SpawnEntityPrefab(res, GetGame().GetWorld(), params);
         if (!m_spawnedEntity)
         {
-            Print("[ERROR] Failed to spawn Radio Tower prefab: " + m_prefabToSpawn, LogLevel.ERROR);
+            Print("[ERROR] Failed to spawn Radio Tower composition: " + towerPrefab, LogLevel.ERROR);
             return;
         }
-        
-        // Set up damage event handlers for the spawned entity
-        SCR_DamageManagerComponent damageManager = SCR_DamageManagerComponent.Cast(m_spawnedEntity.FindComponent(SCR_DamageManagerComponent));
+
+        SCR_AIWorld aiWorld = SCR_AIWorld.Cast(GetGame().GetAIWorld());
+        if (aiWorld)
+            aiWorld.RequestNavmeshRebuildEntity(m_spawnedEntity);
+
+        RefreshRadioTowerDamageBind();
+        GetGame().GetCallqueue().CallLater(RefreshRadioTowerDamageBind, 500, false);
+        GetGame().GetCallqueue().CallLater(RefreshRadioTowerDamageBind, 2000, false);
+        GetGame().GetCallqueue().CallLater(RefreshRadioTowerDamageBind, 5000, false);
+
+        Print("[INFO] Radio Tower composition spawned at " + params.Transform[3], LogLevel.NORMAL);
+    }
+
+    protected ResourceName ResolveDefaultRadioTowerPrefab()
+    {
+        return RADIO_TOWER_COMPOSITION;
+    }
+
+    void RefreshRadioTowerDamageBind()
+    {
+        if (m_towerDamageBound)
+            return;
+        if (!m_spawnedEntity)
+            return;
+
+        IEntity tower = FindDamageManagerEntityInHierarchy(m_spawnedEntity);
+        if (!tower)
+            return;
+
+        SCR_DamageManagerComponent damageManager = SCR_DamageManagerComponent.Cast(tower.FindComponent(SCR_DamageManagerComponent));
+        if (!damageManager)
+            return;
+
+        m_towerEntity = tower;
+        damageManager.GetOnDamageStateChanged().Insert(OnPrefabDestroyed);
+        m_towerDamageBound = true;
+        Print("[INFO] Radio Tower destruction tracking bound at " + m_origin, LogLevel.NORMAL);
+    }
+
+    static IEntity FindDamageManagerEntityInHierarchy(IEntity root)
+    {
+        if (!root)
+            return null;
+
+        SCR_DamageManagerComponent damageManager = SCR_DamageManagerComponent.Cast(root.FindComponent(SCR_DamageManagerComponent));
         if (damageManager)
+            return root;
+
+        IEntity child = root.GetChildren();
+        while (child)
         {
-            // Register for the OnDestroyed event using a member function
-            damageManager.GetOnDamageStateChanged().Insert(OnPrefabDestroyed);
-            Print("[INFO] Radio Tower prefab spawned with destruction tracking at " + m_origin, LogLevel.NORMAL);
+            IEntity found = FindDamageManagerEntityInHierarchy(child);
+            if (found)
+                return found;
+            child = child.GetSibling();
         }
-        else
+        return null;
+    }
+
+    // Spawn a clustered battery of vanilla mortar pit compositions and cache every STATIC_ARTILLERY gun.
+    protected void SpawnMortarPitComposition()
+    {
+        if (GetAreaType() != IA_AreaType.MortarPit)
+            return;
+        if (!Replication.IsServer())
+            return;
+        if (m_spawnedEntity)
+            return;
+
+        int count = EnsureMortarCount();
+        float neededRadius = 40.0 + (count * 4.0);
+        if (m_radius < neededRadius)
         {
-            Print("[WARNING] Radio Tower prefab does not have a damage manager component: " + m_prefabToSpawn, LogLevel.WARNING);
+            m_radius = neededRadius;
+            m_fZoneRadius = neededRadius;
+        }
+
+        ResourceName pitPrefab = m_prefabToSpawn;
+        if (pitPrefab == "")
+            pitPrefab = ResolveDefaultMortarPitPrefab();
+
+        Resource res = Resource.Load(pitPrefab);
+        if (!res)
+        {
+            Print("[ERROR] Failed to load Mortar Pit prefab: " + pitPrefab, LogLevel.ERROR);
+            return;
+        }
+
+        if (!m_mortarEntities)
+            m_mortarEntities = new array<IEntity>();
+        m_mortarEntities.Clear();
+        if (!m_mortarPitCompositions)
+            m_mortarPitCompositions = new array<IEntity>();
+        m_mortarPitCompositions.Clear();
+
+        ref array<vector> localOffsets = new array<vector>();
+        BuildMortarClusterOffsets(count, localOffsets);
+
+        float batteryYawDeg = ComputeBatteryYawTowardAo();
+        float batteryYawRad = batteryYawDeg * Math.DEG2RAD;
+        float cosYaw = Math.Cos(batteryYawRad);
+        float sinYaw = Math.Sin(batteryYawRad);
+
+        for (int i = 0; i < count; i++)
+        {
+            vector localOff = localOffsets[i];
+            vector pos = m_origin;
+            pos[0] = m_origin[0] + (localOff[0] * cosYaw - localOff[2] * sinYaw);
+            pos[2] = m_origin[2] + (localOff[0] * sinYaw + localOff[2] * cosYaw);
+            pos[1] = GetGame().GetWorld().GetSurfaceY(pos[0], pos[2]);
+
+            float pitYaw = batteryYawDeg + IA_Game.rng.RandFloatXY(-MORTAR_YAW_SPREAD_DEG, MORTAR_YAW_SPREAD_DEG);
+
+            ref EntitySpawnParams params = new EntitySpawnParams();
+            params.TransformMode = ETransformMode.WORLD;
+            Math3D.AnglesToMatrix(Vector(pitYaw, 0, 0), params.Transform);
+            params.Transform[3] = pos;
+
+            IEntity pitEnt = GetGame().SpawnEntityPrefab(res, null, params);
+            if (!pitEnt)
+            {
+                Print("[ERROR] Failed to spawn Mortar Pit prefab: " + pitPrefab, LogLevel.ERROR);
+                continue;
+            }
+
+            if (!m_spawnedEntity)
+                m_spawnedEntity = pitEnt;
+
+            m_mortarPitCompositions.Insert(pitEnt);
+        }
+
+        // Composition children are often missing on the spawn frame. Recollect shortly after.
+        RefreshMortarEntities();
+        GetGame().GetCallqueue().CallLater(RefreshMortarEntities, 500, false);
+        GetGame().GetCallqueue().CallLater(RefreshMortarEntities, 2000, false);
+        GetGame().GetCallqueue().CallLater(RefreshMortarEntities, 5000, false);
+    }
+
+    void RefreshMortarEntities()
+    {
+        if (!m_mortarEntities)
+            m_mortarEntities = new array<IEntity>();
+        m_mortarEntities.Clear();
+
+        if (m_mortarPitCompositions)
+        {
+            foreach (IEntity pitEnt : m_mortarPitCompositions)
+            {
+                if (!pitEnt)
+                    continue;
+                CollectStaticArtilleryInHierarchy(pitEnt, m_mortarEntities);
+                DisableArsenalSuppliesInHierarchy(pitEnt);
+            }
+        }
+
+        if (m_mortarEntities && !m_mortarEntities.IsEmpty())
+        {
+            m_mortarEntity = m_mortarEntities[0];
+            Print(string.Format("[INFO] Mortar battery at %1 cached %2/%3 STATIC_ARTILLERY guns", m_origin, m_mortarEntities.Count(), m_mortarCount), LogLevel.NORMAL);
+        }
+    }
+
+    // Point the battery at the AO. Random 360 yaw left tubes unable to finish the aim node.
+    protected float ComputeBatteryYawTowardAo()
+    {
+        array<IA_AreaMarker> markers = GetAreaMarkersByGroup(m_areaGroup);
+        vector sum = vector.Zero;
+        int n = 0;
+        foreach (IA_AreaMarker marker : markers)
+        {
+            if (!marker)
+                continue;
+            if (marker == this)
+                continue;
+            IA_AreaType t = marker.GetAreaType();
+            if (t == IA_AreaType.MortarPit)
+                continue;
+            if (t == IA_AreaType.DefendObjective)
+                continue;
+            sum = sum + marker.GetOrigin();
+            n = n + 1;
+        }
+
+        if (n <= 0)
+            return IA_Game.rng.RandFloatXY(0, 360);
+
+        vector ao = sum / n;
+        vector dir = ao - m_origin;
+        dir[1] = 0;
+        if (dir.Length() < 10)
+            return IA_Game.rng.RandFloatXY(0, 360);
+
+        vector angles = dir.VectorToAngles();
+        return angles[0];
+    }
+
+    // Vanilla mortar crates are Conflict arsenals: they charge supplies. Field pits have no depot,
+    // so the gunner aims, hops out, and fails NO_AMMO. Free the crate so they can take HE shells.
+    protected void DisableArsenalSuppliesInHierarchy(IEntity root)
+    {
+        if (!root)
+            return;
+
+        SCR_ResourceComponent resources = SCR_ResourceComponent.Cast(root.FindComponent(SCR_ResourceComponent));
+        if (resources)
+            resources.SetResourceTypeEnabled(false, EResourceType.SUPPLIES);
+
+        IEntity child = root.GetChildren();
+        while (child)
+        {
+            DisableArsenalSuppliesInHierarchy(child);
+            child = child.GetSibling();
+        }
+    }
+
+    protected int GetMortarGridCols(int count)
+    {
+        if (count <= 4)
+            return 2;
+        if (count <= 6)
+            return 3;
+        return 4;
+    }
+
+    // Loose lattice used as a grouping skeleton, then jittered so the battery is not a perfect grid.
+    protected void BuildMortarClusterOffsets(int count, notnull array<vector> outOffsets)
+    {
+        outOffsets.Clear();
+
+        float spacing = MORTAR_GRID_SPACING_M + IA_Game.rng.RandFloatXY(-MORTAR_SPACING_VARIANCE_M, MORTAR_SPACING_VARIANCE_M);
+        if (spacing < 11.0)
+            spacing = 11.0;
+
+        float stagger = IA_Game.rng.RandFloatXY(-MORTAR_ROW_STAGGER_FRAC, MORTAR_ROW_STAGGER_FRAC) * spacing;
+        int cols = GetMortarGridCols(count);
+
+        for (int i = 0; i < count; i++)
+        {
+            vector baseOff = GetMortarGridOffset(i, count, spacing);
+            int row = i / cols;
+            if ((row % 2) == 1)
+                baseOff[0] = baseOff[0] + stagger;
+
+            vector placed = JitterMortarOffset(baseOff, outOffsets);
+            outOffsets.Insert(placed);
+        }
+    }
+
+    protected vector JitterMortarOffset(vector baseOff, notnull array<vector> existing)
+    {
+        for (int attempt = 0; attempt < 8; attempt++)
+        {
+            vector cand = baseOff;
+            cand[0] = baseOff[0] + IA_Game.rng.RandFloatXY(-MORTAR_JITTER_M, MORTAR_JITTER_M);
+            cand[2] = baseOff[2] + IA_Game.rng.RandFloatXY(-MORTAR_JITTER_M, MORTAR_JITTER_M);
+
+            bool tooClose = false;
+            foreach (vector other : existing)
+            {
+                if (vector.DistanceXZ(cand, other) < MORTAR_MIN_SEP_M)
+                {
+                    tooClose = true;
+                    break;
+                }
+            }
+
+            if (!tooClose)
+                return cand;
+        }
+
+        return baseOff;
+    }
+
+    protected vector GetMortarGridOffset(int index, int count, float spacing)
+    {
+        int cols = GetMortarGridCols(count);
+        int rows = (count + cols - 1) / cols;
+        int col = index % cols;
+        int row = index / cols;
+
+        int colsThisRow = cols;
+        int lastRow = rows - 1;
+        if (row == lastRow)
+        {
+            int remainder = count - (lastRow * cols);
+            if (remainder > 0)
+                colsThisRow = remainder;
+        }
+
+        float originCol = (colsThisRow - 1) * 0.5;
+        float originRow = (rows - 1) * 0.5;
+
+        vector offset = vector.Zero;
+        offset[0] = (col - originCol) * spacing;
+        offset[2] = (row - originRow) * spacing;
+        return offset;
+    }
+
+    protected ResourceName ResolveDefaultMortarPitPrefab()
+    {
+        // Prefer USSR; FIA if that is the configured enemy faction key.
+        ResourceName ussrPit = "{28D63631873AA636}Prefabs/Compositions/Slotted/SlotFlatSmall/MortarPlacement_S_USSR_01.et";
+        ResourceName fiaPit = "{2DE0838804526A10}Prefabs/Compositions/Slotted/SlotFlatSmall/MortarPlacement_S_FIA_01.et";
+
+        IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+        if (config && config.m_sDesiredEnemyFactionKeys && !config.m_sDesiredEnemyFactionKeys.IsEmpty())
+        {
+            string key = config.m_sDesiredEnemyFactionKeys[0];
+            if (key == "FIA")
+                return fiaPit;
+        }
+        return ussrPit;
+    }
+
+    static IEntity FindStaticArtilleryInHierarchy(IEntity root)
+    {
+        if (!root)
+            return null;
+
+        SCR_AIStaticArtilleryVehicleUsageComponent arty = SCR_AIStaticArtilleryVehicleUsageComponent.Cast(
+            root.FindComponent(SCR_AIStaticArtilleryVehicleUsageComponent));
+        if (arty)
+            return root;
+
+        SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.Cast(
+            root.FindComponent(SCR_AIVehicleUsageComponent));
+        if (usage && usage.GetVehicleType() == EAIVehicleType.STATIC_ARTILLERY)
+            return root;
+
+        IEntity child = root.GetChildren();
+        while (child)
+        {
+            IEntity found = FindStaticArtilleryInHierarchy(child);
+            if (found)
+                return found;
+            child = child.GetSibling();
+        }
+        return null;
+    }
+
+    static void CollectStaticArtilleryInHierarchy(IEntity root, notnull array<IEntity> outMortars)
+    {
+        if (!root)
+            return;
+
+        bool isArty = false;
+        SCR_AIStaticArtilleryVehicleUsageComponent arty = SCR_AIStaticArtilleryVehicleUsageComponent.Cast(
+            root.FindComponent(SCR_AIStaticArtilleryVehicleUsageComponent));
+        if (arty)
+            isArty = true;
+
+        if (!isArty)
+        {
+            SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.Cast(
+                root.FindComponent(SCR_AIVehicleUsageComponent));
+            if (usage && usage.GetVehicleType() == EAIVehicleType.STATIC_ARTILLERY)
+                isArty = true;
+        }
+
+        if (isArty && outMortars.Find(root) == -1)
+            outMortars.Insert(root);
+
+        IEntity child = root.GetChildren();
+        while (child)
+        {
+            CollectStaticArtilleryInHierarchy(child, outMortars);
+            child = child.GetSibling();
         }
     }
     
@@ -1021,6 +1558,16 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         m_isCaptured = false;
         m_captureProgress = 0.0;
         m_captureStatus = "Neutral";
+        m_fHudPublishAcc = 0;
+        IA_MissionInitializer.PublishCaptureHud(m_areaName, IA_CaptureHudState.Hidden, 0);
+    }
+
+    protected void PublishCaptureHudState(IA_CaptureHudState state)
+    {
+        float progress = 0;
+        if (CAPTURE_TIME_SECONDS > 0)
+            progress = m_captureProgress / CAPTURE_TIME_SECONDS;
+        IA_MissionInitializer.PublishCaptureHud(m_areaName, state, progress);
     }
     
     // Trigger notification to all players

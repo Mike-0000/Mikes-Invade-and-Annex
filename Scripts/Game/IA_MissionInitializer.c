@@ -85,6 +85,16 @@ class IA_MissionInitializer : GenericEntity
 	string m_sDesiredEnemyFactionKey_Rpl = "";
 	// --- END ADDED ---
 
+	[RplProp()]
+	string m_sCaptureHudArea_Rpl = "";
+
+	[RplProp()]
+	float m_fCaptureHudProgress_Rpl = 0;
+
+	[RplProp()]
+	int m_iCaptureHudState_Rpl = 0;
+
+
 	// Static reference for global access
 	static IA_MissionInitializer s_instance;
 
@@ -249,6 +259,10 @@ class IA_MissionInitializer : GenericEntity
 	    // --- BEGIN ADDED: Set Active Group in IA_Game ---
 	    IA_Game.SetActiveGroupID(currentGroup);
 	    // --- END ADDED ---
+
+	    // Ensure every AO has a MortarPit site (map-authored marker wins over auto-place)
+	    IA_MortarPitPlacer.EnsureForGroup(currentGroup);
+	    IA_AreaMarker.EnsureRadioTowersForGroup(currentGroup);
 	    
 	    // m_currentAreaInstances.Clear(); // Clear for the new zone group - MOVED LATER
 	    // array<IA_AreaMarker> markersInGroup = {}; - MOVED LATER
@@ -686,6 +700,11 @@ class IA_MissionInitializer : GenericEntity
 				        taskTitle = "Destroy " + areaName;
 				        taskDesc = "Destroy the " + areaName + " to disrupt enemy communications.";
 				    }
+				    else if (areaType == IA_AreaType.MortarPit)
+				    {
+				        taskTitle = "Capture " + areaName;
+				        taskDesc = "Secure the enemy mortar position and silence incoming fire.";
+				    }
 				    // --- END MODIFIED ---
 				    
 				    instance.QueueTask(taskTitle, taskDesc, pos);
@@ -895,6 +914,11 @@ class IA_MissionInitializer : GenericEntity
             {
                 taskTitle = "Destroy " + area.GetName();
                 taskDesc = "Destroy the " + area.GetName() + " to disrupt enemy communications.";
+            }
+            else if (area.GetAreaType() == IA_AreaType.MortarPit)
+            {
+                taskTitle = "Capture " + area.GetName();
+                taskDesc = "Secure the enemy mortar position and silence incoming fire.";
             }
             else
             {
@@ -1196,6 +1220,110 @@ class IA_MissionInitializer : GenericEntity
 	static IA_MissionInitializer GetInstance()
 	{
 		return s_instance;
+	}
+
+	string GetCaptureHudArea()
+	{
+		return m_sCaptureHudArea_Rpl;
+	}
+
+	float GetCaptureHudProgress()
+	{
+		return m_fCaptureHudProgress_Rpl;
+	}
+
+	int GetCaptureHudState()
+	{
+		return m_iCaptureHudState_Rpl;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server-only. Drives the persistent capture HUD on every client via RplProp.
+	static void PublishCaptureHud(string areaName, IA_CaptureHudState state, float progress)
+	{
+		if (!Replication.IsServer())
+			return;
+
+		IA_MissionInitializer inst = GetInstance();
+		if (!inst)
+			return;
+
+		inst.ApplyCaptureHud(areaName, state, progress);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyCaptureHud(string areaName, IA_CaptureHudState state, float progress)
+	{
+		if (progress < 0)
+			progress = 0;
+		if (progress > 1)
+			progress = 1;
+
+		if (state == IA_CaptureHudState.Hidden)
+		{
+			if (areaName.IsEmpty() || m_sCaptureHudArea_Rpl == areaName)
+				ClearCaptureHud();
+			return;
+		}
+
+		if (state == IA_CaptureHudState.Capturing)
+		{
+			CommitCaptureHud(areaName, state, progress);
+			return;
+		}
+
+		if (state == IA_CaptureHudState.Complete)
+		{
+			CommitCaptureHud(areaName, state, 1);
+			GetGame().GetCallqueue().Remove(this.TryHideCompletedCaptureHud);
+			GetGame().GetCallqueue().CallLater(this.TryHideCompletedCaptureHud, 2600, false, areaName);
+			return;
+		}
+
+		if (m_iCaptureHudState_Rpl == IA_CaptureHudState.Capturing && m_sCaptureHudArea_Rpl != areaName)
+			return;
+
+		CommitCaptureHud(areaName, state, progress);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void CommitCaptureHud(string areaName, IA_CaptureHudState state, float progress)
+	{
+		bool areaChanged = m_sCaptureHudArea_Rpl != areaName;
+		bool stateChanged = m_iCaptureHudState_Rpl != state;
+		bool progressChanged = Math.AbsFloat(m_fCaptureHudProgress_Rpl - progress) >= 0.008;
+		if (!areaChanged && !stateChanged && !progressChanged)
+			return;
+
+		if (state == IA_CaptureHudState.Capturing)
+			GetGame().GetCallqueue().Remove(this.TryHideCompletedCaptureHud);
+
+		m_sCaptureHudArea_Rpl = areaName;
+		m_iCaptureHudState_Rpl = state;
+		m_fCaptureHudProgress_Rpl = progress;
+		Replication.BumpMe();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ClearCaptureHud()
+	{
+		if (m_sCaptureHudArea_Rpl.IsEmpty() && m_iCaptureHudState_Rpl == IA_CaptureHudState.Hidden)
+			return;
+
+		m_sCaptureHudArea_Rpl = "";
+		m_fCaptureHudProgress_Rpl = 0;
+		m_iCaptureHudState_Rpl = IA_CaptureHudState.Hidden;
+		Replication.BumpMe();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void TryHideCompletedCaptureHud(string areaName)
+	{
+		if (m_sCaptureHudArea_Rpl != areaName)
+			return;
+		if (m_iCaptureHudState_Rpl != IA_CaptureHudState.Complete)
+			return;
+		ClearCaptureHud();
 	}
 
 	IA_AreaGroupManager GetCurrentAreaGroupManager()

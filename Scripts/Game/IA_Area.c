@@ -12,7 +12,8 @@ enum IA_AreaType
     Military,
     SmallMilitary,
     RadioTower,
-    DefendObjective
+    DefendObjective,
+    MortarPit
 };
 
 ///////////////////////////////////////////////////////////////////////
@@ -102,6 +103,8 @@ static IA_Area CreateTransient(string nm, IA_AreaType t, vector org, float rad)
             return 1;
         else if (m_type == IA_AreaType.RadioTower)
             return 3; // Medium security for radio tower
+        else if (m_type == IA_AreaType.MortarPit)
+            return 2; // Crew + guards
         return 0;
     }
 
@@ -119,6 +122,7 @@ static IA_Area CreateTransient(string nm, IA_AreaType t, vector org, float rad)
             case IA_AreaType.Docks:         return 6;
             case IA_AreaType.Property:      return 2;
             case IA_AreaType.RadioTower:    return 4;
+            case IA_AreaType.MortarPit:     return 2;
             default:                        return 8;
         }
         return 0; // Should not be reached
@@ -140,6 +144,8 @@ static IA_Area CreateTransient(string nm, IA_AreaType t, vector org, float rad)
             return 3;
         else if (m_type == IA_AreaType.RadioTower)
             return 0; // No civilians at radio tower
+        else if (m_type == IA_AreaType.MortarPit)
+            return 0;
         return 1;
     }
 

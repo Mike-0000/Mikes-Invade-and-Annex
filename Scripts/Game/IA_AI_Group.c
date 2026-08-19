@@ -89,6 +89,9 @@ class IA_AiGroup
     private IA_Faction   m_faction;
     
     private IA_SideObjective m_OwningSideObjective;
+    private bool m_isMortarCrew = false;
+    private ref array<IEntity> m_assignedMortars = new array<IEntity>();
+    private ref array<AIAgent> m_claimedMortarGunners = new array<AIAgent>();
     
     private vector      m_initialPosition;
     private vector      m_lastOrderPosition;
@@ -299,26 +302,51 @@ class IA_AiGroup
 			return "{5117311FB822FD1F}Prefabs/Characters/Factions/OPFOR/USSR_Army/Character_USSR_Officer.et";
 		
 		}
-		SCR_EntityCatalog entityCatalog;
+
 		SCR_Faction scrFaction = SCR_Faction.Cast(DesiredFaction);
-		entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
 		if (!scrFaction)
-            return "";
+		{
+			FactionManager factionManager = GetGame().GetFactionManager();
+			if (factionManager)
+			{
+				string factionKey = "USSR";
+				if (faction == IA_Faction.US)
+					factionKey = "US";
+				else if (faction == IA_Faction.FIA)
+					factionKey = "FIA";
+				else if (faction == IA_Faction.CIV)
+					factionKey = "CIV";
+
+				scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey(factionKey));
+			}
+		}
+
+		if (!scrFaction)
+			return "";
+
+		SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
 		if (!entityCatalog)
 			return "";
+
 		array<EEditableEntityLabel> excludedLabels = {};
-		
 		array<SCR_EntityCatalogEntry> characterEntries = {};
 		entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
-		if (characterEntries.IsEmpty()) {
-            return "";
-        }
-		
-		
-		
+
+		if (characterEntries.IsEmpty())
+		{
+			array<EEditableEntityLabel> riflemanLabels = {EEditableEntityLabel.ROLE_RIFLEMAN};
+			entityCatalog.GetFullFilteredEntityList(characterEntries, riflemanLabels, excludedLabels);
+		}
+
+		if (characterEntries.IsEmpty())
+		{
+			array<EEditableEntityLabel> anyLabels = {};
+			entityCatalog.GetFullFilteredEntityList(characterEntries, anyLabels, excludedLabels);
+		}
+
 		if (characterEntries.IsEmpty())
 			return "";
-		
+
         return characterEntries[Math.RandomInt(0, characterEntries.Count())].GetPrefab();
 
 
@@ -397,6 +425,8 @@ class IA_AiGroup
 
         BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
         if (!compartmentManager) {
+            IA_Game.AddEntityToGc(grp.m_group);
+            grp.m_group = null;
             return null;
         }
         
@@ -422,6 +452,13 @@ class IA_AiGroup
         
 
         int actualUnitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
+        if (actualUnitsToSpawn <= 0)
+        {
+            Print("[IA_AiGroup.CreateGroupForVehicle] No usable compartments; discarding empty group.", LogLevel.WARNING);
+            IA_Game.AddEntityToGc(grp.m_group);
+            grp.m_group = null;
+            return null;
+        }
 
         // Set up staggered spawning state for vehicle groups
         grp.m_pendingUnitsToSpawn = actualUnitsToSpawn;
@@ -432,7 +469,6 @@ class IA_AiGroup
         
         Print(string.Format("[IA_AiGroup.CreateGroupForVehicle] Starting staggered spawning of %1 units for vehicle group faction %2", actualUnitsToSpawn, faction), LogLevel.NORMAL);
         
-        // Start spawning the first unit immediately
         grp.SpawnNextUnit();
 
         return grp;
@@ -674,7 +710,6 @@ class IA_AiGroup
         
         Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Starting staggered spawning of %1 units for faction %2 at %3", unitCount, faction, finalSpawnPos.ToString()), LogLevel.NORMAL);
         
-        // Start spawning the first unit immediately
         grp.SpawnNextUnit();
 
         return grp;
@@ -1397,7 +1432,7 @@ class IA_AiGroup
     void ProcessDangerEvent(IA_GroupDangerType dangerType, vector position, IEntity sourceEntity = null, float intensity = 0.5, bool isSuppressed = false)
     {
         // Skip danger processing if in defend mode or escaping
-        if (m_isInDefendMode || m_tacticalState == IA_GroupTacticalState.Escaping)
+        if (m_isInDefendMode || m_isMortarCrew || m_tacticalState == IA_GroupTacticalState.Escaping)
             return;
             
         // Rate limit processing per group
@@ -2190,6 +2225,9 @@ class IA_AiGroup
     // Evaluate and potentially change tactical state based on situation
     void EvaluateTacticalState()
     {
+        if (m_isMortarCrew)
+            return;
+
         // If the group is in the Escaping state, it must not be interrupted.
         if (m_tacticalState == IA_GroupTacticalState.Escaping)
         {
@@ -2814,7 +2852,7 @@ class IA_AiGroup
             return;
         
         // Skip for civilian groups
-        if (m_isCivilian)
+        if (m_isCivilian || m_isMortarCrew)
             return;
         
         // For each agent in the group, check if they have any danger events
@@ -2840,7 +2878,7 @@ class IA_AiGroup
         switch (order)
         {
             case IA_AiOrder.SearchAndDestroy:
-                priority += 35; 
+                priority += 15;
                 break;
 			case IA_AiOrder.VehicleMove:
                 return 0;
@@ -2852,13 +2890,13 @@ class IA_AiGroup
                 priority += 100;  // Vehicle mounting is important
                 break;
             case IA_AiOrder.PriorityMove:
-                // If the group is escaping, give it the highest possible priority.
+                // Escape must ignore combat. All other PriorityMove must stay below
+                // soldier attack (70/90) or they walk past players.
                 if (m_tacticalState == IA_GroupTacticalState.Escaping)
                     return 350;
-                return 60;  // High priority movement
+                return 15;
             case IA_AiOrder.Move:
-                priority += 30;  // Move orders medium priority (between combat and patrol)
-                break;
+                return 15;
             case IA_AiOrder.Patrol:
                 priority += 1;  // Patrol orders lowest priority
                 break;
@@ -3080,7 +3118,7 @@ class IA_AiGroup
             m_pendingUnitsToSpawn--;
             if (m_pendingUnitsToSpawn > 0)
             {
-                GetGame().GetCallqueue().CallLater(SpawnNextUnit, 100, false);
+                GetGame().GetCallqueue().CallLater(this.SpawnNextUnit, 100, false);
             }
             else
             {
@@ -3102,7 +3140,7 @@ class IA_AiGroup
             m_pendingUnitsToSpawn--;
             if (m_pendingUnitsToSpawn > 0)
             {
-                GetGame().GetCallqueue().CallLater(SpawnNextUnit, 100, false);
+                GetGame().GetCallqueue().CallLater(this.SpawnNextUnit, 100, false);
             }
             else
             {
@@ -3118,7 +3156,7 @@ class IA_AiGroup
             m_pendingUnitsToSpawn--;
             if (m_pendingUnitsToSpawn > 0)
             {
-                GetGame().GetCallqueue().CallLater(SpawnNextUnit, 100, false);
+                GetGame().GetCallqueue().CallLater(this.SpawnNextUnit, 100, false);
             }
             else
             {
@@ -3127,14 +3165,13 @@ class IA_AiGroup
             return;
         }
         
-        // Add to group
         if (!m_group.AddAIEntityToGroup(charEntity))
         {
-            IA_Game.AddEntityToGc(charEntity); // Schedule for deletion if adding failed
+            GetGame().GetCallqueue().CallLater(this.RetryAddSpawnedUnit, 150, false, charEntity);
         }
         else
         {
-            SetupDeathListenerForUnit(charEntity); // Setup death listener for the added unit
+            SetupDeathListenerForUnit(charEntity);
             m_unitsSpawnedCount++;
         }
         
@@ -3142,7 +3179,7 @@ class IA_AiGroup
         m_pendingUnitsToSpawn--;
         if (m_pendingUnitsToSpawn > 0)
         {
-            GetGame().GetCallqueue().CallLater(SpawnNextUnit, 100, false);
+            GetGame().GetCallqueue().CallLater(this.SpawnNextUnit, 100, false);
         }
         else
         {
@@ -3153,6 +3190,57 @@ class IA_AiGroup
     // Called when all units have been spawned (or attempted)
     void OnStaggeredSpawningComplete()
     {
+        if (m_unitsSpawnedCount <= 0)
+        {
+            GetGame().GetCallqueue().CallLater(this.FinalizeStaggeredSpawn, 250, false);
+            return;
+        }
+
+        FinalizeStaggeredSpawn();
+    }
+
+    void RetryAddSpawnedUnit(IEntity charEntity)
+    {
+        if (!charEntity)
+            return;
+
+        if (!m_group)
+        {
+            IA_Game.AddEntityToGc(charEntity);
+            return;
+        }
+
+        if (!m_group.AddAIEntityToGroup(charEntity))
+        {
+            IA_Game.AddEntityToGc(charEntity);
+            return;
+        }
+
+        SetupDeathListenerForUnit(charEntity);
+        m_unitsSpawnedCount++;
+    }
+
+    void FinalizeStaggeredSpawn()
+    {
+        if (m_unitsSpawnedCount <= 0 || !m_group)
+        {
+            Print(string.Format("[IA_AiGroup.FinalizeStaggeredSpawn] Discarding empty group for faction %1 (spawned %2 units).",
+                m_staggeredSpawnFaction, m_unitsSpawnedCount), LogLevel.WARNING);
+
+            if (m_group)
+            {
+                IA_Game.AddEntityToGc(m_group);
+                m_group = null;
+            }
+
+            m_isSpawned = true;
+            m_pendingUnitsToSpawn = 0;
+            m_staggeredSpawnPos = vector.Zero;
+            m_staggeredSpawnFaction = IA_Faction.NONE;
+            m_staggeredAreaFaction = null;
+            return;
+        }
+
         // Mark as spawned
         PerformSpawn();
         
@@ -3202,8 +3290,12 @@ class IA_AiGroup
         else
         {
             // Non-vehicle groups - original logic
-            // Only set default state if not in defend mode and no area assigned
-            if (!IsInDefendMode() && !m_lastAssignedArea)
+            // Mortar gunners stay Neutral until occupy; a Defend WP dumps them off the tube.
+            if (m_isMortarCrew)
+            {
+                Print("[IA_AiGroup.OnStaggeredSpawningComplete] Mortar crew, skipping default DefendPatrol", LogLevel.DEBUG);
+            }
+            else if (!IsInDefendMode() && !m_lastAssignedArea)
             {
                 // Explicitly set a default tactical state for the new group
                 if (m_staggeredSpawnPos != vector.Zero)
@@ -3609,6 +3701,391 @@ class IA_AiGroup
     bool IsObjectiveUnit()
     {
         return m_OwningSideObjective != null;
+    }
+
+    void SetMortarCrew(bool value)
+    {
+        m_isMortarCrew = value;
+    }
+
+    bool IsMortarCrew()
+    {
+        return m_isMortarCrew;
+    }
+
+    int GetAssignedMortarCount()
+    {
+        if (!m_assignedMortars)
+            return 0;
+        return m_assignedMortars.Count();
+    }
+
+    bool OwnsMortar(IEntity mortar)
+    {
+        if (!mortar || !m_assignedMortars)
+            return false;
+        if (m_assignedMortars.Find(mortar) != -1)
+            return true;
+
+        IEntity usageOwner;
+        SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.FindOnNearestParent(mortar, usageOwner);
+        IEntity mortarEnt = mortar;
+        if (usage && usage.GetOwner())
+            mortarEnt = usage.GetOwner();
+        if (mortarEnt != mortar && m_assignedMortars.Find(mortarEnt) != -1)
+            return true;
+        return false;
+    }
+
+    bool AssignMortar(IEntity mortar)
+    {
+        array<IEntity> mortars = {};
+        mortars.Insert(mortar);
+        return AssignMortars(mortars);
+    }
+
+    // Occupy every empty STATIC_ARTILLERY in the list with a free gunner from this group.
+    // Vanilla GetInNearest cannot find static mortars; teleport into the turret slot does.
+    // Do not send SCR_AIMessage_GetIn after teleport: GetInVehicle fails (already seated)
+    // and OnActionFailed teleports them back out.
+    bool AssignMortars(array<IEntity> mortars)
+    {
+        if (!mortars || mortars.IsEmpty() || !IsSpawned() || !m_group)
+            return false;
+
+        if (GetInitialUnitCount() != 1 && !m_isMortarCrew)
+            return false;
+
+        vector holdPos = mortars[0].GetOrigin();
+        m_isMortarCrew = true;
+        m_isDriving = false;
+        m_drivingTarget = vector.Zero;
+
+        // Already seated on the only gun we were given.
+        if (m_assignedMortars && !m_assignedMortars.IsEmpty() && mortars.Count() == 1)
+        {
+            IEntity onlyGun = mortars[0];
+            IEntity usageOwner;
+            SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.FindOnNearestParent(onlyGun, usageOwner);
+            IEntity mortarEnt = onlyGun;
+            if (usage && usage.GetOwner())
+                mortarEnt = usage.GetOwner();
+            if (m_assignedMortars.Find(onlyGun) != -1 || m_assignedMortars.Find(mortarEnt) != -1)
+                return true;
+        }
+
+        // Clear Defend/Patrol WPs while they are still on foot. Doing this after
+        // occupy makes DefendWaypoint.OnDeselected GetOut everyone in a turret.
+        if (m_tacticalState != IA_GroupTacticalState.InVehicle)
+            SetTacticalState(IA_GroupTacticalState.InVehicle, holdPos, mortars[0], true);
+
+        if (!m_claimedMortarGunners)
+            m_claimedMortarGunners = new array<AIAgent>();
+
+        int occupied = 0;
+        foreach (IEntity mortar : mortars)
+        {
+            if (GetInitialUnitCount() == 1 && occupied >= 1)
+                break;
+            if (OccupyMortarWithFreeGunner(mortar))
+                occupied = occupied + 1;
+        }
+
+        if (occupied <= 0 && m_assignedMortars && m_assignedMortars.IsEmpty())
+            return false;
+
+        if (!m_referencedEntity)
+            m_referencedEntity = mortars[0];
+
+        if (occupied > 0)
+            Print(string.Format("[IA_AiGroup] AssignMortars: occupied %1 gun at %2", occupied, holdPos), LogLevel.NORMAL);
+        return occupied > 0 || (m_assignedMortars && !m_assignedMortars.IsEmpty());
+    }
+
+    protected TurretCompartmentSlot GetMortarTurretSlot(IEntity mortar)
+    {
+        if (!mortar)
+            return null;
+
+        IEntity usageOwner;
+        SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.FindOnNearestParent(mortar, usageOwner);
+        TurretCompartmentSlot turretSlot;
+        if (usage)
+            turretSlot = usage.GetTurretCompartmentSlot();
+        if (turretSlot)
+            return turretSlot;
+
+        IEntity mortarEnt = mortar;
+        if (usage && usage.GetOwner())
+            mortarEnt = usage.GetOwner();
+
+        BaseCompartmentManagerComponent compartmentMan = BaseCompartmentManagerComponent.Cast(mortarEnt.FindComponent(BaseCompartmentManagerComponent));
+        if (compartmentMan)
+        {
+            array<BaseCompartmentSlot> slots = {};
+            compartmentMan.GetCompartments(slots);
+            foreach (BaseCompartmentSlot slot : slots)
+            {
+                TurretCompartmentSlot turret = TurretCompartmentSlot.Cast(slot);
+                if (turret)
+                    return turret;
+            }
+        }
+
+        IEntity child = mortar.GetChildren();
+        while (child)
+        {
+            TurretCompartmentSlot nested = GetMortarTurretSlot(child);
+            if (nested)
+                return nested;
+            child = child.GetSibling();
+        }
+
+        return null;
+    }
+
+    protected bool SeatGunnerInMortar(AIAgent gunner, IEntity mortar)
+    {
+        if (!gunner || !mortar)
+            return false;
+
+        IEntity occupantEnt = gunner.GetControlledEntity();
+        if (!occupantEnt)
+            return false;
+
+        TurretCompartmentSlot turretSlot = GetMortarTurretSlot(mortar);
+        if (!turretSlot)
+            return false;
+
+        IEntity occupant = turretSlot.GetOccupant();
+        if (occupant == occupantEnt)
+            return true;
+        if (occupant)
+            return false;
+
+        if (turretSlot.IsReserved())
+            turretSlot.SetReserved(null);
+
+        turretSlot.SetReserved(occupantEnt);
+
+        IEntity vehicleEnt = turretSlot.GetOwner();
+        if (!vehicleEnt)
+            vehicleEnt = mortar;
+
+        CompartmentAccessComponent access = CompartmentAccessComponent.Cast(occupantEnt.FindComponent(CompartmentAccessComponent));
+        if (!access)
+        {
+            turretSlot.SetReserved(null);
+            return false;
+        }
+
+        bool boarded = access.GetInVehicle(vehicleEnt, turretSlot, true, -1, ECloseDoorAfterActions.INVALID, false);
+        if (!boarded)
+        {
+            turretSlot.SetReserved(null);
+            return false;
+        }
+
+        gunner.PreventMaxLOD();
+        GiveMortarShellsToGunner(gunner, vehicleEnt, 6);
+
+        if (!m_referencedEntity)
+            m_referencedEntity = vehicleEnt;
+        if (m_assignedMortars && m_assignedMortars.Find(vehicleEnt) == -1)
+            m_assignedMortars.Insert(vehicleEnt);
+        if (m_assignedMortars && mortar != vehicleEnt && m_assignedMortars.Find(mortar) == -1)
+            m_assignedMortars.Insert(mortar);
+
+        return true;
+    }
+
+    protected bool OccupyMortarWithFreeGunner(IEntity mortar)
+    {
+        if (!mortar || !m_group)
+            return false;
+
+        TurretCompartmentSlot turretSlot = GetMortarTurretSlot(mortar);
+        if (!turretSlot)
+            return false;
+        if (turretSlot.GetOccupant())
+            return false;
+
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+
+        AIAgent gunner = null;
+        foreach (AIAgent agent : agents)
+        {
+            if (!agent)
+                continue;
+
+            IEntity gunnerEnt = agent.GetControlledEntity();
+            if (!gunnerEnt)
+                continue;
+
+            ChimeraCharacter character = ChimeraCharacter.Cast(gunnerEnt);
+            if (character && character.IsInVehicle())
+                continue;
+
+            gunner = agent;
+            break;
+        }
+
+        if (!gunner)
+            return false;
+
+        if (!SeatGunnerInMortar(gunner, mortar))
+            return false;
+
+        if (m_claimedMortarGunners && m_claimedMortarGunners.Find(gunner) == -1)
+            m_claimedMortarGunners.Insert(gunner);
+        return true;
+    }
+
+    void RegisterAssignedMortarsForFire()
+    {
+        if (!m_group || !m_assignedMortars)
+            return;
+
+        SCR_AIGroupUtilityComponent utility = SCR_AIGroupUtilityComponent.Cast(m_group.FindComponent(SCR_AIGroupUtilityComponent));
+        if (!utility)
+            return;
+
+        foreach (IEntity mortarEnt : m_assignedMortars)
+        {
+            if (!mortarEnt)
+                continue;
+            IEntity usageOwner;
+            SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.FindOnNearestParent(mortarEnt, usageOwner);
+            if (usage)
+                utility.AddUsableVehicle(usage);
+        }
+    }
+
+    bool IssueArtilleryFireMission(vector targetPos, int shotCount)
+    {
+        if (!m_isMortarCrew || !IsSpawned() || !m_group)
+            return false;
+        if (GetAliveCount() <= 0)
+            return false;
+        if (!m_referencedEntity)
+            return false;
+
+        ResourceName wpRes = "{A8F31D47C9E02B16}Prefabs/AI/Waypoints/IA_AIWaypoint_ArtillerySupport.et";
+        Resource res = Resource.Load(wpRes);
+        if (!res)
+        {
+            Print("[IA_AiGroup] Failed to load IA artillery support waypoint prefab", LogLevel.ERROR);
+            return false;
+        }
+
+        // Park the waypoint on the guns. Vanilla HandleWP marches the group to the
+        // waypoint origin if they are outside its radius; that origin is also the
+        // impact point, so a WP on the AO makes them walk off the mortar after GetOut.
+        vector wpPos = m_referencedEntity.GetOrigin();
+        IEntity wpEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(wpPos));
+        SCR_AIWaypointArtillerySupport wp = SCR_AIWaypointArtillerySupport.Cast(wpEnt);
+        if (!wp)
+        {
+            if (wpEnt)
+                IA_Game.AddEntityToGc(wpEnt);
+            Print("[IA_AiGroup] Failed to cast artillery support waypoint", LogLevel.ERROR);
+            return false;
+        }
+
+        if (shotCount < 1)
+            shotCount = 1;
+
+        wp.SetFireTargetOverride(targetPos);
+        wp.SetAmmoType(SCR_EAIArtilleryAmmoType.HIGH_EXPLOSIVE, false);
+        wp.SetTargetShotCount(shotCount, false);
+        wp.SetActive(true, false);
+        RegisterAssignedMortarsForFire();
+        RemoveAllOrders();
+        m_group.AddWaypointToGroup(wp);
+
+        int shells = shotCount;
+        if (shells > 8)
+            shells = 8;
+        if (m_claimedMortarGunners)
+        {
+            IEntity ammoMortar = m_referencedEntity;
+            foreach (AIAgent gunner : m_claimedMortarGunners)
+            {
+                GiveMortarShellsToGunner(gunner, ammoMortar, shells);
+            }
+        }
+
+        Print(string.Format("[IA_AiGroup] Fire mission issued: %1 rounds at %2", shotCount, targetPos), LogLevel.NORMAL);
+        return true;
+    }
+
+    protected ResourceName GetMortarHeAmmoPrefab(IEntity mortar)
+    {
+        if (mortar)
+        {
+            IEntity usageOwner;
+            SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.FindOnNearestParent(mortar, usageOwner);
+            SCR_AIStaticArtilleryVehicleUsageComponent arty = SCR_AIStaticArtilleryVehicleUsageComponent.Cast(usage);
+            if (arty)
+            {
+                ResourceName ammo = arty.GetAmmoResourceName(SCR_EAIArtilleryAmmoType.HIGH_EXPLOSIVE);
+                if (!ammo.IsEmpty())
+                    return ammo;
+            }
+        }
+
+        return "{98EC9C526AFBA282}Prefabs/Weapons/Ammo/Ammo_Shell_82mm_HE_O832DU.et";
+    }
+
+    protected void GiveMortarShellsToGunner(AIAgent gunner, IEntity mortar, int count)
+    {
+        if (!gunner || count <= 0)
+            return;
+
+        IEntity ent = gunner.GetControlledEntity();
+        if (!ent)
+            return;
+
+        ChimeraCharacter character = ChimeraCharacter.Cast(ent);
+        if (!character)
+            return;
+
+        CharacterControllerComponent charController = character.GetCharacterController();
+        if (!charController)
+            return;
+
+        SCR_InventoryStorageManagerComponent inventoryManager = SCR_InventoryStorageManagerComponent.Cast(charController.GetInventoryStorageManager());
+        if (!inventoryManager)
+            return;
+
+        ResourceName ammoPrefab = GetMortarHeAmmoPrefab(mortar);
+        Resource ammoRes = Resource.Load(ammoPrefab);
+        if (!ammoRes)
+            return;
+
+        ref EntitySpawnParams spawnParams = new EntitySpawnParams();
+        spawnParams.TransformMode = ETransformMode.WORLD;
+        character.GetTransform(spawnParams.Transform);
+
+        int given = 0;
+        for (int i = 0; i < count; i++)
+        {
+            IEntity shell = GetGame().SpawnEntityPrefab(ammoRes, GetGame().GetWorld(), spawnParams);
+            if (!shell)
+                break;
+            if (inventoryManager.TryInsertItem(shell))
+            {
+                given = given + 1;
+                continue;
+            }
+
+            IA_Game.AddEntityToGc(shell);
+            break;
+        }
+
+        if (given > 0)
+            Print(string.Format("[IA_AiGroup] Gave gunner %1 HE shells", given), LogLevel.DEBUG);
     }
 
 	void SetOwningAreaInstance(IA_AreaInstance owner)

@@ -3,7 +3,7 @@ GameProject {
  GUID "6556458885927F2F"
  TITLE "Mikes Invade and Annex"
  Dependencies {
-  "58D0FB3206B6F859" "B3F91C6A4E275D08"
+  "58D0FB3206B6F859" "B3F91C6A4E275D08" "C4E8A27B1F906D53"
  }
  Configurations {
   GameProjectConfig PC {

@@ -157,15 +157,24 @@ modded class SCR_ChimeraCharacter{
 				}
 				else if (messageType == "CaptureStarted")
 				{
-					notificationDisplay.QueueNotification(taskTitle, "green", 5000);
+					if (!notificationDisplay.IsCaptureHudActive())
+					{
+						notificationDisplay.QueueNotification(taskTitle, "green", 5000);
+					}
 				}
 				else if (messageType == "CapturePaused")
 				{
-					notificationDisplay.QueueNotification(taskTitle, "yellow", 5000);
+					if (!notificationDisplay.IsCaptureHudActive())
+					{
+						notificationDisplay.QueueNotification(taskTitle, "yellow", 5000);
+					}
 				}
 				else if (messageType == "Capture50Percent")
 				{
-					notificationDisplay.QueueNotification(taskTitle, "green", 5000);
+					if (!notificationDisplay.IsCaptureHudActive())
+					{
+						notificationDisplay.QueueNotification(taskTitle, "green", 5000);
+					}
 				}
 				else if (messageType == "GeneratorDestroyed")
 				{

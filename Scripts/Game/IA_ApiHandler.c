@@ -19,8 +19,8 @@ class IA_ApiRegisterServerRequest : IA_ApiRequest
     override string ToJson()
     {
         string json = "{";
-        json = json + "\"serverName\": \"" + serverName + "\",";
-        json = json + "\"ownerEmail\": \"" + ownerEmail + "\"";
+        json = json + "\"serverName\": \"" + IA_JsonEscape(serverName) + "\",";
+        json = json + "\"ownerEmail\": \"" + IA_JsonEscape(ownerEmail) + "\"";
         json = json + "}";
         return json;
     }
@@ -43,8 +43,8 @@ class IA_ApiSubmitStatsRequest : IA_ApiRequest
     {
         // matchData is already a JSON string, so we don't wrap it in extra quotes.
         string json = "{";
-        json = json + "\"serverGuid\": \"" + serverGuid + "\",";
-		json = json + "\"serverName\": \"" + serverName + "\",";
+        json = json + "\"serverGuid\": \"" + IA_JsonEscape(serverGuid) + "\",";
+		json = json + "\"serverName\": \"" + IA_JsonEscape(serverName) + "\",";
         json = json + "\"matchData\": " + matchData;
         json = json + "}";
         return json;

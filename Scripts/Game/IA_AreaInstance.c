@@ -25,6 +25,18 @@ class IA_PendingStateRequest
     IA_GroupTacticalState currentState;
 }
 
+//! Single CallLater payload so reinforcement spawns don't drop AreaFaction / unit count.
+class IA_ReinforcementSpawnRequest
+{
+    int m_maxAttempts;
+    ref array<vector> m_playerPositions;
+    float m_safeRadiusSq;
+    Faction m_areaFaction;
+    bool m_forDefendMission;
+    int m_sectorIndex;
+    int m_unitCountOverride;
+}
+
 class IA_AreaInstance
 {
     IA_Area m_area;
@@ -76,7 +88,6 @@ class IA_AreaInstance
     private int m_reinforcementGroupsSpawned = 0;     // Groups spawned in this attack cycle
     private int m_reinforcementWaveDelayTimer = 0;    // Ticks until next wave
     private const int INITIAL_REINFORCEMENT_DELAY_TICKS = Math.RandomInt(3,6);
-    private const int REINFORCEMENT_WAVE_DELAY_TICKS = Math.RandomInt(4,8);   
     // --- END ADDED ---
 
     // --- Vehicle Reinforcement System ---
@@ -92,6 +103,14 @@ class IA_AreaInstance
     private ref array<Vehicle> m_areaCivVehicles = {};
     private int m_maxCivVehicles = 2;
     private int m_civVehicleCheckTimer = 0;
+
+    // --- Mortar Pit ---
+    private IA_AiGroup m_mortarCrewGroup;
+    private IEntity m_mortarEntity;
+    private ref array<IA_AiGroup> m_mortarCrewGroups = new array<IA_AiGroup>();
+    private bool m_mortarCrewSetupDone = false;
+    private int m_mortarCrewSetupAttempts = 0;
+    private int m_mortarAiSpawnAttempts = 0;
 
     // --- BEGIN ADDED: Forced Reinforcement S&D Tracking ---
     private ref array<ref IA_AiGroup> m_forcedReinforcementGroups = {}; 
@@ -286,13 +305,18 @@ class IA_AreaInstance
 	    inst.GenerateRandomAiGroups(groupCount, true, AreaFaction);
 	
 	    int civCount = area.GetCivilianCount();
-	    inst.GenerateCivilians(civCount);
+	    if (civCount > 0)
+	        inst.GenerateCivilians(civCount);
 	    
-	    // Also spawn initial vehicles for the area
-	    inst.SpawnInitialVehicles();
-	    
-	    // Spawn civilian vehicles for the area
-	    inst.SpawnInitialCivVehicles();
+	    // Also spawn initial vehicles for the area (skip for mortar pits)
+	    if (area.GetAreaType() != IA_AreaType.MortarPit)
+	    {
+	        inst.SpawnInitialVehicles();
+	        inst.SpawnInitialCivVehicles();
+	    }
+
+	    if (area.GetAreaType() == IA_AreaType.MortarPit)
+	        GetGame().GetCallqueue().CallLater(inst.SetupMortarPitCrew, 12000, false);
 	
 	    // Initialize central reaction manager
 	    inst.m_centralReactionManager = new IA_AIReactionManager();
@@ -665,9 +689,9 @@ class IA_AreaInstance
             
             // --- BEGIN MODIFIED: Don't override defend mode groups ---
             // Check if the group is already in defend mode - if so, don't change its state
-            if (group.IsInDefendMode() || group.IsObjectiveUnit())
+            if (group.IsInDefendMode() || group.IsObjectiveUnit() || group.IsMortarCrew())
             {
-                Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode or is an objective unit, preserving existing tactical state"), LogLevel.DEBUG);
+                Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, objective unit, or mortar crew, preserving existing tactical state"), LogLevel.DEBUG);
                 // Still add to our state tracking for consistency, but don't override
                 m_assignedGroupStates.Insert(group, group.GetTacticalState());
                 return; // Don't change the group's tactical state
@@ -813,6 +837,12 @@ class IA_AreaInstance
         m_reinforcementGroupsSpawned = 0;
         m_reinforcementWaveDelayTimer = 0;
     }
+
+    // One ReinforcementsTask tick is ~20s (RunNextTask cycle). 5-9 ticks = ~100-180s between waves.
+    private int RollReinforcementWaveDelayTicks()
+    {
+        return Math.RandomInt(5, 10);
+    }
     // --- END ADDED ---
 
     // --- MODIFIED: ReinforcementsTask ---
@@ -834,11 +864,11 @@ class IA_AreaInstance
         if (m_reinforcements == IA_ReinforcementState.Done)
             return;
 
-        // --- BEGIN ADDED: Calculate scaled groups per wave ---
+        // One fireteam per wave; a second only at high player scale so they don't arrive as a blob.
         float scaleFactor = IA_Game.GetAIScaleFactor();
-        const int baseGroupsPerWave = 2;
-        int scaledGroupsToAttempt = Math.Max(1, Math.Round(baseGroupsPerWave * (2*scaleFactor)));
-        // --- END ADDED ---
+        int scaledGroupsToAttempt = 1;
+        if (scaleFactor >= 1.4)
+            scaledGroupsToAttempt = 2;
 
         // Handle initial countdown
         if (m_reinforcements == IA_ReinforcementState.Countdown)
@@ -847,25 +877,11 @@ class IA_AreaInstance
 			////Print("Timer: " + m_reinforcementTimer + " Requirement: " + INITIAL_REINFORCEMENT_DELAY_TICKS,LogLevel.ERROR);
             if (m_reinforcementTimer > INITIAL_REINFORCEMENT_DELAY_TICKS)
             {
-				////Print("LOG 5",LogLevel.ERROR);
-                //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 initial delay (%2 ticks) complete. Attempting first wave (scaled groups: %3).",
-//                    m_area.GetName(), INITIAL_REINFORCEMENT_DELAY_TICKS, scaledGroupsToAttempt), LogLevel.DEBUG);
+                SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction);
 
-                bool initialWaveSpawned = SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction); // Use scaled value
-
-                if (initialWaveSpawned)
-                {
-                    // First wave spawned — keep sending waves until the quota is exhausted
-                    m_reinforcements = IA_ReinforcementState.SpawningWaves;
-                    m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS;
-                }
-                else
-                {
-                    // Initial wave failed to find a safe spawn spot — retry on the next countdown
-                    m_reinforcements = IA_ReinforcementState.SpawningWaves;
-                    m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS;
-                }
-                m_reinforcementTimer = 0; // Reset initial countdown timer regardless
+                m_reinforcements = IA_ReinforcementState.SpawningWaves;
+                m_reinforcementWaveDelayTimer = RollReinforcementWaveDelayTicks();
+                m_reinforcementTimer = 0;
             }
         }
         // Handle subsequent waves
@@ -877,35 +893,23 @@ class IA_AreaInstance
                 // Check quota BEFORE attempting to spawn
                 if (m_reinforcementGroupsSpawned >= m_totalReinforcementQuota)
                 {
-                    //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 quota met (%2/%3) before spawning next wave. Reinforcements Done.",
-//                         m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
                     m_reinforcements = IA_ReinforcementState.Done;
                 }
-                else // Quota is not yet met, attempt to spawn
+                else
                 {
-                    //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 attempting subsequent wave (scaled groups: %2).",
-//                        m_area.GetName(), scaledGroupsToAttempt), LogLevel.DEBUG);
-                    
-                    bool waveSpawnedSuccessfully = SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction); // Use scaled value
+                    bool waveSpawnedSuccessfully = SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction);
 
                     if (waveSpawnedSuccessfully)
                     {
-                         //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 successfully spawned reinforcement wave. Groups spawned: %2/%3. Resetting delay (%4 ticks).",
-//                             m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota, REINFORCEMENT_WAVE_DELAY_TICKS), LogLevel.DEBUG);
-                         m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS; // Reset delay for the *next* wave
+                         m_reinforcementWaveDelayTimer = RollReinforcementWaveDelayTicks();
                     }
                     else
                     {
-                         // SpawnReinforcementWave returned false. This means no group was spawned in this attempt (e.g., safe spot not found).
-                         // DO NOT set state to Done here. Just reset the timer to try again later.
-                        Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 failed to spawn group in current wave (e.g., no safe spot). Groups spawned: %2/%3. Resetting delay (%4 ticks) to retry.",
-                             m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota, REINFORCEMENT_WAVE_DELAY_TICKS), LogLevel.WARNING);
-                         m_reinforcementWaveDelayTimer = REINFORCEMENT_WAVE_DELAY_TICKS; // Reset delay to try again later
+                        Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 failed to spawn group in current wave (e.g., no safe spot). Groups spawned: %2/%3. Resetting delay to retry.",
+                             m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.WARNING);
+                         m_reinforcementWaveDelayTimer = RollReinforcementWaveDelayTicks();
 
-                         // An edge case: if quota was *just* met by the failed spawn attempt (shouldn't happen with current logic, but for safety)
                          if (m_reinforcementGroupsSpawned >= m_totalReinforcementQuota) {
-                             //Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 quota met (%2/%3) after failed spawn attempt. Reinforcements Done.",
-//                                 m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
                              m_reinforcements = IA_ReinforcementState.Done;
                          }
                     }
@@ -1309,7 +1313,7 @@ class IA_AreaInstance
                 continue;
                 
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units---
-            if (g.IsInDefendMode() || g.IsObjectiveUnit())
+            if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
                 continue;
             // --- END ADDED ---
 
@@ -1389,7 +1393,7 @@ class IA_AreaInstance
             if (g.IsDriving()) continue; // Skip driving groups for role assignment
             
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-            if (g.IsInDefendMode() || g.IsObjectiveUnit())
+            if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
             {
                 //Print(string.Format("[AreaInstance.MilitaryTask] Skipping group in defend mode at %1", g.GetOrigin().ToString()), LogLevel.DEBUG);
                 continue;
@@ -1512,7 +1516,7 @@ class IA_AreaInstance
         foreach (IA_AiGroup g, IA_GroupTacticalState assignedState : currentAssignments)
         {
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-            if (g.IsInDefendMode() || g.IsObjectiveUnit())
+            if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
                 continue;
             // --- END ADDED ---
             
@@ -1963,7 +1967,7 @@ class IA_AreaInstance
              }
              
              // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-             if (g.IsInDefendMode() || g.IsObjectiveUnit())
+             if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
              {
                  //Print(string.Format("[AreaInstance.MilitaryTask] Enforcement: Skipping group in defend mode at %1", g.GetOrigin().ToString()), LogLevel.DEBUG);
                  continue;
@@ -2031,30 +2035,40 @@ class IA_AreaInstance
             IA_GroupTacticalState actualState = g.GetTacticalState();
             vector targetForState = primaryThreatLocation; // Default
 
-            // --- Approaching → Attacking auto-transition ---
-            // When an Approaching group has consumed all its arc/staging waypoints it is at the
-            // jump-off point and ready to assault.  Promote it to Attacking so normal combat
-            // logic takes over and issues a fresh S&D toward the current threat position.
-            if (finalAssignedState == IA_GroupTacticalState.Approaching && !g.HasActiveWaypoint())
+            // Approaching → Attacking when they make contact, otherwise when they
+            // finish the arc/staging route. Do not let them walk past players.
+            if (finalAssignedState == IA_GroupTacticalState.Approaching)
             {
                 vector assaultTarget;
                 if (primaryThreatLocation != vector.Zero)
                     assaultTarget = primaryThreatLocation;
                 else
                     assaultTarget = m_area.GetOrigin();
-                m_assignedGroupStates.Set(g, IA_GroupTacticalState.Attacking);
-                m_stateStartTimes.Set(g, currentTime);
-                m_stateStability.Set(g, 0);
-                g.SetTacticalState(IA_GroupTacticalState.Attacking, assaultTarget, null, true);
-                Print(string.Format("[MilitaryOrderTask] Approaching group at %1 reached jump-off, transitioning to Attacking toward %2.",
-                    g.GetOrigin().ToString(), assaultTarget.ToString()), LogLevel.DEBUG);
+
+                if (g.IsEngagedWithEnemy())
+                {
+                    m_assignedGroupStates.Set(g, IA_GroupTacticalState.Attacking);
+                    m_stateStartTimes.Set(g, currentTime);
+                    m_stateStability.Set(g, 0);
+                    g.SetTacticalState(IA_GroupTacticalState.Attacking, assaultTarget, null, true);
+                    Print(string.Format("[MilitaryOrderTask] Approaching group at %1 made contact, breaking off to Attacking toward %2.",
+                        g.GetOrigin().ToString(), assaultTarget.ToString()), LogLevel.DEBUG);
+                    continue;
+                }
+
+                if (!g.HasActiveWaypoint())
+                {
+                    m_assignedGroupStates.Set(g, IA_GroupTacticalState.Attacking);
+                    m_stateStartTimes.Set(g, currentTime);
+                    m_stateStability.Set(g, 0);
+                    g.SetTacticalState(IA_GroupTacticalState.Attacking, assaultTarget, null, true);
+                    Print(string.Format("[MilitaryOrderTask] Approaching group at %1 reached jump-off, transitioning to Attacking toward %2.",
+                        g.GetOrigin().ToString(), assaultTarget.ToString()), LogLevel.DEBUG);
+                    continue;
+                }
+
                 continue;
             }
-
-            // Skip all further processing for groups still in the Approaching phase —
-            // they manage their own waypoints until the transition above fires.
-            if (finalAssignedState == IA_GroupTacticalState.Approaching)
-                continue;
 
             // --- BEGIN ADDED: Special handling for attacker reinforcement ---
             // Check if we're critically short on attackers and this group could help
@@ -2629,6 +2643,12 @@ class IA_AreaInstance
 
     void GenerateRandomAiGroups(int number, bool insideArea, Faction AreaFaction)
     {
+        if (m_area && m_area.GetAreaType() == IA_AreaType.MortarPit)
+        {
+            GenerateMortarPitAiGroups(AreaFaction);
+            return;
+        }
+
         // Apply player scaling to number of groups
         int scaledNumberOfGroupsToSpawn = Math.Round(number * m_aiScaleFactor);
         if (scaledNumberOfGroupsToSpawn < 1 && number > 0) scaledNumberOfGroupsToSpawn = 1; // Ensure at least one group if original number > 0
@@ -2663,14 +2683,17 @@ class IA_AreaInstance
                 if (chosenPoint)
                     pos = chosenPoint.GetRandomSpawnPosition();
 
-                useExactPos = true;
+                if (pos != vector.Zero)
+                    useExactPos = true;
             }
-            else
+
+            if (pos == vector.Zero)
             {
                 if (insideArea)
                     pos = IA_Game.rng.GenerateRandomPointInRadius(2, m_area.GetRadius() / 8, m_area.GetOrigin());
                 else
                     pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.25, m_area.GetOrigin());
+                useExactPos = false;
             }
             
             int unitCountBasedOnSquadType = IA_SquadCount(st, m_faction); 
@@ -2699,6 +2722,63 @@ class IA_AreaInstance
         // m_maxHistoricalStrength is updated by every OnStrengthChange call if newVal is greater.
     }
 
+    // Crew is spawned on the guns once the battery exists (one soldier per tube).
+    protected void GenerateMortarPitAiGroups(Faction AreaFaction)
+    {
+        m_mortarAiSpawnAttempts = 0;
+        GetGame().GetCallqueue().CallLater(this.SpawnMortarPitAiAtGuns, 2000, false);
+    }
+
+    protected void SpawnMortarPitAiAtGuns()
+    {
+        if (!m_area)
+            return;
+
+        m_mortarAiSpawnAttempts = m_mortarAiSpawnAttempts + 1;
+        if (m_mortarAiSpawnAttempts > 15)
+        {
+            Print("[IA_AreaInstance] SpawnMortarPitAiAtGuns: giving up, mortars never appeared.", LogLevel.ERROR);
+            return;
+        }
+
+        IA_AreaMarker marker = IA_AreaMarker.GetMortarPitMarkerForGroup(m_areaGroup);
+        if (!marker)
+        {
+            GetGame().GetCallqueue().CallLater(this.SpawnMortarPitAiAtGuns, 2000, false);
+            return;
+        }
+
+        array<IEntity> mortars = marker.GetMortarEntities();
+        int planned = marker.GetPlannedMortarCount();
+        int have = 0;
+        if (mortars)
+            have = mortars.Count();
+        if (!mortars || have <= 0 || (planned >= 2 && have < planned && m_mortarAiSpawnAttempts < 10))
+        {
+            GetGame().GetCallqueue().CallLater(this.SpawnMortarPitAiAtGuns, 2000, false);
+            return;
+        }
+
+        int delay = 0;
+        foreach (IEntity mortar : mortars)
+        {
+            if (!mortar)
+                continue;
+
+            vector pos = mortar.GetOrigin();
+            pos[2] = pos[2] + 1.5;
+            pos[1] = GetGame().GetWorld().GetSurfaceY(pos[0], pos[2]);
+            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, pos, 1, m_AreaFaction, true);
+            delay = delay + 250;
+        }
+
+        int guardCount = Math.Round(3 * m_aiScaleFactor);
+        if (guardCount < 2)
+            guardCount = 2;
+        GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, m_area.GetOrigin(), guardCount, m_AreaFaction, true);
+
+        Print(string.Format("[IA_AreaInstance] Mortar pit AI scheduled: %1 gunners on tubes, %2 guards", mortars.Count(), guardCount), LogLevel.NORMAL);
+    }
 
     private void VehicleReinforcementsTask()
     {
@@ -3094,6 +3174,8 @@ class IA_AreaInstance
     {
         if (m_faction == IA_Faction.NONE || m_faction == IA_Faction.CIV)
             return;
+        if (m_area && m_area.GetAreaType() == IA_AreaType.MortarPit)
+            return;
             
         // Get current scaling
         float scaleFactor = IA_Game.GetAIScaleFactor();
@@ -3443,6 +3525,14 @@ class IA_AreaInstance
             case IA_AreaType.SmallMilitary: // Added SmallMilitary
                 m_maxCivVehicles = 0; // No civilian vehicles for SmallMilitary
                 break;
+
+            case IA_AreaType.MortarPit:
+                m_maxCivVehicles = 0;
+                break;
+
+            case IA_AreaType.RadioTower:
+                m_maxCivVehicles = 0;
+                break;
                 
             default:
                 m_maxCivVehicles = 1 + IA_Game.rng.RandInt(0, 2); // Default fallback
@@ -3599,6 +3689,9 @@ class IA_AreaInstance
             
             if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
             {
+                float approachingDanger = group.GetDangerLevel();
+                if (approachingDanger > 0.8)
+                    ApplyEnemySpottedReactionToGroup(group, group.GetOrigin(), approachingDanger);
                 processedGroups.Insert(group, true);
                 continue;
             }
@@ -3712,6 +3805,22 @@ class IA_AreaInstance
     }
 
     // --- Add these helper methods for reaction processing ---
+    private void BreakApproachingToAttack(IA_AiGroup group, vector targetPos)
+    {
+        if (!group)
+            return;
+
+        if (targetPos == vector.Zero)
+            targetPos = group.GetOrigin();
+
+        m_assignedGroupStates.Set(group, IA_GroupTacticalState.Attacking);
+        m_stateStartTimes.Set(group, System.GetUnixTime());
+        m_stateStability.Set(group, 0);
+        group.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+        Print(string.Format("[AreaInstance] Approaching group at %1 broke off to Attacking toward %2.",
+            group.GetOrigin().ToString(), targetPos.ToString()), LogLevel.DEBUG);
+    }
+
     private void ApplyUnderFireReactionToGroup(IA_AiGroup group, vector sourcePos, float intensity)
     {
 		
@@ -3719,7 +3828,10 @@ class IA_AreaInstance
             return;
         
         if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
+        {
+            BreakApproachingToAttack(group, sourcePos);
             return;
+        }
         
         // --- BEGIN ADDED: Skip groups in defend mode ---
         if (m_isInDefendMode && group.IsInDefendMode())
@@ -3857,7 +3969,10 @@ class IA_AreaInstance
             return;
         
         if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
+        {
+            BreakApproachingToAttack(group, sourcePos);
             return;
+        }
         
         // --- BEGIN ADDED: Skip groups in defend mode ---
         if (m_isInDefendMode && group.IsInDefendMode())
@@ -3945,8 +4060,14 @@ class IA_AreaInstance
         if (!group || !reaction)
             return;
         
-        if (group.GetTacticalState() == IA_GroupTacticalState.Approaching && group.GetAliveCount() > 2)
+        if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
+        {
+            vector killTarget = vector.Zero;
+            if (reaction)
+                killTarget = reaction.GetSourcePosition();
+            BreakApproachingToAttack(group, killTarget);
             return;
+        }
         
         // Update legacy engagement system
         if (!group.IsEngagedWithEnemy() && !group.IsDriving())
@@ -4498,9 +4619,7 @@ class IA_AreaInstance
         }
         else
         {
-            // Normal reinforcement logic
             actualSpawnCount = Math.Min(groupsToSpawn, m_totalReinforcementQuota - m_reinforcementGroupsSpawned);
-            actualSpawnCount = Math.RandomInt(actualSpawnCount*0.6, actualSpawnCount*1.5);
         }
         if (actualSpawnCount <= 0) 
         {
@@ -4511,34 +4630,54 @@ class IA_AreaInstance
         Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
             m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
 
-        bool spawnedAny = false;
         const int MAX_SPAWN_ATTEMPTS = 12; // Max tries to find a safe spot
-        const float SAFE_SPAWN_RADIUS_SQ = 400 * 400; // Check within 300m (squared for efficiency)
+        const float SAFE_SPAWN_RADIUS_SQ = 400 * 400;
 
         // Get player positions once per wave
-        array<vector> playerPositions = {};
+        ref array<vector> playerPositions = new array<vector>();
         GetAllPlayerPositions(playerPositions);
 
         for (int i = 0; i < actualSpawnCount; i++)
         {
-			int sectorIndex = i % 4;
+			int sectorIndex = (m_reinforcementGroupsSpawned + i) % 4;
 			int unitCountOverride = -1;
 			if (forDefendMission && defendFireteamSizes)
 				unitCountOverride = defendFireteamSizes[i];
-			GetGame().GetCallqueue().CallLater(this.SpawnReinforcementEnactor, Math.RandomInt(2500,5000), false, MAX_SPAWN_ATTEMPTS, playerPositions, SAFE_SPAWN_RADIUS_SQ, AreaFaction, forDefendMission, sectorIndex, unitCountOverride);
+
+			ref IA_ReinforcementSpawnRequest request = new IA_ReinforcementSpawnRequest();
+			request.m_maxAttempts = MAX_SPAWN_ATTEMPTS;
+			request.m_playerPositions = playerPositions;
+			request.m_safeRadiusSq = SAFE_SPAWN_RADIUS_SQ;
+			request.m_areaFaction = AreaFaction;
+			request.m_forDefendMission = forDefendMission;
+			request.m_sectorIndex = sectorIndex;
+			request.m_unitCountOverride = unitCountOverride;
+			int spawnDelayMs = 2000 + (i * Math.RandomInt(12000, 20000));
+			GetGame().GetCallqueue().CallLater(this.SpawnReinforcementEnactorFromRequest, spawnDelayMs, false, request);
         }
         
-        return spawnedAny;
+        return true;
     }
     // --- END ADDED ---
 
+	void SpawnReinforcementEnactorFromRequest(IA_ReinforcementSpawnRequest request)
+	{
+		if (!request)
+			return;
+
+		SpawnReinforcementEnactor(request.m_maxAttempts, request.m_playerPositions, request.m_safeRadiusSq, request.m_areaFaction, request.m_forDefendMission, request.m_sectorIndex, request.m_unitCountOverride);
+	}
+
 	bool SpawnReinforcementEnactor(int MAX_SPAWN_ATTEMPTS, array<vector> playerPositions, float SAFE_SPAWN_RADIUS_SQ, Faction AreaFaction, bool forDefendMission = false, int sectorIndex = 0, int unitCountOverride = -1){
 	
+		    if (!m_area)
+		        return false;
+
 		    vector spawnPos = vector.Zero;
             bool safeSpawnFound = false;
 			bool spawnedAny = false;
 
-			// Sector wedge for defend-style waves (4 compass sectors, 90° each)
+			// Compass sector so successive waves don't pile onto the same road.
 			float sectorStartAngle = sectorIndex * (Math.PI2 * 0.25);
 			float sectorEndAngle = sectorStartAngle + (Math.PI2 * 0.25);
 
@@ -4572,28 +4711,20 @@ class IA_AreaInstance
 				bool usedSectorFallback = false;
                 if (roadPos != vector.Zero)
                 {
-					if (forDefendMission)
-					{
-						// Only accept roads that fall inside this fireteam's 90° sector
-						float roadDX = roadPos[0] - center[0];
-						float roadDZ = roadPos[2] - center[2];
-						float roadAngle = Math.Atan2(roadDZ, roadDX);
-						if (roadAngle < 0)
-							roadAngle = roadAngle + Math.PI2;
+					float roadDX = roadPos[0] - center[0];
+					float roadDZ = roadPos[2] - center[2];
+					float roadAngle = Math.Atan2(roadDZ, roadDX);
+					if (roadAngle < 0)
+						roadAngle = roadAngle + Math.PI2;
 
-						bool inSector = false;
-						if (roadAngle >= sectorStartAngle && roadAngle < sectorEndAngle)
-							inSector = true;
+					bool inSector = false;
+					if (roadAngle >= sectorStartAngle && roadAngle < sectorEndAngle)
+						inSector = true;
 
-						if (inSector)
-							spawnPos = roadPos;
-						else
-							usedSectorFallback = true;
-					}
+					if (inSector)
+						spawnPos = roadPos;
 					else
-					{
-                    	spawnPos = roadPos;
-					}
+						usedSectorFallback = true;
                 }
                 else 
                 { 
@@ -4602,16 +4733,7 @@ class IA_AreaInstance
 
 				if (usedSectorFallback)
 				{
-					float angle;
-					if (forDefendMission)
-					{
-						// Constrain spawn angle to this group's compass sector
-						angle = sectorStartAngle + (IA_Game.rng.RandFloat01() * (sectorEndAngle - sectorStartAngle));
-					}
-					else
-					{
-                    	angle = IA_Game.rng.RandFloat01() * Math.PI2;
-					}
+					float angle = sectorStartAngle + (IA_Game.rng.RandFloat01() * (sectorEndAngle - sectorStartAngle));
                     float dist = IA_Game.rng.RandFloatXY(spawnMinRadius, spawnMaxRadius);
                     spawnPos[0] = center[0] + Math.Cos(angle) * dist;
                     spawnPos[2] = center[2] + Math.Sin(angle) * dist;
@@ -4620,12 +4742,15 @@ class IA_AreaInstance
 
                 // 2. Check distance to players
                 bool isSafe = true;
-                foreach (vector playerPos : playerPositions)
+                if (playerPositions)
                 {
-                    if (vector.DistanceSq(spawnPos, playerPos) < SAFE_SPAWN_RADIUS_SQ)
+                    foreach (vector playerPos : playerPositions)
                     {
-                        isSafe = false;
-                        break;
+                        if (vector.DistanceSq(spawnPos, playerPos) < SAFE_SPAWN_RADIUS_SQ)
+                        {
+                            isSafe = false;
+                            break;
+                        }
                     }
                 }
 
@@ -4659,10 +4784,14 @@ class IA_AreaInstance
                 st = IA_GetRandomSquadType();
                 int unitCount = IA_SquadCount(st, IA_Faction.USSR); 
                 scaledUnitCount = Math.Round(unitCount * m_aiScaleFactor);
-                if (scaledUnitCount < 1) scaledUnitCount = 1; 
-                scaledUnitCount = scaledUnitCount * 1.5;
-                scaledUnitCount = Math.RandomInt(scaledUnitCount*0.8, scaledUnitCount*1.7);
+                if (scaledUnitCount < 1)
+                    scaledUnitCount = 1;
+                if (scaledUnitCount > 8)
+                    scaledUnitCount = 8;
             }
+
+            if (scaledUnitCount < 1)
+                scaledUnitCount = 1;
 
             IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, scaledUnitCount, AreaFaction);
 
@@ -4716,7 +4845,7 @@ class IA_AreaInstance
 
                         // SetDefendMode already added S&D; replace with Move then S&D
                         grp.RemoveAllOrders();
-                        grp.AddOrder(stagingPos, IA_AiOrder.PriorityMove, true);
+                        grp.AddOrder(stagingPos, IA_AiOrder.Move, true);
                         grp.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, false);
 
                         Print(string.Format("[SpawnReinforcementWave] Defend flank fireteam staging at %1 (sector %2 -> %3).",
@@ -4781,10 +4910,10 @@ class IA_AreaInstance
                         arcPos[0] = targetPos[0] + rx * routingRadius;
                         arcPos[2] = targetPos[2] + rz * routingRadius;
                         arcPos[1] = GetGame().GetWorld().GetSurfaceY(arcPos[0], arcPos[2]);
-                        grp.AddOrder(arcPos, IA_AiOrder.PriorityMove, true);
+                        grp.AddOrder(arcPos, IA_AiOrder.Move, true);
                     }
 
-                    grp.AddOrder(stagingPos, IA_AiOrder.PriorityMove, true);
+                    grp.AddOrder(stagingPos, IA_AiOrder.Move, true);
                     grp.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, false);
 
                     Print(string.Format("[SpawnReinforcementWave] Staging at %1 (~300m from OBJ), arc: %2° (%3 routing pts).",
@@ -5005,6 +5134,360 @@ class IA_AreaInstance
     {
         return m_military;
     }
+
+    // Assign first military group as mortar crew; remaining groups defend the pit.
+    void SetupMortarPitCrew()
+    {
+        if (m_mortarCrewSetupDone)
+            return;
+        if (!m_area || m_area.GetAreaType() != IA_AreaType.MortarPit)
+            return;
+        if (!Replication.IsServer())
+            return;
+
+        m_mortarCrewSetupAttempts = m_mortarCrewSetupAttempts + 1;
+        if (m_mortarCrewSetupAttempts > 20)
+        {
+            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: giving up for %1 after %2 attempts", m_area.GetName(), m_mortarCrewSetupAttempts), LogLevel.ERROR);
+            m_mortarCrewSetupDone = true;
+            return;
+        }
+
+        IA_AreaMarker marker = IA_AreaMarker.GetMortarPitMarkerForGroup(m_areaGroup);
+        if (!marker)
+        {
+            // Fallback: find by area name
+            array<IA_AreaMarker> markers = IA_AreaMarker.GetAreaMarkersForArea(m_area.GetName());
+            if (markers && !markers.IsEmpty())
+                marker = markers[0];
+        }
+
+        if (!marker)
+        {
+            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: no marker for %1", m_area.GetName()), LogLevel.WARNING);
+            GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 5000, false);
+            return;
+        }
+
+        IEntity firstMortar = marker.GetMortarEntity();
+        array<IEntity> mortars = marker.GetMortarEntities();
+        int plannedGuns = marker.GetPlannedMortarCount();
+        int haveGuns = 0;
+        if (mortars)
+            haveGuns = mortars.Count();
+        if (!mortars || mortars.IsEmpty())
+        {
+            if (firstMortar)
+            {
+                mortars = {};
+                mortars.Insert(firstMortar);
+                haveGuns = 1;
+            }
+        }
+
+        if (!mortars || mortars.IsEmpty() || (plannedGuns >= 2 && haveGuns < plannedGuns && m_mortarCrewSetupAttempts < 12))
+        {
+            // Composition may not have spawned yet (EOnFrame); retry briefly.
+            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: mortars not ready for %1 (%2/%3), retrying.", m_area.GetName(), haveGuns, plannedGuns), LogLevel.DEBUG);
+            GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 3000, false);
+            return;
+        }
+
+        if (!m_military || m_military.IsEmpty())
+        {
+            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: no military groups yet for %1, retrying.", m_area.GetName()), LogLevel.DEBUG);
+            GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 4000, false);
+            return;
+        }
+
+        int spawnedReady = 0;
+        int unspawned = 0;
+        foreach (IA_AiGroup g : m_military)
+        {
+            if (!g)
+                continue;
+            if (g.IsSpawned() && g.GetAliveCount() > 0)
+                spawnedReady = spawnedReady + 1;
+            else
+                unspawned = unspawned + 1;
+        }
+
+        if (spawnedReady <= 0)
+        {
+            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: no spawned groups for %1, retrying.", m_area.GetName()), LogLevel.DEBUG);
+            GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 4000, false);
+            return;
+        }
+
+        ref array<IA_AiGroup> freeCrews = new array<IA_AiGroup>();
+        foreach (IA_AiGroup crew : m_military)
+        {
+            if (!crew || !crew.IsSpawned() || crew.GetAliveCount() <= 0)
+                continue;
+            if (crew.GetInitialUnitCount() != 1 && !crew.IsMortarCrew())
+                continue;
+            if (crew.GetAssignedMortarCount() > 0)
+            {
+                if (m_mortarCrewGroups.Find(crew) == -1)
+                    m_mortarCrewGroups.Insert(crew);
+                if (!m_mortarCrewGroup)
+                    m_mortarCrewGroup = crew;
+                m_assignedGroupStates.Set(crew, IA_GroupTacticalState.InVehicle);
+                continue;
+            }
+            freeCrews.Insert(crew);
+        }
+
+        int crewIdx = 0;
+        foreach (IEntity gunEnt : mortars)
+        {
+            if (!gunEnt)
+                continue;
+            if (IsMortarOccupied(gunEnt) || IsMortarClaimedByCrew(gunEnt))
+                continue;
+            if (crewIdx >= freeCrews.Count())
+                break;
+
+            IA_AiGroup crew = freeCrews[crewIdx];
+            crewIdx = crewIdx + 1;
+            if (!crew)
+                continue;
+
+            ref array<IEntity> oneGun = new array<IEntity>();
+            oneGun.Insert(gunEnt);
+            if (!crew.AssignMortars(oneGun))
+                continue;
+            if (m_mortarCrewGroups.Find(crew) == -1)
+                m_mortarCrewGroups.Insert(crew);
+            if (!m_mortarCrewGroup)
+                m_mortarCrewGroup = crew;
+            m_assignedGroupStates.Set(crew, IA_GroupTacticalState.InVehicle);
+        }
+
+        int emptyGuns = CountUnoccupiedMortars(mortars);
+        if (!m_mortarCrewGroup)
+        {
+            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: occupy failed for %1, retrying.", m_area.GetName()), LogLevel.DEBUG);
+            GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 3000, false);
+            return;
+        }
+
+        int assignedCrews = 0;
+        if (m_mortarCrewGroups)
+            assignedCrews = m_mortarCrewGroups.Count();
+        int unclaimedEmpty = CountUnclaimedEmptyMortars(mortars);
+        bool stillNeedCrews = assignedCrews < mortars.Count();
+        if (stillNeedCrews && unclaimedEmpty > 0)
+        {
+            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: %1 guns still unclaimed for %2, retrying occupy.", unclaimedEmpty, m_area.GetName()), LogLevel.DEBUG);
+            GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 3000, false);
+            return;
+        }
+
+        m_mortarEntity = mortars[0];
+
+        foreach (IA_AiGroup guard : m_military)
+        {
+            if (!guard || guard.IsMortarCrew())
+                continue;
+            if (!guard.IsSpawned())
+                continue;
+            guard.SetTacticalState(IA_GroupTacticalState.Defending, m_area.GetOrigin(), null, true);
+            guard.AddOrder(m_area.GetOrigin(), IA_AiOrder.DefendSmall, true);
+            m_assignedGroupStates.Set(guard, IA_GroupTacticalState.Defending);
+        }
+
+        m_mortarCrewSetupDone = true;
+        Print(string.Format("[IA_AreaInstance] Mortar battery crewed for %1: %2 guns, %3 empty, %4 crew groups", m_area.GetName(), mortars.Count(), emptyGuns, m_mortarCrewGroups.Count()), LogLevel.NORMAL);
+    }
+
+    protected bool IsMortarClaimedByCrew(IEntity mortar)
+    {
+        if (!mortar || !m_mortarCrewGroups)
+            return false;
+
+        foreach (IA_AiGroup crew : m_mortarCrewGroups)
+        {
+            if (crew && crew.OwnsMortar(mortar))
+                return true;
+        }
+
+        return false;
+    }
+
+    protected int CountUnclaimedEmptyMortars(array<IEntity> mortars)
+    {
+        if (!mortars)
+            return 0;
+
+        int unclaimed = 0;
+        foreach (IEntity mortar : mortars)
+        {
+            if (!mortar)
+                continue;
+            if (IsMortarOccupied(mortar))
+                continue;
+            if (IsMortarClaimedByCrew(mortar))
+                continue;
+            unclaimed = unclaimed + 1;
+        }
+
+        return unclaimed;
+    }
+
+    protected bool IsMortarOccupied(IEntity mortar)
+    {
+        if (!mortar)
+            return false;
+
+        TurretCompartmentSlot turretSlot = FindMortarTurretSlot(mortar);
+        if (!turretSlot)
+            return false;
+        if (turretSlot.GetOccupant())
+            return true;
+        return false;
+    }
+
+    protected TurretCompartmentSlot FindMortarTurretSlot(IEntity mortar)
+    {
+        if (!mortar)
+            return null;
+
+        IEntity usageOwner;
+        SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.FindOnNearestParent(mortar, usageOwner);
+        TurretCompartmentSlot turretSlot;
+        if (usage)
+            turretSlot = usage.GetTurretCompartmentSlot();
+        if (turretSlot)
+            return turretSlot;
+
+        IEntity searchEnt = mortar;
+        if (usage && usage.GetOwner())
+            searchEnt = usage.GetOwner();
+
+        BaseCompartmentManagerComponent compartmentMan = BaseCompartmentManagerComponent.Cast(searchEnt.FindComponent(BaseCompartmentManagerComponent));
+        if (compartmentMan)
+        {
+            array<BaseCompartmentSlot> slots = {};
+            compartmentMan.GetCompartments(slots);
+            foreach (BaseCompartmentSlot slot : slots)
+            {
+                TurretCompartmentSlot turret = TurretCompartmentSlot.Cast(slot);
+                if (turret)
+                    return turret;
+            }
+        }
+
+        IEntity child = mortar.GetChildren();
+        while (child)
+        {
+            TurretCompartmentSlot nested = FindMortarTurretSlot(child);
+            if (nested)
+                return nested;
+            child = child.GetSibling();
+        }
+
+        return null;
+    }
+
+    protected int CountUnoccupiedMortars(array<IEntity> mortars)
+    {
+        int empty = 0;
+        if (!mortars)
+            return 0;
+
+        foreach (IEntity mortar : mortars)
+        {
+            if (!IsMortarOccupied(mortar))
+                empty = empty + 1;
+        }
+        return empty;
+    }
+
+    bool IsMortarPitArea()
+    {
+        return m_area && m_area.GetAreaType() == IA_AreaType.MortarPit;
+    }
+
+    bool IsMortarPitCaptured()
+    {
+        if (!IsMortarPitArea())
+            return false;
+
+        IA_AreaMarker marker = IA_AreaMarker.GetMortarPitMarkerForGroup(m_areaGroup);
+        if (!marker)
+        {
+            array<IA_AreaMarker> markers = IA_AreaMarker.GetAreaMarkersForArea(m_area.GetName());
+            if (markers && !markers.IsEmpty())
+                marker = markers[0];
+        }
+        if (!marker)
+            return false;
+        return marker.IsCaptured();
+    }
+
+    IA_AiGroup GetMortarCrewGroup()
+    {
+        return m_mortarCrewGroup;
+    }
+
+    IEntity GetMortarEntity()
+    {
+        return m_mortarEntity;
+    }
+
+    bool CanIssueMortarFireMission()
+    {
+        if (!IsMortarPitArea())
+            return false;
+        if (IsMortarPitCaptured())
+            return false;
+        if (!m_mortarCrewGroups || m_mortarCrewGroups.IsEmpty())
+        {
+            if (!m_mortarCrewGroup || !m_mortarCrewGroup.IsSpawned())
+                return false;
+            if (m_mortarCrewGroup.GetAliveCount() <= 0)
+                return false;
+        }
+        else
+        {
+            bool anyCrew = false;
+            foreach (IA_AiGroup crew : m_mortarCrewGroups)
+            {
+                if (crew && crew.IsSpawned() && crew.GetAliveCount() > 0)
+                {
+                    anyCrew = true;
+                    break;
+                }
+            }
+            if (!anyCrew)
+                return false;
+        }
+        if (!m_mortarEntity && !m_mortarCrewGroup)
+            return false;
+        return true;
+    }
+
+    bool IssueMortarFireMission(vector targetPos, int shotCount)
+    {
+        if (!CanIssueMortarFireMission())
+            return false;
+
+        bool fired = false;
+        if (m_mortarCrewGroups && !m_mortarCrewGroups.IsEmpty())
+        {
+            foreach (IA_AiGroup crew : m_mortarCrewGroups)
+            {
+                if (!crew || !crew.IsSpawned() || crew.GetAliveCount() <= 0)
+                    continue;
+                if (crew.IssueArtilleryFireMission(targetPos, shotCount))
+                    fired = true;
+            }
+            return fired;
+        }
+
+        return m_mortarCrewGroup.IssueArtilleryFireMission(targetPos, shotCount);
+    }
     
     int GetAliveCivilianCount()
     {
@@ -5052,8 +5535,16 @@ class IA_AreaInstance
             return;
         }
 
+        // Gunners are 1-man groups next to tubes. Mark before AddMilitaryGroup so
+        // they do not get a DefendPatrol waypoint that later dumps them off the mortar.
+        if (m_area && m_area.GetAreaType() == IA_AreaType.MortarPit && grp.GetInitialUnitCount() == 1)
+            grp.SetMortarCrew(true);
+
         // AddMilitaryGroup will also assign initial state (e.g., DefendPatrol or Attacking if area is under attack)
         AddMilitaryGroup(grp);
+
+        if (m_area.GetAreaType() == IA_AreaType.MortarPit && !m_mortarCrewSetupDone)
+            GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 3000, false);
 
         // Update strength for this newly added group
         // OnStrengthChange will update m_strength and m_maxHistoricalStrength
