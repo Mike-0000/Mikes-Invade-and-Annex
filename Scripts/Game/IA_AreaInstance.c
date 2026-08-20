@@ -648,6 +648,7 @@ class IA_AreaInstance
     void ForceFinish()
     {
         Print(string.Format("[AreaInstance] ForceFinish called for area %1. Cleaning up tasks and entities.", m_area.GetName()), LogLevel.WARNING);
+        m_mortarCrewSetupDone = true;
         
         // 1. Clear Task Queue
         if (m_taskQueue)

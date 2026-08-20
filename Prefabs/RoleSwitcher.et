@@ -66,7 +66,7 @@ GenericEntity {
     }
    }
    additionalActions {
-    MHJ_HaloJumpUserAction "{654F7B28C4E8A27B}" {
+    IA_HaloJumpUserAction "{654F7B28C4E8A27B}" {
      ParentContextList {
       "main"
      }

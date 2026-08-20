@@ -532,6 +532,20 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        
 	        // Send notification to all players
 	        TriggerCaptureNotification("TaskCompleted", captureMessage);
+
+	        // Optional mortar pits may be captured after the required AO zones
+	        // complete (including during a defend mission), so complete their
+	        // task here instead of relying only on the AO completion poll.
+	        if (GetAreaType() == IA_AreaType.MortarPit)
+	        {
+	            IA_Game game = IA_Game.Instantiate();
+	            if (game)
+	            {
+	                IA_AreaInstance areaInstance = game.GetAreaInstance(m_areaName);
+	                if (areaInstance && areaInstance.GetCurrentTaskEntity())
+	                    areaInstance.GetCurrentTaskEntity().SetTaskState(SCR_ETaskState.COMPLETED);
+	            }
+	        }
 	        
 	        // Note: Score reset will be handled by IA_MissionInitializer when checking completion
 	    }

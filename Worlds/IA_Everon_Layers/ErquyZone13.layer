@@ -1,6 +1,3 @@
-GenericEntity : "{3D4DCD05B7C716E3}Prefabs/IA_RadioCoverage.et" {
- coords 5469.852 96.526 6181.347
-}
 IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
  coords 11044.459 22.276 11698.561
  angleY 125.077

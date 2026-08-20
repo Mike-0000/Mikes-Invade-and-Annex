@@ -2,6 +2,7 @@ GenericEntity {
  ID "65635B551DDA2669"
  components {
   BaseRadioComponent "{6562F6970372AABC}" {
+   "Encryption key" "chickenNuggets"
    "Turned on" 1
    Transceivers {
     RelayTransceiver "{6562F697056BB5C7}" {
@@ -13,7 +14,7 @@ GenericEntity {
    }
   }
   RplComponent "{655C27679699B519}" {
-   "Rpl State Override" Runtime
+   Streamable Disabled
   }
  }
  coords 4994.487 116.017 3430.437

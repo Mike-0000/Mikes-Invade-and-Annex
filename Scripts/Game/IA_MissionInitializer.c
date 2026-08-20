@@ -617,6 +617,7 @@ class IA_MissionInitializer : GenericEntity
 		
 		// First, find all markers for current group, count them, and initialize their completion status tracking
 		int amountOfZones = 0;
+		int amountOfRequiredZones = 0;
 		foreach(IA_AreaMarker marker_counter : markers) { // Changed loop variable name for clarity
 			if(!marker_counter || marker_counter.m_areaGroup != currentGroup || marker_counter.GetAreaType() == IA_AreaType.DefendObjective)
 				continue;
@@ -624,6 +625,8 @@ class IA_MissionInitializer : GenericEntity
 			// Add this zone to our tracking array, initialized to false
 			zoneCompletionStatus.Insert(false);
 			amountOfZones++;
+			if (marker_counter.GetAreaType() != IA_AreaType.MortarPit)
+				amountOfRequiredZones++;
 		}
 		
 		////Print("Running CheckCurrentZoneComplete 2",LogLevel.NORMAL);
@@ -665,7 +668,8 @@ class IA_MissionInitializer : GenericEntity
 			
 			if(factionScore >= 1000) { // Score of 1000 = 120 seconds completed
 				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " IS complete (Score: " + factionScore + ").", LogLevel.WARNING);
-				actualCompletedZones++;
+				if (marker.GetAreaType() != IA_AreaType.MortarPit)
+					actualCompletedZones++;
 				zoneCompletionStatus[currentZoneIndex] = true; // Update status array
 					
 				// Finish the zone task without a toast. Capture and radio-tower
@@ -702,8 +706,8 @@ class IA_MissionInitializer : GenericEntity
 				    }
 				    else if (areaType == IA_AreaType.MortarPit)
 				    {
-				        taskTitle = "Capture " + areaName;
-				        taskDesc = "Secure the enemy mortar position and silence incoming fire.";
+				        taskTitle = "Capture " + areaName + " (Optional)";
+				        taskDesc = "Optional: Secure the enemy mortar position and silence incoming fire.";
 				    }
 				    // --- END MODIFIED ---
 				    
@@ -716,7 +720,7 @@ class IA_MissionInitializer : GenericEntity
 		
 		//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " progress: " + actualCompletedZones + "/" + amountOfZones + " zones completed.", LogLevel.WARNING);
 		
-		if(actualCompletedZones >= amountOfZones){ // Use the accurate count
+		if(actualCompletedZones >= amountOfRequiredZones){ // Optional mortar pits do not gate AO progression
 			//Print("[INFO] All " + amountOfZones + " zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
 
 			// --- BEGIN ADDED: Schedule civilian cleanup for completed zone instances ---
@@ -765,6 +769,7 @@ class IA_MissionInitializer : GenericEntity
 			m_currentAreaGroupManager = null;
 		}
 
+		CleanupOptionalMortarPitObjectives();
 		m_currentIndex++;
 		if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
 		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Stop checking this group
@@ -777,6 +782,18 @@ class IA_MissionInitializer : GenericEntity
 	
 	}
 	// --- END ADDED ---
+
+	private void CleanupOptionalMortarPitObjectives()
+	{
+		if (!m_currentAreaInstances)
+			return;
+
+		foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
+		{
+			if (instance && instance.IsMortarPitArea())
+				instance.ForceFinish();
+		}
+	}
 
 	// --- BEGIN ADDED: Method to trigger global area completed notification ---
 	void TriggerGlobalNotification(string messageType, string taskTitle)
@@ -917,8 +934,8 @@ class IA_MissionInitializer : GenericEntity
             }
             else if (area.GetAreaType() == IA_AreaType.MortarPit)
             {
-                taskTitle = "Capture " + area.GetName();
-                taskDesc = "Secure the enemy mortar position and silence incoming fire.";
+                taskTitle = "Capture " + area.GetName() + " (Optional)";
+                taskDesc = "Optional: Secure the enemy mortar position and silence incoming fire.";
             }
             else
             {
@@ -1494,6 +1511,7 @@ class IA_MissionInitializer : GenericEntity
 		
 		// Clean up current area instances
 		m_civilianRevoltActive = false;
+		CleanupOptionalMortarPitObjectives();
 		m_currentIndex++;
 		if (m_currentAreaInstances) 
 			m_currentAreaInstances.Clear();

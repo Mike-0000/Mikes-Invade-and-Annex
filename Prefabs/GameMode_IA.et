@@ -370,6 +370,10 @@ SCR_BaseGameMode : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
    ID "656F20E3AC61EE60"
    coords 0 0 0
   }
+  GenericEntity : "{3D4DCD05B7C716E3}Prefabs/IA_RadioCoverage.et" {
+   ID "656F20E3AC61EE62"
+   coords 0 0 0
+  }
   SCR_EditorSettingsEntity {
    ID "656F20E3AC612731"
    coords -1.323 0 1.368
