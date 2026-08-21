@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------------------------
 //! I&A Role Switcher HALO action. Keeps HALO available only on low-population sessions.
-//! The cutoff is IA_Config.m_iHaloJumpMaxPlayers (admin config, default 12).
+//! The cutoff is IA_Config.m_iHaloJumpMaxPlayers (admin config, default 15).
 //------------------------------------------------------------------------------------------------
 class IA_HaloJumpUserAction : MHJ_HaloJumpUserAction
 {

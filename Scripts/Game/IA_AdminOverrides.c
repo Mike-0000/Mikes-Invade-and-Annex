@@ -22,7 +22,7 @@ class IA_AdminOverrides
 	int m_iArtilleryMinDelay = 45;
 	int m_iArtilleryMaxDelay = 70;
 	string m_sEnemyFactionKey;
-	int m_iHaloJumpMaxPlayers = 12;
+	int m_iHaloJumpMaxPlayers = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
 
 	//------------------------------------------------------------------------------------------------
 	static string GetPath()

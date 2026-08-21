@@ -85,7 +85,7 @@ class IA_MissionInitializer : GenericEntity
 	string m_sDesiredEnemyFactionKey_Rpl = "";
 
 	[RplProp()]
-	int m_iHaloJumpMaxPlayers_Rpl = 12;
+	int m_iHaloJumpMaxPlayers_Rpl = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
 	// --- END ADDED ---
 
 	protected static const int CAPTURE_HUD_MAX = 6;
@@ -1214,7 +1214,7 @@ class IA_MissionInitializer : GenericEntity
 		string enemyFactionKey = "";
 		if (tokens.Count() > 15)
 			enemyFactionKey = tokens[15];
-		int haloMaxPlayers = 12;
+		int haloMaxPlayers = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
 		if (tokens.Count() > 16)
 			haloMaxPlayers = tokens[16].ToInt();
 		if (haloMaxPlayers < 0)
@@ -1885,13 +1885,13 @@ class IA_MissionInitializer : GenericEntity
 
 	//------------------------------------------------------------------------------------------------
 	//! HALO Role Switcher cutoff. Available while GetPlayerCount() is below this.
-	//! 0 disables HALO. Default 12 if the mission initializer is not ready.
+	//! 0 disables HALO. Uses IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT if the initializer is not ready.
 	static int GetHaloJumpMaxPlayers()
 	{
 		if (s_instance)
 			return s_instance.m_iHaloJumpMaxPlayers_Rpl;
 
-		return 12;
+		return IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
 	}
 	
 	// --- BEGIN ADDED: Method to set artillery cooldown ---

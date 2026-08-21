@@ -164,7 +164,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_HaloMaxField.SetRange(0, 128);
 		m_HaloMaxField.SetStep(1);
 		m_HaloMaxField.SetDecimals(0);
-		m_HaloMaxField.SetValue(12);
+		m_HaloMaxField.SetValue(IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT);
 
 		ref MUI_Label factionLbl = runtime.CreateLabel("Preferred enemy faction (future spawns)", "factionLbl");
 		factionLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
@@ -397,7 +397,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		bool disableGround = false;
 		bool enableCiv = true;
 		bool enforceRoles = false;
-		int haloMaxPlayers = 12;
+		int haloMaxPlayers = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
 		string factionKey = "";
 
 		if (m_civField)
