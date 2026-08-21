@@ -17,6 +17,7 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 	protected string m_sJson;
 
 	protected ref map<string, ref IA_SessionRankEntry> m_mPlayers;
+	protected ref map<string, int> m_mAoStartScore;
 	protected ref array<ref IA_SessionRankEntry> m_aSorted;
 	protected ref ScriptInvoker m_OnUpdated;
 	protected bool m_bReplicatePending;
@@ -184,6 +185,95 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 		entry.score = IA_SessionRankLadder.GetRequiredXp(next);
 		entry.rankId = next;
 		FlushNow();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Snapshot current session XP so AO-end contributors can use XP gained this AO.
+	void BeginAoXpWindow()
+	{
+		if (!Replication.IsServer())
+			return;
+
+		m_mAoStartScore = new map<string, int>();
+		if (!m_mPlayers)
+			return;
+
+		foreach (string id, IA_SessionRankEntry entry : m_mPlayers)
+		{
+			if (!entry)
+				continue;
+			m_mAoStartScore.Insert(id, entry.score);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Ranked list of session XP gained since BeginAoXpWindow. Empty if nobody earned XP.
+	string BuildAoTopContributorsMessage(int maxCount)
+	{
+		ref array<string> names = new array<string>();
+		ref array<int> gained = new array<int>();
+
+		if (!m_mPlayers)
+			return "";
+
+		foreach (string id, IA_SessionRankEntry entry : m_mPlayers)
+		{
+			if (!entry)
+				continue;
+
+			int startXp = 0;
+			if (m_mAoStartScore && m_mAoStartScore.Contains(id))
+				startXp = m_mAoStartScore[id];
+
+			int xp = entry.score - startXp;
+			if (xp < 1)
+				continue;
+
+			string name = entry.PlayerName;
+			if (name.IsEmpty())
+				name = "Unknown";
+
+			names.Insert(name);
+			gained.Insert(xp);
+		}
+
+		int n = gained.Count();
+		int i;
+		int j;
+		for (i = 0; i < n; i++)
+		{
+			for (j = 0; j < n - 1; j++)
+			{
+				if (gained[j] >= gained[j + 1])
+					continue;
+
+				int tmpXp = gained[j];
+				gained[j] = gained[j + 1];
+				gained[j + 1] = tmpXp;
+
+				string tmpName = names[j];
+				names[j] = names[j + 1];
+				names[j + 1] = tmpName;
+			}
+		}
+
+		if (names.IsEmpty())
+			return "";
+
+		int shown = maxCount;
+		if (shown < 1)
+			shown = 3;
+		if (shown > names.Count())
+			shown = names.Count();
+
+		string message = "";
+		for (i = 0; i < shown; i++)
+		{
+			if (i > 0)
+				message = message + "\n";
+			message = message + string.Format("%1. %2 (%3 XP)", i + 1, names[i], gained[i]);
+		}
+		return message;
 	}
 
 	//------------------------------------------------------------------------------------------------

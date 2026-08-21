@@ -1,10 +1,17 @@
 //------------------------------------------------------------------------------------------------
 //! Compact top-right session chip: place number, grade, XP bar, personal stats.
 //! Composite (not a MUI widget). Parent AddChild(GetRoot()). Keep as protected ref.
+//! Full opacity for 30s after spawn and 15s after a local kill, then fades to
+//! 70% transparency (0.3 opacity) across the whole chip.
 //------------------------------------------------------------------------------------------------
 class IA_RankHudPanel
 {
 	protected static const float CHIP_W = 268;
+	protected static const float FULL_OPACITY = 1.0;
+	protected static const float IDLE_OPACITY = 0.3;
+	protected static const float SPAWN_HOLD_SEC = 30.0;
+	protected static const float KILL_HOLD_SEC = 15.0;
+	protected static const float FADE_SPEED = 7.0;
 
 	protected ref MUI_Surface m_Root;
 	protected ref MUI_Label m_Place;
@@ -16,7 +23,11 @@ class IA_RankHudPanel
 	protected ref MUI_Label m_Xp;
 	protected bool m_bBound;
 	protected bool m_bHasRankSample;
+	protected bool m_bHasKillSample;
 	protected int m_iLastRankId;
+	protected int m_iLastKills;
+	protected float m_fHoldLeft;
+	protected float m_fShownOp;
 	protected ref ScriptInvoker m_OnPromoted;
 
 	//------------------------------------------------------------------------------------------------
@@ -24,7 +35,10 @@ class IA_RankHudPanel
 	{
 		ref IA_RankHudPanel panel = new IA_RankHudPanel();
 		panel.m_OnPromoted = new ScriptInvoker();
+		panel.m_fShownOp = FULL_OPACITY;
+		panel.m_fHoldLeft = SPAWN_HOLD_SEC;
 		panel.Build(runtime);
+		panel.ApplyShownOpacity();
 		return panel;
 	}
 
@@ -121,6 +135,47 @@ class IA_RankHudPanel
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void PulseSpawn()
+	{
+		m_fHoldLeft = SPAWN_HOLD_SEC;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void PulseKill()
+	{
+		if (m_fHoldLeft < KILL_HOLD_SEC)
+			m_fHoldLeft = KILL_HOLD_SEC;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void Tick(float dt)
+	{
+		if (dt < 0)
+			dt = 0;
+
+		if (m_fHoldLeft > 0)
+		{
+			m_fHoldLeft = m_fHoldLeft - dt;
+			if (m_fHoldLeft < 0)
+				m_fHoldLeft = 0;
+		}
+
+		float target = IDLE_OPACITY;
+		if (m_fHoldLeft > 0)
+			target = FULL_OPACITY;
+
+		m_fShownOp = MUI_Ease.Approach(m_fShownOp, target, dt, FADE_SPEED);
+		ApplyShownOpacity();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyShownOpacity()
+	{
+		if (m_Root)
+			m_Root.SetOpacity(m_fShownOp);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	ScriptInvoker GetOnPromoted()
 	{
 		if (!m_OnPromoted)
@@ -210,6 +265,11 @@ class IA_RankHudPanel
 			m_Deaths.SetText("D  " + deaths.ToString());
 		if (m_Xp)
 			m_Xp.SetText("XP  " + IA_SessionRankLadder.GetXpPair(xp));
+
+		if (m_bHasKillSample && kills > m_iLastKills)
+			PulseKill();
+		m_iLastKills = kills;
+		m_bHasKillSample = true;
 
 		if (!entry)
 			return;

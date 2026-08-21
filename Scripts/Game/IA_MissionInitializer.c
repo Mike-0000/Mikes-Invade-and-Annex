@@ -85,14 +85,25 @@ class IA_MissionInitializer : GenericEntity
 	string m_sDesiredEnemyFactionKey_Rpl = "";
 	// --- END ADDED ---
 
-	[RplProp()]
-	string m_sCaptureHudArea_Rpl = "";
+	protected static const int CAPTURE_HUD_MAX = 6;
 
 	[RplProp()]
-	float m_fCaptureHudProgress_Rpl = 0;
+	string m_sCaptureHudPacked_Rpl = "";
 
 	[RplProp()]
-	int m_iCaptureHudState_Rpl = 0;
+	string m_sDefendHudArea_Rpl = "";
+
+	[RplProp()]
+	float m_fDefendHudTimeLeft_Rpl = 0;
+
+	[RplProp()]
+	int m_iDefendHudRemainingSec_Rpl = 0;
+
+	[RplProp()]
+	float m_fDefendHudPressure_Rpl = 0;
+
+	[RplProp()]
+	int m_iDefendHudState_Rpl = 0;
 
 
 	// Static reference for global access
@@ -255,6 +266,10 @@ class IA_MissionInitializer : GenericEntity
 	    
 	    // Update the active group in the vehicle manager
 	    IA_VehicleManager.SetActiveGroup(currentGroup);
+
+		IA_SessionRankManagerComponent sessionRanks = IA_SessionRankManagerComponent.GetInstance();
+		if (sessionRanks)
+			sessionRanks.BeginAoXpWindow();
 	    
 	    // --- BEGIN ADDED: Set Active Group in IA_Game ---
 	    IA_Game.SetActiveGroupID(currentGroup);
@@ -761,6 +776,7 @@ class IA_MissionInitializer : GenericEntity
 		// --- BEGIN ADDED: Trigger RTB notification only when actually proceeding to next zone ---
 		// Only send RTB notification if we're not starting a defend mission
 		TriggerGlobalNotification("AreaGroupCompleted", "Return to base and await further tasking.");
+		NotifyAoTopContributors();
 		// --- END ADDED ---
 		
 		if (m_currentAreaGroupManager)
@@ -796,6 +812,19 @@ class IA_MissionInitializer : GenericEntity
 	}
 
 	// --- BEGIN ADDED: Method to trigger global area completed notification ---
+	protected void NotifyAoTopContributors()
+	{
+		IA_SessionRankManagerComponent sessionRanks = IA_SessionRankManagerComponent.GetInstance();
+		if (!sessionRanks)
+			return;
+
+		string message = sessionRanks.BuildAoTopContributorsMessage(3);
+		if (message.IsEmpty())
+			return;
+
+		TriggerGlobalNotification("AoTopContributors", message);
+	}
+
 	void TriggerGlobalNotification(string messageType, string taskTitle)
 	{
 		array<int> playerIDs = new array<int>();
@@ -1239,23 +1268,55 @@ class IA_MissionInitializer : GenericEntity
 		return s_instance;
 	}
 
+	string GetCaptureHudPacked()
+	{
+		return m_sCaptureHudPacked_Rpl;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Fills parallel arrays with every live capture HUD slot (Capturing / Paused /
+	//! Contested / Complete). Occupied 0% zones are included. Hidden slots are omitted.
+	void GetCaptureHudSlots(notnull array<string> areas, notnull array<int> states, notnull array<float> progress)
+	{
+		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, progress);
+	}
+
 	string GetCaptureHudArea()
 	{
-		return m_sCaptureHudArea_Rpl;
+		ref array<string> areas = new array<string>();
+		ref array<int> states = new array<int>();
+		ref array<float> progress = new array<float>();
+		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, progress);
+		if (areas.IsEmpty())
+			return "";
+		return areas[0];
 	}
 
 	float GetCaptureHudProgress()
 	{
-		return m_fCaptureHudProgress_Rpl;
+		ref array<string> areas = new array<string>();
+		ref array<int> states = new array<int>();
+		ref array<float> progress = new array<float>();
+		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, progress);
+		if (progress.IsEmpty())
+			return 0;
+		return progress[0];
 	}
 
 	int GetCaptureHudState()
 	{
-		return m_iCaptureHudState_Rpl;
+		ref array<string> areas = new array<string>();
+		ref array<int> states = new array<int>();
+		ref array<float> progress = new array<float>();
+		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, progress);
+		if (states.IsEmpty())
+			return IA_CaptureHudState.Hidden;
+		return states[0];
 	}
 
 	//------------------------------------------------------------------------------------------------
 	//! Server-only. Drives the persistent capture HUD on every client via RplProp.
+	//! Multiple zones can be live at once; each area name is its own slot.
 	static void PublishCaptureHud(string areaName, IA_CaptureHudState state, float progress)
 	{
 		if (!Replication.IsServer())
@@ -1276,71 +1337,350 @@ class IA_MissionInitializer : GenericEntity
 		if (progress > 1)
 			progress = 1;
 
+		ref array<string> areas = new array<string>();
+		ref array<int> states = new array<int>();
+		ref array<float> values = new array<float>();
+		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, values);
+
 		if (state == IA_CaptureHudState.Hidden)
 		{
-			if (areaName.IsEmpty() || m_sCaptureHudArea_Rpl == areaName)
-				ClearCaptureHud();
-			return;
-		}
+			if (areaName.IsEmpty())
+			{
+				if (m_sCaptureHudPacked_Rpl.IsEmpty())
+					return;
+				m_sCaptureHudPacked_Rpl = "";
+				Replication.BumpMe();
+				return;
+			}
 
-		if (state == IA_CaptureHudState.Capturing)
-		{
-			CommitCaptureHud(areaName, state, progress);
+			int hiddenIdx = FindCaptureHudSlot(areas, areaName);
+			if (hiddenIdx < 0)
+				return;
+
+			areas.Remove(hiddenIdx);
+			states.Remove(hiddenIdx);
+			values.Remove(hiddenIdx);
+			CommitCaptureHudPacked(areas, states, values);
 			return;
 		}
 
 		if (state == IA_CaptureHudState.Complete)
+			progress = 1;
+
+		int idx = FindCaptureHudSlot(areas, areaName);
+		if (idx < 0)
 		{
-			CommitCaptureHud(areaName, state, 1);
-			GetGame().GetCallqueue().Remove(this.TryHideCompletedCaptureHud);
-			GetGame().GetCallqueue().CallLater(this.TryHideCompletedCaptureHud, 2600, false, areaName);
-			return;
+			if (areas.Count() >= CAPTURE_HUD_MAX)
+			{
+				int evict = FindCaptureHudEvictIndex(states);
+				if (evict < 0)
+					return;
+				areas.Set(evict, SanitizeCaptureHudArea(areaName));
+				states.Set(evict, state);
+				values.Set(evict, progress);
+			}
+			else
+			{
+				areas.Insert(SanitizeCaptureHudArea(areaName));
+				states.Insert(state);
+				values.Insert(progress);
+			}
+		}
+		else
+		{
+			bool stateChanged = states[idx] != state;
+			bool progressChanged = Math.AbsFloat(values[idx] - progress) >= 0.008;
+			if (!stateChanged && !progressChanged)
+				return;
+
+			states.Set(idx, state);
+			values.Set(idx, progress);
 		}
 
-		if (m_iCaptureHudState_Rpl == IA_CaptureHudState.Capturing && m_sCaptureHudArea_Rpl != areaName)
-			return;
+		CommitCaptureHudPacked(areas, states, values);
 
-		CommitCaptureHud(areaName, state, progress);
+		if (state == IA_CaptureHudState.Complete)
+			GetGame().GetCallqueue().CallLater(this.TryHideCompletedCaptureHud, 2600, false, areaName);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void CommitCaptureHud(string areaName, IA_CaptureHudState state, float progress)
+	protected void CommitCaptureHudPacked(notnull array<string> areas, notnull array<int> states, notnull array<float> progress)
 	{
-		bool areaChanged = m_sCaptureHudArea_Rpl != areaName;
-		bool stateChanged = m_iCaptureHudState_Rpl != state;
-		bool progressChanged = Math.AbsFloat(m_fCaptureHudProgress_Rpl - progress) >= 0.008;
-		if (!areaChanged && !stateChanged && !progressChanged)
+		string packed = PackCaptureHud(areas, states, progress);
+		if (m_sCaptureHudPacked_Rpl == packed)
 			return;
 
-		if (state == IA_CaptureHudState.Capturing)
-			GetGame().GetCallqueue().Remove(this.TryHideCompletedCaptureHud);
-
-		m_sCaptureHudArea_Rpl = areaName;
-		m_iCaptureHudState_Rpl = state;
-		m_fCaptureHudProgress_Rpl = progress;
+		m_sCaptureHudPacked_Rpl = packed;
 		Replication.BumpMe();
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void ClearCaptureHud()
 	{
-		if (m_sCaptureHudArea_Rpl.IsEmpty() && m_iCaptureHudState_Rpl == IA_CaptureHudState.Hidden)
+		if (m_sCaptureHudPacked_Rpl.IsEmpty())
 			return;
 
-		m_sCaptureHudArea_Rpl = "";
-		m_fCaptureHudProgress_Rpl = 0;
-		m_iCaptureHudState_Rpl = IA_CaptureHudState.Hidden;
+		m_sCaptureHudPacked_Rpl = "";
 		Replication.BumpMe();
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void TryHideCompletedCaptureHud(string areaName)
 	{
-		if (m_sCaptureHudArea_Rpl != areaName)
+		if (areaName.IsEmpty())
 			return;
-		if (m_iCaptureHudState_Rpl != IA_CaptureHudState.Complete)
+
+		ref array<string> areas = new array<string>();
+		ref array<int> states = new array<int>();
+		ref array<float> values = new array<float>();
+		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, values);
+
+		int idx = FindCaptureHudSlot(areas, areaName);
+		if (idx < 0)
 			return;
-		ClearCaptureHud();
+		if (states[idx] != IA_CaptureHudState.Complete)
+			return;
+
+		ApplyCaptureHud(areaName, IA_CaptureHudState.Hidden, 0);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static void UnpackCaptureHudPacked(string packed, notnull array<string> areas, notnull array<int> states, notnull array<float> progress)
+	{
+		areas.Clear();
+		states.Clear();
+		progress.Clear();
+		if (packed.IsEmpty())
+			return;
+
+		ref array<string> slots = new array<string>();
+		packed.Split(";", slots, true);
+		int slotCount = slots.Count();
+		int i;
+		for (i = 0; i < slotCount; i++)
+		{
+			ref array<string> tokens = new array<string>();
+			slots[i].Split("|", tokens, false);
+			if (tokens.Count() < 3)
+				continue;
+
+			string area = tokens[0];
+			if (area.IsEmpty())
+				continue;
+
+			int state = tokens[1].ToInt();
+			int milli = tokens[2].ToInt();
+			float value = milli;
+			value = value * 0.001;
+			if (value < 0)
+				value = 0;
+			if (value > 1)
+				value = 1;
+
+			areas.Insert(area);
+			states.Insert(state);
+			progress.Insert(value);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static string PackCaptureHud(notnull array<string> areas, notnull array<int> states, notnull array<float> progress)
+	{
+		int count = areas.Count();
+		if (count > states.Count())
+			count = states.Count();
+		if (count > progress.Count())
+			count = progress.Count();
+		if (count > CAPTURE_HUD_MAX)
+			count = CAPTURE_HUD_MAX;
+
+		string packed = "";
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			string area = SanitizeCaptureHudArea(areas[i]);
+			if (area.IsEmpty())
+				continue;
+
+			int milli = Math.Round(progress[i] * 1000);
+			if (milli < 0)
+				milli = 0;
+			if (milli > 1000)
+				milli = 1000;
+
+			string slot = string.Format("%1|%2|%3", area, states[i], milli);
+			if (packed.IsEmpty())
+				packed = slot;
+			else
+				packed = packed + ";" + slot;
+		}
+
+		return packed;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static string SanitizeCaptureHudArea(string areaName)
+	{
+		string area = areaName;
+		area.Replace("|", " ");
+		area.Replace(";", " ");
+		return area;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static int FindCaptureHudSlot(notnull array<string> areas, string areaName)
+	{
+		string want = SanitizeCaptureHudArea(areaName);
+		int count = areas.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			if (areas[i] == want)
+				return i;
+		}
+		return -1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static int FindCaptureHudEvictIndex(notnull array<int> states)
+	{
+		int count = states.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			if (states[i] == IA_CaptureHudState.Complete)
+				return i;
+		}
+		for (i = 0; i < count; i++)
+		{
+			if (states[i] == IA_CaptureHudState.Paused)
+				return i;
+		}
+		for (i = 0; i < count; i++)
+		{
+			if (states[i] == IA_CaptureHudState.Contested)
+				return i;
+		}
+		if (count <= 0)
+			return -1;
+		return count - 1;
+	}
+
+	string GetDefendHudArea()
+	{
+		return m_sDefendHudArea_Rpl;
+	}
+
+	float GetDefendHudTimeLeft()
+	{
+		return m_fDefendHudTimeLeft_Rpl;
+	}
+
+	int GetDefendHudRemainingSec()
+	{
+		return m_iDefendHudRemainingSec_Rpl;
+	}
+
+	float GetDefendHudPressure()
+	{
+		return m_fDefendHudPressure_Rpl;
+	}
+
+	int GetDefendHudState()
+	{
+		return m_iDefendHudState_Rpl;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server-only. Drives the persistent defend HUD on every client via RplProp.
+	static void PublishDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure)
+	{
+		if (!Replication.IsServer())
+			return;
+
+		IA_MissionInitializer inst = GetInstance();
+		if (!inst)
+			return;
+
+		inst.ApplyDefendHud(areaName, state, timeLeft, remainingSec, pressure);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure)
+	{
+		if (timeLeft < 0)
+			timeLeft = 0;
+		if (timeLeft > 1)
+			timeLeft = 1;
+		if (pressure < 0)
+			pressure = 0;
+		if (pressure > 1)
+			pressure = 1;
+		if (remainingSec < 0)
+			remainingSec = 0;
+
+		if (state == IA_DefendHudState.Hidden)
+		{
+			if (areaName.IsEmpty() || m_sDefendHudArea_Rpl == areaName)
+				ClearDefendHud();
+			return;
+		}
+
+		if (state == IA_DefendHudState.Complete)
+		{
+			CommitDefendHud(areaName, state, 0, 0, pressure);
+			GetGame().GetCallqueue().Remove(this.TryHideCompletedDefendHud);
+			GetGame().GetCallqueue().CallLater(this.TryHideCompletedDefendHud, 2600, false, areaName);
+			return;
+		}
+
+		CommitDefendHud(areaName, state, timeLeft, remainingSec, pressure);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void CommitDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure)
+	{
+		bool areaChanged = m_sDefendHudArea_Rpl != areaName;
+		bool stateChanged = m_iDefendHudState_Rpl != state;
+		bool timeChanged = Math.AbsFloat(m_fDefendHudTimeLeft_Rpl - timeLeft) >= 0.01;
+		bool secChanged = m_iDefendHudRemainingSec_Rpl != remainingSec;
+		bool pressureChanged = Math.AbsFloat(m_fDefendHudPressure_Rpl - pressure) >= 0.02;
+		if (!areaChanged && !stateChanged && !timeChanged && !secChanged && !pressureChanged)
+			return;
+
+		if (state == IA_DefendHudState.Active)
+			GetGame().GetCallqueue().Remove(this.TryHideCompletedDefendHud);
+
+		m_sDefendHudArea_Rpl = areaName;
+		m_iDefendHudState_Rpl = state;
+		m_fDefendHudTimeLeft_Rpl = timeLeft;
+		m_iDefendHudRemainingSec_Rpl = remainingSec;
+		m_fDefendHudPressure_Rpl = pressure;
+		Replication.BumpMe();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ClearDefendHud()
+	{
+		if (m_sDefendHudArea_Rpl.IsEmpty() && m_iDefendHudState_Rpl == IA_DefendHudState.Hidden)
+			return;
+
+		m_sDefendHudArea_Rpl = "";
+		m_fDefendHudTimeLeft_Rpl = 0;
+		m_iDefendHudRemainingSec_Rpl = 0;
+		m_fDefendHudPressure_Rpl = 0;
+		m_iDefendHudState_Rpl = IA_DefendHudState.Hidden;
+		Replication.BumpMe();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void TryHideCompletedDefendHud(string areaName)
+	{
+		if (m_sDefendHudArea_Rpl != areaName)
+			return;
+		if (m_iDefendHudState_Rpl != IA_DefendHudState.Complete)
+			return;
+		ClearDefendHud();
 	}
 
 	IA_AreaGroupManager GetCurrentAreaGroupManager()
@@ -1492,10 +1832,7 @@ class IA_MissionInitializer : GenericEntity
 			{
 				gameInstance.SetActiveDefendMission(defendMission);
 			}
-			
-			// Trigger notification
-			TriggerGlobalNotification("DefendMissionStarted", "Defend " + selectedMarker.GetAreaName());
-			
+
 			return true;
 		}
 		
@@ -1508,6 +1845,7 @@ class IA_MissionInitializer : GenericEntity
 		
 		// Trigger RTB notification just like normal area group completion
 		TriggerGlobalNotification("AreaGroupCompleted", "Return to base and await further tasking.");
+		NotifyAoTopContributors();
 		
 		// Clean up current area instances
 		m_civilianRevoltActive = false;

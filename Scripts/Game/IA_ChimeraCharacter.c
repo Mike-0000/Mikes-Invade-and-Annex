@@ -120,6 +120,9 @@ modded class SCR_ChimeraCharacter{
 				}else if (messageType == "AreaGroupCompleted")
 			{
 				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayAreaCompletedNotification, 100, false, taskTitle); 
+			}else if (messageType == "AoTopContributors")
+			{
+				GetGame().GetCallqueue().CallLater(notificationDisplay.DisplayAoTopContributorsNotification, 100, false, taskTitle);
 			}else if (messageType == "SideTaskCreated")
 			{
 

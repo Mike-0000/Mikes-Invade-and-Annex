@@ -69,9 +69,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     // -- New capture system variables
     protected float m_captureProgress = 0.0; // 0-120 seconds
     protected const float CAPTURE_TIME_SECONDS = 120.0; // Total capture time
+    protected const float CAPTURE_RATE = 1.3; // 30% faster capture and loss vs the 120s baseline
     protected bool m_isCapturing = false;
     protected bool m_wasPausedLastFrame = false;
     protected bool m_hasReached50Percent = false;
+    protected int m_iPlayerCountInZone = 0;
     protected string m_captureStatus = "Neutral"; // "Capturing", "Paused", "Contested", "Neutral"
     
     // -- Player scoring system
@@ -237,6 +239,43 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		m_iUSCountInZone = factionCounts.Get("US");
 		m_iUSSRCountInZone = factionCounts.Get("USSR");
 	}
+
+	//------------------------------------------------------------------------------------------------
+	protected int CountPlayersInRadius()
+	{
+		PlayerManager pm = GetGame().GetPlayerManager();
+		if (!pm)
+			return 0;
+
+		ref array<int> ids = new array<int>();
+		pm.GetPlayers(ids);
+		int count = ids.Count();
+		if (count <= 0)
+			return 0;
+
+		float radiusSq = m_radius * m_radius;
+		int inside = 0;
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			IEntity pawn = pm.GetPlayerControlledEntity(ids[i]);
+			if (!pawn)
+				continue;
+			if (vector.DistanceSq(pawn.GetOrigin(), m_origin) <= radiusSq)
+				inside = inside + 1;
+		}
+		return inside;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected IA_CaptureHudState ResolveLiveHudState(int usCount, int ussrCount)
+	{
+		if (usCount > ussrCount)
+			return IA_CaptureHudState.Capturing;
+		if (ussrCount > usCount)
+			return IA_CaptureHudState.Contested;
+		return IA_CaptureHudState.Paused;
+	}
 	
 	
 
@@ -338,6 +377,19 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        return; // Zone already captured, no need to process
 	    }
 		
+		int playersInZone = CountPlayersInRadius();
+		bool occupancyChanged = false;
+		if (playersInZone > 0 && m_iPlayerCountInZone <= 0)
+		{
+			occupancyChanged = true;
+			UpdatePlayerCountsInZone();
+		}
+		else if (playersInZone <= 0 && m_iPlayerCountInZone > 0)
+		{
+			occupancyChanged = true;
+		}
+		m_iPlayerCountInZone = playersInZone;
+
 		// --- Performance: Throttle the expensive entity query ---
 		m_fQueryTimeAccumulator += timeSlice;
 		if (m_fQueryTimeAccumulator >= QUERY_INTERVAL)
@@ -346,55 +398,56 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 			m_fQueryTimeAccumulator = Math.Mod(m_fQueryTimeAccumulator, QUERY_INTERVAL);
 		}
 
-	    // Get counts for US and USSR factions from cached data
 	    int usCount = m_iUSCountInZone;
 	    int ussrCount = m_iUSSRCountInZone;
-	    
-	    // Get current capture progress (now 0-120 seconds instead of 0-1000 points)
-	    float previousProgress = m_captureProgress;
 	    bool wasCapturing = m_isCapturing;
+	    IA_CaptureHudState hudState = ResolveLiveHudState(usCount, ussrCount);
 	    
-	    // Debug logging for zone status
 	    if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
 	    {
 	        Print(string.Format("[CAPTURE_DEBUG] Zone %1 - US: %2, USSR: %3, wasCapturing: %4, isCapturing: %5, Progress: %6", 
 	            m_areaName, usCount, ussrCount, wasCapturing, m_isCapturing, Math.Round(m_captureProgress)), LogLevel.DEBUG);
 	    }
-	    
-	    // Check if capture should be paused when zone becomes empty
-	    if (usCount == 0 && ussrCount == 0)
+
+	    if (usCount == 0 && ussrCount == 0 && m_iPlayerCountInZone <= 0)
 	    {
-	        // Check if we need to send pause notification before exiting
 	        if (wasCapturing && m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
-	        {
-	            PublishCaptureHudState(IA_CaptureHudState.Paused);
 	            TriggerCaptureNotification("CapturePaused", m_areaName + " capture paused");
-	            Print(string.Format("[CAPTURE] Zone %1 - PAUSED (empty zone) - Progress: %2/%3 seconds", 
-	                m_areaName, Math.Round(m_captureProgress), CAPTURE_TIME_SECONDS), LogLevel.WARNING);
-	        }
-	        
+
 	        m_IsActive = false;
 	        m_isCapturing = false;
 	        m_captureStatus = "Neutral";
+
+	        m_fHudPublishAcc = m_fHudPublishAcc + timeSlice;
+	        if (occupancyChanged || wasCapturing || m_fHudPublishAcc >= HUD_PUBLISH_INTERVAL)
+	        {
+	            m_fHudPublishAcc = 0;
+	            if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
+	            {
+	                Print(string.Format("[CAPTURE] Zone %1 - PAUSED (empty zone) - Progress: %2/%3 seconds", 
+	                    m_areaName, Math.Round(m_captureProgress), CAPTURE_TIME_SECONDS), LogLevel.WARNING);
+	                PublishCaptureHudState(IA_CaptureHudState.Paused);
+	            }
+	            else
+	            {
+	                PublishCaptureHudState(IA_CaptureHudState.Hidden);
+	            }
+	        }
 	        return;
 	    }
 	    
 	    m_IsActive = true;
-	    
-	    // Determine capture state based on majority
+		float tick = timeSlice * CAPTURE_RATE;
+
 	    if (usCount > ussrCount) 
 	    {
-	        // US has majority - capture progresses (only if not already captured)
 	        if (!m_isCaptured)
 	        {
 	            m_isCapturing = true;
 	            m_captureStatus = "Capturing";
-	            
-				// Increment progress and scoring accumulator by timeSlice for frame-rate independence
-				m_captureProgress += timeSlice;
+				m_captureProgress = m_captureProgress + tick;
 				m_fTimeAccumulator += timeSlice;
-	            
-				// If scoring interval has passed, award points
+
 				if (m_fTimeAccumulator >= SCORING_INTERVAL)
 				{
 					int pointsToAward = Math.Floor(m_fTimeAccumulator / SCORING_INTERVAL);
@@ -402,13 +455,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 					{
 						AwardCapturePoints(m_entitiesInZone, pointsToAward);
 					}
-					// Decrement accumulator by the amount of time accounted for
 					m_fTimeAccumulator = Math.Mod(m_fTimeAccumulator, SCORING_INTERVAL);
 				}
 	        }
 	        else
 	        {
-	            // Zone already captured, just maintain captured status
 	            m_captureStatus = "Captured";
 	        }
 	        
@@ -424,53 +475,67 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	            TriggerCaptureNotification("Capture50Percent", m_areaName + " 50% captured");
 	        }
 	    }
-	    else if (ussrCount >= usCount)
+	    else if (ussrCount > usCount)
 	    {
-	        // USSR has majority or equal - capture pauses
 	        m_isCapturing = false;
-	        
-	        if (ussrCount > usCount)
-	            m_captureStatus = "Contested";
-	        else
-	            m_captureStatus = "Neutral";
-	        
-	        if (wasCapturing && m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
-	        {
-	            if (ussrCount > usCount)
-	                PublishCaptureHudState(IA_CaptureHudState.Contested);
-	            else
-	                PublishCaptureHudState(IA_CaptureHudState.Paused);
+	        m_captureStatus = "Contested";
+	        if (m_captureProgress > 0)
+	            m_captureProgress = m_captureProgress - tick;
+	        if (m_captureProgress < 0)
+	            m_captureProgress = 0;
+	        if (m_captureProgress < CAPTURE_TIME_SECONDS * 0.5)
+	            m_hasReached50Percent = false;
+
+	        if (wasCapturing && m_captureProgress > 0)
 	            TriggerCaptureNotification("CapturePaused", m_areaName + " capture paused");
-	        }
 	    }
-	    
-	    // Clamp progress between 0 and capture time
+	    else
+	    {
+	        m_isCapturing = false;
+	        m_captureStatus = "Paused";
+	        if (wasCapturing)
+	            TriggerCaptureNotification("CapturePaused", m_areaName + " capture paused");
+	    }
+
 	    m_captureProgress = Math.Clamp(m_captureProgress, 0, CAPTURE_TIME_SECONDS);
-	    
-	    // Update faction score for compatibility (scale to 0-1000 range)
+
 	    float scaledScore = (m_captureProgress / CAPTURE_TIME_SECONDS) * 1000.0;
 	    USFactionScore = scaledScore;
 	    m_FactionScores.Set("US", scaledScore);
-	    
-	    // Debug logging
+
+	    bool showHud = false;
+	    if (m_iPlayerCountInZone > 0)
+	    	showHud = true;
+	    else if (m_isCapturing)
+	    	showHud = true;
+	    else if (m_captureProgress > 0)
+	    	showHud = true;
+
 	    m_fHudPublishAcc = m_fHudPublishAcc + timeSlice;
+	    bool publishNow = false;
 	    if (m_fHudPublishAcc >= HUD_PUBLISH_INTERVAL)
 	    {
 	        m_fHudPublishAcc = 0;
-	        if (m_isCapturing)
-	            PublishCaptureHudState(IA_CaptureHudState.Capturing);
-	        else if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
-	        {
-	            if (ussrCount > usCount)
-	                PublishCaptureHudState(IA_CaptureHudState.Contested);
-	            else
-	                PublishCaptureHudState(IA_CaptureHudState.Paused);
-	        }
+	        publishNow = true;
+	    }
+	    if (hudState != IA_CaptureHudState.Capturing && wasCapturing)
+	    	publishNow = true;
+	    if (hudState == IA_CaptureHudState.Capturing && !wasCapturing)
+	    	publishNow = true;
+	    if (occupancyChanged)
+	    	publishNow = true;
+
+	    if (publishNow)
+	    {
+	        if (showHud)
+	            PublishCaptureHudState(hudState);
+	        else
+	            PublishCaptureHudState(IA_CaptureHudState.Hidden);
 	    }
 
 	    if (m_isCapturing)
 	    {
-	        int remainingTime = Math.Ceil(CAPTURE_TIME_SECONDS - m_captureProgress);
+	        int remainingTime = Math.Ceil((CAPTURE_TIME_SECONDS - m_captureProgress) / CAPTURE_RATE);
 	        Print(string.Format("[CAPTURE] Zone %1 - Progress: %2/%3 seconds (%4%%) - Time remaining: %5s", 
 	            m_areaName, 
 	            Math.Round(m_captureProgress), 
@@ -486,10 +551,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        m_isCapturing = false; // Stop capturing state
 	        PublishCaptureHudState(IA_CaptureHudState.Complete);
 	        
-	        Print(string.Format("[CAPTURE] Zone %1 - CAPTURED! Top contributors being calculated...", m_areaName), LogLevel.NORMAL);
-	        
-	        // Get and log top contributors
-	        array<string> topContributors = GetTopContributors(3);
+	        Print(string.Format("[CAPTURE] Zone %1 - CAPTURED!", m_areaName), LogLevel.NORMAL);
 	        
 	        // --- BEGIN MODIFIED: Queue stats for each contributor ---
 	        IA_StatsManager statsManager = IA_StatsManager.GetInstance();
@@ -506,32 +568,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        }
 	        // --- END MODIFIED ---
 	        
-	        // Build the capture completion message with top contributors
-	        string captureMessage = m_areaName + " Captured!";
-	        
-	        if (!topContributors.IsEmpty())
-	        {
-	            captureMessage += "\nTop contributors: ";
-	            
-	            for (int i = 0; i < topContributors.Count(); i++)
-	            {
-	                string playerGuid = topContributors[i];
-	                string playerName = GetPlayerNameFromGuid(playerGuid);
-	                int score = GetPlayerScore(playerGuid);
-	                
-	                                // Format: "1. PlayerName (60)"
-                captureMessage += string.Format("%1. %2 (%3)", i + 1, playerName, score);
-	                
-	                if (i < topContributors.Count() - 1)
-	                    captureMessage += ", ";
-	                
-	                // Also log to console
-	                Print(string.Format("  %1. %2 (GUID: %3): %4 seconds", i + 1, playerName, playerGuid, score), LogLevel.NORMAL);
-	            }
-	        }
-	        
-	        // Send notification to all players
-	        TriggerCaptureNotification("TaskCompleted", captureMessage);
+	        TriggerCaptureNotification("TaskCompleted", m_areaName + " Captured!");
 
 	        // Optional mortar pits may be captured after the required AO zones
 	        // complete (including during a defend mission), so complete their
@@ -571,46 +608,13 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		}
 		
 		// Print(("[DEBUG] IA_AreaMarker.EOnInit called for " + m_areaName + " at " + m_origin, LogLevel.NORMAL);
-		
-		// Only add markers on the server side
-		if (Replication.IsServer() && InitCalled == false)
-		{
-			// Prevent null/self being added multiple times
-			if (!s_areaMarkers.Contains(this) && this != null)
-			{
-				/*
-				//// Print(("Log1",LogLevel.NORMAL);
-				InitCalled = true;
-				if(!this || !m_areaName)
-					return;
-				foreach(IA_AreaMarker tempMarker : s_areaMarkers){
-					if(!tempMarker || !tempMarker.m_areaName)
-						return;
-					if(tempMarker.m_areaName == m_areaName)
-					{
-						// Remove the duplicate marker from the array
-						int index = s_areaMarkers.Find(tempMarker);
-						if (index != -1)
-						{
-							s_areaMarkers.Remove(index);
-							// Print(("[DEBUG] Removed duplicate marker: " + m_areaName, LogLevel.NORMAL);
-						}
-									
-					}
-				}*/
-				
-                s_areaMarkers.Insert(this);
-				super.EOnInit(owner);
-				// Print(("[DEBUG] IA_AreaMarker added to static list: " + m_areaName + " at " + m_origin + " (Total markers: " + s_areaMarkers.Count() + ")", LogLevel.NORMAL);
-				
-				// Spawn prefab entity if this is a Radio Tower
-				// SpawnPrefabEntity(); // Removed from here
-			}
-			else
-			{
-				// Print(("[WARNING] IA_AreaMarker duplicate or null skipped: " + m_areaName + " at " + m_origin, LogLevel.WARNING);
-			}
-		}
+
+		if (!s_areaMarkers)
+			s_areaMarkers = new array<IA_AreaMarker>();
+		if (!s_areaMarkers.Contains(this))
+			s_areaMarkers.Insert(this);
+		InitCalled = true;
+		super.EOnInit(owner);
 	}
 
     
@@ -1456,6 +1460,51 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         float radiusSq = m_radius * m_radius;
         return distanceSq <= radiusSq;
     }
+
+	//------------------------------------------------------------------------------------------------
+	//! Fills `names` with capturable area names whose radius contains the local pawn.
+	//! Used by the objective HUD so capture bars are occupancy-local.
+	static void CollectAreasContainingLocalPlayer(notnull array<string> names)
+	{
+		names.Clear();
+
+		PlayerController pc = GetGame().GetPlayerController();
+		if (!pc)
+			return;
+
+		IEntity pawn = pc.GetControlledEntity();
+		if (!pawn)
+			return;
+
+		vector mat[4];
+		pawn.GetWorldTransform(mat);
+		vector pos = mat[3];
+
+		array<IA_AreaMarker> markers = GetAllMarkers();
+		int count = markers.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			IA_AreaMarker marker = markers[i];
+			if (!marker)
+				continue;
+
+			IA_AreaType areaType = marker.GetAreaType();
+			if (areaType == IA_AreaType.RadioTower)
+				continue;
+			if (areaType == IA_AreaType.DefendObjective)
+				continue;
+			if (!marker.IsPositionInside(pos))
+				continue;
+
+			string areaName = marker.GetAreaName();
+			if (areaName.IsEmpty())
+				continue;
+			if (names.Find(areaName) >= 0)
+				continue;
+			names.Insert(areaName);
+		}
+	}
     
     // --- Player Scoring Methods ---
     protected void AwardCapturePoints(array<IEntity> entities, int points = 1)
@@ -1573,6 +1622,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         m_captureProgress = 0.0;
         m_captureStatus = "Neutral";
         m_fHudPublishAcc = 0;
+        m_iPlayerCountInZone = 0;
         IA_MissionInitializer.PublishCaptureHud(m_areaName, IA_CaptureHudState.Hidden, 0);
     }
 
@@ -1652,9 +1702,21 @@ class CaptureZoneQueryCallback
 		SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(entity);
 		if (!character)
 			return true;
-		
-		if(character.GetDamageManager().GetHealth() < 0.01 || character.GetDamageManager().IsDestroyed())
+
+		SCR_DamageManagerComponent damageManager = character.GetDamageManager();
+		if (!damageManager)
 			return true;
+		if (damageManager.GetHealth() < 0.01 || damageManager.IsDestroyed())
+			return true;
+
+		// Unconscious AI still have health, so they used to contest capture while
+		// lying on the ground. Players who are down still count.
+		CharacterControllerComponent controller = character.GetCharacterController();
+		if (controller && !controller.IsPlayerControlled())
+		{
+			if (controller.IsUnconscious() || controller.GetLifeState() != ECharacterLifeState.ALIVE)
+				return true;
+		}
         
         // Entity is a live character, add it to the list for point scoring
         m_CollectedLiveEntities.Insert(entity);

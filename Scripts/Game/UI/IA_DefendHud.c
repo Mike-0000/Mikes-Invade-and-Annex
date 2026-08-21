@@ -1,24 +1,20 @@
 //------------------------------------------------------------------------------------------------
-//! Persistent capture readout. Independent of IA_NotificationToast so a long hold
-//! never blocks task / alert toasts. Pattern: Create(runtime) → overlay strip
-//! AddChild. Keep as protected ref. Paint uses DrawX/Y + GetDrawOpacity().
+//! Persistent defend-hold readout. Independent of IA_NotificationToast so the
+//! timer never blocks task / alert toasts. Pattern: Create(runtime) → bottom-left
+//! objective strip AddChild. Keep as protected ref. Paint uses DrawX/Y +
+//! GetDrawOpacity().
 //!
-//! Chrome: 288×48 beveled bar (shrinks when several sit in the bottom-left
-//! strip), 18px status tab on the top-left, spinning ring, area name, percent.
-//! Flush to the bottom edge. Colors are the mock tokens (#0d1412 / #5efb83 /
-//! #163824), not the uplink theme. Tie uses the amber warning tone; deficit
-//! uses Danger. Capture and loss both run 30% faster than the 120s baseline.
+//! Chrome matches IA_CaptureHud (bottom-docked 288×48 bezel). Shows remaining
+//! M:SS and a pressure rail instead of capture percent.
 //------------------------------------------------------------------------------------------------
-enum IA_CaptureHudState
+enum IA_DefendHudState
 {
 	Hidden,
-	Capturing,
-	Paused,
-	Contested,
+	Active,
 	Complete
 }
 
-enum IA_CaptureHudAnim
+enum IA_DefendHudAnim
 {
 	Idle,
 	Intro,
@@ -27,57 +23,61 @@ enum IA_CaptureHudAnim
 }
 
 //------------------------------------------------------------------------------------------------
-class IA_CaptureHud : MUI_Surface
+class IA_DefendHud : MUI_Surface
 {
 	protected static const float HUD_W = 288;
+	protected static const float GLOW_H = 48;
 	protected static const float TAB_H = 18;
 	protected static const float BODY_H = 48;
 	protected static const float HUD_H = 66;
 	protected static const float BEVEL = 4;
 	protected static const float DOCK_Y = 1;
-	protected static const float PAD_X = 14;
-	protected static const float SPIN_R = 11;
-	protected static const float SPIN_W = 3;
-	protected static const float SPIN_DOT = 3.6;
-	protected static const float GAP_ICON = 10;
-	protected static const float GAP_PCT = 6;
+	protected static const float PAD_X = 16;
+	protected static const float SPIN_R = 6;
+	protected static const float SPIN_W = 2;
+	protected static const float GAP_ICON = 12;
+	protected static const float GAP_TIME = 6;
 	protected static const float DIV_W = 2;
 	protected static const float DIV_H = 24;
 	protected static const float TAB_PAD_X = 12;
+	protected static const float RAIL_H = 3;
 	protected static const int FONT_TAB = 10;
-	protected static const int FONT_TITLE = 18;
-	protected static const int FONT_PCT = 14;
+	protected static const int FONT_KICK = 10;
+	protected static const int FONT_TITLE = 13;
+	protected static const int FONT_TIME = 14;
 	protected static const float TRACK_TAB = 1.5;
+	protected static const float TRACK_KICK = 1.2;
 	protected static const float INTRO_DUR = 0.38;
 	protected static const float OUTRO_DUR = 0.28;
 	protected static const float SLIDE_FROM = 14;
-	protected static const float CAPTURE_BASE_SECONDS = 120.0;
-	protected static const float CAPTURE_RATE = 1.3;
 
-	protected IA_CaptureHudAnim m_eAnim;
-	protected IA_CaptureHudState m_eShownState;
+	protected IA_DefendHudAnim m_eAnim;
+	protected IA_DefendHudState m_eShownState;
 
 	protected string m_sShownArea;
 
-	protected float m_fServerProgress;
-	protected float m_fPredicted;
-	protected float m_fDisplay;
+	protected float m_fServerPressure;
+	protected float m_fPressureDisplay;
+	protected float m_fLocalRemainSec;
+	protected int m_iServerRemainSec;
 	protected float m_fAnimT;
 	protected float m_fCompleteHold;
 	protected float m_fSpin;
 	protected bool m_bArmed;
 
 	protected ref Color m_HudBg;
-	protected ref Color m_HudGreen;
 	protected ref Color m_HudAmber;
+	protected ref Color m_HudGreen;
 	protected ref Color m_HudTab;
-	protected ref Color m_HudTabHold;
-	protected ref Color m_HudTabLose;
 	protected ref Color m_HudWhite;
+	protected ref Color m_HudRail;
+	protected ref Color m_VignetteTop;
+	protected ref Color m_VignetteBot;
+	protected ref Color m_Shadow;
 	protected ref array<float> m_aBodyPoly;
 
 	//------------------------------------------------------------------------------------------------
-	void IA_CaptureHud()
+	void IA_DefendHud()
 	{
 		m_Style.m_WidthMode = MUI_SizeMode.Exact;
 		m_Style.m_HeightMode = MUI_SizeMode.Exact;
@@ -91,55 +91,33 @@ class IA_CaptureHud : MUI_Surface
 		m_Style.m_bInteractive = false;
 		m_bBlurEnabled = true;
 		m_fBlurIntensity = 0.90;
-		m_eAnim = IA_CaptureHudAnim.Idle;
-		m_eShownState = IA_CaptureHudState.Hidden;
+		m_eAnim = IA_DefendHudAnim.Idle;
+		m_eShownState = IA_DefendHudState.Hidden;
 		m_sShownArea = "";
 		m_fIntroDuration = 0;
 		m_fIntro = 1;
 		m_HudBg = Color.FromSRGBA(13, 20, 18, 230);
-		m_HudGreen = Color.FromSRGBA(94, 251, 131, 255);
 		m_HudAmber = Color.FromSRGBA(240, 180, 70, 255);
-		m_HudTab = Color.FromSRGBA(22, 56, 36, 204);
-		m_HudTabHold = Color.FromSRGBA(56, 40, 18, 204);
-		m_HudTabLose = Color.FromSRGBA(56, 18, 18, 204);
+		m_HudGreen = Color.FromSRGBA(94, 251, 131, 255);
+		m_HudTab = Color.FromSRGBA(56, 40, 18, 204);
 		m_HudWhite = Color.FromSRGBA(255, 255, 255, 255);
+		m_HudRail = Color.FromSRGBA(40, 32, 18, 180);
+		m_VignetteTop = Color.FromSRGBA(0, 0, 0, 0);
+		m_VignetteBot = Color.FromSRGBA(0, 0, 0, 153);
+		m_Shadow = Color.FromSRGBA(0, 0, 0, 204);
 		m_aBodyPoly = new array<float>();
 	}
 
 	//------------------------------------------------------------------------------------------------
-	static IA_CaptureHud Create(notnull MUI_Runtime runtime)
+	static IA_DefendHud Create(notnull MUI_Runtime runtime)
 	{
-		ref IA_CaptureHud hud = new IA_CaptureHud();
+		ref IA_DefendHud hud = new IA_DefendHud();
 		runtime.Adopt(hud);
-		hud.SetName("sectorHold");
+		hud.SetName("defendHold");
 		hud.SetWidth(HUD_W);
 		hud.SetHeight(HUD_H);
 		hud.SetVisible(false);
 		return hud;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	static float GetHudWidth()
-	{
-		return HUD_W;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	static float GetHudHeight()
-	{
-		return HUD_H;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	string GetShownArea()
-	{
-		return m_sShownArea;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	bool IsIdle()
-	{
-		return m_eAnim == IA_CaptureHudAnim.Idle;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -162,8 +140,8 @@ class IA_CaptureHud : MUI_Surface
 	//------------------------------------------------------------------------------------------------
 	void Abort()
 	{
-		m_eAnim = IA_CaptureHudAnim.Idle;
-		m_eShownState = IA_CaptureHudState.Hidden;
+		m_eAnim = IA_DefendHudAnim.Idle;
+		m_eShownState = IA_DefendHudState.Hidden;
 		m_bArmed = false;
 		m_sShownArea = "";
 		m_fIntro = 1;
@@ -175,54 +153,68 @@ class IA_CaptureHud : MUI_Surface
 	override void OnTick(float dt)
 	{
 		super.OnTick(dt);
+		PullServer();
 		TickAnim(dt);
-		TickProgress(dt);
+		TickRemain(dt);
+		TickPressure(dt);
 		TickSpin(dt);
 
-		if (m_eAnim != IA_CaptureHudAnim.Idle)
+		if (m_eAnim != IA_DefendHudAnim.Idle)
 			InvalidatePaint();
 	}
 
 	//------------------------------------------------------------------------------------------------
-	void ApplyServer(string areaName, IA_CaptureHudState state, float progress)
+	protected void PullServer()
 	{
-		if (progress < 0)
-			progress = 0;
-		if (progress > 1)
-			progress = 1;
-
-		m_fServerProgress = progress;
-
-		if (state == IA_CaptureHudState.Hidden)
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		IA_DefendHudState nextState = IA_DefendHudState.Hidden;
+		string nextArea = "";
+		int nextRemain = 0;
+		float nextPressure = 0;
+		if (init)
 		{
-			if (m_eAnim == IA_CaptureHudAnim.Intro || m_eAnim == IA_CaptureHudAnim.Hold)
+			nextState = DecodeState(init.GetDefendHudState());
+			nextArea = init.GetDefendHudArea();
+			nextRemain = init.GetDefendHudRemainingSec();
+			nextPressure = init.GetDefendHudPressure();
+		}
+
+		if (nextPressure < 0)
+			nextPressure = 0;
+		if (nextPressure > 1)
+			nextPressure = 1;
+		if (nextRemain < 0)
+			nextRemain = 0;
+
+		m_fServerPressure = nextPressure;
+		m_iServerRemainSec = nextRemain;
+
+		if (nextState == IA_DefendHudState.Hidden)
+		{
+			if (m_eAnim == IA_DefendHudAnim.Intro || m_eAnim == IA_DefendHudAnim.Hold)
 				BeginOutro();
 			return;
 		}
 
-		bool areaChanged = m_sShownArea != areaName;
+		bool areaChanged = m_sShownArea != nextArea;
 		if (areaChanged || !m_bArmed)
-			Arm(areaName, state, progress);
-		else if (m_eShownState != state)
-			m_eShownState = state;
+			Arm(nextArea, nextState, nextRemain, nextPressure);
+		else if (m_eShownState != nextState)
+			m_eShownState = nextState;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	static IA_CaptureHudState DecodeState(int raw)
+	protected IA_DefendHudState DecodeState(int raw)
 	{
-		if (raw == IA_CaptureHudState.Capturing)
-			return IA_CaptureHudState.Capturing;
-		if (raw == IA_CaptureHudState.Paused)
-			return IA_CaptureHudState.Paused;
-		if (raw == IA_CaptureHudState.Contested)
-			return IA_CaptureHudState.Contested;
-		if (raw == IA_CaptureHudState.Complete)
-			return IA_CaptureHudState.Complete;
-		return IA_CaptureHudState.Hidden;
+		if (raw == IA_DefendHudState.Active)
+			return IA_DefendHudState.Active;
+		if (raw == IA_DefendHudState.Complete)
+			return IA_DefendHudState.Complete;
+		return IA_DefendHudState.Hidden;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void Arm(string areaName, IA_CaptureHudState state, float progress)
+	protected void Arm(string areaName, IA_DefendHudState state, int remainingSec, float pressure)
 	{
 		bool snapDisplay = !m_bArmed;
 		if (m_sShownArea != areaName)
@@ -230,20 +222,24 @@ class IA_CaptureHud : MUI_Surface
 
 		m_sShownArea = areaName;
 		m_eShownState = state;
-		m_fPredicted = progress;
+		m_iServerRemainSec = remainingSec;
+		m_fServerPressure = pressure;
 		if (snapDisplay)
-			m_fDisplay = progress;
+		{
+			m_fLocalRemainSec = remainingSec;
+			m_fPressureDisplay = pressure;
+		}
 		m_bArmed = true;
 		m_fCompleteHold = 0;
 
-		if (m_eAnim == IA_CaptureHudAnim.Idle || m_eAnim == IA_CaptureHudAnim.Outro)
+		if (m_eAnim == IA_DefendHudAnim.Idle || m_eAnim == IA_DefendHudAnim.Outro)
 			BeginIntro();
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void BeginIntro()
 	{
-		m_eAnim = IA_CaptureHudAnim.Intro;
+		m_eAnim = IA_DefendHudAnim.Intro;
 		m_fAnimT = 0;
 		m_fIntroDuration = 0;
 		m_fIntro = 0;
@@ -255,21 +251,21 @@ class IA_CaptureHud : MUI_Surface
 	//------------------------------------------------------------------------------------------------
 	protected void BeginOutro()
 	{
-		if (m_eAnim == IA_CaptureHudAnim.Idle)
+		if (m_eAnim == IA_DefendHudAnim.Idle)
 			return;
-		if (m_eAnim == IA_CaptureHudAnim.Outro)
+		if (m_eAnim == IA_DefendHudAnim.Outro)
 			return;
-		m_eAnim = IA_CaptureHudAnim.Outro;
+		m_eAnim = IA_DefendHudAnim.Outro;
 		m_fAnimT = 0;
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void TickAnim(float dt)
 	{
-		if (m_eAnim == IA_CaptureHudAnim.Idle)
+		if (m_eAnim == IA_DefendHudAnim.Idle)
 			return;
 
-		if (m_eAnim == IA_CaptureHudAnim.Intro)
+		if (m_eAnim == IA_DefendHudAnim.Intro)
 		{
 			m_fAnimT = m_fAnimT + dt / INTRO_DUR;
 			float t = MUI_Ease.CubicOut(m_fAnimT);
@@ -277,16 +273,16 @@ class IA_CaptureHud : MUI_Surface
 			m_fSlideY = (1.0 - t) * SLIDE_FROM + t * DOCK_Y;
 			if (m_fAnimT < 1)
 				return;
-			m_eAnim = IA_CaptureHudAnim.Hold;
+			m_eAnim = IA_DefendHudAnim.Hold;
 			m_fIntro = 1;
 			m_fSlideY = DOCK_Y;
 			return;
 		}
 
-		if (m_eAnim == IA_CaptureHudAnim.Hold)
+		if (m_eAnim == IA_DefendHudAnim.Hold)
 		{
 			m_fSlideY = DOCK_Y;
-			if (m_eShownState == IA_CaptureHudState.Complete)
+			if (m_eShownState == IA_DefendHudState.Complete)
 			{
 				m_fCompleteHold = m_fCompleteHold + dt;
 				if (m_fCompleteHold >= 2.15)
@@ -302,72 +298,70 @@ class IA_CaptureHud : MUI_Surface
 		if (m_fAnimT < 1)
 			return;
 
-		m_eAnim = IA_CaptureHudAnim.Idle;
+		m_eAnim = IA_DefendHudAnim.Idle;
 		m_bArmed = false;
 		m_sShownArea = "";
-		m_eShownState = IA_CaptureHudState.Hidden;
+		m_eShownState = IA_DefendHudState.Hidden;
 		m_fIntro = 1;
 		m_fSlideY = 0;
 		SetVisible(false);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void TickProgress(float dt)
+	protected void TickRemain(float dt)
 	{
-		if (m_eAnim == IA_CaptureHudAnim.Idle)
+		if (m_eAnim == IA_DefendHudAnim.Idle)
 			return;
-		if (m_eAnim == IA_CaptureHudAnim.Outro)
+		if (m_eAnim == IA_DefendHudAnim.Outro)
 			return;
 
-		if (m_eShownState == IA_CaptureHudState.Capturing)
+		if (m_eShownState == IA_DefendHudState.Complete)
 		{
-			m_fPredicted = m_fPredicted + dt * CAPTURE_RATE / CAPTURE_BASE_SECONDS;
-			if (m_fServerProgress > m_fPredicted)
-				m_fPredicted = m_fServerProgress;
-			else if (m_fPredicted - m_fServerProgress > 0.03)
-				m_fPredicted = m_fServerProgress;
-		}
-		else if (m_eShownState == IA_CaptureHudState.Contested)
-		{
-			m_fPredicted = m_fPredicted - dt * CAPTURE_RATE / CAPTURE_BASE_SECONDS;
-			if (m_fServerProgress < m_fPredicted)
-				m_fPredicted = m_fServerProgress;
-			else if (m_fServerProgress - m_fPredicted > 0.03)
-				m_fPredicted = m_fServerProgress;
-		}
-		else
-		{
-			m_fPredicted = MUI_Ease.Approach(m_fPredicted, m_fServerProgress, dt, 8);
+			m_fLocalRemainSec = 0;
+			return;
 		}
 
-		if (m_fPredicted < 0)
-			m_fPredicted = 0;
-		if (m_fPredicted > 1)
-			m_fPredicted = 1;
+		m_fLocalRemainSec = m_fLocalRemainSec - dt;
+		if (m_fLocalRemainSec < 0)
+			m_fLocalRemainSec = 0;
 
-		if (m_eShownState == IA_CaptureHudState.Complete)
-			m_fPredicted = 1;
+		float serverRemain = m_iServerRemainSec;
+		float delta = m_fLocalRemainSec - serverRemain;
+		if (delta < 0)
+			delta = -delta;
+		if (delta > 2.5)
+			m_fLocalRemainSec = serverRemain;
+		else if (m_fLocalRemainSec < serverRemain - 0.35)
+			m_fLocalRemainSec = serverRemain;
+	}
 
-		m_fDisplay = MUI_Ease.Approach(m_fDisplay, m_fPredicted, dt, 9);
+	//------------------------------------------------------------------------------------------------
+	protected void TickPressure(float dt)
+	{
+		if (m_eAnim == IA_DefendHudAnim.Idle)
+			return;
+		if (m_eAnim == IA_DefendHudAnim.Outro)
+			return;
+
+		m_fPressureDisplay = MUI_Ease.Approach(m_fPressureDisplay, m_fServerPressure, dt, 8);
+		if (m_fPressureDisplay < 0)
+			m_fPressureDisplay = 0;
+		if (m_fPressureDisplay > 1)
+			m_fPressureDisplay = 1;
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void TickSpin(float dt)
 	{
-		if (m_eAnim == IA_CaptureHudAnim.Idle)
+		if (m_eAnim == IA_DefendHudAnim.Idle)
 			return;
-		if (m_eAnim == IA_CaptureHudAnim.Outro)
-			return;
-
-		float degPerSec = 0;
-		if (m_eShownState == IA_CaptureHudState.Capturing)
-			degPerSec = 360;
-		else if (m_eShownState == IA_CaptureHudState.Contested)
-			degPerSec = 540;
-
-		if (degPerSec <= 0)
+		if (m_eAnim == IA_DefendHudAnim.Outro)
 			return;
 
+		if (m_eShownState == IA_DefendHudState.Complete)
+			return;
+
+		float degPerSec = 180 + m_fPressureDisplay * 360;
 		m_fSpin = m_fSpin + dt * degPerSec;
 		if (m_fSpin >= 360)
 			m_fSpin = m_fSpin - 360;
@@ -412,7 +406,7 @@ class IA_CaptureHud : MUI_Surface
 	//------------------------------------------------------------------------------------------------
 	override void Paint(MUI_RenderSurface surface)
 	{
-		if (m_eAnim == IA_CaptureHudAnim.Idle)
+		if (m_eAnim == IA_DefendHudAnim.Idle)
 			return;
 
 		float x = DrawX();
@@ -428,6 +422,7 @@ class IA_CaptureHud : MUI_Surface
 		float bodyY = y + TAB_H;
 
 		SyncHostWidgets();
+		DrawVignette(surface, x, tabY - GLOW_H, w, op);
 		DrawBody(surface, x, bodyY, w, op, tone);
 		DrawTab(surface, x, tabY, w, op, tone);
 		DrawContent(surface, x, bodyY, w, op, tone);
@@ -436,35 +431,52 @@ class IA_CaptureHud : MUI_Surface
 	//------------------------------------------------------------------------------------------------
 	protected Color ResolveTone(notnull MUI_ThemeData theme)
 	{
-		if (m_eShownState == IA_CaptureHudState.Contested)
+		if (m_eShownState == IA_DefendHudState.Complete)
+			return m_HudGreen;
+		if (m_fPressureDisplay >= 0.75)
 			return theme.Danger;
-		if (m_eShownState == IA_CaptureHudState.Paused)
-			return m_HudAmber;
-		return m_HudGreen;
+		return m_HudAmber;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected Color ResolveTabFill()
+	protected string ResolveKicker()
 	{
-		if (m_eShownState == IA_CaptureHudState.Contested)
-			return m_HudTabLose;
-		if (m_eShownState == IA_CaptureHudState.Paused)
-			return m_HudTabHold;
-		return m_HudTab;
+		if (m_eShownState == IA_DefendHudState.Complete)
+			return "POSITION HELD";
+		return "DEFEND";
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected string ResolveTab()
 	{
-		if (m_eShownState == IA_CaptureHudState.Capturing)
-			return "SECURING";
-		if (m_eShownState == IA_CaptureHudState.Contested)
-			return "LOSING";
-		if (m_eShownState == IA_CaptureHudState.Paused)
-			return "HOLD";
-		if (m_eShownState == IA_CaptureHudState.Complete)
+		if (m_eShownState == IA_DefendHudState.Complete)
 			return "SECURE";
-		return "LIVE";
+		if (m_fPressureDisplay >= 0.75)
+			return "ASSAULT";
+		return "HOLD";
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected string FormatRemain()
+	{
+		int total = m_fLocalRemainSec;
+		if (total < 0)
+			total = 0;
+		int minutes = total / 60;
+		int seconds = total - minutes * 60;
+		string secStr;
+		if (seconds < 10)
+			secStr = "0" + seconds.ToString();
+		else
+			secStr = seconds.ToString();
+		return minutes.ToString() + ":" + secStr;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void DrawVignette(MUI_RenderSurface surface, float x, float y, float w, float op)
+	{
+		surface.FillGradientV(x, y, w, GLOW_H, MUI_ColorUtil.Fade(m_VignetteTop, op), MUI_ColorUtil.Fade(m_VignetteBot, op), 10);
+		surface.FillRect(x - 8, y + GLOW_H - 18, w + 16, 28, MUI_ColorUtil.Fade(m_Shadow, op * 0.35), 16);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -479,9 +491,7 @@ class IA_CaptureHud : MUI_Surface
 		surface.DrawLine(x + w, y, x + w, y + BODY_H + DOCK_Y - BEVEL, edge, 1);
 
 		float glow = 0.5 + 0.5 * MUI_Ease.Pulse(GetTime(), 0.5);
-		if (m_eShownState == IA_CaptureHudState.Paused)
-			glow = 0.55;
-		else if (m_eShownState == IA_CaptureHudState.Complete)
+		if (m_eShownState == IA_DefendHudState.Complete)
 			glow = 1;
 
 		int slices = 24;
@@ -499,6 +509,16 @@ class IA_CaptureHud : MUI_Surface
 				a = 0;
 			surface.FillRect(x + sliceW * i, y, sliceW + 0.5, 1, MUI_ColorUtil.Fade(tone, op * 0.50 * glow * a), 0);
 		}
+
+		float railY = y + BODY_H - RAIL_H - 5;
+		float railX = x + PAD_X;
+		float railW = w - PAD_X * 2;
+		if (railW < 8)
+			railW = 8;
+		surface.FillRect(railX, railY, railW, RAIL_H, MUI_ColorUtil.Fade(m_HudRail, op), 0);
+		float fillW = railW * m_fPressureDisplay;
+		if (fillW > 0)
+			surface.FillRect(railX, railY, fillW, RAIL_H, MUI_ColorUtil.Fade(tone, op * 0.90), 0);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -509,12 +529,10 @@ class IA_CaptureHud : MUI_Surface
 		float tabW = textW + TAB_PAD_X * 2;
 		if (tabW < 48)
 			tabW = 48;
-		if (tabW > w)
-			tabW = w;
-		float tx = x;
+		float tx = x + (w - tabW) * 0.5;
 		float ty = y;
 
-		surface.FillRect(tx, ty, tabW, TAB_H + 1, MUI_ColorUtil.Fade(ResolveTabFill(), op), 0);
+		surface.FillRect(tx, ty, tabW, TAB_H + 1, MUI_ColorUtil.Fade(m_HudTab, op), 0);
 
 		Color edge = MUI_ColorUtil.Fade(tone, op * 0.20);
 		surface.DrawLine(tx, ty, tx + tabW, ty, edge, 1);
@@ -528,46 +546,46 @@ class IA_CaptureHud : MUI_Surface
 	protected void DrawContent(MUI_RenderSurface surface, float x, float y, float w, float op, Color tone)
 	{
 		float cx = x + PAD_X + SPIN_R;
-		float cy = y + BODY_H * 0.5;
+		float cy = y + BODY_H * 0.5 - 2;
 		DrawSpinner(surface, cx, cy, op, tone);
 
 		float copyX = x + PAD_X + SPIN_R * 2 + GAP_ICON;
+		float kickerH = 10;
+		float titleH = 14;
+		float copyGap = 4;
+		float copyTop = y + (BODY_H - RAIL_H - 8 - (kickerH + copyGap + titleH)) * 0.5;
+
+		Color kickerCol = MUI_ColorUtil.Fade(tone, op * 0.80);
+		DrawTracked(surface, copyX, copyTop, kickerH, ResolveKicker(), FONT_KICK, TRACK_KICK, kickerCol);
 
 		string area = m_sShownArea;
 		if (area.IsEmpty())
-			area = "Unknown Sector";
+			area = "Position";
 		float divX = x + w - PAD_X - DIV_W;
-		float titleW = divX - GAP_PCT - 36 - copyX;
+		float titleW = divX - GAP_TIME - 48 - copyX;
 		if (titleW < 48)
 			titleW = 48;
-		surface.DrawText(copyX, y, titleW, BODY_H, area, FONT_TITLE, MUI_ColorUtil.Fade(m_HudWhite, op), true, false, true, false, true);
+		surface.DrawText(copyX, copyTop + kickerH + copyGap, titleW, titleH, area, FONT_TITLE, MUI_ColorUtil.Fade(m_HudWhite, op), true, false, true, false, true);
 
-		int pct = Math.Round(m_fDisplay * 100);
-		if (pct < 0)
-			pct = 0;
-		if (pct > 100)
-			pct = 100;
-		string pctText = pct.ToString() + "%";
-		float pctW = 32;
-		float pctH = 16;
+		string timeText = FormatRemain();
+		float timeW = 44;
+		float timeH = 16;
 		if (m_Runtime)
-			m_Runtime.MeasureText(pctText, FONT_PCT, true, 0, pctW, pctH);
-		float pctX = divX - GAP_PCT - pctW;
-		surface.DrawText(pctX, y, pctW, BODY_H, pctText, FONT_PCT, MUI_ColorUtil.Fade(m_HudWhite, op), true, false, true, false, true);
+			m_Runtime.MeasureText(timeText, FONT_TIME, true, 0, timeW, timeH);
+		float timeX = divX - GAP_TIME - timeW;
+		surface.DrawText(timeX, y, timeW, BODY_H - RAIL_H - 6, timeText, FONT_TIME, MUI_ColorUtil.Fade(m_HudWhite, op), true, false, true, false, true);
 
-		float divY = y + (BODY_H - DIV_H) * 0.5;
+		float divY = y + (BODY_H - DIV_H - 6) * 0.5;
 		surface.FillRect(divX, divY, DIV_W, DIV_H, MUI_ColorUtil.Fade(tone, op * 0.20), 0);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void DrawSpinner(MUI_RenderSurface surface, float cx, float cy, float op, Color tone)
 	{
-		Color track = ResolveTabFill();
-		if (m_eShownState == IA_CaptureHudState.Contested)
-			track = MUI_ColorUtil.Fade(tone, op * 0.45);
+		Color track = m_HudTab;
 		surface.StrokeCircle(cx, cy, SPIN_R, MUI_ColorUtil.Fade(track, op), SPIN_W);
 
-		if (m_eShownState == IA_CaptureHudState.Complete)
+		if (m_eShownState == IA_DefendHudState.Complete)
 		{
 			surface.StrokeCircle(cx, cy, SPIN_R, MUI_ColorUtil.Fade(tone, op), SPIN_W);
 		}
@@ -578,11 +596,9 @@ class IA_CaptureHud : MUI_Surface
 		}
 
 		float pulse = 0.55 + 0.45 * MUI_Ease.Pulse(GetTime(), 0.5);
-		if (m_eShownState == IA_CaptureHudState.Paused)
-			pulse = 0.7;
-		else if (m_eShownState == IA_CaptureHudState.Complete)
+		if (m_eShownState == IA_DefendHudState.Complete)
 			pulse = 1;
-		surface.FillCircle(cx, cy, SPIN_DOT, MUI_ColorUtil.Fade(tone, op * pulse));
+		surface.FillCircle(cx, cy, 2.1, MUI_ColorUtil.Fade(tone, op * pulse));
 	}
 
 	//------------------------------------------------------------------------------------------------

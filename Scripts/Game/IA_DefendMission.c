@@ -3,21 +3,37 @@
 ///////////////////////////////////////////////////////////////////////
 class IA_DefendMission
 {
+    private static const float PEAK_MULT_CAP = 1.75;
+    private static const int BASE_WAVE_INTERVAL_MS = 25000;
+    private static const int MIN_WAVE_INTERVAL_MS = 12000;
+    private static const int MAX_WAVE_INTERVAL_MS = 35000;
+    private static const int LULL_END_GUARD_MS = 120000;
+
     private vector m_defendPoint;
     private int m_startTime;
-    private int m_duration = Math.RandomInt(9, 14) * 60000; // 9-13 minutes
+    private int m_duration = Math.RandomInt(12, 17) * 60000; // 12-16 minutes
     private int m_durationMinutes = 0;
-    private int m_targetAICount;
+    private int m_baseTargetAICount;
     private bool m_isActive = false;
     private int m_groupID;
     private ref array<IA_AreaInstance> m_affectedAreas = {};
     private int m_lastWaveSpawnTime = 0;
-    private int m_waveSpawnInterval = 25000; // 25 seconds between waves (multi-fireteam waves need room)
+    private int m_waveSpawnInterval = BASE_WAVE_INTERVAL_MS;
     private Faction m_defendFaction = null; // Store the faction once for all waves
     private string m_defendMarkerName = ""; // Store the marker name for notifications
     private bool m_vehicleBeatSpawned = false;
     private int m_lastVehicleBeatAttempt = 0;
     private ref IA_AreaGroupManager m_ownedQrfManager; // kept alive for truck arrival CallLaters if needed
+
+    private float m_fStartMult = 0.75;
+    private float m_fPeakMult = 1.75;
+    private float m_fPeakMinutes = 6.0;
+    private int m_surgeStartMs = 180000;
+    private int m_surgeEndMs = 240000;
+    private bool m_bHasLull = false;
+    private int m_lullStartMs = 0;
+    private int m_lullEndMs = 0;
+    private float m_fVehicleBeatFrac = 0.4;
     
     private void IA_DefendMission(vector defendPoint, int groupID, string markerName = "")
     {
@@ -27,10 +43,10 @@ class IA_DefendMission
         m_durationMinutes = Math.Round(m_duration / 60000.0);
         if (m_durationMinutes < 1)
             m_durationMinutes = 1;
-        m_targetAICount = CalculateTargetAICount();
+        m_baseTargetAICount = CalculateTargetAICount();
         
-        Print(string.Format("[IA_DefendMission] Created defend mission at %1 (%2) for group %3, target AI count: %4, duration: %5 min", 
-            m_defendPoint.ToString(), m_defendMarkerName, m_groupID, m_targetAICount, m_durationMinutes), LogLevel.NORMAL);
+        Print(string.Format("[IA_DefendMission] Created defend mission at %1 (%2) for group %3, base AI cap: %4, duration: %5 min", 
+            m_defendPoint.ToString(), m_defendMarkerName, m_groupID, m_baseTargetAICount, m_durationMinutes), LogLevel.NORMAL);
     }
     
     static IA_DefendMission Create(vector defendPoint, int groupID, string markerName = "")
@@ -46,6 +62,7 @@ class IA_DefendMission
         m_isActive = true;
         m_startTime = System.GetTickCount();
         m_lastWaveSpawnTime = m_startTime;
+        RollPressureProfile();
         
         Print(string.Format("[IA_DefendMission] Starting defend mission at %1", m_defendPoint.ToString()), LogLevel.NORMAL);
         
@@ -57,9 +74,12 @@ class IA_DefendMission
         
         // Set all existing AI to defend mode
         SetAllAIToDefendMode();
+
+        PublishDefendHud(IA_DefendHudState.Active);
         
         // Spawn initial wave
         SpawnDefendWave();
+        RollNextWaveInterval();
     }
     
     void UpdateDefendMission()
@@ -76,11 +96,13 @@ class IA_DefendMission
             EndDefendMission();
             return;
         }
+
+        PublishDefendHud(IA_DefendHudState.Active);
         
-        // Mid-hold vehicle / QRF beat (~40% elapsed). Retry every 30s until success.
+        // Mid-hold vehicle / QRF beat. Retry every 30s until success.
         if (!m_vehicleBeatSpawned)
         {
-            int beatThreshold = Math.Round(m_duration * 0.4);
+            int beatThreshold = Math.Round(m_duration * m_fVehicleBeatFrac);
             if (currentTime - m_startTime >= beatThreshold)
             {
                 if (m_lastVehicleBeatAttempt == 0 || currentTime - m_lastVehicleBeatAttempt >= 30000)
@@ -96,10 +118,11 @@ class IA_DefendMission
         if (currentTime - m_lastWaveSpawnTime >= m_waveSpawnInterval)
         {
             int currentAICount = GetCurrentAICount();
-            if (currentAICount < m_targetAICount)
+            if (currentAICount < GetEffectiveTargetAICount())
             {
                 SpawnDefendWave();
                 m_lastWaveSpawnTime = currentTime;
+                RollNextWaveInterval();
             }
         }
     }
@@ -126,15 +149,14 @@ class IA_DefendMission
         Print("[IA_DefendMission] Ending defend mission", LogLevel.NORMAL);
         m_isActive = false;
         
-        // Complete the defend task
-        CompleteDefendTask();
+        // Complete the defend task (that path already sends TaskCompleted).
+        bool didNotify = CompleteDefendTask();
+
+        PublishDefendHud(IA_DefendHudState.Complete);
         
-        // --- BEGIN ADDED: Trigger defend mission completion notification ---
-        // Trigger notification that defend mission is complete (but don't mention RTB yet)
         IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
-        if (initializer)
+        if (!didNotify && initializer)
         {
-            // Use TaskCompleted type instead of AreaGroupCompleted to avoid showing RTB message
             string taskTitle;
             if (m_defendMarkerName.IsEmpty())
                 taskTitle = "Defend Position";
@@ -142,7 +164,6 @@ class IA_DefendMission
                 taskTitle = "Defend " + m_defendMarkerName;
             initializer.TriggerGlobalNotification("TaskCompleted", taskTitle);
         }
-        // --- END ADDED ---
         
         // Return all AI to normal mode
         foreach (IA_AreaInstance area : m_affectedAreas)
@@ -175,9 +196,197 @@ class IA_DefendMission
         float scaleFactor = IA_Game.GetAIScaleFactor();
         float scaled = scaleFactor * 1.9;
         int targetCount = Math.Round(9 * (scaled * scaled) * 1.6);
-        Print(string.Format("[IA_DefendMission] Calculated target AI count: %1 (scale factor: %2)", targetCount, scaleFactor), LogLevel.NORMAL);
+        Print(string.Format("[IA_DefendMission] Calculated base target AI count: %1 (scale factor: %2)", targetCount, scaleFactor), LogLevel.NORMAL);
         
         return targetCount;
+    }
+
+    private void RollPressureProfile()
+    {
+        m_fStartMult = IA_Game.rng.RandFloatXY(0.65, 0.85);
+        m_fPeakMult = IA_Game.rng.RandFloatXY(1.55, PEAK_MULT_CAP);
+        if (m_fPeakMult > PEAK_MULT_CAP)
+            m_fPeakMult = PEAK_MULT_CAP;
+        m_fPeakMinutes = IA_Game.rng.RandFloatXY(5.0, 7.0);
+        m_fVehicleBeatFrac = IA_Game.rng.RandFloatXY(0.35, 0.55);
+
+        int surgeDurationMs = Math.Round(IA_Game.rng.RandFloatXY(50.0, 80.0) * 1000.0);
+        m_surgeStartMs = 180000 + Math.Round(IA_Game.rng.RandFloatXY(0.0, 20000.0));
+        m_surgeEndMs = m_surgeStartMs + surgeDurationMs;
+
+        m_bHasLull = IA_Game.rng.RandFloat01() < 0.5;
+        m_lullStartMs = 0;
+        m_lullEndMs = 0;
+        if (m_bHasLull)
+        {
+            if (!TryPlaceLull())
+                m_bHasLull = false;
+        }
+
+        int lullFlag = 0;
+        if (m_bHasLull)
+            lullFlag = 1;
+        Print(string.Format("[IA_DefendMission] Pressure profile start=%1 peak=%2 at %3 min surge=%4-%5s lull=%6 vehicleBeat=%7",
+            m_fStartMult, m_fPeakMult, m_fPeakMinutes, m_surgeStartMs / 1000, m_surgeEndMs / 1000, lullFlag, m_fVehicleBeatFrac), LogLevel.NORMAL);
+    }
+
+    private bool TryPlaceLull()
+    {
+        int lullDurationMs = Math.Round(IA_Game.rng.RandFloatXY(30.0, 45.0) * 1000.0);
+        int latestStart = m_duration - LULL_END_GUARD_MS - lullDurationMs;
+        int earliestAfterSurge = m_surgeEndMs + 10000;
+        if (earliestAfterSurge <= latestStart)
+        {
+            m_lullStartMs = Math.Round(IA_Game.rng.RandFloatXY(earliestAfterSurge, latestStart));
+            m_lullEndMs = m_lullStartMs + lullDurationMs;
+            return true;
+        }
+
+        int earliestBefore = 60000;
+        int latestBefore = m_surgeStartMs - 10000 - lullDurationMs;
+        if (earliestBefore <= latestBefore)
+        {
+            m_lullStartMs = Math.Round(IA_Game.rng.RandFloatXY(earliestBefore, latestBefore));
+            m_lullEndMs = m_lullStartMs + lullDurationMs;
+            return true;
+        }
+
+        return false;
+    }
+
+    private float GetIntensityMultiplier()
+    {
+        int elapsedMs = GetElapsedMs();
+        float tMin = elapsedMs / 60000.0;
+        float u = 0;
+        if (m_fPeakMinutes > 0.01)
+            u = tMin / m_fPeakMinutes;
+        if (u < 0)
+            u = 0;
+        if (u > 1)
+            u = 1;
+        u = SmoothStep01(u);
+
+        float mult = m_fStartMult + u * (m_fPeakMult - m_fStartMult);
+        if (elapsedMs >= m_surgeStartMs && elapsedMs < m_surgeEndMs)
+        {
+            mult = mult + 0.20;
+            if (mult > PEAK_MULT_CAP)
+                mult = PEAK_MULT_CAP;
+        }
+
+        if (m_bHasLull && elapsedMs >= m_lullStartMs && elapsedMs < m_lullEndMs)
+            mult = mult * 0.75;
+
+        return mult;
+    }
+
+    private float SmoothStep01(float t)
+    {
+        return t * t * (3.0 - 2.0 * t);
+    }
+
+    private int GetElapsedMs()
+    {
+        if (!m_isActive && m_startTime == 0)
+            return 0;
+        int elapsed = System.GetTickCount() - m_startTime;
+        if (elapsed < 0)
+            return 0;
+        return elapsed;
+    }
+
+    private int GetEffectiveTargetAICount()
+    {
+        float mult = GetIntensityMultiplier();
+        int cap = Math.Round(m_baseTargetAICount * mult);
+        int peakCap = Math.Round(m_baseTargetAICount * PEAK_MULT_CAP);
+        if (cap > peakCap)
+            cap = peakCap;
+        if (cap < 2)
+            cap = 2;
+
+        int alive = GetCurrentAICount();
+        if (cap < alive)
+            cap = alive;
+        return cap;
+    }
+
+    private void RollNextWaveInterval()
+    {
+        float mult = GetIntensityMultiplier();
+        if (mult < 0.01)
+            mult = 0.01;
+
+        int interval = Math.Round(BASE_WAVE_INTERVAL_MS / mult);
+        interval = ClampInt(interval, MIN_WAVE_INTERVAL_MS, MAX_WAVE_INTERVAL_MS);
+        float jitter = IA_Game.rng.RandFloatXY(0.85, 1.15);
+        interval = Math.Round(interval * jitter);
+        m_waveSpawnInterval = ClampInt(interval, MIN_WAVE_INTERVAL_MS, MAX_WAVE_INTERVAL_MS);
+    }
+
+    private int ClampInt(int value, int minValue, int maxValue)
+    {
+        if (value < minValue)
+            return minValue;
+        if (value > maxValue)
+            return maxValue;
+        return value;
+    }
+
+    private float GetHudTimeLeft01()
+    {
+        if (m_duration <= 0)
+            return 0;
+        float left = 1.0 - (GetElapsedMs() / m_duration);
+        if (left < 0)
+            return 0;
+        if (left > 1)
+            return 1;
+        return left;
+    }
+
+    private int GetHudRemainingSec()
+    {
+        int remainingMs = m_duration - GetElapsedMs();
+        if (remainingMs < 0)
+            remainingMs = 0;
+        int sec = Math.Ceil(remainingMs / 1000.0);
+        if (sec < 0)
+            sec = 0;
+        return sec;
+    }
+
+    private float GetHudPressure01()
+    {
+        float span = m_fPeakMult - m_fStartMult;
+        if (span < 0.01)
+            return 1;
+
+        float pressure = (GetIntensityMultiplier() - m_fStartMult) / span;
+        if (pressure < 0)
+            return 0;
+        if (pressure > 1)
+            return 1;
+        return pressure;
+    }
+
+    private void PublishDefendHud(IA_DefendHudState state)
+    {
+        string areaName = m_defendMarkerName;
+        if (areaName.IsEmpty())
+            areaName = "Position";
+
+        float timeLeft = GetHudTimeLeft01();
+        int remainingSec = GetHudRemainingSec();
+        float pressure = GetHudPressure01();
+        if (state == IA_DefendHudState.Complete)
+        {
+            timeLeft = 0;
+            remainingSec = 0;
+        }
+
+        IA_MissionInitializer.PublishDefendHud(areaName, state, timeLeft, remainingSec, pressure);
     }
     
     private void CollectAffectedAreas()
@@ -261,7 +470,7 @@ class IA_DefendMission
             taskTitle = "Defend Position";
         else
             taskTitle = "Defend " + m_defendMarkerName;
-        string taskDesc = string.Format("Hold the position for %1 minutes against enemy attacks", m_durationMinutes);
+        string taskDesc = string.Format("Hold the position for %1 minutes against enemy attacks. Enemy pressure will increase.", m_durationMinutes);
         
         Print(string.Format("[IA_DefendMission] Creating defend task for area %1 at position %2", 
             firstArea.m_area.GetName(), m_defendPoint.ToString()), LogLevel.NORMAL);
@@ -269,19 +478,17 @@ class IA_DefendMission
         firstArea.QueueTask(taskTitle, taskDesc, m_defendPoint);
     }
     
-    private void CompleteDefendTask()
+    private bool CompleteDefendTask()
     {
-        // Complete the task in the first affected area
         if (m_affectedAreas.IsEmpty())
-            return;
+            return false;
             
         IA_AreaInstance firstArea = m_affectedAreas[0];
         if (!firstArea)
-            return;
+            return false;
             
         Print("[IA_DefendMission] CompleteDefendTask: Attempting to complete defend task", LogLevel.NORMAL);
         
-        // Use the new method to find and complete the defend task by title
         string taskTitle;
         if (m_defendMarkerName.IsEmpty())
             taskTitle = "Defend Position";
@@ -292,11 +499,11 @@ class IA_DefendMission
         if (taskCompleted)
         {
             Print("[IA_DefendMission] Successfully completed defend task", LogLevel.NORMAL);
+            return true;
         }
-        else
-        {
-            Print("[IA_DefendMission] Could not find defend task to complete - it may have already been completed", LogLevel.WARNING);
-        }
+
+        Print("[IA_DefendMission] Could not find defend task to complete - it may have already been completed", LogLevel.WARNING);
+        return false;
     }
     
     private void SetAllAIToDefendMode()
@@ -349,8 +556,15 @@ class IA_DefendMission
         }
         
         float scaleFactor = IA_Game.GetAIScaleFactor();
-        int unitBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
-        int room = m_targetAICount - GetCurrentAICount();
+        int baseBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
+        float mult = GetIntensityMultiplier();
+        int unitBudget = Math.Round(baseBudget * mult);
+        float jitter = IA_Game.rng.RandFloatXY(0.85, 1.15);
+        unitBudget = Math.Round(unitBudget * jitter);
+        if (unitBudget < 8)
+            unitBudget = 8;
+
+        int room = GetEffectiveTargetAICount() - GetCurrentAICount();
         if (room < unitBudget)
             unitBudget = room;
         if (unitBudget < 2)
@@ -359,8 +573,8 @@ class IA_DefendMission
             return;
         }
 
-        Print(string.Format("[IA_DefendMission] Spawning defend wave: budget %1 units from area %2 (cap room %3)", 
-            unitBudget, targetArea.m_area.GetName(), room), LogLevel.NORMAL);
+        Print(string.Format("[IA_DefendMission] Spawning defend wave: budget %1 units from area %2 (cap room %3, mult %4, nextInterval %5ms)", 
+            unitBudget, targetArea.m_area.GetName(), room, mult, m_waveSpawnInterval), LogLevel.NORMAL);
             
         // --- BEGIN MODIFIED: Use stored faction or get it once ---
         // If we haven't set the faction for this defend mission yet, get it now and store it

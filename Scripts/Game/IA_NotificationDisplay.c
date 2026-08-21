@@ -1,7 +1,8 @@
 //------------------------------------------------------------------------------------------------
-//! HUD sector toasts plus a persistent capture readout. Mike's UI path uses
-//! IA_NotificationToast and IA_CaptureHud (custom MUI_Node). Capture progress
-//! never occupies the toast queue. Legacy layout remains if HUD mount fails.
+//! HUD sector toasts plus persistent capture / defend readouts. Mike's UI path uses
+//! IA_NotificationToast and IA_ObjectiveHudStrip (capture tiles + defend bar in a
+//! bottom-left row). Capture and defend progress never occupy the toast queue.
+//! Legacy layout remains if HUD mount fails.
 //------------------------------------------------------------------------------------------------
 class IA_NotificationInfo
 {
@@ -35,7 +36,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected MUI_Runtime m_Runtime;
 	protected ref IA_NotificationToast m_Toast;
 	protected ref IA_RankHudPanel m_RankHud;
-	protected ref IA_CaptureHud m_CaptureHud;
+	protected ref IA_ObjectiveHudStrip m_ObjectiveHud;
 
 	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
 	protected bool m_bIsDisplaying = false;
@@ -73,6 +74,21 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		super.DisplayUpdate(owner, timeSlice);
 		if (m_HudHost)
 			m_HudHost.Tick(timeSlice);
+		if (m_RankHud)
+			m_RankHud.Tick(timeSlice);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	override void DisplayControlledEntityChanged(IEntity from, IEntity to)
+	{
+		super.DisplayControlledEntityChanged(from, to);
+		if (!m_RankHud)
+			return;
+		if (from == to)
+			return;
+		if (!ChimeraCharacter.Cast(to))
+			return;
+		m_RankHud.PulseSpawn();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -109,8 +125,8 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			m_Toast.GetOnFinished().Remove(OnToastFinished);
 			m_Toast.Abort();
 		}
-		if (m_CaptureHud)
-			m_CaptureHud.Abort();
+		if (m_ObjectiveHud)
+			m_ObjectiveHud.Abort();
 		IA_LocalOptions.Get().GetOnChanged().Remove(this.ApplyLocalOptions);
 		if (m_RankHud)
 		{
@@ -124,7 +140,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			m_HudHost = null;
 		}
 		m_Toast = null;
-		m_CaptureHud = null;
+		m_ObjectiveHud = null;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -132,20 +148,21 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	{
 		ref MUI_Panel overlay = m_Runtime.CreatePanel("overlay");
 		overlay.MakePassThroughOverlay();
-		overlay.SetPaddingTRBL(26, 24, 36, 24);
+		overlay.SetPaddingTRBL(26, 24, 0, 16);
 
 		m_Toast = IA_NotificationToast.Create(m_Runtime);
 		m_Toast.GetOnFinished().Insert(OnToastFinished);
 
-		m_CaptureHud = IA_CaptureHud.Create(m_Runtime);
+		m_ObjectiveHud = IA_ObjectiveHudStrip.Create(m_Runtime);
 		m_RankHud = IA_RankHudPanel.Create(m_Runtime);
 
 		overlay.AddChild(m_Toast);
-		overlay.AddChild(m_CaptureHud);
+		overlay.AddChild(m_ObjectiveHud);
 		overlay.AddChild(m_RankHud.GetRoot());
 		m_Runtime.SetRoot(overlay);
 		m_RankHud.GetOnPromoted().Insert(this.OnLocalPromoted);
 		m_RankHud.Bind();
+		m_RankHud.PulseSpawn();
 		IA_LocalOptions.Get().GetOnChanged().Insert(this.ApplyLocalOptions);
 		ApplyLocalOptions();
 	}
@@ -247,6 +264,8 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			return IA_NotificationKind.AreaCompleted;
 		if (message.IndexOf("RTB") != -1)
 			return IA_NotificationKind.AreaCompleted;
+		if (message.IndexOf(" XP)") != -1)
+			return IA_NotificationKind.AoContributors;
 		if (color == "red")
 			return IA_NotificationKind.Alert;
 		if (color == "yellow")
@@ -332,7 +351,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	//------------------------------------------------------------------------------------------------
 	bool IsCaptureHudActive()
 	{
-		return m_CaptureHud != null;
+		return m_ObjectiveHud != null;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -360,6 +379,14 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		if (!taskName.IsEmpty() && taskName != "All objectives in current area")
 			body = taskName;
 		QueueNotificationKind(body, "", 12000, IA_NotificationKind.AreaCompleted);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void DisplayAoTopContributorsNotification(string taskName)
+	{
+		if (taskName.IsEmpty())
+			return;
+		QueueNotificationKind(taskName, "green", 12000, IA_NotificationKind.AoContributors);
 	}
 
 	//------------------------------------------------------------------------------------------------

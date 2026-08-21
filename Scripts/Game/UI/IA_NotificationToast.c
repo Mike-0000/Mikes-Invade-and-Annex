@@ -10,6 +10,7 @@ enum IA_NotificationKind
 	SideTaskCreated,
 	TaskCompleted,
 	AreaCompleted,
+	AoContributors,
 	Alert,
 	Success,
 	Promotion
@@ -160,6 +161,8 @@ class IA_NotificationToast : MUI_Surface
 			m_fIntroDur = 0.62;
 		else if (kind == IA_NotificationKind.AreaCompleted)
 			m_fIntroDur = 0.98;
+		else if (kind == IA_NotificationKind.AoContributors)
+			m_fIntroDur = 0.88;
 		else if (kind == IA_NotificationKind.Success)
 			m_fIntroDur = 0.78;
 		else if (kind == IA_NotificationKind.Promotion)
@@ -615,6 +618,8 @@ class IA_NotificationToast : MUI_Surface
 		int extra = 0;
 		if (m_eKind == IA_NotificationKind.AreaCompleted)
 			extra = 6;
+		else if (m_eKind == IA_NotificationKind.AoContributors)
+			extra = 5;
 		else if (m_eKind == IA_NotificationKind.Success)
 			extra = 4;
 		else if (m_eKind == IA_NotificationKind.Promotion)
@@ -748,6 +753,8 @@ class IA_NotificationToast : MUI_Surface
 			return "OBJECTIVE COMPLETE";
 		if (kind == IA_NotificationKind.AreaCompleted)
 			return "SECTOR COMPLETE";
+		if (kind == IA_NotificationKind.AoContributors)
+			return "TOP CONTRIBUTORS";
 		if (kind == IA_NotificationKind.Alert)
 			return "PRIORITY ALERT";
 		if (kind == IA_NotificationKind.Success)
@@ -768,6 +775,8 @@ class IA_NotificationToast : MUI_Surface
 			return "DONE";
 		if (kind == IA_NotificationKind.AreaCompleted)
 			return "RTB";
+		if (kind == IA_NotificationKind.AoContributors)
+			return "AO";
 		if (kind == IA_NotificationKind.Alert)
 			return "WARN";
 		if (kind == IA_NotificationKind.Success)
@@ -790,6 +799,8 @@ class IA_NotificationToast : MUI_Surface
 			return theme.Accent;
 		if (m_eKind == IA_NotificationKind.AreaCompleted)
 			return theme.Live;
+		if (m_eKind == IA_NotificationKind.AoContributors)
+			return theme.Accent;
 		if (m_eKind == IA_NotificationKind.Success)
 			return theme.Live;
 		if (m_eKind == IA_NotificationKind.Promotion)
@@ -827,6 +838,8 @@ class IA_NotificationToast : MUI_Surface
 	protected bool WantsMotes()
 	{
 		if (m_eKind == IA_NotificationKind.AreaCompleted)
+			return true;
+		if (m_eKind == IA_NotificationKind.AoContributors)
 			return true;
 		if (m_eKind == IA_NotificationKind.Success)
 			return true;

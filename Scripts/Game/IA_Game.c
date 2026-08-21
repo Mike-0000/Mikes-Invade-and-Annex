@@ -401,6 +401,11 @@ class IA_Game
         s_activeGroupID = groupID;
         // Print(string.Format("[IA_Game] Active group ID set to: %1", s_activeGroupID), LogLevel.NORMAL);
     }
+
+    static int GetActiveGroupID()
+    {
+        return s_activeGroupID;
+    }
     // --- END ADDED ---
 
     // --- BEGIN ADDED: Clear All Areas ---
