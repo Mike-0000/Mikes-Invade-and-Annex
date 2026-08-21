@@ -28,7 +28,7 @@ Map HUD stays production-only. Do not enable it on a server that loads experimen
 
 ## Daily work
 
-1. Open `F:\Mikes-Experimental.code-workspace`.
+1. Open `F:\Mikes-Invade-and-Annex-Exp\Mikes-Experimental.code-workspace`.
 2. Commit on `experimental` in the `*-Exp` worktrees.
 3. In Workbench, open the Exp project (not the production folder) and publish. First publish: Unlisted or Test.
 
