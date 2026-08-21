@@ -192,6 +192,7 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 Enfusion has **no WebView**. Widgets are the compositor (Canvas, text, EditBox). Feature menus belong in the **consuming addon**, subclassing `MUI_MenuBase`. HUD: `MUI_HudHost` + pass-through overlay. Do not use `MenuWithEditorContext` on HUD. Native `MapWidget` stays in a layout; Mike's UI does not host it.
 
 - **`EditBoxWidget.ActivateWriteMode` keeps native widget focus.** A visible EditBox without `IGNORE_CURSOR` sits above the compositor and can eat every later click. `OnWriteModeLeave` from hiding / re-activating the same shared box can Detach a field you just attached. Shared IME bridges must `IGNORE_CURSOR`, switch fields without hiding, ignore stale leave for a frame, and re-`BeginEditing` when the already-focused field is clicked again. Evidence: `EditBoxWidget.c`; `WidgetFlags.IGNORE_CURSOR`; `runtime: HALO planner` second numeric field unclickable until menu reopen.
+- **`SCR_MapMarkersUI.CleanupMarkerEditWidget` always calls `m_CursorModule.HandleDialog(false)`.** Configs that omit `SCR_MapCursorModule` (HALO planner) leave that pointer null, so `CloseMap` NPEs on Jump/Cancel. Null-check before HandleDialog; do not add a cursor module just to satisfy close — it steals click-to-drop. Evidence: `SCR_MapMarkersUI.c:581`; `runtime: MHJ_MapHost.CloseOwnMap` after Jump.
 
 Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer rule / `F:\Mikes-UI\README.md`.
 
@@ -204,6 +205,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-21 — `SCR_MapMarkersUI.CleanupMarkerEditWidget` NPEs when the map config has no `SCR_MapCursorModule`; HALO planner CloseMap after Jump (`SCR_MapMarkersUI.c:581`, `runtime: MHJ_MapHost.CloseOwnMap`).
 - 2026-08-20 — Individual AI do shoot vehicle occupants; group perception skips them to fight the vehicle. They never shoot `IsDisarmed` targets (`TARGET_MAX_DISTANCE_DISARMED = 0`). Cargo has no `SCR_VehiclePerceivableComponent`. HALO `SetInteractionLayer(0)` on the linked craft (working MK4 never does) can zero perception traces (`SCR_AICombatComponent.c`, `Vehicle_Cargo_Base.et`).
 - 2026-08-20 — Group AI skips `PerceivableComponent.IsInCompartment()` targets. HALO `HandleFalling` Fall inject plus sleeping/deleting the cargo craft before GetOut finished left that flag set; working MK4 never injects Fall and keeps Simulation through exit (`SCR_AIGroupPerception.c`, `ArmaReforgerParachutes` `Rpc_ServerExitParachute`).
 - 2026-08-19 — `PlayerManager.GetPlayerCount()` is the connected-player total; `GetAllPlayers` also includes disconnected identities, and controlled-pawn scaling counts are unsuitable for population gates (`PlayerManager.c`, I&A HALO Role Switcher).

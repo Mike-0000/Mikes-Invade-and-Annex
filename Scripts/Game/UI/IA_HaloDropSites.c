@@ -207,6 +207,9 @@ class IA_HaloDropSites
 		if (!e)
 			return false;
 
+		if (SCR_Task.Cast(e))
+			return false;
+
 		SCR_MapDescriptorComponent desc = SCR_MapDescriptorComponent.Cast(e.FindComponent(SCR_MapDescriptorComponent));
 		if (!desc)
 			return false;
