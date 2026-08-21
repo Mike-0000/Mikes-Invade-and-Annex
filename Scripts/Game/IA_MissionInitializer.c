@@ -859,6 +859,7 @@ class IA_MissionInitializer : GenericEntity
 
 		// Load config file if specified
 		LoadConfig();
+		ApplyAdminOverrides();
 
         // Set this instance as the reference for IA_AreaMarker
         IA_AreaMarker.SetMissionInitializer(this);
@@ -996,7 +997,7 @@ class IA_MissionInitializer : GenericEntity
 
 	// --- BEGIN ADDED: Config Update RPC ---
 	// Rpc has a hard param limit — pack fields into one string.
-	static void UpdateConfig(
+	protected static string PackAdminConfig(
 		float civCount,
 		float aiScale,
 		bool disableHeli,
@@ -1045,6 +1046,34 @@ class IA_MissionInitializer : GenericEntity
 		packed = packed + "|" + artyMaxDelay.ToString();
 		packed = packed + "|" + enemyFactionKey;
 		packed = packed + "|" + haloMaxPlayers.ToString();
+		return packed;
+	}
+
+	static void UpdateConfig(
+		float civCount,
+		float aiScale,
+		bool disableHeli,
+		bool disableGround,
+		int artyCooldown,
+		float staticAiScale,
+		float milVehMult,
+		float civVehMult,
+		float revoltThresh,
+		bool enableCiv,
+		bool enforceRoles,
+		float artyChance,
+		int artyMinDelay,
+		int artyMaxDelay,
+		string enemyFactionKey,
+		int haloMaxPlayers
+	)
+	{
+		string packed = PackAdminConfig(
+			civCount, aiScale, disableHeli, disableGround, artyCooldown,
+			staticAiScale, milVehMult, civVehMult, revoltThresh, enableCiv,
+			enforceRoles, artyChance, artyMinDelay, artyMaxDelay, enemyFactionKey,
+			haloMaxPlayers
+		);
 
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
 		if (pc)
@@ -1061,6 +1090,64 @@ class IA_MissionInitializer : GenericEntity
 		}
 	}
 
+	static void PersistConfig(
+		float civCount,
+		float aiScale,
+		bool disableHeli,
+		bool disableGround,
+		int artyCooldown,
+		float staticAiScale,
+		float milVehMult,
+		float civVehMult,
+		float revoltThresh,
+		bool enableCiv,
+		bool enforceRoles,
+		float artyChance,
+		int artyMinDelay,
+		int artyMaxDelay,
+		string enemyFactionKey,
+		int haloMaxPlayers
+	)
+	{
+		string packed = PackAdminConfig(
+			civCount, aiScale, disableHeli, disableGround, artyCooldown,
+			staticAiScale, milVehMult, civVehMult, revoltThresh, enableCiv,
+			enforceRoles, artyChance, artyMinDelay, artyMaxDelay, enemyFactionKey,
+			haloMaxPlayers
+		);
+
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+		{
+			pc.IA_AskPersistAdminConfig(packed);
+			return;
+		}
+
+		if (Replication.IsServer())
+		{
+			IA_MissionInitializer init = GetInstance();
+			if (init)
+				init.ServerPersistAdminConfig(packed);
+		}
+	}
+
+	static void ClearPersistedAdminConfig()
+	{
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+		{
+			pc.IA_AskClearAdminOverrides();
+			return;
+		}
+
+		if (Replication.IsServer())
+		{
+			IA_MissionInitializer init = GetInstance();
+			if (init)
+				init.ServerClearAdminOverrides();
+		}
+	}
+
 	void ServerApplyAdminConfig(string packed)
 	{
 		if (!Replication.IsServer())
@@ -1073,6 +1160,29 @@ class IA_MissionInitializer : GenericEntity
 		if (!Replication.IsServer())
 			return;
 		RPC_ForceCompleteZone();
+	}
+
+	void ServerPersistAdminConfig(string packed)
+	{
+		if (!Replication.IsServer())
+			return;
+
+		ApplyPackedAdminConfig(packed);
+		if (!m_config)
+		{
+			Print("[IA_MissionInitializer] Persist skipped: no IA_Config instance", LogLevel.ERROR);
+			return;
+		}
+
+		if (!IA_AdminOverrides.SaveFrom(m_config))
+			Print("[IA_MissionInitializer] Persist failed: could not write profile override", LogLevel.ERROR);
+	}
+
+	void ServerClearAdminOverrides()
+	{
+		if (!Replication.IsServer())
+			return;
+		IA_AdminOverrides.ClearFile();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1116,6 +1226,9 @@ class IA_MissionInitializer : GenericEntity
 			"[IA_MissionInitializer] RPC_UpdateConfig: Civ=%1 AI=%2 Heli=%3 Gnd=%4 Arty=%5 Chance=%6 Faction=%7 HALO=%8",
 			civCount, aiScale, disableHeli, disableGround, artyCooldown, artyChance, enemyFactionKey, haloMaxPlayers
 		), LogLevel.NORMAL);
+
+		if (!m_config)
+			m_config = new IA_Config();
 
 		if (m_config)
 		{
@@ -1270,6 +1383,23 @@ class IA_MissionInitializer : GenericEntity
 		Print("[IA_MissionInitializer] Successfully loaded config: " + m_configResource, LogLevel.NORMAL);
 		m_bEnforceRoleRestrictionsReplicated = m_config.m_bEnforceRoleRestrictions;
 		Replication.BumpMe();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Overlay $profile admin snapshot after the mission .conf. Last writer wins.
+	protected void ApplyAdminOverrides()
+	{
+		if (!Replication.IsServer())
+			return;
+
+		if (!IA_AdminOverrides.FileExists())
+			return;
+
+		if (!m_config)
+			m_config = new IA_Config();
+
+		if (IA_AdminOverrides.ApplyIfPresent(m_config))
+			Print("[IA_MissionInitializer] Applied admin overrides from " + IA_AdminOverrides.GetPath(), LogLevel.NORMAL);
 	}
 
 	IA_Config GetConfig()
