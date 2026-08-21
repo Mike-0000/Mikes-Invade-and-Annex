@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "F:/Mikes-Invade-and-Annex-Exp"
+		},
+		{
+			"path": "F:/Mikes-UI-Exp"
+		},
+		{
+			"path": "D:/ReforgerGameSources"
+		},
+		{
+			"path": "F:/Mikes-HALO-Jump-Exp"
+		}
+	],
+	"settings": {
+		"debug.internalConsoleOptions": "neverOpen"
+	}
+}

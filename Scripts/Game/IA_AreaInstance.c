@@ -697,6 +697,15 @@ class IA_AreaInstance
                 m_assignedGroupStates.Insert(group, group.GetTacticalState());
                 return; // Don't change the group's tactical state
             }
+
+            // Vehicle groups already have a hull reference. Do not assign infantry
+            // Defend/Attack; DefendWaypoint.OnDeselected GetOuts every turret.
+            if (group.IsDriving() || group.GetReferencedEntity())
+            {
+                Print("[AreaInstance.AddMilitaryGroup] Vehicle group, assigning InVehicle", LogLevel.DEBUG);
+                m_assignedGroupStates.Insert(group, IA_GroupTacticalState.InVehicle);
+                return;
+            }
             // --- END MODIFIED ---
             
             // --- BEGIN ADDED: Assign initial state for non-defend groups ---

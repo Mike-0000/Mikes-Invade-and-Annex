@@ -867,6 +867,92 @@ class IA_VehicleManager: GenericEntity
         }
     }
     
+    // GetCompartments is not recursive. Child-entity turrets (technicals) are
+    // missed unless we walk the hierarchy. Fill order is Pilot, Turret, Cargo.
+    static void CollectVehicleCrewSeats(IEntity vehicle, notnull array<BaseCompartmentSlot> outSlots, bool skipOccupied)
+    {
+        outSlots.Clear();
+        if (!vehicle)
+            return;
+
+        ref array<BaseCompartmentSlot> pilots = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> turrets = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> cargo = new array<BaseCompartmentSlot>();
+        CollectVehicleCrewSeatsRecursive(vehicle, pilots, turrets, cargo, skipOccupied);
+
+        int i;
+        int n;
+        n = pilots.Count();
+        for (i = 0; i < n; i++)
+        {
+            outSlots.Insert(pilots[i]);
+        }
+        n = turrets.Count();
+        for (i = 0; i < n; i++)
+        {
+            outSlots.Insert(turrets[i]);
+        }
+        n = cargo.Count();
+        for (i = 0; i < n; i++)
+        {
+            outSlots.Insert(cargo[i]);
+        }
+    }
+
+    static bool VehicleCrewSeatsHaveTurret(notnull array<BaseCompartmentSlot> slots)
+    {
+        int n = slots.Count();
+        int i;
+        for (i = 0; i < n; i++)
+        {
+            BaseCompartmentSlot slot = slots[i];
+            if (slot && slot.GetType() == ECompartmentType.TURRET)
+                return true;
+        }
+
+        return false;
+    }
+
+    protected static void CollectVehicleCrewSeatsRecursive(IEntity ent, notnull array<BaseCompartmentSlot> pilots, notnull array<BaseCompartmentSlot> turrets, notnull array<BaseCompartmentSlot> cargo, bool skipOccupied)
+    {
+        if (!ent)
+            return;
+
+        BaseCompartmentManagerComponent mgr = BaseCompartmentManagerComponent.Cast(ent.FindComponent(BaseCompartmentManagerComponent));
+        if (mgr)
+        {
+            array<BaseCompartmentSlot> slots = {};
+            mgr.GetCompartments(slots);
+            int n = slots.Count();
+            int i;
+            for (i = 0; i < n; i++)
+            {
+                BaseCompartmentSlot slot = slots[i];
+                if (!slot)
+                    continue;
+                if (skipOccupied && slot.GetOccupant())
+                    continue;
+                if (!slot.IsCompartmentAccessible())
+                    continue;
+
+                ECompartmentType type = slot.GetType();
+                if (type == ECompartmentType.PILOT)
+                    pilots.Insert(slot);
+                else if (type == ECompartmentType.TURRET)
+                    turrets.Insert(slot);
+                else if (type == ECompartmentType.CARGO)
+                    cargo.Insert(slot);
+            }
+        }
+
+        IEntity child = ent.GetChildren();
+        while (child)
+        {
+            CollectVehicleCrewSeatsRecursive(child, pilots, turrets, cargo, skipOccupied);
+            child = child.GetSibling();
+        }
+    }
+
     // Add units to a vehicle and assign orders
     static IA_AiGroup PlaceUnitsInVehicle(Vehicle vehicle, IA_Faction faction, vector destination, IA_AreaInstance areaInstance, Faction AreaFaction)
     {
@@ -878,17 +964,9 @@ class IA_VehicleManager: GenericEntity
             return null;
         }
         
-        // Get compartment count for the vehicle
-        BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
-        if (!compartmentManager)
-        {
-           //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: No compartment manager found", LogLevel.WARNING);
-            return null;
-        }
-        
-        array<BaseCompartmentSlot> compartments = {};
-        compartmentManager.GetCompartments(compartments);
-        int compartmentCount = compartments.Count();
+        array<BaseCompartmentSlot> usableCompartments = {};
+        CollectVehicleCrewSeats(vehicle, usableCompartments, true);
+        int compartmentCount = usableCompartments.Count();
         
         if (compartmentCount == 0)
         {
@@ -896,28 +974,22 @@ class IA_VehicleManager: GenericEntity
             return null;
         }
         
-        // Get the AI scaling factor from the area instance
-        float aiScaleFactor = 1.0; // Default value
+        float aiScaleFactor = IA_Game.GetAIScaleFactor();
+        int scaledCompartmentCount = Math.Round(compartmentCount * aiScaleFactor);
+        if (scaledCompartmentCount < 1)
+            scaledCompartmentCount = 1;
 
-        aiScaleFactor = IA_Game.GetAIScaleFactor();
-        // Scale the number of units to spawn based on player count, but always ensure driver
-        int scaledCompartmentCount;
-        
-        // For civilians, only use 1 unit (the driver)
-
-     
-            // For military, use full compartment scaling
-            scaledCompartmentCount = Math.Round(compartmentCount * aiScaleFactor);
-            if (scaledCompartmentCount < 1)
-                scaledCompartmentCount = 1;  // Always ensure at least a driver
-       
-		 if (faction == IA_Faction.CIV)
+        if (faction == IA_Faction.CIV)
         {
-            scaledCompartmentCount = scaledCompartmentCount*0.6;
-            
+            scaledCompartmentCount = scaledCompartmentCount * 0.6;
+            if (scaledCompartmentCount < 1)
+                scaledCompartmentCount = 1;
+        }
+        else if (VehicleCrewSeatsHaveTurret(usableCompartments) && scaledCompartmentCount < 2 && compartmentCount >= 2)
+        {
+            scaledCompartmentCount = 2;
         }
         
-        // Ensure we never exceed actual compartment count
         if (scaledCompartmentCount > compartmentCount)
             scaledCompartmentCount = compartmentCount;
         
@@ -1206,64 +1278,36 @@ class IA_VehicleManager: GenericEntity
         
        //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: Found " + characters.Count() + " characters", LogLevel.NORMAL);
 
-        // Find out how many seats the vehicle has (needed again here)
-        BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
-        if (!compartmentManager)
-        {
-           //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No compartment manager found", LogLevel.WARNING);
-            return;
-        }
-        array<BaseCompartmentSlot> compartments = {};
-        compartmentManager.GetCompartments(compartments);
-        if (compartments.IsEmpty())
+        array<BaseCompartmentSlot> usableCompartments = {};
+        CollectVehicleCrewSeats(vehicle, usableCompartments, true);
+        if (usableCompartments.IsEmpty())
         {
             //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No compartments found", LogLevel.WARNING);
              return;
         }
 
-        // Filter out compartments that are not suitable for AI occupation
-        array<BaseCompartmentSlot> usableCompartments = {};
-        
-        // Collect valid compartment types for AI
-        foreach (BaseCompartmentSlot compartment : compartments)
-        {
-            ECompartmentType type = compartment.GetType();
-            
-            // Include only driver and cargo compartments
-            if (type == ECompartmentType.PILOT || 
-                type == ECompartmentType.CARGO || type == ECompartmentType.TURRET)
-            {
-                usableCompartments.Insert(compartment);
-            }
-        }
-
-        // Fill the seats with passengers (only place up to the number of characters we have)
+        // Fill Pilot, then Turret, then Cargo (CollectVehicleCrewSeats order).
         int passengerIndex = 0;
-        for (int i = 0; i < usableCompartments.Count() && passengerIndex < characters.Count(); i++)
+        int seatCount = usableCompartments.Count();
+        for (int i = 0; i < seatCount && passengerIndex < characters.Count(); i++)
         {
             BaseCompartmentSlot compartment = usableCompartments[i];
+            if (!compartment || compartment.GetOccupant())
+                continue;
 
-            if (!compartment.GetOccupant())
+            SCR_ChimeraCharacter passenger = characters[passengerIndex];
+            if (!passenger)
             {
-                // Place a character in this compartment
-                if (passengerIndex >= characters.Count()) 
-                    break; // Ensure we don't go out of bounds
-
-                SCR_ChimeraCharacter passenger = characters[passengerIndex];
-               //// Print(("[DEBUG_CIV_VEHICLE] Placing passenger " + passengerIndex + " in compartment " + i, LogLevel.NORMAL);
-                
-                CompartmentAccessComponent accessComponent = CompartmentAccessComponent.Cast(passenger.FindComponent(CompartmentAccessComponent));
-                if (accessComponent)
-                {
-                    accessComponent.GetInVehicle(vehicle, compartment, true, 0, ECloseDoorAfterActions.CLOSE_DOOR, true);
-                   //// Print(("[DEBUG_CIV_VEHICLE] Successfully placed passenger in vehicle", LogLevel.NORMAL);
-                }
-                else
-                {
-                   //// Print(("[DEBUG_CIV_VEHICLE] Passenger CompartmentAccessComponent is NULL", LogLevel.WARNING);
-                }
                 passengerIndex++;
+                continue;
             }
+            CompartmentAccessComponent accessComponent = CompartmentAccessComponent.Cast(passenger.FindComponent(CompartmentAccessComponent));
+            if (accessComponent)
+            {
+                accessComponent.GetInVehicle(vehicle, compartment, true, -1, ECloseDoorAfterActions.CLOSE_DOOR, true);
+            }
+
+            passengerIndex++;
         }
 
         // For civilians specifically, make sure driving state is properly set

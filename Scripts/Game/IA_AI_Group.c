@@ -423,34 +423,8 @@ class IA_AiGroup
         groundPos[1] = groundY;
         grp.m_group.SetOrigin(groundPos);
 
-        BaseCompartmentManagerComponent compartmentManager = BaseCompartmentManagerComponent.Cast(vehicle.FindComponent(BaseCompartmentManagerComponent));
-        if (!compartmentManager) {
-            IA_Game.AddEntityToGc(grp.m_group);
-            grp.m_group = null;
-            return null;
-        }
-        
-        array<BaseCompartmentSlot> compartments = {};
-        compartmentManager.GetCompartments(compartments);
-        
         array<BaseCompartmentSlot> usableCompartments = {};
-        
-        foreach (BaseCompartmentSlot slot : compartments) {
-            if (slot.GetOccupant())
-                continue;
-                
-            ECompartmentType type = slot.GetType();
-            
-            if (type == ECompartmentType.PILOT ||  
-                type == ECompartmentType.CARGO || 
-                type == ECompartmentType.TURRET) {
-                
-                if (slot.IsCompartmentAccessible())
-                    usableCompartments.Insert(slot);
-            }
-        }
-        
-
+        IA_VehicleManager.CollectVehicleCrewSeats(vehicle, usableCompartments, true);
         int actualUnitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
         if (actualUnitsToSpawn <= 0)
         {
@@ -3272,17 +3246,10 @@ class IA_AiGroup
         {
             // Order units to get in the vehicle immediately
             AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
-            
-            // Initialize tactical state and schedule evaluation only if not in defend mode
-            if (!IsInDefendMode() && !m_lastAssignedArea)
-            {
-                SetTacticalState(IA_GroupTacticalState.DefendPatrol, m_staggeredSpawnPos);
-            }
-            else
-            {
-                Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Vehicle group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
-                    IsInDefendMode(), m_lastAssignedArea != null), LogLevel.NORMAL);
-            }
+
+            // Stay InVehicle. DefendPatrol here used to spawn a Defend waypoint whose
+            // OnDeselected GetOuts every turret occupant.
+            Print("[IA_AiGroup.OnStaggeredSpawningComplete] Vehicle group, skipping infantry DefendPatrol", LogLevel.DEBUG);
             
             ScheduleNextStateEvaluation();
             SetupDeathListener(); // Ensure CheckDangerEvents is scheduled
