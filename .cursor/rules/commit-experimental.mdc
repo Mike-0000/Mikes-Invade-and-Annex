@@ -1,0 +1,28 @@
+---
+description: After any turn that edited Exp addon files, commit on experimental with a why-focused message. Do not wait to be asked.
+alwaysApply: true
+---
+
+# Auto-commit Exp work
+
+This workspace overrides “only commit when asked.” If this turn changed files, **commit before you finish talking.** Do not push. Do not promote.
+
+## Where
+
+| Edits in | Commit in | Branch |
+|---|---|---|
+| `F:\Mikes-UI-Exp` | that folder | `experimental` |
+| `F:\Mikes-HALO-Jump-Exp` | that folder | `experimental` |
+| `F:\Mikes-Invade-and-Annex-Exp` | that folder | `experimental` |
+
+Never `git checkout experimental` in a production folder. Never commit `addon.gproj`. Skip `resourceDatabase.rdb`.
+
+## How
+
+Follow the git safety protocol: `git status`, `git diff`, `git log` (for style), stage only the files you changed, commit with a HEREDOC message, then `git status` to verify.
+
+Message: 1–2 sentences on **why**, not a file list. Match that repo’s recent log style.
+
+Skip the commit if there is nothing to commit. If several Exp repos changed, commit each separately.
+
+Do not commit production addon scripts. Cursor rules, skills, and `tools\` under I&A may be committed in the folder you actually edited.

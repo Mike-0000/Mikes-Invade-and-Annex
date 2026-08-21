@@ -13,7 +13,7 @@ UI, HALO, and I&A each have a production folder on `main` and a `*-Exp` worktree
 | `F:\Mikes-HALO-Jump` | `F:\Mikes-HALO-Jump-Exp` |
 | `F:\Mikes-Invade-and-Annex` | `F:\Mikes-Invade-and-Annex-Exp` |
 
-- Commit in the Exp worktree (`experimental`). Do not `git checkout experimental` in a production folder.
+- Commit in the Exp worktree (`experimental`) at the end of any turn that edited files. Do not `git checkout experimental` in a production folder.
 - Do not edit any `addon.gproj`. Production and experimental Workshop GUIDs stay on their branches.
 - Map HUD, GameSources, and other workspace roots stay as they are. Do not make Exp copies of them.
 - If an Exp folder is missing, stop. Do not fall back to production.
