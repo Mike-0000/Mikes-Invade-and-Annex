@@ -1,11 +1,11 @@
 ---
-description: How Invade & Annex consumes Mike's UI. Library lives at F:\Mikes-UI — do not rebuild the compositor here.
+description: How Invade & Annex consumes Mike's UI. Library lives at F:\Mikes-UI-Exp — do not rebuild the compositor here.
 alwaysApply: true
 ---
 
 # I&A + Mike's UI
 
-**Library:** `F:\Mikes-UI` (GUID `B3F91C6A4E275D08`). This repo depends on it. Prefix `IA_` here, `MUI_` there. Never edit GameSources. Read `F:\Mikes-UI\README.md` and the Consumer headers on MUI classes.
+**Library:** `F:\Mikes-UI-Exp` (production GUID `B3F91C6A4E275D08`). This repo depends on it. Prefix `IA_` here, `MUI_` there. Never edit GameSources. Read `F:\Mikes-UI-Exp\README.md` and the Consumer headers on MUI classes.
 
 Enforce: no ternary. Every `new` in a `ref`. Colors `Color.FromSRGBA`. Paint `DrawX/Y` + `GetDrawOpacity()`.
 
@@ -22,4 +22,4 @@ Do **not** resurrect `IA_MikesMenuHost`. Do **not** add I&A screens inside Mikes
 
 Overlay (`MakeOverlay`, fill 0) → `CreateFxBackdrop` → `CreateCard` (width, padding, `SetAlign(0.5, 0.5)`, staggered `SetIntro`). Store every kept control as `protected ref MUI_*`. Lists: `SetViewportHeight`. Buttons in a row: Hug + Grow 1, never Fill width. Custom I&A nodes: `runtime.Adopt` + `AddChild`.
 
-If the compositor is wrong, patch `F:\Mikes-UI`, not a copy here.
+If the compositor is wrong, patch `F:\Mikes-UI-Exp`, not a copy here.
