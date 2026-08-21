@@ -28,6 +28,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Toggle m_heliToggle;
 	protected ref MUI_Toggle m_groundToggle;
 	protected ref MUI_Toggle m_RolesToggle;
+	protected ref MUI_NumericField m_HaloMaxField;
 	protected ref MUI_Dropdown m_FactionDrop;
 
 	//------------------------------------------------------------------------------------------------
@@ -159,6 +160,12 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_groundToggle = runtime.CreateToggle("Disable HQ ground vehicles", "ground");
 		m_RolesToggle = runtime.CreateToggle("Enforce pilot role restrictions", "roles");
 
+		m_HaloMaxField = runtime.CreateNumericField("HALO Jump max players (0 = off)", "haloMax");
+		m_HaloMaxField.SetRange(0, 128);
+		m_HaloMaxField.SetStep(1);
+		m_HaloMaxField.SetDecimals(0);
+		m_HaloMaxField.SetValue(12);
+
 		ref MUI_Label factionLbl = runtime.CreateLabel("Preferred enemy faction (future spawns)", "factionLbl");
 		factionLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		factionLbl.SetMuted(true);
@@ -173,6 +180,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageHq.AddChild(m_heliToggle);
 		m_PageHq.AddChild(m_groundToggle);
 		m_PageHq.AddChild(m_RolesToggle);
+		m_PageHq.AddChild(m_HaloMaxField);
 		m_PageHq.AddChild(factionLbl);
 		m_PageHq.AddChild(m_FactionDrop);
 
@@ -295,6 +303,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_groundToggle.SetChecked(cfg.m_bDisableHQGroundVehicles);
 		if (m_RolesToggle)
 			m_RolesToggle.SetChecked(cfg.m_bEnforceRoleRestrictions);
+		if (m_HaloMaxField)
+			m_HaloMaxField.SetValue(cfg.m_iHaloJumpMaxPlayers);
 
 		if (m_FactionDrop && cfg.m_sDesiredEnemyFactionKeys && cfg.m_sDesiredEnemyFactionKeys.Count() > 0)
 		{
@@ -335,6 +345,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		bool disableGround = false;
 		bool enableCiv = true;
 		bool enforceRoles = false;
+		int haloMaxPlayers = 12;
 		string factionKey = "";
 
 		if (m_civField)
@@ -365,6 +376,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			enableCiv = m_CivSpawnToggle.IsChecked();
 		if (m_RolesToggle)
 			enforceRoles = m_RolesToggle.IsChecked();
+		if (m_HaloMaxField)
+			haloMaxPlayers = m_HaloMaxField.GetText().ToInt();
 		if (m_FactionDrop && m_FactionDrop.GetIndex() > 0)
 			factionKey = m_FactionDrop.GetText();
 
@@ -383,7 +396,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			artyChance,
 			artyMin,
 			artyMax,
-			factionKey
+			factionKey,
+			haloMaxPlayers
 		);
 		GetGame().GetMenuManager().CloseMenu(this);
 	}

@@ -55,6 +55,9 @@ class IA_Config{
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Roles", desc: "Enforce role restrictions for vehicle pilots.")]
 	bool m_bEnforceRoleRestrictions;
 
+	[Attribute(defvalue: "12", UIWidgets.EditBox, category: "Roles", desc: "HALO Jump is available while connected players are below this count. 0 disables HALO.")]
+	int m_iHaloJumpMaxPlayers;
+
 	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Civilian & Resistance", desc: "Enable civilian spawning in captured zones")]
 	bool m_bEnableCivilianSpawning;
 
