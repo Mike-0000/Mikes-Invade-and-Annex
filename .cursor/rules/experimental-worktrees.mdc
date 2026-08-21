@@ -1,0 +1,23 @@
+---
+description: Write UI, HALO, and I&A feature work only to *-Exp worktrees. Promote to production only when the user asks.
+alwaysApply: true
+---
+
+# Experimental worktrees
+
+UI, HALO, and I&A each have a production folder on `main` and a `*-Exp` worktree on `experimental`. **Always edit the Exp paths.** Never write to the production folders, even if both are in the workspace.
+
+| Production (read / Workbench publish only) | Edit here |
+|---|---|
+| `F:\Mikes-UI` | `F:\Mikes-UI-Exp` |
+| `F:\Mikes-HALO-Jump` | `F:\Mikes-HALO-Jump-Exp` |
+| `F:\Mikes-Invade-and-Annex` | `F:\Mikes-Invade-and-Annex-Exp` |
+
+- Commit in the Exp worktree (`experimental`). Do not `git checkout experimental` in a production folder.
+- Do not edit any `addon.gproj`. Production and experimental Workshop GUIDs stay on their branches.
+- Map HUD, GameSources, and other workspace roots stay as they are. Do not make Exp copies of them.
+- If an Exp folder is missing, stop. Do not fall back to production.
+
+## Promote
+
+Only when the user asks to promote experimental to production, or runs `/promote-experimental`: read and follow `F:\Mikes-Invade-and-Annex\.cursor\skills\promote-experimental\SKILL.md`. Do not promote as a side effect of other work.
