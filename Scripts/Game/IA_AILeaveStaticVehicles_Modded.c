@@ -5,6 +5,8 @@
 
 modded class SCR_AILeaveStaticVehicles
 {
+	protected bool m_bLoggedStayMountedLeave;
+
 	override ENodeResult EOnTaskSimulate(AIAgent owner, float dt)
 	{
 		if (m_Utility && m_Utility.m_VehicleMgr)
@@ -16,6 +18,12 @@ modded class SCR_AILeaveStaticVehicles
 				if (GroupVehicleIsStaticArtillery(groupVehicle))
 					return ENodeResult.SUCCESS;
 			}
+		}
+
+		if (!m_bLoggedStayMountedLeave)
+		{
+			Print("[IA] StayMounted LeaveStaticVehicles proceeding (non-artillery)", LogLevel.DEBUG);
+			m_bLoggedStayMountedLeave = true;
 		}
 
 		return super.EOnTaskSimulate(owner, dt);
