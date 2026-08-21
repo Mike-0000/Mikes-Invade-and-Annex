@@ -34,6 +34,6 @@ Map HUD stays production-only. Do not enable it on a server that loads experimen
 
 ## Promote to production
 
-Run `tools/Promote-Experimental.ps1` from this repo. It merges `experimental` into `main` in all three repos and **keeps `main`’s `addon.gproj`**. Then open the production folders in Workbench and publish.
+In Cursor, run `/promote-experimental`. That runs `tools/Promote-Experimental.ps1`, which merges `experimental` into `main` in all three repos and **keeps `main`’s `addon.gproj`**. Then open the production folders in Workbench and publish.
 
 Do not merge `addon.gproj` from `experimental` into `main`. That would retarget the live Workshop listings.
