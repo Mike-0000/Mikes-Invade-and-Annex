@@ -14,7 +14,7 @@ class IA_MortarPitPlacer
 	protected static const float OCCUPANCY_RADIUS = 6.0;
 	protected static const float DEFAULT_PIT_RADIUS = 40.0;
 	protected static const int MORTAR_GRID_MIN = 2;
-	protected static const int MORTAR_GRID_MAX = 8;
+	protected static const int MORTAR_GRID_MAX = 4;
 	protected static const int SAMPLE_COUNT = 48;
 
 	//----------------------------------------------------------------------------------------------

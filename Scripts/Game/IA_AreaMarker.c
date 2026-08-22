@@ -51,7 +51,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected static const float MORTAR_ROW_STAGGER_FRAC = 0.38;
     protected static const float MORTAR_YAW_SPREAD_DEG = 18.0;
     protected static const int MORTAR_GRID_MIN = 2;
-    protected static const int MORTAR_GRID_MAX = 8;
+    protected static const int MORTAR_GRID_MAX = 4;
     protected static const ResourceName RADIO_TOWER_COMPOSITION = "{B8E4C17A6D392F05}Prefabs/Compositions/IA_RadioTower_01.et";
     protected bool m_isDestroyed = false;
     protected bool m_prefabSpawned = false; // Flag to track if prefab has been spawned
