@@ -137,6 +137,11 @@ class IA_AiGroup
     private const float CIVILIAN_VEHICLE_PRIORITY_MOVE_LEVEL = 400.0;
     private const int PASSENGER_MIN_RIDE_S = 10;
     private const float PASSENGER_DUMP_CONTACT_M = 200.0;
+    private const int PASSENGER_DUMP_GETIN_CLEAR_MS = 400;
+    private const int PASSENGER_DUMP_ASSAULT_DELAY_MS = 500;
+    private const int PASSENGER_DUMP_ASSAULT_RETRY_MS = 1000;
+    private const int PASSENGER_DUMP_ASSAULT_MAX_TRIES = 10;
+    private int m_passengerDumpAssaultTries = 0;
 
     // Logging and rate limiting
     private static const int BEHAVIOR_LOG_RATE_LIMIT_SECONDS = 3;
@@ -1994,6 +1999,16 @@ class IA_AiGroup
             
             return; // Don't proceed with movement orders until everyone is inside
         }
+
+        // Teleport-seat / remount leftover GetInNearest stays current (Autocomplete 0)
+        // and blocks the drive Move. Drop it once everyone is actually seated.
+        if (IsCurrentWaypointGetInNearest())
+        {
+            RemoveAllOrders(false);
+            if (m_drivingTarget != vector.Zero)
+                IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
+            return;
+        }
         
         // If everyone is in the vehicle and we have a destination, make sure we have a waypoint
         if (!anyOutside && m_drivingTarget != vector.Zero)
@@ -2111,9 +2126,69 @@ class IA_AiGroup
         m_referencedEntity = null;
     }
 
+    bool IsAnyMemberOnFoot()
+    {
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (character && !character.IsInVehicle())
+                return true;
+        }
+        return false;
+    }
+
+    bool IsAnyMemberInVehicle()
+    {
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (character && character.IsInVehicle())
+                return true;
+        }
+        return false;
+    }
+
+    bool IsCurrentWaypointGetInNearest()
+    {
+        if (!m_group)
+            return false;
+
+        AIWaypoint current = m_group.GetCurrentWaypoint();
+        if (!current)
+            return false;
+
+        SCR_BoardingTimedWaypoint getInNearest = SCR_BoardingTimedWaypoint.Cast(current);
+        return getInNearest != null;
+    }
+
+    void ClearOrdersIfAllSeated()
+    {
+        if (IsAnyMemberOnFoot())
+            return;
+
+        RemoveAllOrders(false);
+    }
+
     void IssuePassengerMountHold()
     {
         if (!m_isVehiclePassengerGroup || m_passengerDumped)
+            return;
+
+        m_mountedUntilDump = true;
+        if (m_passengerMountTime == 0)
+            m_passengerMountTime = System.GetUnixTime();
+
+        // Already seated: do not plant GetInNearest. That tree re-reads
+        // GetCurrentWaypoint every tick and NodeErrors if we later swap to
+        // GetOut / S&D. Stay mounted by issuing no waypoint.
+        if (!IsAnyMemberOnFoot())
+        {
+            if (IsCurrentWaypointGetInNearest())
+                RemoveAllOrders(false);
+            return;
+        }
+
+        if (IsCurrentWaypointGetInNearest())
             return;
 
         vector holdPos = GetOrigin();
@@ -2122,9 +2197,6 @@ class IA_AiGroup
 
         RemoveAllOrders(false);
         AddOrder(holdPos, IA_AiOrder.GetInVehicle, true);
-        m_mountedUntilDump = true;
-        if (m_passengerMountTime == 0)
-            m_passengerMountTime = System.GetUnixTime();
     }
 
     void DumpPassengersAndAssault(vector assaultOverride = vector.Zero)
@@ -2134,28 +2206,87 @@ class IA_AiGroup
 
         m_passengerDumped = true;
         m_mountedUntilDump = false;
+        m_passengerDumpAssaultTries = 0;
         if (assaultOverride != vector.Zero)
             m_passengerAssaultTarget = assaultOverride;
-
-        RemoveAllOrders(false);
-
-        vector outPos = GetOrigin();
-        if (m_passengerVehicle)
-            outPos = m_passengerVehicle.GetOrigin();
-
-        AddOrder(outPos, IA_AiOrder.GetOutOfVehicle, true);
 
         vector assault = m_passengerAssaultTarget;
         if (assault == vector.Zero && m_linkedCrewGroup)
             assault = m_linkedCrewGroup.GetDrivingTarget();
         if (assault == vector.Zero)
-            assault = outPos;
+            assault = GetOrigin();
+        m_passengerAssaultTarget = assault;
 
-        AddOrder(assault, IA_AiOrder.SearchAndDestroy, false);
+        // GetOut only this frame. S&D is priority 15 and would steal current
+        // from GetOut (priority 0). If GetInNearest was current, wait out
+        // DecideActivity (~0.3s) before planting GetOut so that tree is gone.
+        bool hadGetIn = IsCurrentWaypointGetInNearest();
+        RemoveAllOrders(false);
+
         m_tacticalState = IA_GroupTacticalState.Attacking;
         m_tacticalStateTarget = assault;
         m_isStateManagedByAuthority = true;
-        Print(string.Format("[IA_AiGroup] Passenger group dumped and assaulting %1", assault.ToString()), LogLevel.DEBUG);
+        if (hadGetIn)
+        {
+            GetGame().GetCallqueue().CallLater(this.BeginPassengerGetOutAfterGetInClear, PASSENGER_DUMP_GETIN_CLEAR_MS, false);
+        }
+        else
+        {
+            IssuePassengerGetOut();
+            GetGame().GetCallqueue().CallLater(this.FinishPassengerDumpAssault, PASSENGER_DUMP_ASSAULT_DELAY_MS, false);
+        }
+        Print(string.Format("[IA_AiGroup] Passenger group dumping toward %1", assault.ToString()), LogLevel.DEBUG);
+    }
+
+    protected void BeginPassengerGetOutAfterGetInClear()
+    {
+        if (!m_isVehiclePassengerGroup || !m_passengerDumped)
+            return;
+        if (!m_isSpawned || !m_group)
+            return;
+
+        IssuePassengerGetOut();
+        GetGame().GetCallqueue().CallLater(this.FinishPassengerDumpAssault, PASSENGER_DUMP_ASSAULT_DELAY_MS, false);
+    }
+
+    protected void IssuePassengerGetOut()
+    {
+        vector outPos = GetOrigin();
+        if (m_passengerVehicle)
+            outPos = m_passengerVehicle.GetOrigin();
+
+        AddOrder(outPos, IA_AiOrder.GetOutOfVehicle, true);
+    }
+
+    protected void FinishPassengerDumpAssault()
+    {
+        if (!m_isVehiclePassengerGroup || !m_passengerDumped)
+            return;
+        if (!m_isSpawned || !m_group)
+            return;
+
+        if (IsAnyMemberInVehicle())
+        {
+            m_passengerDumpAssaultTries = m_passengerDumpAssaultTries + 1;
+            if (!HasOrders())
+                IssuePassengerGetOut();
+            if (m_passengerDumpAssaultTries <= PASSENGER_DUMP_ASSAULT_MAX_TRIES)
+            {
+                GetGame().GetCallqueue().CallLater(this.FinishPassengerDumpAssault, PASSENGER_DUMP_ASSAULT_RETRY_MS, false);
+                return;
+            }
+
+            // Still seated after retries — keep GetOut, do not add S&D
+            // (priority 15 would steal current and re-trigger GetInNearest NodeError).
+            return;
+        }
+
+        vector assault = m_passengerAssaultTarget;
+        if (assault == vector.Zero)
+            assault = GetOrigin();
+
+        AddOrder(assault, IA_AiOrder.SearchAndDestroy, true);
+        Print(string.Format("[IA_AiGroup] Passenger group assaulting %1", assault.ToString()), LogLevel.DEBUG);
     }
 
     protected void ApplyBoardingAllowance(SCR_AIWaypoint waypoint, IA_AiOrder order)
@@ -2399,7 +2530,9 @@ class IA_AiGroup
 
         if (m_isVehiclePassengerGroup && m_mountedUntilDump && !m_passengerDumped)
         {
-            TryDumpPassengersIfNeeded();
+            IssuePassengerMountHold();
+            if (!IsAnyMemberOnFoot())
+                TryDumpPassengersIfNeeded();
             return;
         }
 
@@ -2803,11 +2936,10 @@ class IA_AiGroup
         // Mark this as an authoritative state change.
         SetTacticalState(IA_GroupTacticalState.InVehicle, destination, vehicle, true);
         
-        // After setting the state, add a GetInVehicle order to register the vehicle with SCR_AIGroup
-        // This is required after recent game updates - the vehicle must be registered
-        // before SCR_AIGetEmptyCompartment can find compartments for boarding
-        // We add this after SetTacticalState so it's not removed by RemoveAllOrders()
-        if (m_group)
+        // GetInNearest only if someone is actually on foot. Stacking it on the
+        // InVehicle Move after a teleport-seat makes GetInNearestVehicle.bt
+        // read a Move waypoint and NodeError.
+        if (m_group && IsAnyMemberOnFoot())
         {
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
         }
@@ -3501,14 +3633,14 @@ class IA_AiGroup
         {
             SetTacticalState(IA_GroupTacticalState.InVehicle, m_passengerAssaultTarget, null, true);
             IssuePassengerMountHold();
-            Print("[IA_AiGroup.OnStaggeredSpawningComplete] Passenger group held on cargo GetIn", LogLevel.DEBUG);
+            Print("[IA_AiGroup.OnStaggeredSpawningComplete] Passenger group ready for cargo mount", LogLevel.DEBUG);
             ScheduleNextStateEvaluation();
             SetupDeathListener();
         }
         else if (m_referencedEntity)
         {
-            // Order units to get in the vehicle immediately
-            AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+            if (IsAnyMemberOnFoot())
+                AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
 
             // Stay InVehicle. DefendPatrol here used to spawn a Defend waypoint whose
             // OnDeselected GetOuts every turret occupant.

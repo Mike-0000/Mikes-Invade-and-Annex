@@ -1397,6 +1397,7 @@ class IA_VehicleManager: GenericEntity
                 GetGame().GetCallqueue().CallLater(CheckCiviliansInVehicle, 5000, true, vehicle, crewGroup, destination);
             }
 
+            crewGroup.ClearOrdersIfAllSeated();
             UpdateVehicleWaypoint(vehicle, crewGroup, destination);
             return;
         }
@@ -1426,6 +1427,9 @@ class IA_VehicleManager: GenericEntity
         if (!passengerCharacters.IsEmpty())
             SeatCharactersInSlots(vehicle, passengerCharacters, cargo);
 
+        // Drop leftover GetInNearest from spawn-complete so the drive Move can
+        // become current. Passengers stay seated with no waypoint.
+        crewGroup.ClearOrdersIfAllSeated();
         passengerGroup.IssuePassengerMountHold();
         UpdateVehicleWaypoint(vehicle, crewGroup, destination);
     }
@@ -1484,8 +1488,10 @@ class IA_VehicleManager: GenericEntity
         
         // Ensure they're still flagged as driving
         aiGroup.ForceDrivingState(true);
-        
-        // Update their waypoint to continue the journey
+
+        // Remount used GetInNearest; clear it before the drive Move or that
+        // tree keeps running against the new waypoint class.
+        aiGroup.ClearOrdersIfAllSeated();
         UpdateVehicleWaypoint(vehicle, aiGroup, destination);
     }
     
