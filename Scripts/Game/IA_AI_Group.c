@@ -97,8 +97,10 @@ class IA_AiGroup
     
     private IA_SideObjective m_OwningSideObjective;
     private bool m_isMortarCrew = false;
+    private float m_defendWaypointRadiusOverride = 0;
     private ref array<IEntity> m_assignedMortars = new array<IEntity>();
     private ref array<AIAgent> m_claimedMortarGunners = new array<AIAgent>();
+    private IEntity m_artilleryFireWaypoint;
     
     private vector      m_initialPosition;
     private vector      m_lastOrderPosition;
@@ -1033,8 +1035,10 @@ class IA_AiGroup
                     this, typename.EnumToString(IA_Faction, m_faction), waypointEnt.Type()), LogLevel.DEBUG);
                 // --- END ADDED ---
                 
-                // If specific SCR_DefendWaypoint methods were needed, they could be called on 'defendW' here.
-                w = defendW; // Assign to the SCR_AIWaypoint variable for common operations
+                if (m_defendWaypointRadiusOverride > 0)
+                    defendW.SetCompletionRadius(m_defendWaypointRadiusOverride);
+
+                w = defendW;
             }
             else
             {
@@ -4360,6 +4364,44 @@ class IA_AiGroup
         return m_OwningSideObjective != null;
     }
 
+    void SetDefendWaypointRadiusOverride(float radius)
+    {
+        if (radius < 0)
+            radius = 0;
+        m_defendWaypointRadiusOverride = radius;
+        ApplyDefendWaypointRadius(radius);
+    }
+
+    void ApplyDefendWaypointRadius(float radius)
+    {
+        if (radius <= 0)
+            return;
+
+        if (m_group)
+        {
+            array<AIWaypoint> wps = {};
+            m_group.GetWaypoints(wps);
+            foreach (AIWaypoint wp : wps)
+            {
+                SCR_DefendWaypoint defendWp = SCR_DefendWaypoint.Cast(wp);
+                if (!defendWp)
+                    continue;
+                defendWp.SetCompletionRadius(radius);
+            }
+        }
+
+        if (m_pendingWaypoints)
+        {
+            foreach (SCR_AIWaypoint pendingWp : m_pendingWaypoints)
+            {
+                SCR_DefendWaypoint pendingDefend = SCR_DefendWaypoint.Cast(pendingWp);
+                if (!pendingDefend)
+                    continue;
+                pendingDefend.SetCompletionRadius(radius);
+            }
+        }
+    }
+
     void SetMortarCrew(bool value)
     {
         m_isMortarCrew = value;
@@ -4625,8 +4667,28 @@ class IA_AiGroup
             return false;
         if (GetAliveCount() <= 0)
             return false;
-        if (!m_referencedEntity)
-            return false;
+
+        if (shotCount < 1)
+            shotCount = 1;
+
+        RegisterAssignedMortarsForFire();
+
+        SCR_AIWaypointArtillerySupport existing = SCR_AIWaypointArtillerySupport.Cast(m_artilleryFireWaypoint);
+        if (existing && m_group.GetCurrentWaypoint() == existing)
+        {
+            ConfigureArtilleryWaypoint(existing, shotCount, false);
+            existing.SetOrigin(targetPos);
+            existing.SetActive(true, true);
+            GiftMortarMissionAmmo(shotCount);
+            Print(string.Format("[IA_AiGroup] Fire mission moved: %1 rounds at %2", shotCount, targetPos), LogLevel.NORMAL);
+            return true;
+        }
+
+        if (m_artilleryFireWaypoint)
+        {
+            IA_Game.AddEntityToGc(m_artilleryFireWaypoint);
+            m_artilleryFireWaypoint = null;
+        }
 
         ResourceName wpRes = "{A8F31D47C9E02B16}Prefabs/AI/Waypoints/IA_AIWaypoint_ArtillerySupport.et";
         Resource res = Resource.Load(wpRes);
@@ -4636,11 +4698,7 @@ class IA_AiGroup
             return false;
         }
 
-        // Park the waypoint on the guns. Vanilla HandleWP marches the group to the
-        // waypoint origin if they are outside its radius; that origin is also the
-        // impact point, so a WP on the AO makes them walk off the mortar after GetOut.
-        vector wpPos = m_referencedEntity.GetOrigin();
-        IEntity wpEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(wpPos));
+        IEntity wpEnt = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(targetPos));
         SCR_AIWaypointArtillerySupport wp = SCR_AIWaypointArtillerySupport.Cast(wpEnt);
         if (!wp)
         {
@@ -4650,31 +4708,38 @@ class IA_AiGroup
             return false;
         }
 
-        if (shotCount < 1)
-            shotCount = 1;
-
-        wp.SetFireTargetOverride(targetPos);
-        wp.SetAmmoType(SCR_EAIArtilleryAmmoType.HIGH_EXPLOSIVE, false);
-        wp.SetTargetShotCount(shotCount, false);
+        ConfigureArtilleryWaypoint(wp, shotCount, false);
         wp.SetActive(true, false);
-        RegisterAssignedMortarsForFire();
         RemoveAllOrders();
         m_group.AddWaypointToGroup(wp);
-
-        int shells = shotCount;
-        if (shells > 8)
-            shells = 8;
-        if (m_claimedMortarGunners)
-        {
-            IEntity ammoMortar = m_referencedEntity;
-            foreach (AIAgent gunner : m_claimedMortarGunners)
-            {
-                GiveMortarShellsToGunner(gunner, ammoMortar, shells);
-            }
-        }
+        m_artilleryFireWaypoint = wp;
+        GiftMortarMissionAmmo(shotCount);
 
         Print(string.Format("[IA_AiGroup] Fire mission issued: %1 rounds at %2", shotCount, targetPos), LogLevel.NORMAL);
         return true;
+    }
+
+    protected void ConfigureArtilleryWaypoint(notnull SCR_AIWaypointArtillerySupport wp, int shotCount, bool invokeEvent)
+    {
+        wp.SetCompletionRadius(10000);
+        wp.SetAmmoType(SCR_EAIArtilleryAmmoType.HIGH_EXPLOSIVE, invokeEvent);
+        wp.SetTargetShotCount(shotCount, invokeEvent);
+        wp.SetPriorityLevel(SCR_AIActionBase.PRIORITY_LEVEL_GAMEMASTER);
+    }
+
+    protected void GiftMortarMissionAmmo(int shotCount)
+    {
+        int shells = shotCount;
+        if (shells > 8)
+            shells = 8;
+        if (!m_claimedMortarGunners)
+            return;
+
+        IEntity ammoMortar = m_referencedEntity;
+        foreach (AIAgent gunner : m_claimedMortarGunners)
+        {
+            GiveMortarShellsToGunner(gunner, ammoMortar, shells);
+        }
     }
 
     protected ResourceName GetMortarHeAmmoPrefab(IEntity mortar)

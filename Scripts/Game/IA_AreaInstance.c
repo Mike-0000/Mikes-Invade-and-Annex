@@ -161,21 +161,6 @@ class IA_AreaInstance
     private Faction m_sideObjectiveDefenseFaction = null;
     // --- END ADDED ---
     
-    // --- BEGIN ADDED: Artillery Strike System ---
-    private bool m_isArtilleryStrikeActive = false;
-    private int m_lastArtilleryStrikeCheckTime = 0;
-    private int m_lastArtilleryStrikeEndTime = 0;
-    private vector m_artilleryStrikeCenter = vector.Zero;
-    private int m_artilleryStrikeSmokeTime = 0; // Time when smoke was spawned
-    private bool m_artillerySmokeSpawned = false;
-    private const int ARTILLERY_CHECK_INTERVAL = 60; // seconds
-    private const int ARTILLERY_COOLDOWN = 300; // 5 minutes
-    private const int ARTILLERY_SMOKE_TO_IMPACT_DELAY = 90; // 90 seconds
-    private const float ARTILLERY_STRIKE_CHANCE = 0.25; // 25% chance per check
-    private const ResourceName RED_SMOKE_EFFECT_PREFAB = "{002FEEDB0213777D}Prefabs/EffectsModuleEntities/EffectModule_Particle_Smoke_Red.et";
-    private const ResourceName ARTILLERY_STRIKE_PREFAB = "{11B2A636F321AD68}PrefabsEditable/EffectsModules/Mortar/IA_EffectModule_Zoned_MortarBarrage_Large.et";
-    // --- END ADDED ---
-    
     private bool m_isEscapeSequenceActive = false;
 
 	private int m_civiliansKilledByPlayer = 0;
@@ -1027,6 +1012,9 @@ class IA_AreaInstance
             return;
 
         if (!this || !m_area || !m_canSpawn || m_military.IsEmpty())
+            return;
+
+        if (m_area.GetAreaType() == IA_AreaType.MortarPit)
             return;
 
         // Get current time for duration calculations
@@ -2786,12 +2774,12 @@ class IA_AreaInstance
             delay = delay + 250;
         }
 
-        int guardCount = Math.Round(3 * m_aiScaleFactor);
-        if (guardCount < 2)
-            guardCount = 2;
+        int guardCount = Math.Round(4 * m_aiScaleFactor);
+        if (guardCount < 3)
+            guardCount = 3;
         GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, m_area.GetOrigin(), guardCount, m_AreaFaction, true);
 
-        Print(string.Format("[IA_AreaInstance] Mortar pit AI scheduled: %1 gunners on tubes, %2 guards", mortars.Count(), guardCount), LogLevel.NORMAL);
+        Print(string.Format("[IA][MortarPit] AI scheduled: %1 gunners on tubes, %2 guards", mortars.Count(), guardCount), LogLevel.NORMAL);
     }
 
     private void VehicleReinforcementsTask()
@@ -5174,13 +5162,28 @@ class IA_AreaInstance
                 continue;
             if (!guard.IsSpawned())
                 continue;
-            guard.SetTacticalState(IA_GroupTacticalState.Defending, m_area.GetOrigin(), null, true);
-            guard.AddOrder(m_area.GetOrigin(), IA_AiOrder.DefendSmall, true);
+            AssignMortarPitGuardPost(guard);
             m_assignedGroupStates.Set(guard, IA_GroupTacticalState.Defending);
         }
 
         m_mortarCrewSetupDone = true;
-        Print(string.Format("[IA_AreaInstance] Mortar battery crewed for %1: %2 guns, %3 empty, %4 crew groups", m_area.GetName(), mortars.Count(), emptyGuns, m_mortarCrewGroups.Count()), LogLevel.NORMAL);
+        Print(string.Format("[IA][MortarPit] Battery crewed for %1: %2 guns, %3 empty, %4 crew groups", m_area.GetName(), mortars.Count(), emptyGuns, m_mortarCrewGroups.Count()), LogLevel.NORMAL);
+    }
+
+    // Casual pit security: vanilla Defend + Loiter/Observation posts, not DefendPatrol.
+    protected void AssignMortarPitGuardPost(IA_AiGroup guard)
+    {
+        if (!guard || !m_area)
+            return;
+
+        float radius = m_area.GetRadius();
+        if (radius < 30)
+            radius = 30;
+
+        guard.EnableDefendModeTracking(true, m_area.GetOrigin());
+        guard.SetDefendWaypointRadiusOverride(radius);
+        guard.SetTacticalState(IA_GroupTacticalState.Defending, m_area.GetOrigin(), null, true);
+        guard.ApplyDefendWaypointRadius(radius);
     }
 
     protected bool IsMortarClaimedByCrew(IEntity mortar)
@@ -5421,6 +5424,9 @@ class IA_AreaInstance
         // they do not get a DefendPatrol waypoint that later dumps them off the mortar.
         if (m_area && m_area.GetAreaType() == IA_AreaType.MortarPit && grp.GetInitialUnitCount() == 1)
             grp.SetMortarCrew(true);
+
+        if (m_area && m_area.GetAreaType() == IA_AreaType.MortarPit && grp.GetInitialUnitCount() != 1)
+            AssignMortarPitGuardPost(grp);
 
         // AddMilitaryGroup will also assign initial state (e.g., DefendPatrol or Attacking if area is under attack)
         AddMilitaryGroup(grp);
@@ -5834,112 +5840,4 @@ class IA_AreaInstance
             Print(string.Format("[AreaInstance] Escape sequence ACTIVATED for area %1. Halting military order task.", m_area.GetName()), LogLevel.DEBUG);
         }
     }
-	
-	// --- BEGIN ADDED: Artillery Strike System ---
-	private void ArtilleryStrikeTask()
-	{
-		int currentTime = System.GetUnixTime();
-	
-		// If a strike is active, manage its lifecycle
-		if (m_isArtilleryStrikeActive)
-		{
-			if (m_artillerySmokeSpawned && (currentTime - m_artilleryStrikeSmokeTime >= ARTILLERY_SMOKE_TO_IMPACT_DELAY))
-			{
-				// Time for impact!
-				Print(string.Format("[ArtilleryStrike] BOOM! Firing artillery at %1 for area %2", m_artilleryStrikeCenter, m_area.GetName()), LogLevel.DEBUG);
-				
-				Resource res = Resource.Load(ARTILLERY_STRIKE_PREFAB);
-				if (res)
-				{
-					GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(m_artilleryStrikeCenter));
-				}
-				else
-				{
-					Print(string.Format("[ArtilleryStrike] FAILED to load artillery prefab: %1", ARTILLERY_STRIKE_PREFAB), LogLevel.ERROR);
-				}
-	
-				// Strike is finished, reset state and start cooldown
-				m_isArtilleryStrikeActive = false;
-				m_artillerySmokeSpawned = false;
-				m_artilleryStrikeCenter = vector.Zero;
-				m_lastArtilleryStrikeEndTime = currentTime;
-			}
-			return; // Don't try to start a new one
-		}
-	
-		// If no strike is active, check if we should start one.
-	
-		// 1. Must be under attack
-		if (!IsUnderAttack())
-			return;
-	
-		// 2. Check main 60-second timer
-		if (currentTime - m_lastArtilleryStrikeCheckTime < ARTILLERY_CHECK_INTERVAL)
-			return;
-		m_lastArtilleryStrikeCheckTime = currentTime;
-	
-		// 3. Check 5-minute cooldown
-		if (currentTime - m_lastArtilleryStrikeEndTime < ARTILLERY_COOLDOWN)
-			return;
-	
-		// 4. Random chance
-		if (IA_Game.rng.RandFloat01() > ARTILLERY_STRIKE_CHANCE)
-			return;
-			
-		// --- All checks passed, let's start a strike! ---
-		Print(string.Format("[ArtilleryStrike] Initiating artillery strike for area %1", m_area.GetName()), LogLevel.DEBUG);
-		
-		// 5. Determine target location
-		vector primaryThreatLocation = m_area.GetOrigin();
-		vector dangerSum = vector.Zero;
-		int dangerCount = 0;
-		
-		foreach (IA_AiGroup g_threat : m_military) 
-		{
-			int timeSinceLastDanger = currentTime - g_threat.GetLastDangerEventTime();
-			if (g_threat && g_threat.GetLastDangerEventTime() > 0 && timeSinceLastDanger < 90)
-			{
-				vector currentDangerPos = g_threat.GetLastDangerPosition();
-				if(currentDangerPos != vector.Zero)
-				{
-					 if (vector.DistanceSq(currentDangerPos, m_area.GetOrigin()) < (m_area.GetRadius() * 1.5) * (m_area.GetRadius() * 1.5))
-					 {
-						dangerSum += currentDangerPos;
-						dangerCount++;
-					 }
-				}
-			}
-		}
-		
-		if (dangerCount > 0)
-		{
-			primaryThreatLocation = dangerSum / dangerCount;
-		}
-		
-		// Add 25m randomization
-		m_artilleryStrikeCenter = IA_Game.rng.GenerateRandomPointInRadius(1, 25, primaryThreatLocation);
-		Print(string.Format("[ArtilleryStrike] Target determined: %1 for area %2", m_artilleryStrikeCenter, m_area.GetName()), LogLevel.DEBUG);
-	
-		// 6. Spawn warning smoke
-		Print(string.Format("[ArtilleryStrike] Spawning warning smoke around %1", m_artilleryStrikeCenter), LogLevel.DEBUG);
-		Resource smokeRes = Resource.Load(RED_SMOKE_EFFECT_PREFAB);
-		if (smokeRes)
-		{
-			for (int i = 0; i < 6; i++)
-			{
-				vector smokePos = IA_Game.rng.GenerateRandomPointInRadius(1, 100, m_artilleryStrikeCenter);
-				GetGame().SpawnEntityPrefab(smokeRes, null, IA_CreateSimpleSpawnParams(smokePos));
-			}
-		}
-		else
-		{
-			Print(string.Format("[ArtilleryStrike] FAILED to load smoke prefab: %1", RED_SMOKE_EFFECT_PREFAB), LogLevel.ERROR);
-		}
-	
-		// 7. Update state
-		m_isArtilleryStrikeActive = true;
-		m_artillerySmokeSpawned = true;
-		m_artilleryStrikeSmokeTime = currentTime;
-	}
-	// --- END ADDED ---
 }

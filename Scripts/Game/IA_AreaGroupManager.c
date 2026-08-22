@@ -12,16 +12,11 @@ class IA_AreaGroupManager
     private ref array<ref IA_AreaInstance> m_areaInstances;
 
     // --- Artillery Strike System ---
-    private bool m_isArtilleryStrikeActive = false;
     private int m_lastArtilleryStrikeCheckTime = 0;
     private int m_lastArtilleryStrikeEndTime = 0;
-    private vector m_artilleryStrikeCenter = vector.Zero;
-    private int m_artilleryStrikeSmokeTime = 0; // Time when smoke was spawned
-    private bool m_artillerySmokeSpawned = false;
     private const int ARTILLERY_CHECK_INTERVAL = 60; // seconds
     private const int ARTILLERY_COOLDOWN = 300; // 5+ minutes
-    private const float ARTILLERY_STRIKE_CHANCE = 0.18; // 25% chance per check
-    private const ResourceName RED_SMOKE_EFFECT_PREFAB = "{002FEEDB0213777D}Prefabs/EffectsModuleEntities/EffectModule_Particle_Smoke_Red.et";
+    private const float ARTILLERY_STRIKE_CHANCE = 0.18; // chance per check
     private const int ARTILLERY_MIN_SHOTS = 6;
     private const int ARTILLERY_MAX_SHOTS = 12;
 
@@ -661,54 +656,16 @@ class IA_AreaGroupManager
     void ArtilleryStrikeTask()
     {
         int currentTime = System.GetUnixTime();
-		Print(string.Format("[ArtilleryStrikeTask] Running for group with %1 areas.", m_areaInstances.Count()), LogLevel.NORMAL);
+        float strikeChance = ARTILLERY_STRIKE_CHANCE;
+        int cooldown = ARTILLERY_COOLDOWN;
 
-		// Configurable values (defaults)
-		float strikeChance = ARTILLERY_STRIKE_CHANCE;
-		int cooldown = ARTILLERY_COOLDOWN;
-		int minDelay = 45;
-		int maxDelay = 70;
-
-		IA_Config config = IA_MissionInitializer.GetGlobalConfig();
-		if (config)
-		{
-			strikeChance = config.m_fArtilleryStrikeChance;
-			cooldown = config.m_iArtilleryCooldown;
-			minDelay = config.m_iArtilleryMinDelay;
-			maxDelay = config.m_iArtilleryMaxDelay;
-		}
-
-        // If a strike is active, manage its lifecycle
-        if (m_isArtilleryStrikeActive)
+        IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+        if (config)
         {
-            if (m_artillerySmokeSpawned && (currentTime - m_artilleryStrikeSmokeTime >= Math.RandomInt(minDelay, maxDelay)))
-            {
-                Print(string.Format("[ArtilleryStrike] Issuing fire mission at %1 for area group.", m_artilleryStrikeCenter), LogLevel.NORMAL);
-
-                IA_AreaInstance pit = FindMortarPitInstance();
-                bool fired = false;
-                if (pit)
-                {
-                    int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
-                    fired = pit.IssueMortarFireMission(m_artilleryStrikeCenter, shotCount);
-                }
-
-                if (!fired)
-                    Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
-
-                // Strike is finished, reset state and start cooldown
-                m_isArtilleryStrikeActive = false;
-                m_artillerySmokeSpawned = false;
-                m_artilleryStrikeCenter = vector.Zero;
-                m_lastArtilleryStrikeEndTime = currentTime;
-				Print(string.Format("[ArtilleryStrike] Strike finished. Cooldown started for %1 seconds.", cooldown), LogLevel.NORMAL);
-            }
-            return; // Don't try to start a new one
+            strikeChance = config.m_fArtilleryStrikeChance;
+            cooldown = config.m_iArtilleryCooldown;
         }
 
-        // --- New Strike Checks ---
-
-        // 0. Need a live, uncaptured mortar pit with a crew
         IA_AreaInstance mortarPit = FindMortarPitInstance();
         if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
         {
@@ -716,153 +673,61 @@ class IA_AreaGroupManager
             return;
         }
 
-        // 1. Check main 60-second timer
         if (currentTime - m_lastArtilleryStrikeCheckTime < ARTILLERY_CHECK_INTERVAL)
-		{
-			Print(string.Format("[ArtilleryStrike] Check skipped: interval not yet met. %1s remaining.", ARTILLERY_CHECK_INTERVAL - (currentTime - m_lastArtilleryStrikeCheckTime)), LogLevel.NORMAL);
-            return; // Too soon for another check
-		}
+        {
+            Print(string.Format("[ArtilleryStrike] Check skipped: interval not yet met. %1s remaining.", ARTILLERY_CHECK_INTERVAL - (currentTime - m_lastArtilleryStrikeCheckTime)), LogLevel.NORMAL);
+            return;
+        }
         m_lastArtilleryStrikeCheckTime = currentTime;
-		Print("[ArtilleryStrike] Passed 60-second interval check.", LogLevel.NORMAL);
 
-        // 2. Check if any area in the group is under attack
         bool groupUnderAttack = false;
-		string attackedAreaName;
+        string attackedAreaName;
         foreach (IA_AreaInstance instance : m_areaInstances)
         {
             if (instance && instance.IsUnderAttack())
             {
                 groupUnderAttack = true;
-				attackedAreaName = instance.GetArea().GetName();
+                attackedAreaName = instance.GetArea().GetName();
                 break;
             }
         }
         if (!groupUnderAttack)
-		{
-			Print("[ArtilleryStrike] Check failed: No area in the group is under attack.", LogLevel.NORMAL);
-            return;
-		}
-		Print(string.Format("[ArtilleryStrike] Passed 'Under Attack' check. Area '%1' is under attack.", attackedAreaName), LogLevel.NORMAL);
-
-        // 3. Check cooldown
-        if (currentTime - m_lastArtilleryStrikeEndTime < cooldown)
-		{
-			Print(string.Format("[ArtilleryStrike] Check failed: On cooldown. %1 seconds remaining.", cooldown - (currentTime - m_lastArtilleryStrikeEndTime)), LogLevel.NORMAL);
-            return;
-		}
-		Print("[ArtilleryStrike] Passed cooldown check.", LogLevel.NORMAL);
-
-        // 4. Random chance
-		float randomRoll = IA_Game.rng.RandFloat01();
-        if (randomRoll > strikeChance)
-		{
-			Print(string.Format("[ArtilleryStrike] Check failed: Random chance not met (Rolled %1, needed <= %2).", randomRoll, strikeChance), LogLevel.NORMAL);
-            return;
-		}
-		Print(string.Format("[ArtilleryStrike] Passed random chance (Rolled %1, needed <= %2). Initiating strike.", randomRoll, strikeChance), LogLevel.NORMAL);
-			
-        // 5. Determine target location from *all* danger events in the group
-		vector groupCenter = vector.Zero;
-		if (!m_areaInstances.IsEmpty())
-		{
-			vector totalPos = vector.Zero;
-			int count = 0;
-			foreach (IA_AreaInstance inst : m_areaInstances)
-			{
-				if (inst && inst.GetArea())
-				{
-					totalPos += inst.GetArea().GetOrigin();
-					count++;
-				}
-			}
-			if (count > 0)
-			{
-				groupCenter = totalPos / count;
-				Print(string.Format("[ArtilleryStrike] Calculated area group center: %1", groupCenter), LogLevel.NORMAL);
-			}
-			else
-			{
-				 Print("[ArtilleryStrike] Could not calculate area group center, no valid areas found. Aborting strike.", LogLevel.WARNING);
-				 return;
-			}
-		}
-		else
-		{
-			Print("[ArtilleryStrike] Strike aborted, no area instances in group.", LogLevel.WARNING);
-			return;
-		}
-		
-        array<vector> relevantPositions = {};
-		const float MAX_DANGER_EVENT_DISTANCE = 1600.0;
-        
-        foreach (IA_AreaInstance instance : m_areaInstances)
         {
-            if (!instance) continue;
-            
-            array<ref IA_AiGroup> military = instance.GetMilitaryGroups();
-            foreach (IA_AiGroup group : military)
-            {
-                int timeSinceLastDanger = currentTime - group.GetLastDangerEventTime();
-                // Only consider recent danger events
-                if (group && group.GetLastDangerEventTime() > 0 && timeSinceLastDanger < 90)
-                {
-                    vector currentDangerPos = group.GetLastDangerPosition();
-                    if (currentDangerPos != vector.Zero)
-                    {
-						if (vector.DistanceSq(currentDangerPos, groupCenter) <= (MAX_DANGER_EVENT_DISTANCE * MAX_DANGER_EVENT_DISTANCE))
-						{
-                        	relevantPositions.Insert(currentDangerPos);
-						}
-						else
-						{
-							Print(string.Format("[ArtilleryStrike] Discarded danger event at %1, too far from group center %2 (Distance: %3m, Max: %4m)", 
-								currentDangerPos, groupCenter, vector.Distance(currentDangerPos, groupCenter), MAX_DANGER_EVENT_DISTANCE), LogLevel.NORMAL);
-						}
-                    }
-                }
-            }
+            Print("[ArtilleryStrike] Check failed: No area in the group is under attack.", LogLevel.NORMAL);
+            return;
         }
-	
-        // BUG FIX: If no valid, recent danger events are found, abort the strike.
-        if (relevantPositions.IsEmpty())
+        Print(string.Format("[ArtilleryStrike] Passed 'Under Attack' check. Area '%1' is under attack.", attackedAreaName), LogLevel.NORMAL);
+
+        if (currentTime - m_lastArtilleryStrikeEndTime < cooldown)
+        {
+            Print(string.Format("[ArtilleryStrike] Check failed: On cooldown. %1 seconds remaining.", cooldown - (currentTime - m_lastArtilleryStrikeEndTime)), LogLevel.NORMAL);
+            return;
+        }
+
+        float randomRoll = IA_Game.rng.RandFloat01();
+        if (randomRoll > strikeChance)
+        {
+            Print(string.Format("[ArtilleryStrike] Check failed: Random chance not met (Rolled %1, needed <= %2).", randomRoll, strikeChance), LogLevel.NORMAL);
+            return;
+        }
+
+        vector targetPos;
+        if (!ComputeGroupThreatTarget(targetPos))
         {
             Print("[ArtilleryStrike] Strike aborted for area group. No recent danger events found.", LogLevel.NORMAL);
             return;
         }
-        
-		Print(string.Format("[ArtilleryStrike] Found %1 recent danger events to calculate target.", relevantPositions.Count()), LogLevel.NORMAL);
-		
-        // Calculate median position
-        IA_VectorUtils.SortVectorsByX(relevantPositions);
-        int medianIndex = relevantPositions.Count() / 2;
-        vector primaryThreatLocation = relevantPositions[medianIndex];
-        
-        // Add 25m randomization
-        m_artilleryStrikeCenter = IA_Game.rng.GenerateRandomPointInRadius(4, 30, primaryThreatLocation);
-		m_artilleryStrikeCenter[1] = GetGame().GetWorld().GetSurfaceY(m_artilleryStrikeCenter[0], m_artilleryStrikeCenter[2]);
-        Print(string.Format("[ArtilleryStrike] Target determined (Median): %1 for area group.", m_artilleryStrikeCenter), LogLevel.NORMAL);
-    
-        // 6. Spawn warning smoke
-        Print(string.Format("[ArtilleryStrike] Spawning 6 warning smoke markers around %1.", m_artilleryStrikeCenter), LogLevel.NORMAL);
-        Resource smokeRes = Resource.Load(RED_SMOKE_EFFECT_PREFAB);
-        if (smokeRes)
+
+        int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
+        bool fired = mortarPit.IssueMortarFireMission(targetPos, shotCount);
+        if (!fired)
         {
-            for (int i = 0; i < 6; i++)
-            {
-                vector smokePos = IA_Game.rng.GenerateRandomPointInRadius(1, 100, m_artilleryStrikeCenter);
-				smokePos[1] = GetGame().GetWorld().GetSurfaceY(smokePos[0], smokePos[2]);
-                GetGame().SpawnEntityPrefab(smokeRes, null, IA_CreateSimpleSpawnParams(smokePos));
-            }
+            Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
+            return;
         }
-        else
-        {
-            Print(string.Format("[ArtilleryStrike] FAILED to load smoke prefab: %1", RED_SMOKE_EFFECT_PREFAB), LogLevel.ERROR);
-        }
-    
-        // 7. Update state
-        m_isArtilleryStrikeActive = true;
-        m_artillerySmokeSpawned = true;
-        m_artilleryStrikeSmokeTime = currentTime;
+
+        m_lastArtilleryStrikeEndTime = currentTime;
+        Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, targetPos, cooldown), LogLevel.NORMAL);
     }
 
     protected IA_AreaInstance FindMortarPitInstance()
