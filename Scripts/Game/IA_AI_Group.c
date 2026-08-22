@@ -448,9 +448,18 @@ class IA_AiGroup
         groundPos[1] = groundY;
         grp.m_group.SetOrigin(groundPos);
 
-        array<BaseCompartmentSlot> usableCompartments = {};
-        IA_VehicleManager.CollectVehicleCrewSeats(vehicle, usableCompartments, true);
-        int actualUnitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
+        ref array<BaseCompartmentSlot> pilots = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> turrets = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> cargo = new array<BaseCompartmentSlot>();
+        IA_VehicleManager.CollectVehicleSeatsByRole(vehicle, pilots, turrets, cargo, true);
+        int seatCap;
+        if (passengerOnly)
+            seatCap = cargo.Count();
+        else
+            seatCap = pilots.Count() + turrets.Count();
+        if (seatCap <= 0)
+            seatCap = pilots.Count() + turrets.Count() + cargo.Count();
+        int actualUnitsToSpawn = Math.Min(unitCount, seatCap);
         if (actualUnitsToSpawn <= 0)
         {
             Print("[IA_AiGroup.CreateGroupForVehicle] No usable compartments; discarding empty group.", LogLevel.WARNING);
@@ -1995,6 +2004,17 @@ class IA_AiGroup
             {
                 if (IsCurrentWaypointGetInNearest())
                     RemoveAllOrders(false);
+                return;
+            }
+
+            // Overfill leftover: no empty seat left, so GetIn can never
+            // complete. Drive with who is already seated.
+            if (!IA_VehicleManager.VehicleHasEmptyAccessibleSeat(vehicle))
+            {
+                if (IsCurrentWaypointGetInNearest())
+                    RemoveAllOrders(false);
+                if (m_drivingTarget != vector.Zero)
+                    IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
                 return;
             }
 

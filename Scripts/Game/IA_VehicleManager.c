@@ -867,8 +867,11 @@ class IA_VehicleManager: GenericEntity
         }
     }
     
-    // GetCompartments is not recursive. Child-entity turrets (technicals) are
-    // missed unless we walk the hierarchy. Fill order is Pilot, Turret, Cargo.
+    // GetCompartments is not recursive, so child turrets on technicals are
+    // missed unless we walk the hierarchy. Hulls that set RegisterCompartments
+    // on those children (BRDM-2, BTR-70) also list the same hatches on the
+    // parent — dedupe or we spawn extra AI and the drive GetIn never completes.
+    // Fill order is Pilot, Turret, Cargo.
     static void CollectVehicleCrewSeats(IEntity vehicle, notnull array<BaseCompartmentSlot> outSlots, bool skipOccupied)
     {
         outSlots.Clear();
@@ -924,6 +927,55 @@ class IA_VehicleManager: GenericEntity
         return false;
     }
 
+    protected static bool SeatArrayHasDuplicate(notnull array<BaseCompartmentSlot> slots, notnull BaseCompartmentSlot slot, int mgrId, int slotId, string uniqueName)
+    {
+        int n = slots.Count();
+        int i;
+        for (i = 0; i < n; i++)
+        {
+            BaseCompartmentSlot existing = slots[i];
+            if (!existing)
+                continue;
+            if (existing == slot)
+                return true;
+            if (existing.GetCompartmentMgrID() == mgrId && existing.GetCompartmentSlotID() == slotId)
+                return true;
+            if (uniqueName != "")
+            {
+                string existingName = existing.GetCompartmentUniqueName();
+                if (existingName == uniqueName)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected static bool SeatAlreadyCollected(BaseCompartmentSlot slot, notnull array<BaseCompartmentSlot> pilots, notnull array<BaseCompartmentSlot> turrets, notnull array<BaseCompartmentSlot> cargo)
+    {
+        if (!slot)
+            return true;
+
+        int mgrId = slot.GetCompartmentMgrID();
+        int slotId = slot.GetCompartmentSlotID();
+        string uniqueName = slot.GetCompartmentUniqueName();
+        if (SeatArrayHasDuplicate(pilots, slot, mgrId, slotId, uniqueName))
+            return true;
+        if (SeatArrayHasDuplicate(turrets, slot, mgrId, slotId, uniqueName))
+            return true;
+        if (SeatArrayHasDuplicate(cargo, slot, mgrId, slotId, uniqueName))
+            return true;
+
+        return false;
+    }
+
+    static bool VehicleHasEmptyAccessibleSeat(IEntity vehicle)
+    {
+        array<BaseCompartmentSlot> slots = {};
+        CollectVehicleCrewSeats(vehicle, slots, true);
+        return !slots.IsEmpty();
+    }
+
     protected static void CollectVehicleCrewSeatsRecursive(IEntity ent, notnull array<BaseCompartmentSlot> pilots, notnull array<BaseCompartmentSlot> turrets, notnull array<BaseCompartmentSlot> cargo, bool skipOccupied)
     {
         if (!ent)
@@ -943,7 +995,11 @@ class IA_VehicleManager: GenericEntity
                     continue;
                 if (skipOccupied && slot.GetOccupant())
                     continue;
+                if (slot.IsReserved())
+                    continue;
                 if (!slot.IsCompartmentAccessible())
+                    continue;
+                if (SeatAlreadyCollected(slot, pilots, turrets, cargo))
                     continue;
 
                 ECompartmentType type = slot.GetType();
@@ -1055,6 +1111,9 @@ class IA_VehicleManager: GenericEntity
         if (!crewGroup.IsSpawned())
             crewGroup.Spawn();
         crewGroup.AssignVehicle(vehicle, destination);
+
+        Print(string.Format("[IA][Vehicle] Fill seats unique=%1 crew=%2 cargo=%3 spawnCrew=%4 spawnCargo=%5",
+            compartmentCount, crewSeats, cargoSeats, crewUnits, cargoUnits), LogLevel.NORMAL);
 
         if (cargoUnits > 0)
         {
