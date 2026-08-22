@@ -355,10 +355,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                     if (instance)
                         instance.SetRadioTowerDefenseActive(false);
                 }
-            // Apply a 20-minute global QRF cooldown when a radio tower is destroyed (once)
+            // Apply a 10-minute global QRF cooldown when a radio tower is destroyed (once)
             if (!m_qrfCooldownApplied)
             {
-                IA_MissionInitializer.SetQRFDisabled(20 * 60);
+                IA_MissionInitializer.SetQRFDisabled(10 * 60);
                 m_qrfCooldownApplied = true;
             }
 	        }
@@ -1444,7 +1444,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         // Notify players that the objective is complete and waves have stopped
         IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
         if (initializer)
-            initializer.TriggerGlobalNotification("TaskCompleted", "Radio Tower " + m_areaName + " Destroyed. Reinforcements halted. QRF disabled for 20 minutes.");
+            initializer.TriggerGlobalNotification("TaskCompleted", "Radio Tower " + m_areaName + " Destroyed. Reinforcements halted. QRF disabled for 10 minutes.");
         // --- END MODIFIED ---
 
         // Set the US faction score to 1000 (maximum) to indicate completion
