@@ -5340,7 +5340,6 @@ class IA_AreaInstance
         const int STALE_S = 20;
         int bestAge = STALE_S + 1;
         vector bestPos = vector.Zero;
-        bool haveSource = false;
 
         foreach (IA_AiGroup group : groups)
         {
@@ -5355,28 +5354,26 @@ class IA_AreaInstance
             if (age < 0 || age > STALE_S)
                 continue;
 
+            // Unsourced explosions (AO HE, this battery's own rounds) are not
+            // "someone shooting the pit". Treating them as defense targets
+            // locks ArtilleryStrikeTask onto guaranteed fire and skips chance
+            // plus the 5 min harassment cooldown for the rest of the fight.
             IEntity source = group.GetLastDangerSource();
-            vector pos = group.GetLastDangerPosition();
-            bool thisHasSource = false;
-            if (source)
-            {
-                pos = source.GetOrigin();
-                thisHasSource = true;
-            }
+            if (!source)
+                continue;
+
+            vector pos = source.GetOrigin();
             if (pos == vector.Zero)
                 continue;
 
             bool better = false;
             if (age < bestAge)
                 better = true;
-            else if (age == bestAge && thisHasSource && !haveSource)
-                better = true;
             if (!better)
                 continue;
 
             bestAge = age;
             bestPos = pos;
-            haveSource = thisHasSource;
         }
 
         if (bestPos == vector.Zero)
