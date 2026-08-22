@@ -327,6 +327,9 @@ class IA_Game
 	    foreach (IA_AreaInstance areaInst : m_areas)
 	    {
 				// --- BEGIN ADDED: Filter by Active Group ID ---
+				if (areaInst && areaInst.IsShutDown())
+					continue;
+
 				if (areaInst && areaInst.GetAreaGroup() != s_activeGroupID)
 				{
 					// Print(string.Format("[IA_Game.PeriodicalTask] Skipping Area '%1' (Group %2) - Active Group is %3", 
@@ -350,7 +353,11 @@ class IA_Game
 		for (int i = m_transientAreaInstances.Count() - 1; i >= 0; i--)
 	    {
 	        IA_AreaInstance transientAreaInst = m_transientAreaInstances[i];
-	        if (transientAreaInst && transientAreaInst.m_area)
+	        if (transientAreaInst && transientAreaInst.IsShutDown())
+	        {
+	            m_transientAreaInstances.Remove(i);
+	        }
+	        else if (transientAreaInst && transientAreaInst.m_area)
 	        {
 	            transientAreaInst.RunNextTask();
 	        }
@@ -413,19 +420,16 @@ class IA_Game
     {
         if (m_areas)
         {
-            //Print(string.Format("[IA_Game.ClearAllAreas] Clearing %1 existing area instances.", m_areas.Count()), LogLevel.NORMAL);
+            Print(string.Format("[IA][Game] ClearAllAreas finishing %1 leftover area instances.", m_areas.Count()), LogLevel.NORMAL);
             foreach (IA_AreaInstance areaInst : m_areas)
             {
-                if (areaInst && areaInst.m_area)
-                {
-                    Print(string.Format("[IA_Game.ClearAllAreas] Removing area instance: %1", areaInst.m_area.GetName()), LogLevel.DEBUG);
-                }
+                if (areaInst)
+                    areaInst.ForceFinish();
             }
             m_areas.Clear();
         }
         else
         {
-            //Print("[IA_Game.ClearAllAreas] m_areas was null, initializing.", LogLevel.DEBUG);
             m_areas = new array<IA_AreaInstance>();
         }
     }

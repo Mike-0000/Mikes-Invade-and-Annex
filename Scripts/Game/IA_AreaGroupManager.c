@@ -10,6 +10,7 @@ enum IA_QRFType
 class IA_AreaGroupManager
 {
     private ref array<ref IA_AreaInstance> m_areaInstances;
+    private bool m_bShutDown = false;
 
     // --- Artillery Strike System ---
     private int m_lastArtilleryStrikeCheckTime = 0;
@@ -46,8 +47,23 @@ class IA_AreaGroupManager
     private bool m_qrfRetryDefend = false;
 
     // Entry point called periodically (from MissionInitializer) to evaluate spawning of QRFs for the whole area group
+    void Shutdown()
+    {
+        m_bShutDown = true;
+        m_qrfRetryPending = false;
+        ScriptCallQueue queue = GetGame().GetCallqueue();
+        if (queue)
+        {
+            queue.Remove(OnQRFRetry);
+            queue.Remove(QRF_PollTruckArrival);
+            queue.Remove(QRF_AddDefendAfterDisembark);
+        }
+    }
+
     void QRFTask()
     {
+        if (m_bShutDown)
+            return;
         if (!Replication.IsServer())
             return; // QRF is server-authoritative only
         int currentTime = System.GetUnixTime();
@@ -272,6 +288,10 @@ class IA_AreaGroupManager
 
     private bool SpawnQRFForTarget(IA_QRFType type, vector targetPos, IA_AreaInstance targetAreaInst, Faction enemyGameFaction, bool forDefendMission, bool isRetry)
     {
+        if (m_bShutDown)
+            return false;
+        if (targetAreaInst && targetAreaInst.IsShutDown())
+            return false;
         if (!Replication.IsServer())
             return false;
         if (!targetAreaInst)
@@ -363,7 +383,9 @@ class IA_AreaGroupManager
     void OnQRFRetry()
     {
         m_qrfRetryPending = false;
-        if (!m_qrfRetryArea)
+        if (m_bShutDown)
+            return;
+        if (!m_qrfRetryArea || m_qrfRetryArea.IsShutDown())
             return;
         SpawnQRFForTarget(m_qrfRetryType, m_qrfRetryTarget, m_qrfRetryArea, m_qrfRetryFaction, m_qrfRetryDefend, true);
     }
@@ -620,7 +642,10 @@ class IA_AreaGroupManager
     // Poller to detect truck arrival at driveTarget, then order dismount and later defend
     private void QRF_PollTruckArrival(Vehicle vehicle, IA_AiGroup group, IA_AreaInstance areaInst, vector areaOrigin, vector driveTarget)
     {
-        if (!vehicle || !group || !areaInst) return;
+        if (m_bShutDown)
+            return;
+        if (!vehicle || !group || !areaInst || areaInst.IsShutDown())
+            return;
         // If arrived, dismount and schedule defend
         if (IA_VehicleManager.HasVehicleReachedDestination(vehicle, driveTarget))
         {
@@ -642,7 +667,8 @@ class IA_AreaGroupManager
 
     private void QRF_AddDefendAfterDisembark(IA_AiGroup group, vector defendPos)
     {
-        if (!group) return;
+        if (m_bShutDown || !group)
+            return;
         if (group.IsInDefendMode())
         {
             group.AddOrder(defendPos, IA_AiOrder.SearchAndDestroy, true);
@@ -657,6 +683,9 @@ class IA_AreaGroupManager
 
     void ArtilleryStrikeTask()
     {
+        if (m_bShutDown)
+            return;
+
         int currentTime = System.GetUnixTime();
         float strikeChance = ARTILLERY_STRIKE_CHANCE;
         int cooldown = ARTILLERY_COOLDOWN;

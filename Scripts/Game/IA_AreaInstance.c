@@ -79,6 +79,7 @@ class IA_AreaInstance
     private int m_reinforcementTimer = 0;
     private int m_currentTask = 0;
     private bool m_canSpawn   = true;
+    private bool m_bShutDown = false;
     
     // --- BEGIN ADDED: Reinforcement Wave Variables ---
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
@@ -552,6 +553,9 @@ class IA_AreaInstance
 
     void RunNextTask()
     {
+        if (m_bShutDown)
+            return;
+
         m_currentTask = m_currentTask + 1;
         if (m_currentTask == 1)
         {
@@ -600,16 +604,26 @@ class IA_AreaInstance
 
     void Cleanup()
     {
+        if (m_aiAttackers)
+        {
+            m_aiAttackers.DespawnAll();
+            delete m_aiAttackers;
+            m_aiAttackers = null;
+        }
+
         foreach (IA_AiGroup group : m_military)
         {
-            if (group)
-            {
-                group.Despawn();
-            }
+            if (!group)
+                continue;
+
+            IA_AiGroup passengers = group.GetLinkedPassengerGroup();
+            if (passengers)
+                passengers.Despawn();
+
+            group.Despawn();
         }
         m_military.Clear();
 
-        // Optional: Also clean up vehicles, etc. if needed
         foreach (Vehicle vehicle : m_areaVehicles)
         {
             if (vehicle)
@@ -626,13 +640,45 @@ class IA_AreaInstance
         Print(string.Format("[AreaInstance] Reinforcements for area %1 have been cancelled by an external source (e.g., generator destroyed).", m_area.GetName()), LogLevel.DEBUG);
     }
 
-    // --- BEGIN ADDED: Force Finish Method for cleanup ---
+    bool IsShutDown()
+    {
+        return m_bShutDown;
+    }
+
+    protected void CancelPendingSpawns()
+    {
+        ScriptCallQueue queue = GetGame().GetCallqueue();
+        if (!queue)
+            return;
+
+        queue.Remove(SetupMortarPitCrew);
+        queue.Remove(SpawnMortarPitAiAtGuns);
+        queue.Remove(SpawnReinforcementEnactorFromRequest);
+        queue.Remove(_SpawnSingleAiGroupAndAddToArea);
+        queue.Remove(_SpawnAndArmHostileCivilianGroup_Internal);
+        queue.Remove(SpawnCivilianRevoltReinforcements);
+    }
+
     void ForceFinish()
     {
-        Print(string.Format("[AreaInstance] ForceFinish called for area %1. Cleaning up tasks and entities.", m_area.GetName()), LogLevel.WARNING);
+        if (m_bShutDown)
+            return;
+
+        string areaName = "unknown";
+        if (m_area)
+            areaName = m_area.GetName();
+        Print(string.Format("[IA][Area] ForceFinish shutting down %1 so leftover AI cannot keep spawning.", areaName), LogLevel.WARNING);
+
+        m_bShutDown = true;
+        m_canSpawn = false;
         m_mortarCrewSetupDone = true;
-        
-        // 1. Clear Task Queue
+        m_reinforcements = IA_ReinforcementState.Done;
+        m_vehicleReinforcements = IA_ReinforcementState.Done;
+        m_isRadioTowerDefenseActive = false;
+        m_isSideObjectiveDefenseActive = false;
+        m_attackingFactions.Clear();
+        CancelPendingSpawns();
+
         if (m_taskQueue)
         {
             foreach (SCR_TriggerTask task : m_taskQueue)
@@ -641,29 +687,30 @@ class IA_AreaInstance
             }
             m_taskQueue.Clear();
         }
-        
-        // 2. Remove Active Task
+
         if (m_currentTaskEntity)
         {
             IA_Game.AddEntityToGc(m_currentTaskEntity);
             m_currentTaskEntity = null;
         }
-        
-        // 3. Cleanup Military AI and Vehicles (Immediate)
+
         Cleanup();
-        
-        // 4. Schedule Civilian Cleanup (Immediate/Short delay)
         ScheduleCivilianCleanup(100);
-        
-        // 5. Ensure Defend/Radio Tower modes are off
         SetDefendMode(false);
         SetRadioTowerDefenseActive(false);
+        SetSideObjectiveDefenseActive(false, null);
     }
-    // --- END ADDED ---
 
     // --- Add a group to the military list ---
     void AddMilitaryGroup(IA_AiGroup group)
     {
+        if (m_bShutDown)
+        {
+            if (group)
+                group.Despawn();
+            return;
+        }
+
         if (group && m_military.Find(group) == -1) // Avoid duplicates
         {
             m_military.Insert(group);
@@ -840,6 +887,8 @@ class IA_AreaInstance
     // --- MODIFIED: ReinforcementsTask ---
     private void ReinforcementsTask()
     {
+        if (m_bShutDown)
+            return;
         if (m_isSideObjectiveDefenseActive)
             return;
         // Stop immediately if area is no longer under attack
@@ -2645,6 +2694,9 @@ class IA_AreaInstance
 
     void GenerateRandomAiGroups(int number, bool insideArea, Faction AreaFaction)
     {
+        if (m_bShutDown)
+            return;
+
         if (m_area && m_area.GetAreaType() == IA_AreaType.MortarPit)
         {
             GenerateMortarPitAiGroups(AreaFaction);
@@ -2733,6 +2785,8 @@ class IA_AreaInstance
 
     protected void SpawnMortarPitAiAtGuns()
     {
+        if (m_bShutDown)
+            return;
         if (!m_area)
             return;
 
@@ -2843,6 +2897,8 @@ class IA_AreaInstance
     
     void SpawnVehicleReinforcements()
     {
+        if (m_bShutDown)
+            return;
         return; // Prevent scheduled vehicle reinforcements for now
             
         if (!m_area)
@@ -4539,6 +4595,9 @@ class IA_AreaInstance
     // --- BEGIN ADDED: Spawn Reinforcement Wave Logic ---
     bool SpawnReinforcementWave(int groupsToSpawn, Faction AreaFaction, bool forDefendMission = false)
     {
+        if (m_bShutDown)
+            return false;
+
 		Print(string.Format("SpawnReinforcementWave called for area %1. Request: %2 groups. Current: %3/%4. ForDefend: %5", 
 		    m_area.GetName(), groupsToSpawn, m_reinforcementGroupsSpawned, m_totalReinforcementQuota, forDefendMission), LogLevel.DEBUG);
 		
@@ -4609,6 +4668,8 @@ class IA_AreaInstance
 
 	void SpawnReinforcementEnactorFromRequest(IA_ReinforcementSpawnRequest request)
 	{
+		if (m_bShutDown)
+			return;
 		if (!request)
 			return;
 
@@ -4617,6 +4678,8 @@ class IA_AreaInstance
 
 	bool SpawnReinforcementEnactor(Faction AreaFaction, bool forDefendMission = false, int sectorIndex = 0, int unitCountOverride = -1){
 	
+		    if (m_bShutDown)
+		        return false;
 		    if (!m_area)
 		        return false;
 
@@ -5006,6 +5069,8 @@ class IA_AreaInstance
     // Assign first military group as mortar crew; remaining groups defend the pit.
     void SetupMortarPitCrew()
     {
+        if (m_bShutDown)
+            return;
         if (m_mortarCrewSetupDone)
             return;
         if (!m_area || m_area.GetAreaType() != IA_AreaType.MortarPit)
@@ -5404,6 +5469,8 @@ class IA_AreaInstance
 
     bool CanIssueMortarFireMission()
     {
+        if (m_bShutDown)
+            return false;
         if (!IsMortarPitArea())
             return false;
         if (IsMortarPitCaptured())
@@ -5475,6 +5542,8 @@ class IA_AreaInstance
     // --- BEGIN ADDED: Helper to spawn a single AI group with delay and add it ---
     private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask, bool useExactPosition = false)
     {
+        if (m_bShutDown)
+            return;
         if (!m_area) // Ensure area instance is still valid
         {
             Print("[IA_AreaInstance._SpawnSingleAiGroupAndAddToArea] m_area is null, cannot spawn group.", LogLevel.ERROR);
@@ -5491,6 +5560,12 @@ class IA_AreaInstance
         if (!grp)
         {
             Print("[IA_AreaInstance.OnAsyncGroupCreated] Group creation failed.", LogLevel.ERROR);
+            return;
+        }
+
+        if (m_bShutDown)
+        {
+            grp.Despawn();
             return;
         }
         
@@ -5750,6 +5825,8 @@ class IA_AreaInstance
 
     void SpawnCivilianRevoltReinforcements()
     {
+        if (m_bShutDown)
+            return;
         if (!m_area)
             return;
 
@@ -5771,6 +5848,9 @@ class IA_AreaInstance
     
     private void _SpawnAndArmHostileCivilianGroup_Internal(Faction AreaFaction)
     {
+        if (m_bShutDown || !m_area)
+            return;
+
         // This combines logic from SpawnReinforcementEnactor and the arming step.
         
         vector center = m_area.GetOrigin();

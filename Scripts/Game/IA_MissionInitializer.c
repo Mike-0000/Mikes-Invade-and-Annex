@@ -254,6 +254,7 @@ class IA_MissionInitializer : GenericEntity
 		
 		if (m_currentAreaGroupManager)
 		{
+			m_currentAreaGroupManager.Shutdown();
 			delete m_currentAreaGroupManager;
 			m_currentAreaGroupManager = null;
 		}
@@ -741,25 +742,12 @@ class IA_MissionInitializer : GenericEntity
 		if(actualCompletedZones >= amountOfRequiredZones){ // Optional mortar pits do not gate AO progression
 			//Print("[INFO] All " + amountOfZones + " zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
 
-			// --- BEGIN ADDED: Schedule civilian cleanup for completed zone instances ---
-			if (m_currentAreaInstances)
-			{
-				Print(string.Format("[IA_MissionInitializer.CheckCurrentZoneComplete] Group %1 completed. Scheduling civilian cleanup for %2 area instances.", 
-					currentGroup, m_currentAreaInstances.Count()), LogLevel.NORMAL);
-				foreach (ref IA_AreaInstance oldInstance : m_currentAreaInstances)
-				{
-					if (oldInstance)
-					{
-						oldInstance.ScheduleCivilianCleanup(50000); // 60 seconds delay
-					}
-				}
-			}
-			// --- END ADDED ---
-
 			// --- BEGIN ADDED: Check for defend mission before proceeding ---
 			if (CheckAndStartDefendMission(currentGroup))
 			{
-				// Defend mission started, don't proceed to next zone yet
+				ForceFinishAllCurrentAreaInstances();
+				GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
+				GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
 				Print("[IA_MissionInitializer] Defend mission started for group " + currentGroup + ". Delaying progression.", LogLevel.NORMAL);
 				return;
 			}
@@ -784,14 +772,17 @@ class IA_MissionInitializer : GenericEntity
 		
 		if (m_currentAreaGroupManager)
 		{
+			m_currentAreaGroupManager.Shutdown();
 			delete m_currentAreaGroupManager;
 			m_currentAreaGroupManager = null;
 		}
 
-		CleanupOptionalMortarPitObjectives();
+		ForceFinishAllCurrentAreaInstances();
 		m_currentIndex++;
 		if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
 		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Stop checking this group
+		GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
+		GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
 		
 		int finalDelay = delayMs;
 		if (finalDelay < 0)
@@ -802,14 +793,14 @@ class IA_MissionInitializer : GenericEntity
 	}
 	// --- END ADDED ---
 
-	private void CleanupOptionalMortarPitObjectives()
+	private void ForceFinishAllCurrentAreaInstances()
 	{
 		if (!m_currentAreaInstances)
 			return;
 
 		foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
 		{
-			if (instance && instance.IsMortarPitArea())
+			if (instance)
 				instance.ForceFinish();
 		}
 	}
@@ -916,6 +907,12 @@ class IA_MissionInitializer : GenericEntity
 
     private void _SpawnAreaInstanceWithDelay(IA_AreaMarker marker, Faction nextAreaFaction, int currentGroup)
     {
+        if (!groupsArray || !groupsArray.IsIndexValid(m_currentIndex) || groupsArray[m_currentIndex] != currentGroup)
+        {
+            Print(string.Format("[IA][Mission] Ignoring stale area spawn for group %1; current group is no longer active.", currentGroup), LogLevel.WARNING);
+            return;
+        }
+
         if (!marker)
         {
             Print("[ERROR] IA_MissionInitializer._SpawnAreaInstanceWithDelay: marker is null!", LogLevel.ERROR);
@@ -986,12 +983,14 @@ class IA_MissionInitializer : GenericEntity
 
     private void _SpawnGroupVehiclesWithDelay(Faction nextAreaFaction)
     {
-        // Ensure CurrentAreaInstance is valid or IA_VehicleManager can work without it for group spawns
-        // IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints uses IA_VehicleManager.GetActiveGroup()
-        // which is set at the beginning of ProceedToNextZone.
-        // So, IA_Game.CurrentAreaInstance might not be directly needed for this specific call.
-        
-        //Print("[DEBUG_ZONE_GROUP_DELAYED] Calling IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints for faction " + nextAreaFaction.GetFactionKey() + " in active group: " + IA_VehicleManager.GetActiveGroup(), LogLevel.NORMAL);
+        if (!groupsArray || !groupsArray.IsIndexValid(m_currentIndex))
+            return;
+        if (IA_VehicleManager.GetActiveGroup() != groupsArray[m_currentIndex])
+        {
+            Print("[IA][Mission] Ignoring stale group-vehicle spawn after AO change.", LogLevel.WARNING);
+            return;
+        }
+
         IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints(IA_Faction.USSR, nextAreaFaction);
     }
 
@@ -2006,19 +2005,21 @@ class IA_MissionInitializer : GenericEntity
 		
 		// Clean up current area instances
 		m_civilianRevoltActive = false;
-		CleanupOptionalMortarPitObjectives();
+		if (m_currentAreaGroupManager)
+		{
+			m_currentAreaGroupManager.Shutdown();
+			delete m_currentAreaGroupManager;
+			m_currentAreaGroupManager = null;
+		}
+		ForceFinishAllCurrentAreaInstances();
 		m_currentIndex++;
 		if (m_currentAreaInstances) 
 			m_currentAreaInstances.Clear();
 		
-		if (m_currentAreaGroupManager)
-		{
-			delete m_currentAreaGroupManager;
-			m_currentAreaGroupManager = null;
-		}
-		
 		// Remove the zone completion check and proceed to next zone
 		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+		GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
+		GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
 		GetGame().GetCallqueue().CallLater(ProceedToNextZone, Math.RandomInt(45,90)*1000, false);
 	}
 	// --- END ADDED ---
