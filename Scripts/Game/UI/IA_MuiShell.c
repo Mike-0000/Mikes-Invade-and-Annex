@@ -89,7 +89,7 @@ class IA_MuiShell
 	}
 
 	//------------------------------------------------------------------------------------------------
-	void AddFooter(notnull MUI_Runtime runtime, string footText, notnull MUI_Row buttons)
+	void AddFooter(notnull MUI_Runtime runtime, string footText, notnull MUI_Node buttons)
 	{
 		ref MUI_Hairline lineBottom = runtime.CreateHairline("lineBottom");
 		lineBottom.SetIntro(0.50, 0.35, 8);

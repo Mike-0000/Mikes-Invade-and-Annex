@@ -18,6 +18,30 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void IA_AskPersistAdminConfig(string packed)
+	{
+		if (Replication.IsServer())
+		{
+			IA_PersistAdminConfigIfAdmin(packed);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_PersistAdminConfig, packed);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void IA_AskClearAdminOverrides()
+	{
+		if (Replication.IsServer())
+		{
+			IA_ClearAdminOverridesIfAdmin();
+			return;
+		}
+
+		Rpc(RpcAsk_IA_ClearAdminOverrides);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void IA_AskForceCompleteZone()
 	{
 		if (Replication.IsServer())
@@ -46,6 +70,20 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_UpdateAdminConfig(string packed)
 	{
 		IA_ApplyAdminConfigIfAdmin(packed);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_PersistAdminConfig(string packed)
+	{
+		IA_PersistAdminConfigIfAdmin(packed);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_ClearAdminOverrides()
+	{
+		IA_ClearAdminOverridesIfAdmin();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -79,6 +117,41 @@ modded class SCR_PlayerController
 		}
 
 		init.ServerApplyAdminConfig(packed);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_PersistAdminConfigIfAdmin(string packed)
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Admin persist rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (!init)
+		{
+			Print("[IA] Admin persist rejected: mission initializer missing", LogLevel.ERROR);
+			return;
+		}
+
+		init.ServerPersistAdminConfig(packed);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_ClearAdminOverridesIfAdmin()
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Admin override clear rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (!init)
+			return;
+
+		init.ServerClearAdminOverrides();
 	}
 
 	//------------------------------------------------------------------------------------------------

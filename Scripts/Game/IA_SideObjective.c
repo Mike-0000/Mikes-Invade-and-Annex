@@ -178,7 +178,7 @@ class IA_SideObjective
             SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_PlayerTask);
             if (extendedTask)
                 extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
-            IA_Game.S_TriggerGlobalNotification("SideTaskCompleted", "Side Objective Completed. The HVT has been eliminated. Enemy artillery and QRF is unavailable for 30 minutes.");
+            IA_Game.S_TriggerGlobalNotification("SideTaskCompleted", "Side Objective Completed. The HVT has been eliminated. Enemy artillery and QRF is unavailable for 20 minutes.");
         }
     }
 
@@ -474,7 +474,7 @@ class IA_AssassinationObjective : IA_SideObjective
 			w = SCR_AIWaypoint.Cast(waypointEnt);
             if(!w)
 				return;
-			w.SetPriorityLevel(150);
+			w.SetPriorityLevel(IA_AiGroup.WP_PRIORITY_DEFEND);
 			hvtGroup.GetSCR_AIGroup().AddWaypointToGroup(w);
 			
             //hvtGroup.AddOrder(defendPos, IA_AiOrder.DefendSmall, true); // Using DefendSmall for tighter defense
@@ -504,7 +504,7 @@ class IA_AssassinationObjective : IA_SideObjective
 			
             if(!w)
 				return;
-			w.SetPriorityLevel(80);
+			w.SetPriorityLevel(IA_AiGroup.WP_PRIORITY_FIGHT);
 			guardGroup.GetSCR_AIGroup().AddWaypointToGroup(w);
 
             // Use the standard tactical state system

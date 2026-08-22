@@ -23,6 +23,13 @@ enum IA_GroupTacticalState
     Approaching,   // Counter-attack staging approach: following arc routing to jump-off point before assaulting
 }
 
+enum IA_TypedWpTree
+{
+    None,
+    Defend,
+    GetInNearest
+}
+
 
 
 // Class to track danger events for processing
@@ -104,6 +111,15 @@ class IA_AiGroup
     private vector      m_drivingTarget = vector.Zero;
     private int         m_lastVehicleOrderTime = 0;
     private const int   VEHICLE_ORDER_UPDATE_INTERVAL = 5;
+    private bool        m_isVehicleCrewGroup = false;
+    private bool        m_isVehiclePassengerGroup = false;
+    private bool        m_mountedUntilDump = false;
+    private bool        m_passengerDumped = false;
+    private int         m_passengerMountTime = 0;
+    private IEntity     m_passengerVehicle = null;
+    private vector      m_passengerAssaultTarget = vector.Zero;
+    private IA_AiGroup  m_linkedCrewGroup = null;
+    private IA_AiGroup  m_linkedPassengerGroup = null;
     
     // Danger state tracking
     private float       m_currentDangerLevel = 0.0;
@@ -118,8 +134,25 @@ class IA_AiGroup
     private const float GUNSHOT_AUDIBLE_DISTANCE = 500.0;
     private const float SUPPRESSED_AUDIBLE_DISTANCE = 90.0;
     private const float EXPLOSION_REACT_DISTANCE = 220.0;
-    private const float VEHICLE_PRIORITY_MOVE_LEVEL = 200.0;
-	private const float CIVILIAN_VEHICLE_PRIORITY_MOVE_LEVEL = 400.0;
+    static const int WP_PRIORITY_PATROL = 0;
+    static const int WP_PRIORITY_FIGHT = 15;
+    static const int WP_PRIORITY_DEFEND = 20;
+    static const int WP_PRIORITY_GET_IN = 20;
+    static const int WP_PRIORITY_GET_OUT = 0;
+    static const int WP_PRIORITY_DRIVE = 20;
+    static const int WP_PRIORITY_ESCAPE = 350;
+    private const float CIVILIAN_VEHICLE_PRIORITY_MOVE_LEVEL = 400.0;
+    private const int PASSENGER_MIN_RIDE_S = 10;
+    private const float PASSENGER_DUMP_CONTACT_M = 200.0;
+    private const int PASSENGER_DUMP_GETIN_CLEAR_MS = 400;
+    // Group.bt DecideActivity idles 0.3s. ActivityDefend and ActivityGetIn
+    // (GetInNearestVehicle.bt) re-read GetCurrentWaypoint and NodeError if
+    // the class no longer matches. Wait this out before planting a new WP.
+    private const int TYPED_WP_TREE_CLEAR_MS = 400;
+    private const int PASSENGER_DUMP_ASSAULT_DELAY_MS = 500;
+    private const int PASSENGER_DUMP_ASSAULT_RETRY_MS = 1000;
+    private const int PASSENGER_DUMP_FORCE_EJECT_TRIES = 2;
+    private int m_passengerDumpAssaultTries = 0;
 
     // Logging and rate limiting
     private static const int BEHAVIOR_LOG_RATE_LIMIT_SECONDS = 3;
@@ -155,6 +188,12 @@ class IA_AiGroup
     // Flanking state tracking
     private bool m_isInFlankingPhase = false; // True if in first phase of flanking (moving to flank position)
     private vector m_originalThreatPosition = vector.Zero; // The original position that triggered the flanking maneuver
+    private bool m_typedClearScheduled = false;
+    private bool m_flushingTypedClear = false;
+    private ref array<vector> m_pendingOrderOrigins = {};
+    private ref array<IA_AiOrder> m_pendingOrderTypes = {};
+    private ref array<bool> m_pendingOrderTopPriority = {};
+    private ref array<SCR_AIWaypoint> m_pendingWaypoints = {};
 
     private int m_initialUnitCount = 0; // Store the original number of units in the group
 
@@ -172,6 +211,8 @@ class IA_AiGroup
     private vector m_defendTarget = vector.Zero;
     // True when spawned by a defend / radio-tower / side-obj assault wave (not leftover garrison).
     private bool m_isDefendWaveGroup = false;
+    private bool m_bInboundSimPinned = false;
+    private vector m_vInboundTarget = vector.Zero;
     
     // Staggered spawning state
     private int m_pendingUnitsToSpawn = 0;
@@ -381,7 +422,7 @@ class IA_AiGroup
         return grp;
     }
 
-    static IA_AiGroup CreateGroupForVehicle(Vehicle vehicle, IA_Faction faction, int unitCount, Faction AreaFaction)
+    static IA_AiGroup CreateGroupForVehicle(Vehicle vehicle, IA_Faction faction, int unitCount, Faction AreaFaction, bool passengerOnly = false)
     {
         if (!vehicle || unitCount <= 0)
             return null;
@@ -390,7 +431,8 @@ class IA_AiGroup
 
         IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, faction, unitCount);
         grp.m_isCivilian = false;
-        grp.m_referencedEntity = vehicle; // Store vehicle reference for later use
+        if (!passengerOnly)
+            grp.m_referencedEntity = vehicle;
 
 		Resource groupRes;
 		switch(faction){
@@ -423,9 +465,18 @@ class IA_AiGroup
         groundPos[1] = groundY;
         grp.m_group.SetOrigin(groundPos);
 
-        array<BaseCompartmentSlot> usableCompartments = {};
-        IA_VehicleManager.CollectVehicleCrewSeats(vehicle, usableCompartments, true);
-        int actualUnitsToSpawn = Math.Min(unitCount, usableCompartments.Count());
+        ref array<BaseCompartmentSlot> pilots = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> turrets = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> cargo = new array<BaseCompartmentSlot>();
+        IA_VehicleManager.CollectVehicleSeatsByRole(vehicle, pilots, turrets, cargo, true);
+        int seatCap;
+        if (passengerOnly)
+            seatCap = cargo.Count();
+        else
+            seatCap = pilots.Count() + turrets.Count();
+        if (seatCap <= 0)
+            seatCap = pilots.Count() + turrets.Count() + cargo.Count();
+        int actualUnitsToSpawn = Math.Min(unitCount, seatCap);
         if (actualUnitsToSpawn <= 0)
         {
             Print("[IA_AiGroup.CreateGroupForVehicle] No usable compartments; discarding empty group.", LogLevel.WARNING);
@@ -765,35 +816,16 @@ class IA_AiGroup
             ////Print("[IA_AiGroup.AddWaypoint] Group or waypoint is null.", LogLevel.WARNING);
             return;
         }
-        
-        // --- BEGIN ENHANCED: More detailed waypoint type validation ---
-        // Get the actual type of the waypoint
-        string waypointTypeName = waypoint.Type().ToString();
-        
-        // Check if this is a defend waypoint
-        SCR_DefendWaypoint defendTest = SCR_DefendWaypoint.Cast(waypoint);
-        bool isDefendWaypoint = (defendTest != null);
-        
-        // Log waypoint addition with type info
-        Print(string.Format("[IA_AiGroup.AddWaypoint] Adding waypoint to Group %1 | Faction: %2 | Waypoint Type: %3 | Is SCR_DefendWaypoint: %4 | Group State: %5", 
-            this, typename.EnumToString(IA_Faction, m_faction), waypointTypeName, isDefendWaypoint, 
-            typename.EnumToString(IA_GroupTacticalState, m_tacticalState)), LogLevel.DEBUG);
-        
-        // Validate waypoint type based on current tactical state
-        if (m_tacticalState == IA_GroupTacticalState.Defending)
+
+        if (!m_flushingTypedClear && ShouldDeferWaypointForTypedTree(waypoint))
         {
-            // For defending state, we should ideally have a SCR_DefendWaypoint
-            if (!isDefendWaypoint)
-            {
-                Print(string.Format("[IA_AiGroup.AddWaypoint] ERROR: Group %1 (Faction: %2) is in Defending state but received non-DefendWaypoint type: %3. This may cause issues!", 
-                    this, typename.EnumToString(IA_Faction, m_faction), waypointTypeName), LogLevel.ERROR);
-                
-                // Log a stack trace to help identify where this is coming from
-                Print("[IA_AiGroup.AddWaypoint] Stack trace for non-defend waypoint:", LogLevel.ERROR);
-                // Still add it, but log the warning
-            }
+            m_pendingWaypoints.Insert(waypoint);
+            PrepareTypedWaypointTreeClear();
+            return;
         }
-        // --- END ENHANCED ---
+
+        if (WaypointMatchesActiveTypedTree(waypoint))
+            CancelPendingTypedClear();
         
         m_group.AddWaypointToGroup(waypoint);
         ////Print("[DEBUG] IA_AiGroup.AddWaypoint: Waypoint added to internal SCR_AIGroup.", LogLevel.NORMAL);
@@ -805,11 +837,13 @@ class IA_AiGroup
         m_lastOrderPosition = origin;
         m_lastOrderTime = System.GetUnixTime();
         
-        // If this is a vehicle group, update vehicle orders first
-        if (m_isDriving)
+        // Driving groups keep Move/drive on the vehicle ticker. GetIn/GetOut
+        // must still become waypoints or passengers never dump and stragglers
+        // never remount.
+        if (m_isDriving && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.GetOutOfVehicle)
         {
             UpdateVehicleOrders();
-            return; // Let the vehicle order system handle it
+            return;
         }
         
         if (!m_isSpawned)
@@ -820,6 +854,16 @@ class IA_AiGroup
         {
             return;
         }
+
+        if (!m_flushingTypedClear && ShouldDeferOrderForTypedTree(order))
+        {
+            QueuePendingOrder(origin, order, topPriority);
+            PrepareTypedWaypointTreeClear();
+            return;
+        }
+
+        if (OrderMatchesActiveTypedTree(order))
+            CancelPendingTypedClear();
 		vector zoneOrigin;
 		float zoneRadius;
         // Restrict infantry waypoints to a single zone, while vehicle waypoints can navigate across the zone group
@@ -877,8 +921,8 @@ class IA_AiGroup
         }
         // --- END WATER CHECK ---
 		
-        // For vehicle orders, snap to nearest road - EXCEPT GetInVehicle orders which should go directly to the vehicle
-        if (m_isDriving && order != IA_AiOrder.GetInVehicle)
+        // For vehicle orders, snap to nearest road - EXCEPT GetIn/GetOut which go to the hull
+        if (m_isDriving && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.GetOutOfVehicle)
         {
 
             int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
@@ -1032,9 +1076,9 @@ class IA_AiGroup
             return;
         }
 
-        if (m_isDriving)
+        if (m_isDriving && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.GetOutOfVehicle)
         {
-            w.SetPriorityLevel(VEHICLE_PRIORITY_MOVE_LEVEL); // Keep vehicles as is
+            w.SetPriorityLevel(WP_PRIORITY_DRIVE);
         }
         else
         {
@@ -1044,8 +1088,7 @@ class IA_AiGroup
                 IA_AssassinationObjective assassinObj = IA_AssassinationObjective.Cast(m_OwningSideObjective);
                 if (assassinObj && assassinObj.IsHVTGroup(this))
                 {
-                    // HVT gets highest priority defend
-                    w.SetPriorityLevel(300);
+                    w.SetPriorityLevel(WP_PRIORITY_DEFEND);
                     
                     // Set tight completion radius for HVT
                     if (w.Type().IsInherited(SCR_DefendWaypoint))
@@ -1057,12 +1100,11 @@ class IA_AiGroup
                         }
                     }
                     
-                    Print(string.Format("[IA_AiGroup.AddOrder] Set HVT waypoint priority to 1250 with 4m completion radius", this), LogLevel.DEBUG);
+                    Print(string.Format("[IA_AiGroup.AddOrder] Set HVT waypoint priority to %1 with 4m completion radius", WP_PRIORITY_DEFEND), LogLevel.DEBUG);
                 }
                 else
                 {
-                    // Guards get high but not maximum priority
-                    w.SetPriorityLevel(140);
+                    w.SetPriorityLevel(WP_PRIORITY_FIGHT);
                     
                     // Set wider completion radius for guards
                     if (w.Type().IsInherited(SCR_DefendWaypoint))
@@ -1074,17 +1116,18 @@ class IA_AiGroup
                         }
                     }
                     
-                    Print(string.Format("[IA_AiGroup.AddOrder] Set Guard waypoint priority to 300 with 15-40m completion radius", this), LogLevel.DEBUG);
+                    Print(string.Format("[IA_AiGroup.AddOrder] Set Guard waypoint priority to %1 with 15-40m completion radius", WP_PRIORITY_FIGHT), LogLevel.DEBUG);
                 }
             }
             else
             {
-                // Dynamic priority for regular infantry based on situation
                 int priorityLevel = CalculateWaypointPriority(order);
                 w.SetPriorityLevel(priorityLevel);
             }
             // --- END MODIFIED ---
         }
+
+        ApplyBoardingAllowance(w, order);
 
         // --- BEGIN ADDED: Additional logging before adding waypoint to group ---
         if (order == IA_AiOrder.Defend)
@@ -1962,16 +2005,44 @@ class IA_AiGroup
         
         if (anyOutside)
         {
-            // Someone is outside, order them back in
-            ////Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 members outside vehicle. Ordering GetInVehicle.", this), LogLevel.NORMAL);
+            // Contact / dump: one crewman on foot (or still getting out) must
+            // not replace the drive with GetIn. That waypoint waits for every
+            // member, so the seated driver and gunner idle at the hull.
+            if (ShouldSkipCrewRemount())
+            {
+                if (IsCurrentWaypointGetInNearest())
+                    RemoveAllOrders(false);
+                return;
+            }
+
+            // Overfill leftover: no empty seat left, so GetIn can never
+            // complete. Drive with who is already seated.
+            if (!IA_VehicleManager.VehicleHasEmptyAccessibleSeat(vehicle))
+            {
+                if (IsCurrentWaypointGetInNearest())
+                    RemoveAllOrders(false);
+                if (m_drivingTarget != vector.Zero)
+                    IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
+                return;
+            }
+
             RemoveAllOrders();
             
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
             
-            // Ensure driving state is set correctly
             m_isDriving = true;
             
-            return; // Don't proceed with movement orders until everyone is inside
+            return;
+        }
+
+        // Teleport-seat / remount leftover GetInNearest stays current (Autocomplete 0)
+        // and blocks the drive Move. Drop it once everyone is actually seated.
+        if (IsCurrentWaypointGetInNearest())
+        {
+            RemoveAllOrders(false);
+            if (m_drivingTarget != vector.Zero)
+                IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
+            return;
         }
         
         // If everyone is in the vehicle and we have a destination, make sure we have a waypoint
@@ -2040,6 +2111,552 @@ class IA_AiGroup
     void ForceDrivingState(bool state)
     {
         m_isDriving = state;
+    }
+
+    void MarkAsVehicleCrew()
+    {
+        m_isVehicleCrewGroup = true;
+    }
+
+    bool IsVehicleCrewGroup()
+    {
+        return m_isVehicleCrewGroup;
+    }
+
+    bool IsVehiclePassengerGroup()
+    {
+        return m_isVehiclePassengerGroup;
+    }
+
+    bool ShouldSkipInfantryOrders()
+    {
+        if (m_isDriving || m_isVehicleCrewGroup)
+            return true;
+
+        if (m_isVehiclePassengerGroup && !m_passengerDumped)
+            return true;
+
+        return false;
+    }
+
+    IA_AiGroup GetLinkedPassengerGroup()
+    {
+        return m_linkedPassengerGroup;
+    }
+
+    bool HasDumpedPassengers()
+    {
+        return m_passengerDumped;
+    }
+
+    void OnLinkedPassengersDumped()
+    {
+        if (!m_isVehicleCrewGroup)
+            return;
+
+        if (IsCurrentWaypointGetInNearest())
+            RemoveAllOrders(false);
+    }
+
+    protected bool ShouldSkipCrewRemount()
+    {
+        if (!m_isVehicleCrewGroup)
+            return false;
+
+        if (m_linkedPassengerGroup && m_linkedPassengerGroup.HasDumpedPassengers())
+            return true;
+
+        if (m_currentDangerLevel > 0.6)
+            return true;
+
+        if (IsEngagedWithEnemy())
+            return true;
+
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (vehicle && m_drivingTarget != vector.Zero)
+        {
+            if (IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget))
+                return true;
+        }
+
+        return false;
+    }
+
+    void SetLinkedPassengerGroup(IA_AiGroup passengerGroup)
+    {
+        m_linkedPassengerGroup = passengerGroup;
+    }
+
+    void ConfigureAsVehiclePassengers(IA_AiGroup crewGroup, IEntity vehicle, vector assaultTarget)
+    {
+        m_isVehiclePassengerGroup = true;
+        m_mountedUntilDump = true;
+        m_passengerDumped = false;
+        m_linkedCrewGroup = crewGroup;
+        m_passengerVehicle = vehicle;
+        m_passengerAssaultTarget = assaultTarget;
+        m_isDriving = false;
+        m_referencedEntity = null;
+    }
+
+    bool IsAnyMemberOnFoot()
+    {
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (character && !character.IsInVehicle())
+                return true;
+        }
+        return false;
+    }
+
+    bool IsAnyMemberInVehicle()
+    {
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (character && character.IsInVehicle())
+                return true;
+        }
+        return false;
+    }
+
+    bool IsCurrentWaypointGetInNearest()
+    {
+        if (!m_group)
+            return false;
+
+        AIWaypoint current = m_group.GetCurrentWaypoint();
+        if (!current)
+            return false;
+
+        SCR_BoardingTimedWaypoint getInNearest = SCR_BoardingTimedWaypoint.Cast(current);
+        return getInNearest != null;
+    }
+
+    protected bool IsDefendOrder(IA_AiOrder order)
+    {
+        if (order == IA_AiOrder.Defend)
+            return true;
+        if (order == IA_AiOrder.DefendSmall)
+            return true;
+        return false;
+    }
+
+    protected IA_TypedWpTree GetActiveTypedWaypointTree()
+    {
+        if (!m_group)
+            return IA_TypedWpTree.None;
+
+        AIWaypoint current = m_group.GetCurrentWaypoint();
+        if (SCR_DefendWaypoint.Cast(current))
+            return IA_TypedWpTree.Defend;
+        if (SCR_BoardingTimedWaypoint.Cast(current))
+            return IA_TypedWpTree.GetInNearest;
+
+        array<AIWaypoint> wps = {};
+        m_group.GetWaypoints(wps);
+        foreach (AIWaypoint wp : wps)
+        {
+            if (SCR_DefendWaypoint.Cast(wp))
+                return IA_TypedWpTree.Defend;
+            if (SCR_BoardingTimedWaypoint.Cast(wp))
+                return IA_TypedWpTree.GetInNearest;
+        }
+
+        SCR_AIGroupUtilityComponent utility = SCR_AIGroupUtilityComponent.Cast(m_group.FindComponent(SCR_AIGroupUtilityComponent));
+        if (!utility)
+            return IA_TypedWpTree.None;
+
+        AIActionBase action = utility.GetCurrentAction();
+        if (SCR_AIDefendActivity.Cast(action))
+            return IA_TypedWpTree.Defend;
+        if (SCR_AIGetInActivity.Cast(action))
+            return IA_TypedWpTree.GetInNearest;
+
+        return IA_TypedWpTree.None;
+    }
+
+    protected bool OrderMatchesTypedTree(IA_AiOrder order, IA_TypedWpTree tree)
+    {
+        if (tree == IA_TypedWpTree.Defend)
+            return IsDefendOrder(order);
+        if (tree == IA_TypedWpTree.GetInNearest)
+            return order == IA_AiOrder.GetInVehicle;
+        return true;
+    }
+
+    protected bool WaypointMatchesTypedTree(SCR_AIWaypoint waypoint, IA_TypedWpTree tree)
+    {
+        if (!waypoint)
+            return false;
+        if (tree == IA_TypedWpTree.Defend)
+            return SCR_DefendWaypoint.Cast(waypoint) != null;
+        if (tree == IA_TypedWpTree.GetInNearest)
+            return SCR_BoardingTimedWaypoint.Cast(waypoint) != null;
+        return true;
+    }
+
+    protected bool OrderMatchesActiveTypedTree(IA_AiOrder order)
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.None)
+            return false;
+        return OrderMatchesTypedTree(order, tree);
+    }
+
+    protected bool WaypointMatchesActiveTypedTree(SCR_AIWaypoint waypoint)
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.None)
+            return false;
+        return WaypointMatchesTypedTree(waypoint, tree);
+    }
+
+    protected bool ShouldDeferOrderForTypedTree(IA_AiOrder order)
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.None)
+            return m_typedClearScheduled;
+        return !OrderMatchesTypedTree(order, tree);
+    }
+
+    protected bool ShouldDeferWaypointForTypedTree(SCR_AIWaypoint waypoint)
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.None)
+            return m_typedClearScheduled;
+        return !WaypointMatchesTypedTree(waypoint, tree);
+    }
+
+    protected void QueuePendingOrder(vector origin, IA_AiOrder order, bool topPriority)
+    {
+        m_pendingOrderOrigins.Insert(origin);
+        m_pendingOrderTypes.Insert(order);
+        m_pendingOrderTopPriority.Insert(topPriority);
+    }
+
+    protected void CancelPendingTypedClear()
+    {
+        if (m_typedClearScheduled)
+        {
+            GetGame().GetCallqueue().Remove(this.FlushPendingAfterTypedClear);
+            m_typedClearScheduled = false;
+        }
+
+        DiscardPendingWaypoints();
+        m_pendingOrderOrigins.Clear();
+        m_pendingOrderTypes.Clear();
+        m_pendingOrderTopPriority.Clear();
+    }
+
+    protected void PrepareTypedWaypointTreeClear()
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree != IA_TypedWpTree.None)
+            RemoveAllOrders(false);
+
+        if (m_typedClearScheduled)
+            return;
+
+        m_typedClearScheduled = true;
+        GetGame().GetCallqueue().CallLater(this.FlushPendingAfterTypedClear, TYPED_WP_TREE_CLEAR_MS, false);
+    }
+
+    protected void FlushPendingAfterTypedClear()
+    {
+        m_typedClearScheduled = false;
+        if (!m_isSpawned || !m_group)
+        {
+            DiscardPendingWaypoints();
+            m_pendingOrderOrigins.Clear();
+            m_pendingOrderTypes.Clear();
+            m_pendingOrderTopPriority.Clear();
+            return;
+        }
+
+        m_flushingTypedClear = true;
+
+        int orderCount = m_pendingOrderOrigins.Count();
+        int i;
+        for (i = 0; i < orderCount; i++)
+        {
+            AddOrder(m_pendingOrderOrigins[i], m_pendingOrderTypes[i], m_pendingOrderTopPriority[i]);
+        }
+        m_pendingOrderOrigins.Clear();
+        m_pendingOrderTypes.Clear();
+        m_pendingOrderTopPriority.Clear();
+
+        int wpCount = m_pendingWaypoints.Count();
+        for (i = 0; i < wpCount; i++)
+        {
+            SCR_AIWaypoint pendingWp = m_pendingWaypoints[i];
+            if (!pendingWp)
+                continue;
+            AddWaypoint(pendingWp);
+        }
+        m_pendingWaypoints.Clear();
+
+        m_flushingTypedClear = false;
+    }
+
+    protected void DiscardPendingWaypoints()
+    {
+        int wpCount = m_pendingWaypoints.Count();
+        int i;
+        for (i = 0; i < wpCount; i++)
+        {
+            SCR_AIWaypoint pendingWp = m_pendingWaypoints[i];
+            if (pendingWp)
+                IA_Game.AddEntityToGc(pendingWp);
+        }
+        m_pendingWaypoints.Clear();
+    }
+
+    void ClearOrdersIfAllSeated()
+    {
+        if (IsAnyMemberOnFoot())
+            return;
+
+        RemoveAllOrders(false);
+    }
+
+    void IssuePassengerMountHold()
+    {
+        if (!m_isVehiclePassengerGroup || m_passengerDumped)
+            return;
+
+        m_mountedUntilDump = true;
+        if (m_passengerMountTime == 0)
+            m_passengerMountTime = System.GetUnixTime();
+
+        // Already seated: do not plant GetInNearest. That tree re-reads
+        // GetCurrentWaypoint every tick and NodeErrors if we later swap to
+        // GetOut / S&D. Stay mounted by issuing no waypoint.
+        if (!IsAnyMemberOnFoot())
+        {
+            if (IsCurrentWaypointGetInNearest())
+                RemoveAllOrders(false);
+            return;
+        }
+
+        if (IsCurrentWaypointGetInNearest())
+            return;
+
+        vector holdPos = GetOrigin();
+        if (m_passengerVehicle)
+            holdPos = m_passengerVehicle.GetOrigin();
+
+        RemoveAllOrders(false);
+        AddOrder(holdPos, IA_AiOrder.GetInVehicle, true);
+    }
+
+    void DumpPassengersAndAssault(vector assaultOverride = vector.Zero)
+    {
+        if (!m_isVehiclePassengerGroup || m_passengerDumped)
+            return;
+
+        m_passengerDumped = true;
+        m_mountedUntilDump = false;
+        m_passengerDumpAssaultTries = 0;
+        if (assaultOverride != vector.Zero)
+            m_passengerAssaultTarget = assaultOverride;
+
+        vector assault = m_passengerAssaultTarget;
+        if (assault == vector.Zero && m_linkedCrewGroup)
+            assault = m_linkedCrewGroup.GetDrivingTarget();
+        if (assault == vector.Zero)
+            assault = GetOrigin();
+        m_passengerAssaultTarget = assault;
+
+        // GetOut only this frame. S&D is priority 15 and would steal current
+        // from GetOut (priority 0). If GetInNearest was current, wait out
+        // DecideActivity (~0.3s) before planting GetOut so that tree is gone.
+        bool hadGetIn = IsCurrentWaypointGetInNearest();
+        RemoveAllOrders(false);
+
+        m_tacticalState = IA_GroupTacticalState.Attacking;
+        m_tacticalStateTarget = assault;
+        m_isStateManagedByAuthority = true;
+        if (m_linkedCrewGroup)
+            m_linkedCrewGroup.OnLinkedPassengersDumped();
+        if (hadGetIn)
+        {
+            GetGame().GetCallqueue().CallLater(this.BeginPassengerGetOutAfterGetInClear, PASSENGER_DUMP_GETIN_CLEAR_MS, false);
+        }
+        else
+        {
+            IssuePassengerGetOut();
+            GetGame().GetCallqueue().CallLater(this.FinishPassengerDumpAssault, PASSENGER_DUMP_ASSAULT_DELAY_MS, false);
+        }
+        Print(string.Format("[IA_AiGroup] Passenger group dumping toward %1", assault.ToString()), LogLevel.DEBUG);
+    }
+
+    protected void BeginPassengerGetOutAfterGetInClear()
+    {
+        if (!m_isVehiclePassengerGroup || !m_passengerDumped)
+            return;
+        if (!m_isSpawned || !m_group)
+            return;
+
+        IssuePassengerGetOut();
+        GetGame().GetCallqueue().CallLater(this.FinishPassengerDumpAssault, PASSENGER_DUMP_ASSAULT_DELAY_MS, false);
+    }
+
+    protected void IssuePassengerGetOut()
+    {
+        vector outPos = GetOrigin();
+        if (m_passengerVehicle)
+            outPos = m_passengerVehicle.GetOrigin();
+
+        AddOrder(outPos, IA_AiOrder.GetOutOfVehicle, true);
+    }
+
+    protected void FinishPassengerDumpAssault()
+    {
+        if (!m_isVehiclePassengerGroup || !m_passengerDumped)
+            return;
+        if (!m_isSpawned || !m_group)
+            return;
+
+        if (IsAnyMemberInVehicle())
+        {
+            m_passengerDumpAssaultTries = m_passengerDumpAssaultTries + 1;
+            bool someoneAlreadyOut = IsAnyMemberOnFoot();
+            if (!someoneAlreadyOut && m_passengerDumpAssaultTries <= PASSENGER_DUMP_FORCE_EJECT_TRIES)
+            {
+                if (!HasOrders())
+                    IssuePassengerGetOut();
+                GetGame().GetCallqueue().CallLater(this.FinishPassengerDumpAssault, PASSENGER_DUMP_ASSAULT_RETRY_MS, false);
+                return;
+            }
+
+            // One leftover seat completes the group GetOut for nobody.
+            // Those already on foot stand at the hull; the crew Move/GetIn
+            // also waits. Kick the remainder out and assault with who can.
+            int leftover = ForceEjectSeatedMembers();
+            Print(string.Format("[IA][AI] Passenger dump force-eject leftover=%1 after %2 tries", leftover, m_passengerDumpAssaultTries), LogLevel.NORMAL);
+        }
+
+        vector assault = m_passengerAssaultTarget;
+        if (assault == vector.Zero)
+            assault = GetOrigin();
+
+        RemoveAllOrders(false);
+        AddOrder(assault, IA_AiOrder.SearchAndDestroy, true);
+        Print(string.Format("[IA_AiGroup] Passenger group assaulting %1", assault.ToString()), LogLevel.DEBUG);
+    }
+
+    protected int ForceEjectSeatedMembers()
+    {
+        int ejected = 0;
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character || !character.IsInVehicle())
+                continue;
+
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                continue;
+
+            bool left = false;
+            if (access.CanGetOutVehicleViaDoor(-1))
+                left = access.GetOutVehicle(EGetOutType.TELEPORT, -1, ECloseDoorAfterActions.INVALID, false);
+
+            if (!left)
+            {
+                vector mat[4];
+                character.GetWorldTransform(mat);
+                left = access.GetOutVehicle_NoDoor(mat, false, false);
+            }
+
+            if (left)
+                ejected = ejected + 1;
+        }
+
+        return ejected;
+    }
+
+    protected void ApplyBoardingAllowance(SCR_AIWaypoint waypoint, IA_AiOrder order)
+    {
+        if (!waypoint)
+            return;
+
+        SCR_BoardingWaypoint boarding = SCR_BoardingWaypoint.Cast(waypoint);
+        if (!boarding)
+            return;
+
+        if (order == IA_AiOrder.GetOutOfVehicle)
+        {
+            // Passenger dump only. Allow every seat type so a cargo AI who
+            // landed in a turret-typed bench is not left behind.
+            boarding.SetAllowance(true, true, true);
+            return;
+        }
+
+        if (order != IA_AiOrder.GetInVehicle)
+            return;
+
+        if (m_isVehiclePassengerGroup)
+            boarding.SetAllowance(false, false, true);
+        else if (m_isVehicleCrewGroup)
+            boarding.SetAllowance(true, true, false);
+    }
+
+    protected void TryDumpPassengersIfNeeded()
+    {
+        if (!m_isVehiclePassengerGroup || m_passengerDumped || !m_mountedUntilDump)
+            return;
+
+        if (m_passengerMountTime > 0)
+        {
+            int rideS = System.GetUnixTime() - m_passengerMountTime;
+            if (rideS < PASSENGER_MIN_RIDE_S)
+                return;
+        }
+
+        IEntity vehEnt = m_passengerVehicle;
+        if (m_linkedCrewGroup)
+        {
+            IEntity crewVeh = m_linkedCrewGroup.GetReferencedEntity();
+            if (crewVeh)
+                vehEnt = crewVeh;
+        }
+
+        Vehicle veh = Vehicle.Cast(vehEnt);
+        if (veh)
+        {
+            if (SCR_AIVehicleUsability.VehicleIsOnFire(veh) || !SCR_AIVehicleUsability.VehicleCanMove(veh))
+            {
+                DumpPassengersAndAssault();
+                return;
+            }
+
+            vector dest = m_passengerAssaultTarget;
+            if (m_linkedCrewGroup)
+            {
+                vector crewDest = m_linkedCrewGroup.GetDrivingTarget();
+                if (crewDest != vector.Zero)
+                    dest = crewDest;
+            }
+
+            if (dest != vector.Zero && IA_VehicleManager.HasVehicleReachedDestination(veh, dest))
+            {
+                DumpPassengersAndAssault();
+                return;
+            }
+        }
+
+        if (m_currentDangerLevel > 0.6 && m_lastDangerPosition != vector.Zero)
+        {
+            vector worldPos = GetOrigin();
+            if (veh)
+                worldPos = veh.GetOrigin();
+
+            if (vector.Distance(worldPos, m_lastDangerPosition) < PASSENGER_DUMP_CONTACT_M)
+                DumpPassengersAndAssault();
+        }
     }
 
     void ProcessReactions()
@@ -2201,6 +2818,14 @@ class IA_AiGroup
     {
         if (m_isMortarCrew)
             return;
+
+        if (m_isVehiclePassengerGroup && m_mountedUntilDump && !m_passengerDumped)
+        {
+            IssuePassengerMountHold();
+            if (!IsAnyMemberOnFoot())
+                TryDumpPassengersIfNeeded();
+            return;
+        }
 
         // If the group is in the Escaping state, it must not be interrupted.
         if (m_tacticalState == IA_GroupTacticalState.Escaping)
@@ -2602,11 +3227,10 @@ class IA_AiGroup
         // Mark this as an authoritative state change.
         SetTacticalState(IA_GroupTacticalState.InVehicle, destination, vehicle, true);
         
-        // After setting the state, add a GetInVehicle order to register the vehicle with SCR_AIGroup
-        // This is required after recent game updates - the vehicle must be registered
-        // before SCR_AIGetEmptyCompartment can find compartments for boarding
-        // We add this after SetTacticalState so it's not removed by RemoveAllOrders()
-        if (m_group)
+        // GetInNearest only if someone is actually on foot. Stacking it on the
+        // InVehicle Move after a teleport-seat makes GetInNearestVehicle.bt
+        // read a Move waypoint and NodeError.
+        if (m_group && IsAnyMemberOnFoot())
         {
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
         }
@@ -2621,6 +3245,7 @@ class IA_AiGroup
         {
             return;
         }
+        UnpinInboundSimulation();
         m_isSpawned = false;
         
         if (m_isDriving || m_referencedEntity)
@@ -2689,7 +3314,10 @@ class IA_AiGroup
         // Approaching is the exception: arc routing waypoints were already queued externally,
         // so we must NOT wipe them here. All other states get a clean slate.
         if (m_tacticalState != IA_GroupTacticalState.Approaching)
+        {
+            CancelPendingTypedClear();
             RemoveAllOrders();
+        }
         
         switch (m_tacticalState)
         {
@@ -2845,73 +3473,34 @@ class IA_AiGroup
     // Make sure CalculateWaypointPriority is defined as a public method
     int CalculateWaypointPriority(IA_AiOrder order)
     {
-        // Base priority level starts at 0
-        int priority = 0;
-        
-        // Increase priority based on order type
+        // Level is added to the vanilla activity score. Stay at or below
+        // FIGHT (15) so soldier Attack 90 still wins. Do not stack combat
+        // bonuses — last-man + engaged already walked past players.
         switch (order)
         {
             case IA_AiOrder.SearchAndDestroy:
-                priority += 15;
-                break;
-			case IA_AiOrder.VehicleMove:
-                return 0;
+                return WP_PRIORITY_FIGHT;
+            case IA_AiOrder.VehicleMove:
+                return WP_PRIORITY_PATROL;
             case IA_AiOrder.Defend:
-                return 20;
-			case IA_AiOrder.DefendSmall:
-                return 40;
+                return WP_PRIORITY_DEFEND;
+            case IA_AiOrder.DefendSmall:
+                return WP_PRIORITY_FIGHT;
             case IA_AiOrder.GetInVehicle:
-                priority += 100;  // Vehicle mounting is important
-                break;
+                return WP_PRIORITY_GET_IN;
+            case IA_AiOrder.GetOutOfVehicle:
+                return WP_PRIORITY_GET_OUT;
             case IA_AiOrder.PriorityMove:
-                // Escape must ignore combat. All other PriorityMove must stay below
-                // soldier attack (70/90) or they walk past players.
                 if (m_tacticalState == IA_GroupTacticalState.Escaping)
-                    return 350;
-                return 15;
+                    return WP_PRIORITY_ESCAPE;
+                return WP_PRIORITY_FIGHT;
             case IA_AiOrder.Move:
-                return 15;
+                return WP_PRIORITY_FIGHT;
             case IA_AiOrder.Patrol:
-                priority += 1;  // Patrol orders lowest priority
-                break;
+                return WP_PRIORITY_PATROL;
         }
-        
-        // Increase priority if in danger
-        if (m_currentDangerLevel > 0.0)
-        {
-            priority += Math.Round(1 * m_currentDangerLevel);
-        }
-        
-        // Increase priority if engaged with enemy
-        if (IsEngagedWithEnemy())
-        {
-            priority += 15;
-        }
-        
-        // Adjust priority based on group strength
-        int aliveCount = GetAliveCount();
-        if (aliveCount == 2)
-        {
-            // Small groups prioritize their orders more (survival focused)
-            priority += 10;
-        }
-        if (aliveCount == 1)
-        {
-            // Small groups prioritize their orders more (survival focused)
-            priority += 30;
-        }
-        
-        // More recent danger events increase priority
-        if (m_lastDangerEventTime > 0)
-        {
-            int timeSinceLastDanger = System.GetUnixTime() - m_lastDangerEventTime;
-            if (timeSinceLastDanger < 30)
-            {
-                priority += 5; // Recent danger gets higher priority
-            }
-        }
-        
-        return priority;
+
+        return WP_PRIORITY_PATROL;
     }
 
     // Improved flanking position calculation
@@ -2987,6 +3576,8 @@ class IA_AiGroup
         
         if (!IsSpawned() || !m_group)
             return;
+
+        TickInboundSimulation();
         
         // Evaluate danger state
         EvaluateDangerState();
@@ -3052,6 +3643,94 @@ class IA_AiGroup
     bool IsDefendWaveGroup()
     {
         return m_isDefendWaveGroup;
+    }
+
+    void EnableInboundSimulation(vector target)
+    {
+        m_bInboundSimPinned = true;
+        m_vInboundTarget = target;
+        RequestInboundNavmeshLoad();
+        PinInboundAgents();
+        ScheduleNextStateEvaluation();
+        Print(string.Format("[IA][InboundSim] pin target=%1", target.ToString()), LogLevel.NORMAL);
+    }
+
+    protected void RequestInboundNavmeshLoad()
+    {
+        AIWorld aiWorld = GetGame().GetAIWorld();
+        if (!aiWorld)
+            return;
+
+        vector spawnPos = GetOrigin();
+        if (spawnPos == vector.Zero)
+            spawnPos = m_staggeredSpawnPos;
+        if (spawnPos != vector.Zero)
+            aiWorld.RequestNavmeshLoad(spawnPos);
+        if (m_vInboundTarget != vector.Zero)
+            aiWorld.RequestNavmeshLoad(m_vInboundTarget);
+    }
+
+    protected void PinInboundAgents()
+    {
+        if (!m_bInboundSimPinned || !m_group)
+            return;
+
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        int maxLod = AIAgent.GetMaxLOD();
+        int nextToLast = maxLod - 1;
+        if (nextToLast < 0)
+            nextToLast = 0;
+
+        foreach (AIAgent agent : agents)
+        {
+            if (!agent)
+                continue;
+
+            if (agent.GetLOD() == maxLod)
+                agent.SetLOD(nextToLast);
+
+            agent.PreventMaxLOD();
+        }
+    }
+
+    protected void UnpinInboundSimulation()
+    {
+        if (!m_bInboundSimPinned)
+            return;
+
+        m_bInboundSimPinned = false;
+
+        if (m_group)
+        {
+            array<AIAgent> agents = {};
+            m_group.GetAgents(agents);
+            foreach (AIAgent agent : agents)
+            {
+                if (agent)
+                    agent.AllowMaxLOD();
+            }
+        }
+
+        Print("[IA][InboundSim] unpin", LogLevel.NORMAL);
+    }
+
+    protected void TickInboundSimulation()
+    {
+        if (!m_bInboundSimPinned)
+            return;
+
+        if (!m_group || GetAliveCount() == 0)
+        {
+            UnpinInboundSimulation();
+            return;
+        }
+
+        if (m_vInboundTarget == vector.Zero)
+            return;
+
+        if (vector.Distance(GetOrigin(), m_vInboundTarget) < IA_SpawnPlacement.ARRIVE_UNPIN_M)
+            UnpinInboundSimulation();
     }
 
     // Add a public setter for the assigned area
@@ -3147,6 +3826,7 @@ class IA_AiGroup
         {
             SetupDeathListenerForUnit(charEntity);
             m_unitsSpawnedCount++;
+            PinInboundAgents();
         }
         
         // Decrement pending count and schedule next spawn
@@ -3192,6 +3872,7 @@ class IA_AiGroup
 
         SetupDeathListenerForUnit(charEntity);
         m_unitsSpawnedCount++;
+        PinInboundAgents();
     }
 
     void FinalizeStaggeredSpawn()
@@ -3242,10 +3923,18 @@ class IA_AiGroup
             }
         }
         // Special handling for vehicle groups
+        else if (m_isVehiclePassengerGroup)
+        {
+            SetTacticalState(IA_GroupTacticalState.InVehicle, m_passengerAssaultTarget, null, true);
+            IssuePassengerMountHold();
+            Print("[IA_AiGroup.OnStaggeredSpawningComplete] Passenger group ready for cargo mount", LogLevel.DEBUG);
+            ScheduleNextStateEvaluation();
+            SetupDeathListener();
+        }
         else if (m_referencedEntity)
         {
-            // Order units to get in the vehicle immediately
-            AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+            if (IsAnyMemberOnFoot())
+                AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
 
             // Stay InVehicle. DefendPatrol here used to spawn a Defend waypoint whose
             // OnDeselected GetOuts every turret occupant.
@@ -3360,6 +4049,7 @@ class IA_AiGroup
         {
             SetupDeathListenerForUnit(charEntity); // Setup death listener for the added unit
             m_unitsSpawnedCount++;
+            PinInboundAgents();
         }
         
         // Decrement pending count and schedule next spawn

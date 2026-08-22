@@ -28,6 +28,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Toggle m_heliToggle;
 	protected ref MUI_Toggle m_groundToggle;
 	protected ref MUI_Toggle m_RolesToggle;
+	protected ref MUI_NumericField m_HaloMaxField;
 	protected ref MUI_Dropdown m_FactionDrop;
 
 	//------------------------------------------------------------------------------------------------
@@ -159,6 +160,12 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_groundToggle = runtime.CreateToggle("Disable HQ ground vehicles", "ground");
 		m_RolesToggle = runtime.CreateToggle("Enforce pilot role restrictions", "roles");
 
+		m_HaloMaxField = runtime.CreateNumericField("HALO Jump max players (0 = off)", "haloMax");
+		m_HaloMaxField.SetRange(0, 128);
+		m_HaloMaxField.SetStep(1);
+		m_HaloMaxField.SetDecimals(0);
+		m_HaloMaxField.SetValue(IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT);
+
 		ref MUI_Label factionLbl = runtime.CreateLabel("Preferred enemy faction (future spawns)", "factionLbl");
 		factionLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		factionLbl.SetMuted(true);
@@ -173,6 +180,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageHq.AddChild(m_heliToggle);
 		m_PageHq.AddChild(m_groundToggle);
 		m_PageHq.AddChild(m_RolesToggle);
+		m_PageHq.AddChild(m_HaloMaxField);
 		m_PageHq.AddChild(factionLbl);
 		m_PageHq.AddChild(m_FactionDrop);
 
@@ -181,13 +189,33 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		scroll.AddChild(m_PageArty);
 		scroll.AddChild(m_PageHq);
 
-		ref MUI_Row buttons = runtime.CreateRow("buttons");
-		buttons.SetGap(12);
-		buttons.SetIntro(0.52, 0.4, 18);
+		ref MUI_Panel footerBtns = runtime.CreatePanel("footerBtns");
+		footerBtns.GetStyle().m_Fill = Color.FromInt(0);
+		footerBtns.GetStyle().m_fRadius = 0;
+		footerBtns.GetStyle().m_fGap = 12;
+		footerBtns.GetStyle().m_bBlockHit = false;
+		footerBtns.SetFillWidth();
+		footerBtns.SetIntro(0.52, 0.4, 18);
+
+		ref MUI_Row persistRow = runtime.CreateRow("persistRow");
+		persistRow.SetGap(12);
 
 		ref MUI_Button saveBtn = runtime.CreateButton("Save", "save");
 		saveBtn.MakeAccent();
 		saveBtn.GetOnClicked().Insert(OnMikesSave);
+
+		ref MUI_Button persistBtn = runtime.CreateButton("Save for restart", "persist");
+		persistBtn.GetOnClicked().Insert(OnMikesPersist);
+
+		ref MUI_Button clearBtn = runtime.CreateButton("Clear saved", "clearSaved");
+		clearBtn.GetOnClicked().Insert(OnMikesClearPersisted);
+
+		persistRow.AddChild(saveBtn);
+		persistRow.AddChild(persistBtn);
+		persistRow.AddChild(clearBtn);
+
+		ref MUI_Row actionRow = runtime.CreateRow("actionRow");
+		actionRow.SetGap(12);
 
 		ref MUI_Button promoteBtn = runtime.CreateButton("Promote Self", "promote");
 		promoteBtn.GetOnClicked().Insert(OnMikesPromoteSelf);
@@ -199,14 +227,16 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		ref MUI_Button closeBtn = runtime.CreateButton("Close", "close");
 		closeBtn.GetOnClicked().Insert(OnMUIBack);
 
-		buttons.AddChild(saveBtn);
-		buttons.AddChild(promoteBtn);
-		buttons.AddChild(completeBtn);
-		buttons.AddChild(closeBtn);
+		actionRow.AddChild(promoteBtn);
+		actionRow.AddChild(completeBtn);
+		actionRow.AddChild(closeBtn);
+
+		footerBtns.AddChild(persistRow);
+		footerBtns.AddChild(actionRow);
 
 		shell.GetCard().AddChild(m_Tabs);
 		shell.GetCard().AddChild(scroll);
-		shell.AddFooter(runtime, "Promote Self is +1 session grade  •  Save writes to the server config", buttons);
+		shell.AddFooter(runtime, "Save applies now  •  Save for restart also writes the server profile (last-wins on boot)", footerBtns);
 		shell.Mount(runtime);
 
 		ShowAdminPage(0);
@@ -295,6 +325,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_groundToggle.SetChecked(cfg.m_bDisableHQGroundVehicles);
 		if (m_RolesToggle)
 			m_RolesToggle.SetChecked(cfg.m_bEnforceRoleRestrictions);
+		if (m_HaloMaxField)
+			m_HaloMaxField.SetValue(cfg.m_iHaloJumpMaxPlayers);
 
 		if (m_FactionDrop && cfg.m_sDesiredEnemyFactionKeys && cfg.m_sDesiredEnemyFactionKeys.Count() > 0)
 		{
@@ -312,6 +344,36 @@ class IA_AdminConfigMenu : MUI_MenuBase
 
 	//------------------------------------------------------------------------------------------------
 	protected void OnMikesSave()
+	{
+		SubmitAdminConfig(false);
+		GetGame().GetMenuManager().CloseMenu(this);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnMikesPersist()
+	{
+		SubmitAdminConfig(true);
+		SCR_HintManagerComponent.ShowCustomHint(
+			"Overrides written to the server profile. They load after the mission config on the next restart.",
+			"ADMIN CONFIG",
+			6
+		);
+		GetGame().GetMenuManager().CloseMenu(this);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnMikesClearPersisted()
+	{
+		IA_MissionInitializer.ClearPersistedAdminConfig();
+		SCR_HintManagerComponent.ShowCustomHint(
+			"Saved overrides cleared. Next restart uses the mission config.",
+			"ADMIN CONFIG",
+			6
+		);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void SubmitAdminConfig(bool persist)
 	{
 		IA_MissionInitializer missionInit = IA_MissionInitializer.GetInstance();
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
@@ -335,6 +397,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		bool disableGround = false;
 		bool enableCiv = true;
 		bool enforceRoles = false;
+		int haloMaxPlayers = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
 		string factionKey = "";
 
 		if (m_civField)
@@ -365,8 +428,33 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			enableCiv = m_CivSpawnToggle.IsChecked();
 		if (m_RolesToggle)
 			enforceRoles = m_RolesToggle.IsChecked();
+		if (m_HaloMaxField)
+			haloMaxPlayers = m_HaloMaxField.GetText().ToInt();
 		if (m_FactionDrop && m_FactionDrop.GetIndex() > 0)
 			factionKey = m_FactionDrop.GetText();
+
+		if (persist)
+		{
+			IA_MissionInitializer.PersistConfig(
+				civCount,
+				aiScale,
+				disableHeli,
+				disableGround,
+				artyCooldown,
+				staticAi,
+				milVeh,
+				civVeh,
+				revolt,
+				enableCiv,
+				enforceRoles,
+				artyChance,
+				artyMin,
+				artyMax,
+				factionKey,
+				haloMaxPlayers
+			);
+			return;
+		}
 
 		IA_MissionInitializer.UpdateConfig(
 			civCount,
@@ -383,9 +471,9 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			artyChance,
 			artyMin,
 			artyMax,
-			factionKey
+			factionKey,
+			haloMaxPlayers
 		);
-		GetGame().GetMenuManager().CloseMenu(this);
 	}
 
 	//------------------------------------------------------------------------------------------------

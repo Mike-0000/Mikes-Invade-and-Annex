@@ -1,10 +1,9 @@
 //------------------------------------------------------------------------------------------------
 //! I&A Role Switcher HALO action. Keeps HALO available only on low-population sessions.
+//! The cutoff is IA_Config.m_iHaloJumpMaxPlayers (admin config, default 15).
 //------------------------------------------------------------------------------------------------
 class IA_HaloJumpUserAction : MHJ_HaloJumpUserAction
 {
-	protected static const int MAX_PLAYER_COUNT = 12;
-
 	//------------------------------------------------------------------------------------------------
 	override bool CanBeShownScript(IEntity user)
 	{
@@ -36,6 +35,6 @@ class IA_HaloJumpUserAction : MHJ_HaloJumpUserAction
 		if (!playerManager)
 			return false;
 
-		return playerManager.GetPlayerCount() < MAX_PLAYER_COUNT;
+		return playerManager.GetPlayerCount() < IA_MissionInitializer.GetHaloJumpMaxPlayers();
 	}
 }

@@ -64,10 +64,9 @@ class IA_SideObjectiveManager
             {
                 if (obj.GetState() == IA_SideObjectiveState.Completed)
                 {
-                    // Call the new static method to disable artillery for 30 mins
-                    IA_MissionInitializer.SetArtilleryDisabled(1800);
-                    // Also disable QRF for 30 minutes
-                    IA_MissionInitializer.SetQRFDisabled(1800);
+                    // Disable artillery and QRF for 20 minutes
+                    IA_MissionInitializer.SetArtilleryDisabled(20 * 60);
+                    IA_MissionInitializer.SetQRFDisabled(20 * 60);
                 }
                 m_ActiveObjectives.Remove(i);
 				objectiveJustFinished = true;
