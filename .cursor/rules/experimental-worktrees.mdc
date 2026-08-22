@@ -20,4 +20,4 @@ UI, HALO, and I&A each have a production folder on `main` and a `*-Exp` worktree
 
 ## Promote
 
-Only when the user asks to promote experimental to production, or runs `/promote-experimental`: read and follow `F:\Mikes-Invade-and-Annex\.cursor\skills\promote-experimental\SKILL.md`. Do not promote as a side effect of other work.
+Only when the user asks to promote experimental to production, or runs `/promote-experimental`: read and follow `F:\Mikes-Invade-and-Annex\.cursor\skills\promote-experimental\SKILL.md`. That skill restores Workbench `rdb` dirt and resolves experimental/main conflicts in `*-Exp`, then reruns — do not stop and ask. Do not promote as a side effect of other work.
