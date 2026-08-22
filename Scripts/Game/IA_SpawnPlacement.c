@@ -2,6 +2,7 @@ class IA_SpawnPlacement
 {
 	static const float PLAYER_MIN_M = 280.0;
 	static const float PLAYER_MAX_M = 550.0;
+	static const float DESPAWN_PLAYER_SAFE_M = 400.0;
 	static const float FIGHT_NEAR_AO_M = 700.0;
 	static const float CENTER_MIN_M = 220.0;
 	static const float CENTER_MAX_M = 550.0;
@@ -32,9 +33,32 @@ class IA_SpawnPlacement
 		for (i = 0; i < idCount; i++)
 		{
 			IEntity playerEntity = playerManager.GetPlayerControlledEntity(playerIds[i]);
-			if (playerEntity)
-				positions.Insert(playerEntity.GetOrigin());
+			if (!playerEntity)
+				continue;
+
+			vector worldTm[4];
+			playerEntity.GetWorldTransform(worldTm);
+			positions.Insert(worldTm[3]);
 		}
+	}
+
+	static bool IsNearAnyPlayer(vector pos, array<vector> players, float radiusM)
+	{
+		if (!players || players.IsEmpty())
+			return false;
+		if (pos == vector.Zero)
+			return false;
+
+		float radiusSq = radiusM * radiusM;
+		int playerCount = players.Count();
+		int i;
+		for (i = 0; i < playerCount; i++)
+		{
+			if (vector.DistanceSq(pos, players[i]) <= radiusSq)
+				return true;
+		}
+
+		return false;
 	}
 
 	static bool IsLegalInbound(vector pos, vector center, array<vector> players, float centerMax, bool applyPlayerMax)

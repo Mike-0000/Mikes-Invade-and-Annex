@@ -80,6 +80,8 @@ class IA_AreaInstance
     private int m_currentTask = 0;
     private bool m_canSpawn   = true;
     private bool m_bShutDown = false;
+    private bool m_bDeferredCleanupPending = false;
+    private const int DEFERRED_CLEANUP_RETRY_MS = 8000;
     
     // --- BEGIN ADDED: Reinforcement Wave Variables ---
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
@@ -604,34 +606,196 @@ class IA_AreaInstance
 
     void Cleanup()
     {
-        if (m_aiAttackers)
+        DespawnAssetsAwayFromPlayers();
+    }
+
+    protected bool ShouldKeepNearPlayers(vector origin, array<vector> players)
+    {
+        return IA_SpawnPlacement.IsNearAnyPlayer(origin, players, IA_SpawnPlacement.DESPAWN_PLAYER_SAFE_M);
+    }
+
+    protected bool ShouldKeepGroupNearPlayers(IA_AiGroup group, array<vector> players)
+    {
+        if (!group)
+            return false;
+        if (ShouldKeepNearPlayers(group.GetOrigin(), players))
+            return true;
+
+        IA_AiGroup passengers = group.GetLinkedPassengerGroup();
+        if (passengers && passengers.IsSpawned() && ShouldKeepNearPlayers(passengers.GetOrigin(), players))
+            return true;
+
+        return false;
+    }
+
+    protected void DespawnGroupAndPassengers(IA_AiGroup group)
+    {
+        if (!group)
+            return;
+
+        if (group.IsDriving() && group.GetReferencedEntity())
         {
-            m_aiAttackers.DespawnAll();
+            Vehicle vehicle = Vehicle.Cast(group.GetReferencedEntity());
+            if (vehicle)
+            {
+                IA_VehicleManager.ReleaseVehicleReservation(vehicle);
+                IA_VehicleManager.DespawnVehicle(vehicle);
+                if (m_areaVehicles)
+                {
+                    int milIdx = m_areaVehicles.Find(vehicle);
+                    if (milIdx != -1)
+                        m_areaVehicles.Remove(milIdx);
+                }
+                if (m_areaCivVehicles)
+                {
+                    int civIdx = m_areaCivVehicles.Find(vehicle);
+                    if (civIdx != -1)
+                        m_areaCivVehicles.Remove(civIdx);
+                }
+            }
+        }
+
+        IA_AiGroup passengers = group.GetLinkedPassengerGroup();
+        if (passengers)
+            passengers.Despawn();
+
+        group.Despawn();
+    }
+
+    protected void DespawnAttackersAwayFromPlayers(array<vector> players, bool checkPlayers)
+    {
+        if (!m_aiAttackers)
+            return;
+
+        array<ref IA_AiGroup> attackerGroups = m_aiAttackers.GetGroups();
+        if (!attackerGroups)
+        {
+            delete m_aiAttackers;
+            m_aiAttackers = null;
+            return;
+        }
+
+        int i;
+        for (i = attackerGroups.Count() - 1; i >= 0; i--)
+        {
+            IA_AiGroup group = attackerGroups[i];
+            if (!group)
+            {
+                attackerGroups.Remove(i);
+                continue;
+            }
+
+            if (checkPlayers && ShouldKeepGroupNearPlayers(group, players))
+                continue;
+
+            DespawnGroupAndPassengers(group);
+            attackerGroups.Remove(i);
+        }
+
+        if (attackerGroups.IsEmpty())
+        {
             delete m_aiAttackers;
             m_aiAttackers = null;
         }
+    }
 
-        foreach (IA_AiGroup group : m_military)
+    protected void DespawnGroupListAwayFromPlayers(array<ref IA_AiGroup> groups, array<vector> players, bool checkPlayers)
+    {
+        if (!groups)
+            return;
+
+        int i;
+        for (i = groups.Count() - 1; i >= 0; i--)
         {
+            IA_AiGroup group = groups[i];
             if (!group)
+            {
+                groups.Remove(i);
+                continue;
+            }
+
+            if (!group.IsSpawned() || group.GetAliveCount() <= 0)
+            {
+                group.Despawn();
+                groups.Remove(i);
+                continue;
+            }
+
+            if (checkPlayers && ShouldKeepGroupNearPlayers(group, players))
                 continue;
 
-            IA_AiGroup passengers = group.GetLinkedPassengerGroup();
-            if (passengers)
-                passengers.Despawn();
-
-            group.Despawn();
+            DespawnGroupAndPassengers(group);
+            groups.Remove(i);
         }
-        m_military.Clear();
+    }
 
-        foreach (Vehicle vehicle : m_areaVehicles)
+    protected void DespawnVehicleListAwayFromPlayers(array<Vehicle> vehicles, array<vector> players, bool checkPlayers)
+    {
+        if (!vehicles)
+            return;
+
+        int i;
+        for (i = vehicles.Count() - 1; i >= 0; i--)
         {
-            if (vehicle)
+            Vehicle vehicle = vehicles[i];
+            if (!vehicle)
             {
-                IA_VehicleManager.DespawnVehicle(vehicle);
+                vehicles.Remove(i);
+                continue;
             }
+
+            if (checkPlayers && ShouldKeepNearPlayers(vehicle.GetOrigin(), players))
+                continue;
+
+            IA_VehicleManager.DespawnVehicle(vehicle);
+            vehicles.Remove(i);
         }
-        m_areaVehicles.Clear();
+    }
+
+    protected bool HasDeferredCleanupRemaining()
+    {
+        if (m_aiAttackers)
+            return true;
+        if (m_military && !m_military.IsEmpty())
+            return true;
+        if (m_civilians && !m_civilians.IsEmpty())
+            return true;
+        if (m_areaVehicles && !m_areaVehicles.IsEmpty())
+            return true;
+        if (m_areaCivVehicles && !m_areaCivVehicles.IsEmpty())
+            return true;
+        return false;
+    }
+
+    protected void ScheduleDeferredCleanup()
+    {
+        if (m_bDeferredCleanupPending)
+            return;
+
+        m_bDeferredCleanupPending = true;
+        GetGame().GetCallqueue().CallLater(RetryDeferredCleanup, DEFERRED_CLEANUP_RETRY_MS, false);
+    }
+
+    void RetryDeferredCleanup()
+    {
+        m_bDeferredCleanupPending = false;
+        DespawnAssetsAwayFromPlayers();
+    }
+
+    protected void DespawnAssetsAwayFromPlayers()
+    {
+        ref array<vector> players = new array<vector>();
+        IA_SpawnPlacement.CollectPlayerPositions(players);
+        bool checkPlayers = players && !players.IsEmpty();
+
+        DespawnAttackersAwayFromPlayers(players, checkPlayers);
+        DespawnGroupListAwayFromPlayers(m_military, players, checkPlayers);
+        DespawnGroupListAwayFromPlayers(m_civilians, players, checkPlayers);
+        DespawnVehicleListAwayFromPlayers(m_areaVehicles, players, checkPlayers);
+        DespawnVehicleListAwayFromPlayers(m_areaCivVehicles, players, checkPlayers);
+
+        if (HasDeferredCleanupRemaining())
+            ScheduleDeferredCleanup();
     }
 
     void CancelReinforcements()
@@ -661,44 +825,44 @@ class IA_AreaInstance
 
     void ForceFinish()
     {
-        if (m_bShutDown)
-            return;
-
-        string areaName = "unknown";
-        if (m_area)
-            areaName = m_area.GetName();
-        Print(string.Format("[IA][Area] ForceFinish shutting down %1 so leftover AI cannot keep spawning.", areaName), LogLevel.WARNING);
-
-        m_bShutDown = true;
-        m_canSpawn = false;
-        m_mortarCrewSetupDone = true;
-        m_reinforcements = IA_ReinforcementState.Done;
-        m_vehicleReinforcements = IA_ReinforcementState.Done;
-        m_isRadioTowerDefenseActive = false;
-        m_isSideObjectiveDefenseActive = false;
-        m_attackingFactions.Clear();
-        CancelPendingSpawns();
-
-        if (m_taskQueue)
+        if (!m_bShutDown)
         {
-            foreach (SCR_TriggerTask task : m_taskQueue)
+            string areaName = "unknown";
+            if (m_area)
+                areaName = m_area.GetName();
+            Print(string.Format("[IA][Area] ForceFinish shutting down %1 so leftover AI cannot keep spawning.", areaName), LogLevel.WARNING);
+
+            m_bShutDown = true;
+            m_canSpawn = false;
+            m_mortarCrewSetupDone = true;
+            m_reinforcements = IA_ReinforcementState.Done;
+            m_vehicleReinforcements = IA_ReinforcementState.Done;
+            m_isRadioTowerDefenseActive = false;
+            m_isSideObjectiveDefenseActive = false;
+            m_attackingFactions.Clear();
+            CancelPendingSpawns();
+
+            if (m_taskQueue)
             {
-                if (task) IA_Game.AddEntityToGc(task);
+                foreach (SCR_TriggerTask task : m_taskQueue)
+                {
+                    if (task) IA_Game.AddEntityToGc(task);
+                }
+                m_taskQueue.Clear();
             }
-            m_taskQueue.Clear();
-        }
 
-        if (m_currentTaskEntity)
-        {
-            IA_Game.AddEntityToGc(m_currentTaskEntity);
-            m_currentTaskEntity = null;
+            if (m_currentTaskEntity)
+            {
+                IA_Game.AddEntityToGc(m_currentTaskEntity);
+                m_currentTaskEntity = null;
+            }
+
+            SetDefendMode(false);
+            SetRadioTowerDefenseActive(false);
+            SetSideObjectiveDefenseActive(false, null);
         }
 
         Cleanup();
-        ScheduleCivilianCleanup(100);
-        SetDefendMode(false);
-        SetRadioTowerDefenseActive(false);
-        SetSideObjectiveDefenseActive(false, null);
     }
 
     // --- Add a group to the military list ---
