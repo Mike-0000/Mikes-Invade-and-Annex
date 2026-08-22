@@ -140,7 +140,7 @@ class IA_AiGroup
     private const int PASSENGER_DUMP_GETIN_CLEAR_MS = 400;
     private const int PASSENGER_DUMP_ASSAULT_DELAY_MS = 500;
     private const int PASSENGER_DUMP_ASSAULT_RETRY_MS = 1000;
-    private const int PASSENGER_DUMP_ASSAULT_MAX_TRIES = 10;
+    private const int PASSENGER_DUMP_FORCE_EJECT_TRIES = 2;
     private int m_passengerDumpAssaultTries = 0;
 
     // Logging and rate limiting
@@ -1988,16 +1988,23 @@ class IA_AiGroup
         
         if (anyOutside)
         {
-            // Someone is outside, order them back in
-            ////Print(string.Format("[IA_AiGroup.UpdateVehicleOrders] Group %1 members outside vehicle. Ordering GetInVehicle.", this), LogLevel.NORMAL);
+            // Contact / dump: one crewman on foot (or still getting out) must
+            // not replace the drive with GetIn. That waypoint waits for every
+            // member, so the seated driver and gunner idle at the hull.
+            if (ShouldSkipCrewRemount())
+            {
+                if (IsCurrentWaypointGetInNearest())
+                    RemoveAllOrders(false);
+                return;
+            }
+
             RemoveAllOrders();
             
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
             
-            // Ensure driving state is set correctly
             m_isDriving = true;
             
-            return; // Don't proceed with movement orders until everyone is inside
+            return;
         }
 
         // Teleport-seat / remount leftover GetInNearest stays current (Autocomplete 0)
@@ -2107,6 +2114,44 @@ class IA_AiGroup
     IA_AiGroup GetLinkedPassengerGroup()
     {
         return m_linkedPassengerGroup;
+    }
+
+    bool HasDumpedPassengers()
+    {
+        return m_passengerDumped;
+    }
+
+    void OnLinkedPassengersDumped()
+    {
+        if (!m_isVehicleCrewGroup)
+            return;
+
+        if (IsCurrentWaypointGetInNearest())
+            RemoveAllOrders(false);
+    }
+
+    protected bool ShouldSkipCrewRemount()
+    {
+        if (!m_isVehicleCrewGroup)
+            return false;
+
+        if (m_linkedPassengerGroup && m_linkedPassengerGroup.HasDumpedPassengers())
+            return true;
+
+        if (m_currentDangerLevel > 0.6)
+            return true;
+
+        if (IsEngagedWithEnemy())
+            return true;
+
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (vehicle && m_drivingTarget != vector.Zero)
+        {
+            if (IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget))
+                return true;
+        }
+
+        return false;
     }
 
     void SetLinkedPassengerGroup(IA_AiGroup passengerGroup)
@@ -2226,6 +2271,8 @@ class IA_AiGroup
         m_tacticalState = IA_GroupTacticalState.Attacking;
         m_tacticalStateTarget = assault;
         m_isStateManagedByAuthority = true;
+        if (m_linkedCrewGroup)
+            m_linkedCrewGroup.OnLinkedPassengersDumped();
         if (hadGetIn)
         {
             GetGame().GetCallqueue().CallLater(this.BeginPassengerGetOutAfterGetInClear, PASSENGER_DUMP_GETIN_CLEAR_MS, false);
@@ -2268,25 +2315,60 @@ class IA_AiGroup
         if (IsAnyMemberInVehicle())
         {
             m_passengerDumpAssaultTries = m_passengerDumpAssaultTries + 1;
-            if (!HasOrders())
-                IssuePassengerGetOut();
-            if (m_passengerDumpAssaultTries <= PASSENGER_DUMP_ASSAULT_MAX_TRIES)
+            bool someoneAlreadyOut = IsAnyMemberOnFoot();
+            if (!someoneAlreadyOut && m_passengerDumpAssaultTries <= PASSENGER_DUMP_FORCE_EJECT_TRIES)
             {
+                if (!HasOrders())
+                    IssuePassengerGetOut();
                 GetGame().GetCallqueue().CallLater(this.FinishPassengerDumpAssault, PASSENGER_DUMP_ASSAULT_RETRY_MS, false);
                 return;
             }
 
-            // Still seated after retries — keep GetOut, do not add S&D
-            // (priority 15 would steal current and re-trigger GetInNearest NodeError).
-            return;
+            // One leftover seat completes the group GetOut for nobody.
+            // Those already on foot stand at the hull; the crew Move/GetIn
+            // also waits. Kick the remainder out and assault with who can.
+            int leftover = ForceEjectSeatedMembers();
+            Print(string.Format("[IA][AI] Passenger dump force-eject leftover=%1 after %2 tries", leftover, m_passengerDumpAssaultTries), LogLevel.NORMAL);
         }
 
         vector assault = m_passengerAssaultTarget;
         if (assault == vector.Zero)
             assault = GetOrigin();
 
+        RemoveAllOrders(false);
         AddOrder(assault, IA_AiOrder.SearchAndDestroy, true);
         Print(string.Format("[IA_AiGroup] Passenger group assaulting %1", assault.ToString()), LogLevel.DEBUG);
+    }
+
+    protected int ForceEjectSeatedMembers()
+    {
+        int ejected = 0;
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character || !character.IsInVehicle())
+                continue;
+
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                continue;
+
+            bool left = false;
+            if (access.CanGetOutVehicleViaDoor(-1))
+                left = access.GetOutVehicle(EGetOutType.TELEPORT, -1, ECloseDoorAfterActions.INVALID, false);
+
+            if (!left)
+            {
+                vector mat[4];
+                character.GetWorldTransform(mat);
+                left = access.GetOutVehicle_NoDoor(mat, false, false);
+            }
+
+            if (left)
+                ejected = ejected + 1;
+        }
+
+        return ejected;
     }
 
     protected void ApplyBoardingAllowance(SCR_AIWaypoint waypoint, IA_AiOrder order)
@@ -2300,7 +2382,9 @@ class IA_AiGroup
 
         if (order == IA_AiOrder.GetOutOfVehicle)
         {
-            boarding.SetAllowance(false, false, true);
+            // Passenger dump only. Allow every seat type so a cargo AI who
+            // landed in a turret-typed bench is not left behind.
+            boarding.SetAllowance(true, true, true);
             return;
         }
 
