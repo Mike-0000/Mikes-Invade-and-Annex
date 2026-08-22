@@ -179,6 +179,10 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 - **`Locomotion.agf` leaves `VehicleAttachment` only on `CMD_Vehicle_EndControl`.** Enter is `CMD_Vehicle_GetIn` / `CMD_Vehicle_StartControl`. `CharacterCommandVehicle` re-issues StartControl in PreAnim, so a handler `CallCommand(EndControl)` is discarded until `StartCommand_Move` replaces that command. Sitting pose plus no infantry weapons after a canopy GetOut means EndControl never won a frame. After a clean GetOut, `StartCommand_Move` alone went `cmd=23 veh=1` → `cmd=21 move=1` while `stance=0` (sit) stayed. Evidence: `data/data/anims/workspaces/player/Locomotion.agf`; `BaseAnimPhysComponent.c`; `runtime: logs_2026-08-18_18-25-32` leave / land restore / land check.
 - **A child entity hand-added to a character (`AddChild`) stops rendering once the compartment re-parents the pawn into a vehicle.** For local-only cosmetics, spawn unparented (`ETransformMode.WORLD`) and drive `SetWorldTransform` + `Update()` each frame from the anchor's world matrix. Evidence: chute logged `Canopy visual attached` yet was never visible after `GetIn ok` (`logs_2026-08-17_22-45-22`); the freefall path already world-drove the same mesh.
 
+## AI / behavior trees
+
+- **`Group.bt` only re-runs `SCR_AIDecideActivity` every 0.3s.** `ActivityDefend.bt` then reads `GetCurrentWaypoint()` with no `WaypointIn` and `NodeError`s unless that entity is `SCR_DefendWaypoint`. Swap to Move/S&D/GetIn while defend is still the executed tree (same-frame `RemoveAllOrders` + new order) and the Repeater spam-fails. Leave current null until the next DecideActivity, or wait ~400 ms. Evidence: `Group.bt` Idle Period 0.3; `SCR_AIGetDefendWaypointParameters.c:21`; `runtime:` `Wrong class of provided Waypoint!`
+
 ## Prefabs, configs, resources
 
 - Assets are **`ResourceName`**, usually `{GUID}path/to/file.et`. Do not hardcode raw filesystem paths.
@@ -206,6 +210,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-21 — `Group.bt` DecideActivity idles 0.3s; `ActivityDefend.bt` re-reads `GetCurrentWaypoint()` and NodeErrors if current is not `SCR_DefendWaypoint` (`Group.bt`, `SCR_AIGetDefendWaypointParameters.c:21`, `runtime:` Wrong class of provided Waypoint).
 - 2026-08-21 — `GetCompartments` is not recursive, but hull `RegisterCompartments 1` already lists child turret slots; walking children double-counts BRDM-2 / BTR hatches (`SCR_CompartmentAccessComponent.c`, `BRDM2_base.et`, `runtime:` overfill GetIn loop).
 - 2026-08-21 — `SCR_MapMarkersUI.CleanupMarkerEditWidget` NPEs when the map config has no `SCR_MapCursorModule`; HALO planner CloseMap after Jump (`SCR_MapMarkersUI.c:581`, `runtime: MHJ_MapHost.CloseOwnMap`).
 - 2026-08-20 — Individual AI do shoot vehicle occupants; group perception skips them to fight the vehicle. They never shoot `IsDisarmed` targets (`TARGET_MAX_DISTANCE_DISARMED = 0`). Cargo has no `SCR_VehiclePerceivableComponent`. HALO `SetInteractionLayer(0)` on the linked craft (working MK4 never does) can zero perception traces (`SCR_AICombatComponent.c`, `Vehicle_Cargo_Base.et`).
