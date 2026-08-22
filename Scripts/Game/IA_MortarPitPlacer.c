@@ -15,7 +15,9 @@ class IA_MortarPitPlacer
 	protected static const float DEFAULT_PIT_RADIUS = 40.0;
 	protected static const int MORTAR_GRID_MIN = 2;
 	protected static const int MORTAR_GRID_MAX = 4;
-	protected static const int SAMPLE_COUNT = 48;
+	protected static const int SAMPLE_COUNT = 64;
+	protected static const float NEAR_BIAS_SOFTEN_M = 60.0;
+	protected static const float FALLBACK_DIST_SLOPE_PER_M = 0.0002;
 
 	//----------------------------------------------------------------------------------------------
 	static void EnsureForGroup(int groupNumber)
@@ -46,21 +48,21 @@ class IA_MortarPitPlacer
 		}
 
 		vector chosen = vector.Zero;
-		bool found = TryFindPosition(groupCenter, footprint, RING_INNER_EXTRA_M, RING_OUTER_EXTRA_M, STRICT_SLOPE, chosen);
+		bool found = TryFindPosition(groupCenter, footprint, RING_INNER_EXTRA_M, RING_OUTER_EXTRA_M, STRICT_SLOPE, sites, chosen);
 		if (!found)
 		{
 			Print(string.Format("[IA_MortarPitPlacer] Group %1 strict search failed, widening ring.", groupNumber), LogLevel.WARNING);
-			found = TryFindPosition(groupCenter, footprint, RING_INNER_EXTRA_M, RING_OUTER_EXTRA_M + RING_WIDEN_EXTRA_M, STRICT_SLOPE, chosen);
+			found = TryFindPosition(groupCenter, footprint, RING_INNER_EXTRA_M, RING_OUTER_EXTRA_M + RING_WIDEN_EXTRA_M, STRICT_SLOPE, sites, chosen);
 		}
 		if (!found)
 		{
 			Print(string.Format("[IA_MortarPitPlacer] Group %1 widened search failed, relaxing slope.", groupNumber), LogLevel.WARNING);
-			found = TryFindPosition(groupCenter, footprint, RING_INNER_EXTRA_M, RING_OUTER_EXTRA_M + RING_WIDEN_EXTRA_M, RELAXED_SLOPE, chosen);
+			found = TryFindPosition(groupCenter, footprint, RING_INNER_EXTRA_M, RING_OUTER_EXTRA_M + RING_WIDEN_EXTRA_M, RELAXED_SLOPE, sites, chosen);
 		}
 		if (!found)
 		{
 			Print(string.Format("[IA_MortarPitPlacer] Group %1 all filters failed, using flattest fallback.", groupNumber), LogLevel.WARNING);
-			chosen = FindFlattestFallback(groupCenter, footprint + RING_INNER_EXTRA_M, footprint + RING_OUTER_EXTRA_M + RING_WIDEN_EXTRA_M);
+			chosen = FindFlattestFallback(groupCenter, footprint + RING_INNER_EXTRA_M, footprint + RING_OUTER_EXTRA_M + RING_WIDEN_EXTRA_M, sites);
 		}
 
 		if (chosen == vector.Zero)
@@ -138,7 +140,7 @@ class IA_MortarPitPlacer
 	}
 
 	//----------------------------------------------------------------------------------------------
-	protected static bool TryFindPosition(vector groupCenter, float footprint, float innerExtra, float outerExtra, float maxSlope, out vector chosen)
+	protected static bool TryFindPosition(vector groupCenter, float footprint, float innerExtra, float outerExtra, float maxSlope, array<IA_AreaMarker> sites, out vector chosen)
 	{
 		chosen = vector.Zero;
 		ref array<vector> candidates = new array<vector>();
@@ -151,7 +153,8 @@ class IA_MortarPitPlacer
 
 		for (int i = 0; i < SAMPLE_COUNT; i++)
 		{
-			vector sample = IA_Game.rng.GenerateRandomPointInRadius(innerR, outerR, groupCenter);
+			// uniform=false puts more samples toward the AO centroid (inner ring).
+			vector sample = IA_Game.rng.GenerateRandomPointInRadius(innerR, outerR, groupCenter, false);
 			sample[1] = GetGame().GetWorld().GetSurfaceY(sample[0], sample[2]);
 
 			if (!PassesFilters(sample, maxSlope))
@@ -174,8 +177,7 @@ class IA_MortarPitPlacer
 		if (!elevated.IsEmpty())
 			pool = elevated;
 
-		int idx = IA_Game.rng.RandInt(0, pool.Count());
-		chosen = pool[idx];
+		chosen = PickCloserToObjectives(pool, sites);
 		return true;
 	}
 
@@ -259,13 +261,69 @@ class IA_MortarPitPlacer
 	}
 
 	//----------------------------------------------------------------------------------------------
-	protected static vector FindFlattestFallback(vector groupCenter, float innerR, float outerR)
+	protected static float DistanceToNearestObjective(vector pos, array<IA_AreaMarker> sites)
+	{
+		float best = 999999.0;
+		if (!sites)
+			return best;
+
+		foreach (IA_AreaMarker marker : sites)
+		{
+			if (!marker)
+				continue;
+
+			float dist = vector.Distance(pos, marker.GetOrigin()) - marker.GetRadius();
+			if (dist < 0)
+				dist = 0;
+			if (dist < best)
+				best = dist;
+		}
+
+		return best;
+	}
+
+	//----------------------------------------------------------------------------------------------
+	protected static vector PickCloserToObjectives(notnull array<vector> pool, array<IA_AreaMarker> sites)
+	{
+		int n = pool.Count();
+		if (n <= 1)
+			return pool[0];
+
+		ref array<float> weights = new array<float>();
+		float totalWeight = 0;
+		int i;
+		for (i = 0; i < n; i++)
+		{
+			float dist = DistanceToNearestObjective(pool[i], sites);
+			float denom = dist + NEAR_BIAS_SOFTEN_M;
+			float weight = 1.0 / (denom * denom);
+			weights.Insert(weight);
+			totalWeight = totalWeight + weight;
+		}
+
+		if (totalWeight <= 0)
+			return pool[IA_Game.rng.RandInt(0, n)];
+
+		float roll = IA_Game.rng.RandFloat01() * totalWeight;
+		float acc = 0;
+		for (i = 0; i < n; i++)
+		{
+			acc = acc + weights[i];
+			if (roll <= acc)
+				return pool[i];
+		}
+
+		return pool[n - 1];
+	}
+
+	//----------------------------------------------------------------------------------------------
+	protected static vector FindFlattestFallback(vector groupCenter, float innerR, float outerR, array<IA_AreaMarker> sites)
 	{
 		vector best = vector.Zero;
-		float bestSlope = 999.0;
+		float bestScore = 999.0;
 		for (int i = 0; i < SAMPLE_COUNT; i++)
 		{
-			vector sample = IA_Game.rng.GenerateRandomPointInRadius(innerR, outerR, groupCenter);
+			vector sample = IA_Game.rng.GenerateRandomPointInRadius(innerR, outerR, groupCenter, false);
 			sample[1] = GetGame().GetWorld().GetSurfaceY(sample[0], sample[2]);
 			if (IsUnderOcean(sample))
 				continue;
@@ -273,9 +331,11 @@ class IA_MortarPitPlacer
 				continue;
 
 			float slope = GetSlopeTangent(sample);
-			if (slope < bestSlope)
+			float dist = DistanceToNearestObjective(sample, sites);
+			float score = slope + (dist * FALLBACK_DIST_SLOPE_PER_M);
+			if (score < bestScore)
 			{
-				bestSlope = slope;
+				bestScore = score;
 				best = sample;
 			}
 		}
@@ -312,6 +372,9 @@ class IA_MortarPitPlacer
 		float radius = DEFAULT_PIT_RADIUS + (mortarCount * 4.0);
 		marker.SetMortarCount(mortarCount);
 		marker.ConfigureRuntime(groupNumber, name, radius);
-		Print(string.Format("[IA_MortarPitPlacer] Auto-placed MortarPit for group %1 at %2 with %3 guns", groupNumber, pos, mortarCount), LogLevel.NORMAL);
+
+		array<IA_AreaMarker> sites = CollectNonMortarSites(groupNumber);
+		float nearDist = DistanceToNearestObjective(pos, sites);
+		Print(string.Format("[IA_MortarPitPlacer] Auto-placed MortarPit for group %1 at %2 with %3 guns (%4 m from nearest site)", groupNumber, pos, mortarCount, nearDist), LogLevel.NORMAL);
 	}
 };
