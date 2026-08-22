@@ -52,6 +52,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected static const float MORTAR_YAW_SPREAD_DEG = 18.0;
     protected static const int MORTAR_GRID_MIN = 2;
     protected static const int MORTAR_GRID_MAX = 4;
+    protected static const int MORTAR_GUARD_POST_COUNT = 5;
+    protected static const float MORTAR_GUARD_POST_EXTRA_M = 8.0;
+    protected static const ResourceName MORTAR_LOITER_POST = "{E105D2F87098E1D8}Prefabs/Systems/Compositions/PatrolPoint/PatrolPoint_LoiterPoint.et";
+    protected static const ResourceName MORTAR_OBSERVE_POST = "{F76BD5785C7FE191}Prefabs/Systems/Compositions/PatrolPoint/PatrolPoint_ObservationPoint.et";
+    protected ref array<IEntity> m_mortarGuardPosts = new array<IEntity>();
     protected static const ResourceName RADIO_TOWER_COMPOSITION = "{B8E4C17A6D392F05}Prefabs/Compositions/IA_RadioTower_01.et";
     protected bool m_isDestroyed = false;
     protected bool m_prefabSpawned = false; // Flag to track if prefab has been spawned
@@ -1179,11 +1184,77 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             m_mortarPitCompositions.Insert(pitEnt);
         }
 
+        SpawnMortarPitGuardPosts(batteryYawDeg, localOffsets);
+
         // Composition children are often missing on the spawn frame. Recollect shortly after.
         RefreshMortarEntities();
         GetGame().GetCallqueue().CallLater(RefreshMortarEntities, 500, false);
         GetGame().GetCallqueue().CallLater(RefreshMortarEntities, 2000, false);
         GetGame().GetCallqueue().CallLater(RefreshMortarEntities, 5000, false);
+    }
+
+    // Vanilla Defend searches ObservationPost / LoiterPost / GatePost inside CompletionRadius.
+    // Mortar compositions have none, so drop those sentinel posts around the battery.
+    protected void SpawnMortarPitGuardPosts(float aoYawDeg, notnull array<vector> localOffsets)
+    {
+        if (!Replication.IsServer())
+            return;
+        if (m_mortarGuardPosts && !m_mortarGuardPosts.IsEmpty())
+            return;
+
+        if (!m_mortarGuardPosts)
+            m_mortarGuardPosts = new array<IEntity>();
+
+        float maxXZ = 6.0;
+        foreach (vector off : localOffsets)
+        {
+            float d = vector.DistanceXZ(off, vector.Zero);
+            if (d > maxXZ)
+                maxXZ = d;
+        }
+
+        float ringR = maxXZ + MORTAR_GUARD_POST_EXTRA_M;
+        float stepDeg = 360.0 / MORTAR_GUARD_POST_COUNT;
+
+        for (int i = 0; i < MORTAR_GUARD_POST_COUNT; i++)
+        {
+            float outwardYaw = aoYawDeg + 36.0 + (i * stepDeg);
+            float yawRad = outwardYaw * Math.DEG2RAD;
+            vector pos = m_origin;
+            pos[0] = m_origin[0] + (Math.Sin(yawRad) * ringR);
+            pos[2] = m_origin[2] + (Math.Cos(yawRad) * ringR);
+            pos[1] = GetGame().GetWorld().GetSurfaceY(pos[0], pos[2]);
+
+            ResourceName prefab = MORTAR_LOITER_POST;
+            float entityYaw = outwardYaw - 90.0;
+            if (i == 0 || i == 2)
+            {
+                prefab = MORTAR_OBSERVE_POST;
+                entityYaw = aoYawDeg - 90.0;
+            }
+
+            IEntity post = SpawnOrientedPrefab(prefab, pos, entityYaw);
+            if (post)
+                m_mortarGuardPosts.Insert(post);
+        }
+
+        Print(string.Format("[IA][MortarPit] Spawned %1 guard posts around %2 (ring %3m)", m_mortarGuardPosts.Count(), m_origin, ringR), LogLevel.NORMAL);
+    }
+
+    protected IEntity SpawnOrientedPrefab(ResourceName prefab, vector pos, float yawDeg)
+    {
+        Resource res = Resource.Load(prefab);
+        if (!res)
+        {
+            Print(string.Format("[IA][MortarPit] Failed to load guard post prefab %1", prefab), LogLevel.ERROR);
+            return null;
+        }
+
+        ref EntitySpawnParams params = new EntitySpawnParams();
+        params.TransformMode = ETransformMode.WORLD;
+        Math3D.AnglesToMatrix(Vector(yawDeg, 0, 0), params.Transform);
+        params.Transform[3] = pos;
+        return GetGame().SpawnEntityPrefab(res, null, params);
     }
 
     void RefreshMortarEntities()
