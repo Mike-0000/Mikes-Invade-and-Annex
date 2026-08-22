@@ -48,6 +48,7 @@ Prefer **`SCR_`** types over thinner native/`GameCode` types — they have the m
 - **`autoptr` is legacy.** Bohemia formatter: remove it on ordinary locals, or replace with `ref` on member arrays. New code uses `ref`.
 - **No `auto`.** Name the type.
 - **`Class` is the super-root. `Managed` is GC'd.** Downcast with `T.Cast(obj)`, then null-check. `IsInherited(typename)`.
+- **`null` is not an enum value.** Enums are ints. `ShouldDefer(null, waypoint)` when the first arg is `IA_AiOrder` is `Cannot convert 'Class' to 'int'`. Split the overload or pass a real enum. Evidence: `compiler: IA_AI_Group.c` `ShouldDeferForTypedWaypointTree`.
 - **`pointer` types cannot be class members.** They are plain C++ pointers with no weak refs and no GC (`Types.c`). `Physics` is `NativeComponent : pointer`, so `protected Physics m_Physics` is `Pointer type 'Physics' can only be used with local variables` and can block the Game script module. Fetch a local with `owner.GetPhysics()`; cache `IEntity` if you need the owner. `global_pointer` is the subtype `Types.c` marks "Safe to store outside local scope". Evidence: `compiler: MHJ_CanopyFlight.c`; `Physics.c`, `NativeComponent.c`, `Types.c`.
 - **Subclass constructors must match prototype parameter names** for inherited ctor args. `ScriptedCommand` is `protected void ScriptedCommand(BaseAnimPhysComponent pAnimPhysComponent)`. Renaming that first arg (e.g. `animPhysComponent`) is `SCRIPT (E): … name differs from prototype 'pAnimPhysComponent'` and the Game script module will not compile. Extra parameters after the prototype are fine. Evidence: `compiler: MHJ_HaloCommand.c`; `ScriptedCommand.c`; vanilla `SCR_CharacterCommandSwim` / `SCR_CharacterCommandFly`.
 - **`notnull` in a signature is a contract**, not a runtime gift. Still validate at trust boundaries.
@@ -210,6 +211,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-21 — `null` cannot be passed for an enum argument (`Cannot convert 'Class' to 'int'`; `compiler: IA_AI_Group.c`).
 - 2026-08-21 — `Group.bt` DecideActivity idles 0.3s; `ActivityDefend.bt` and `GetInNearestVehicle.bt` re-read `GetCurrentWaypoint()` and NodeError on the wrong class (`SCR_AIGetDefendWaypointParameters.c:21`, `SCR_AIGetInNearestWaypointParameters.c:20`, `runtime:` Wrong class of provided Waypoint).
 - 2026-08-21 — `GetCompartments` is not recursive, but hull `RegisterCompartments 1` already lists child turret slots; walking children double-counts BRDM-2 / BTR hatches (`SCR_CompartmentAccessComponent.c`, `BRDM2_base.et`, `runtime:` overfill GetIn loop).
 - 2026-08-21 — `SCR_MapMarkersUI.CleanupMarkerEditWidget` NPEs when the map config has no `SCR_MapCursorModule`; HALO planner CloseMap after Jump (`SCR_MapMarkersUI.c:581`, `runtime: MHJ_MapHost.CloseOwnMap`).

@@ -817,7 +817,7 @@ class IA_AiGroup
             return;
         }
 
-        if (!m_flushingTypedClear && ShouldDeferForTypedWaypointTree(null, waypoint))
+        if (!m_flushingTypedClear && ShouldDeferWaypointForTypedTree(waypoint))
         {
             m_pendingWaypoints.Insert(waypoint);
             PrepareTypedWaypointTreeClear();
@@ -855,7 +855,7 @@ class IA_AiGroup
             return;
         }
 
-        if (!m_flushingTypedClear && ShouldDeferForTypedWaypointTree(order, null))
+        if (!m_flushingTypedClear && ShouldDeferOrderForTypedTree(order))
         {
             QueuePendingOrder(origin, order, topPriority);
             PrepareTypedWaypointTreeClear();
@@ -2313,15 +2313,20 @@ class IA_AiGroup
         return WaypointMatchesTypedTree(waypoint, tree);
     }
 
-    protected bool ShouldDeferForTypedWaypointTree(IA_AiOrder order, SCR_AIWaypoint waypoint)
+    protected bool ShouldDeferOrderForTypedTree(IA_AiOrder order)
     {
         IA_TypedWpTree tree = GetActiveTypedWaypointTree();
         if (tree == IA_TypedWpTree.None)
             return m_typedClearScheduled;
-
-        if (waypoint)
-            return !WaypointMatchesTypedTree(waypoint, tree);
         return !OrderMatchesTypedTree(order, tree);
+    }
+
+    protected bool ShouldDeferWaypointForTypedTree(SCR_AIWaypoint waypoint)
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.None)
+            return m_typedClearScheduled;
+        return !WaypointMatchesTypedTree(waypoint, tree);
     }
 
     protected void QueuePendingOrder(vector origin, IA_AiOrder order, bool topPriority)
