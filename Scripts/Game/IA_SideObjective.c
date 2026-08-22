@@ -178,7 +178,7 @@ class IA_SideObjective
             SCR_ExtendedTask extendedTask = SCR_ExtendedTask.Cast(m_PlayerTask);
             if (extendedTask)
                 extendedTask.SetTaskState(SCR_ETaskState.COMPLETED);
-            IA_Game.S_TriggerGlobalNotification("SideTaskCompleted", "Side Objective Completed. The HVT has been eliminated. Enemy artillery and QRF is unavailable for 30 minutes.");
+            IA_Game.S_TriggerGlobalNotification("SideTaskCompleted", "Side Objective Completed. The HVT has been eliminated. Enemy artillery and QRF is unavailable for 20 minutes.");
         }
     }
 
