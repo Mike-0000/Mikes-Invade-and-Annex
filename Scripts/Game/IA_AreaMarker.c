@@ -52,7 +52,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected static const float MORTAR_YAW_SPREAD_DEG = 18.0;
     protected static const int MORTAR_GRID_MIN = 2;
     protected static const int MORTAR_GRID_MAX = 4;
-    protected static const int MORTAR_GUARD_POST_COUNT = 5;
+    protected static const int MORTAR_GUARD_BASE_COUNT = 10;
+    protected static const int MORTAR_GUARD_SCALE_PLAYERS = 20;
+    protected static const int MORTAR_GUARD_COUNT_MAX = 18;
     protected static const float MORTAR_GUARD_POST_EXTRA_M = 8.0;
     protected static const ResourceName MORTAR_LOITER_POST = "{E105D2F87098E1D8}Prefabs/Systems/Compositions/PatrolPoint/PatrolPoint_LoiterPoint.et";
     protected static const ResourceName MORTAR_OBSERVE_POST = "{F76BD5785C7FE191}Prefabs/Systems/Compositions/PatrolPoint/PatrolPoint_ObservationPoint.et";
@@ -821,6 +823,27 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         return GetMortarPitMarkerForGroup(groupNumber) != null;
     }
 
+    // 10 posts/guards at low pop. Grow with live connected players after 20, cap at 18.
+    static int GetMortarPitGuardCount()
+    {
+        int count = MORTAR_GUARD_BASE_COUNT;
+        PlayerManager playerManager = GetGame().GetPlayerManager();
+        if (!playerManager)
+            return count;
+
+        int players = playerManager.GetPlayerCount();
+        if (players <= MORTAR_GUARD_SCALE_PLAYERS)
+            return count;
+
+        float scale = players / MORTAR_GUARD_SCALE_PLAYERS;
+        int scaled = Math.Round(MORTAR_GUARD_BASE_COUNT * scale);
+        if (scaled < MORTAR_GUARD_BASE_COUNT)
+            scaled = MORTAR_GUARD_BASE_COUNT;
+        if (scaled > MORTAR_GUARD_COUNT_MAX)
+            scaled = MORTAR_GUARD_COUNT_MAX;
+        return scaled;
+    }
+
     static void EnsureRadioTowersForGroup(int groupNumber)
     {
         if (!Replication.IsServer())
@@ -1213,10 +1236,14 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                 maxXZ = d;
         }
 
-        float ringR = maxXZ + MORTAR_GUARD_POST_EXTRA_M;
-        float stepDeg = 360.0 / MORTAR_GUARD_POST_COUNT;
+        int postCount = GetMortarPitGuardCount();
+        if (postCount < 1)
+            postCount = MORTAR_GUARD_BASE_COUNT;
 
-        for (int i = 0; i < MORTAR_GUARD_POST_COUNT; i++)
+        float ringR = maxXZ + MORTAR_GUARD_POST_EXTRA_M;
+        float stepDeg = 360.0 / postCount;
+
+        for (int i = 0; i < postCount; i++)
         {
             float outwardYaw = aoYawDeg + 36.0 + (i * stepDeg);
             float yawRad = outwardYaw * Math.DEG2RAD;
@@ -1227,7 +1254,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 
             ResourceName prefab = MORTAR_LOITER_POST;
             float entityYaw = outwardYaw - 90.0;
-            if (i == 0 || i == 2)
+            if ((i % 3) == 0)
             {
                 prefab = MORTAR_OBSERVE_POST;
                 entityYaw = aoYawDeg - 90.0;

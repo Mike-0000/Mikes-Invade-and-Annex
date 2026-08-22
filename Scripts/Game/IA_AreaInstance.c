@@ -2774,9 +2774,7 @@ class IA_AreaInstance
             delay = delay + 250;
         }
 
-        int guardCount = Math.Round(4 * m_aiScaleFactor);
-        if (guardCount < 3)
-            guardCount = 3;
+        int guardCount = IA_AreaMarker.GetMortarPitGuardCount();
         GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, m_area.GetOrigin(), guardCount, m_AreaFaction, true);
 
         Print(string.Format("[IA][MortarPit] AI scheduled: %1 gunners on tubes, %2 guards", mortars.Count(), guardCount), LogLevel.NORMAL);
