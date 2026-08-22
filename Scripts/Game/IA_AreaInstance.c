@@ -5319,6 +5319,89 @@ class IA_AreaInstance
         return m_mortarEntity;
     }
 
+    // Incoming fire on pit crews/guards — not capture majority / IsUnderAttack occupancy.
+    bool IsMortarPitUnderFire()
+    {
+        vector unused;
+        return GetMortarPitDefenseTarget(unused);
+    }
+
+    bool GetMortarPitDefenseTarget(out vector outTarget)
+    {
+        outTarget = vector.Zero;
+        if (!IsMortarPitArea() || !m_area)
+            return false;
+
+        array<ref IA_AiGroup> groups = GetMilitaryGroups();
+        if (!groups)
+            return false;
+
+        int now = System.GetUnixTime();
+        const int STALE_S = 20;
+        int bestAge = STALE_S + 1;
+        vector bestPos = vector.Zero;
+        bool haveSource = false;
+
+        foreach (IA_AiGroup group : groups)
+        {
+            if (!group || !group.IsSpawned() || group.GetAliveCount() <= 0)
+                continue;
+
+            int lastTime = group.GetLastDangerEventTime();
+            if (lastTime <= 0)
+                continue;
+
+            int age = now - lastTime;
+            if (age < 0 || age > STALE_S)
+                continue;
+
+            IEntity source = group.GetLastDangerSource();
+            vector pos = group.GetLastDangerPosition();
+            bool thisHasSource = false;
+            if (source)
+            {
+                pos = source.GetOrigin();
+                thisHasSource = true;
+            }
+            if (pos == vector.Zero)
+                continue;
+
+            bool better = false;
+            if (age < bestAge)
+                better = true;
+            else if (age == bestAge && thisHasSource && !haveSource)
+                better = true;
+            if (!better)
+                continue;
+
+            bestAge = age;
+            bestPos = pos;
+            haveSource = thisHasSource;
+        }
+
+        if (bestPos == vector.Zero)
+            return false;
+
+        vector pitOrigin = m_area.GetOrigin();
+        float distXZ = vector.DistanceXZ(pitOrigin, bestPos);
+        const float MIN_RANGE_M = 35.0;
+        if (distXZ < MIN_RANGE_M)
+        {
+            vector dir = bestPos - pitOrigin;
+            dir[1] = 0;
+            float len = dir.Length();
+            if (len < 0.1)
+                dir = Vector(1, 0, 0);
+            else
+                dir = dir * (1.0 / len);
+            bestPos = pitOrigin + (dir * MIN_RANGE_M);
+        }
+
+        bestPos[1] = GetGame().GetWorld().GetSurfaceY(bestPos[0], bestPos[2]);
+        outTarget = bestPos;
+        return true;
+    }
+
     bool CanIssueMortarFireMission()
     {
         if (!IsMortarPitArea())

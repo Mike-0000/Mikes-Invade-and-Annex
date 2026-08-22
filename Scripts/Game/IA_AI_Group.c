@@ -127,6 +127,7 @@ class IA_AiGroup
     private float       m_currentDangerLevel = 0.0;
     private int         m_lastDangerEventTime = 0;
     private vector      m_lastDangerPosition = vector.Zero;
+    private IEntity     m_lastDangerSource;
     private ref array<ref IA_GroupDangerEvent> m_dangerEvents = {};
     private int         m_consecutiveDangerEvents = 0;
     
@@ -1452,8 +1453,7 @@ class IA_AiGroup
     // Process a danger event at the group level
     void ProcessDangerEvent(IA_GroupDangerType dangerType, vector position, IEntity sourceEntity = null, float intensity = 0.5, bool isSuppressed = false)
     {
-        // Skip danger processing if in defend mode or escaping
-        if (m_isInDefendMode || m_isMortarCrew || m_tacticalState == IA_GroupTacticalState.Escaping)
+        if (m_tacticalState == IA_GroupTacticalState.Escaping)
             return;
             
         // Rate limit processing per group
@@ -1510,6 +1510,10 @@ class IA_AiGroup
         
         // Update last danger info - Shared for both infantry and vehicles
         m_lastDangerEventTime = System.GetUnixTime();
+        m_lastDangerSource = sourceEntity;
+        m_lastDangerPosition = position;
+        if (sourceEntity)
+            m_lastDangerPosition = sourceEntity.GetOrigin();
         
         // --- BEGIN ADDED: Vehicle specific handling ---
         // If driving, we only care about the timestamp for the simple reaction.
@@ -1522,8 +1526,12 @@ class IA_AiGroup
         }
         // --- END ADDED ---
 
+        // Mortar crews and pit guards must remember incoming fire so the battery
+        // can shoot back. Do not run EvaluateDangerState — that changes orders.
+        if (m_isInDefendMode || m_isMortarCrew)
+            return;
+
         // --- Infantry specific handling (original logic) ---
-        m_lastDangerPosition = position;
         m_consecutiveDangerEvents++;
         
         // Create a danger event for later processing (infantry only)
@@ -1549,6 +1557,7 @@ class IA_AiGroup
         m_consecutiveDangerEvents = 0;
         m_lastDangerEventTime = 0;
         m_lastDangerPosition = vector.Zero;
+        m_lastDangerSource = null;
     }
     
     void OnProjectileImpact(vector impactPosition, IEntity shooterEntity = null)
@@ -3457,8 +3466,8 @@ class IA_AiGroup
         if (!IsSpawned() || !m_group)
             return;
         
-        // Skip for civilian groups
-        if (m_isCivilian || m_isMortarCrew)
+        // Skip for civilian groups. Mortar crews still poll so incoming fire is recorded.
+        if (m_isCivilian)
             return;
         
         // For each agent in the group, check if they have any danger events
@@ -4138,6 +4147,11 @@ class IA_AiGroup
     int GetLastDangerEventTime()
     {
         return m_lastDangerEventTime;
+    }
+
+    IEntity GetLastDangerSource()
+    {
+        return m_lastDangerSource;
     }
     // --- END ADDED ---
 

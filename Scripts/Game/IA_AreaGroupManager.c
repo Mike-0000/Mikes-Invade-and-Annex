@@ -19,6 +19,8 @@ class IA_AreaGroupManager
     private const float ARTILLERY_STRIKE_CHANCE = 0.18; // chance per check
     private const int ARTILLERY_MIN_SHOTS = 6;
     private const int ARTILLERY_MAX_SHOTS = 12;
+    private const int ARTILLERY_PIT_DEFENSE_COOLDOWN = 15;
+    private int m_lastPitDefenseFireTime = 0;
 
     void IA_AreaGroupManager(array<ref IA_AreaInstance> instances)
     {
@@ -670,6 +672,22 @@ class IA_AreaGroupManager
         if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
         {
             Print("[ArtilleryStrike] Check failed: No usable mortar pit crew in this AO group.", LogLevel.NORMAL);
+            return;
+        }
+
+        // Pit taking fire beats AO harassment. This is incoming shots, not capture majority.
+        vector defensePos;
+        if (mortarPit.GetMortarPitDefenseTarget(defensePos))
+        {
+            if (currentTime - m_lastPitDefenseFireTime >= ARTILLERY_PIT_DEFENSE_COOLDOWN)
+            {
+                int defenseShots = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
+                if (mortarPit.IssueMortarFireMission(defensePos, defenseShots))
+                {
+                    m_lastPitDefenseFireTime = currentTime;
+                    Print(string.Format("[ArtilleryStrike] Pit defense fire: %1 rounds at %2", defenseShots, defensePos), LogLevel.NORMAL);
+                }
+            }
             return;
         }
 
