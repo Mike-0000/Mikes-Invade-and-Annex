@@ -181,7 +181,7 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 
 ## AI / behavior trees
 
-- **`Group.bt` only re-runs `SCR_AIDecideActivity` every 0.3s.** `ActivityDefend.bt` then reads `GetCurrentWaypoint()` with no `WaypointIn` and `NodeError`s unless that entity is `SCR_DefendWaypoint`. Swap to Move/S&D/GetIn while defend is still the executed tree (same-frame `RemoveAllOrders` + new order) and the Repeater spam-fails. Leave current null until the next DecideActivity, or wait ~400 ms. Evidence: `Group.bt` Idle Period 0.3; `SCR_AIGetDefendWaypointParameters.c:21`; `runtime:` `Wrong class of provided Waypoint!`
+- **`Group.bt` only re-runs `SCR_AIDecideActivity` every 0.3s.** Typed waypoint trees re-read `GetCurrentWaypoint()` with no `WaypointIn` and `NodeError` unless the class matches: `ActivityDefend.bt` needs `SCR_DefendWaypoint`, `GetInNearestVehicle.bt` (from `ActivityGetIn.bt`) needs `SCR_BoardingTimedWaypoint`. Same-frame `RemoveAllOrders` + Move/S&D/GetOut leaves the old tree running. Leave current null until the next DecideActivity, or wait ~400 ms. GetInNearest is `Autocomplete 0`, so it stays current until removed. Evidence: `Group.bt` Idle Period 0.3; `SCR_AIGetDefendWaypointParameters.c:21`; `SCR_AIGetInNearestWaypointParameters.c:20`; `runtime:` `Wrong class of provided Waypoint!`
 
 ## Prefabs, configs, resources
 
@@ -210,7 +210,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
-- 2026-08-21 — `Group.bt` DecideActivity idles 0.3s; `ActivityDefend.bt` re-reads `GetCurrentWaypoint()` and NodeErrors if current is not `SCR_DefendWaypoint` (`Group.bt`, `SCR_AIGetDefendWaypointParameters.c:21`, `runtime:` Wrong class of provided Waypoint).
+- 2026-08-21 — `Group.bt` DecideActivity idles 0.3s; `ActivityDefend.bt` and `GetInNearestVehicle.bt` re-read `GetCurrentWaypoint()` and NodeError on the wrong class (`SCR_AIGetDefendWaypointParameters.c:21`, `SCR_AIGetInNearestWaypointParameters.c:20`, `runtime:` Wrong class of provided Waypoint).
 - 2026-08-21 — `GetCompartments` is not recursive, but hull `RegisterCompartments 1` already lists child turret slots; walking children double-counts BRDM-2 / BTR hatches (`SCR_CompartmentAccessComponent.c`, `BRDM2_base.et`, `runtime:` overfill GetIn loop).
 - 2026-08-21 — `SCR_MapMarkersUI.CleanupMarkerEditWidget` NPEs when the map config has no `SCR_MapCursorModule`; HALO planner CloseMap after Jump (`SCR_MapMarkersUI.c:581`, `runtime: MHJ_MapHost.CloseOwnMap`).
 - 2026-08-20 — Individual AI do shoot vehicle occupants; group perception skips them to fight the vehicle. They never shoot `IsDisarmed` targets (`TARGET_MAX_DISTANCE_DISARMED = 0`). Cargo has no `SCR_VehiclePerceivableComponent`. HALO `SetInteractionLayer(0)` on the linked craft (working MK4 never does) can zero perception traces (`SCR_AICombatComponent.c`, `Vehicle_Cargo_Base.et`).

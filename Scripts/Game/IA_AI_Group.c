@@ -23,6 +23,13 @@ enum IA_GroupTacticalState
     Approaching,   // Counter-attack staging approach: following arc routing to jump-off point before assaulting
 }
 
+enum IA_TypedWpTree
+{
+    None,
+    Defend,
+    GetInNearest
+}
+
 
 
 // Class to track danger events for processing
@@ -138,10 +145,10 @@ class IA_AiGroup
     private const int PASSENGER_MIN_RIDE_S = 10;
     private const float PASSENGER_DUMP_CONTACT_M = 200.0;
     private const int PASSENGER_DUMP_GETIN_CLEAR_MS = 400;
-    // Group.bt DecideActivity idles 0.3s, so ActivityDefend keeps ticking after
-    // the defend waypoint is gone. Planting Move/S&D/GetIn in that window is
-    // NodeError "Wrong class of provided Waypoint!".
-    private const int DEFEND_ACTIVITY_CLEAR_MS = 400;
+    // Group.bt DecideActivity idles 0.3s. ActivityDefend and ActivityGetIn
+    // (GetInNearestVehicle.bt) re-read GetCurrentWaypoint and NodeError if
+    // the class no longer matches. Wait this out before planting a new WP.
+    private const int TYPED_WP_TREE_CLEAR_MS = 400;
     private const int PASSENGER_DUMP_ASSAULT_DELAY_MS = 500;
     private const int PASSENGER_DUMP_ASSAULT_RETRY_MS = 1000;
     private const int PASSENGER_DUMP_FORCE_EJECT_TRIES = 2;
@@ -181,8 +188,8 @@ class IA_AiGroup
     // Flanking state tracking
     private bool m_isInFlankingPhase = false; // True if in first phase of flanking (moving to flank position)
     private vector m_originalThreatPosition = vector.Zero; // The original position that triggered the flanking maneuver
-    private bool m_defendClearScheduled = false;
-    private bool m_flushingDefendClear = false;
+    private bool m_typedClearScheduled = false;
+    private bool m_flushingTypedClear = false;
     private ref array<vector> m_pendingOrderOrigins = {};
     private ref array<IA_AiOrder> m_pendingOrderTypes = {};
     private ref array<bool> m_pendingOrderTopPriority = {};
@@ -810,12 +817,15 @@ class IA_AiGroup
             return;
         }
 
-        if (!m_flushingDefendClear && !IsDefendWaypoint(waypoint) && ShouldDeferNonDefendWaypoint())
+        if (!m_flushingTypedClear && ShouldDeferForTypedWaypointTree(null, waypoint))
         {
             m_pendingWaypoints.Insert(waypoint);
-            PrepareDefendActivityClear();
+            PrepareTypedWaypointTreeClear();
             return;
         }
+
+        if (WaypointMatchesActiveTypedTree(waypoint))
+            CancelPendingTypedClear();
         
         m_group.AddWaypointToGroup(waypoint);
         ////Print("[DEBUG] IA_AiGroup.AddWaypoint: Waypoint added to internal SCR_AIGroup.", LogLevel.NORMAL);
@@ -845,15 +855,15 @@ class IA_AiGroup
             return;
         }
 
-        if (IsDefendOrder(order))
-            CancelPendingDefendClear();
-
-        if (!m_flushingDefendClear && !IsDefendOrder(order) && ShouldDeferNonDefendWaypoint())
+        if (!m_flushingTypedClear && ShouldDeferForTypedWaypointTree(order, null))
         {
             QueuePendingOrder(origin, order, topPriority);
-            PrepareDefendActivityClear();
+            PrepareTypedWaypointTreeClear();
             return;
         }
+
+        if (OrderMatchesActiveTypedTree(order))
+            CancelPendingTypedClear();
 		vector zoneOrigin;
 		float zoneRadius;
         // Restrict infantry waypoints to a single zone, while vehicle waypoints can navigate across the zone group
@@ -2233,62 +2243,85 @@ class IA_AiGroup
         return false;
     }
 
-    protected bool IsDefendWaypoint(SCR_AIWaypoint waypoint)
-    {
-        if (!waypoint)
-            return false;
-        return SCR_DefendWaypoint.Cast(waypoint) != null;
-    }
-
-    protected bool IsCurrentWaypointDefend()
+    protected IA_TypedWpTree GetActiveTypedWaypointTree()
     {
         if (!m_group)
-            return false;
+            return IA_TypedWpTree.None;
 
         AIWaypoint current = m_group.GetCurrentWaypoint();
-        if (!current)
-            return false;
-
-        return SCR_DefendWaypoint.Cast(current) != null;
-    }
-
-    protected bool HasQueuedDefendWaypoint()
-    {
-        if (!m_group)
-            return false;
+        if (SCR_DefendWaypoint.Cast(current))
+            return IA_TypedWpTree.Defend;
+        if (SCR_BoardingTimedWaypoint.Cast(current))
+            return IA_TypedWpTree.GetInNearest;
 
         array<AIWaypoint> wps = {};
         m_group.GetWaypoints(wps);
         foreach (AIWaypoint wp : wps)
         {
             if (SCR_DefendWaypoint.Cast(wp))
-                return true;
+                return IA_TypedWpTree.Defend;
+            if (SCR_BoardingTimedWaypoint.Cast(wp))
+                return IA_TypedWpTree.GetInNearest;
         }
-
-        return false;
-    }
-
-    protected bool IsDefendActivityCurrent()
-    {
-        if (!m_group)
-            return false;
 
         SCR_AIGroupUtilityComponent utility = SCR_AIGroupUtilityComponent.Cast(m_group.FindComponent(SCR_AIGroupUtilityComponent));
         if (!utility)
-            return false;
+            return IA_TypedWpTree.None;
 
-        return SCR_AIDefendActivity.Cast(utility.GetCurrentAction()) != null;
+        AIActionBase action = utility.GetCurrentAction();
+        if (SCR_AIDefendActivity.Cast(action))
+            return IA_TypedWpTree.Defend;
+        if (SCR_AIGetInActivity.Cast(action))
+            return IA_TypedWpTree.GetInNearest;
+
+        return IA_TypedWpTree.None;
     }
 
-    protected bool ShouldDeferNonDefendWaypoint()
+    protected bool OrderMatchesTypedTree(IA_AiOrder order, IA_TypedWpTree tree)
     {
-        if (m_defendClearScheduled)
-            return true;
-        if (IsCurrentWaypointDefend())
-            return true;
-        if (HasQueuedDefendWaypoint())
-            return true;
-        return IsDefendActivityCurrent();
+        if (tree == IA_TypedWpTree.Defend)
+            return IsDefendOrder(order);
+        if (tree == IA_TypedWpTree.GetInNearest)
+            return order == IA_AiOrder.GetInVehicle;
+        return true;
+    }
+
+    protected bool WaypointMatchesTypedTree(SCR_AIWaypoint waypoint, IA_TypedWpTree tree)
+    {
+        if (!waypoint)
+            return false;
+        if (tree == IA_TypedWpTree.Defend)
+            return SCR_DefendWaypoint.Cast(waypoint) != null;
+        if (tree == IA_TypedWpTree.GetInNearest)
+            return SCR_BoardingTimedWaypoint.Cast(waypoint) != null;
+        return true;
+    }
+
+    protected bool OrderMatchesActiveTypedTree(IA_AiOrder order)
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.None)
+            return false;
+        return OrderMatchesTypedTree(order, tree);
+    }
+
+    protected bool WaypointMatchesActiveTypedTree(SCR_AIWaypoint waypoint)
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.None)
+            return false;
+        return WaypointMatchesTypedTree(waypoint, tree);
+    }
+
+    protected bool ShouldDeferForTypedWaypointTree(IA_AiOrder order, SCR_AIWaypoint waypoint)
+    {
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.None)
+            return m_typedClearScheduled;
+
+        if (waypoint)
+            return !WaypointMatchesTypedTree(waypoint, tree);
+        return !OrderMatchesTypedTree(order, tree);
     }
 
     protected void QueuePendingOrder(vector origin, IA_AiOrder order, bool topPriority)
@@ -2298,12 +2331,12 @@ class IA_AiGroup
         m_pendingOrderTopPriority.Insert(topPriority);
     }
 
-    protected void CancelPendingDefendClear()
+    protected void CancelPendingTypedClear()
     {
-        if (m_defendClearScheduled)
+        if (m_typedClearScheduled)
         {
-            GetGame().GetCallqueue().Remove(this.FlushPendingAfterDefendClear);
-            m_defendClearScheduled = false;
+            GetGame().GetCallqueue().Remove(this.FlushPendingAfterTypedClear);
+            m_typedClearScheduled = false;
         }
 
         DiscardPendingWaypoints();
@@ -2312,21 +2345,22 @@ class IA_AiGroup
         m_pendingOrderTopPriority.Clear();
     }
 
-    protected void PrepareDefendActivityClear()
+    protected void PrepareTypedWaypointTreeClear()
     {
-        if (IsCurrentWaypointDefend() || HasQueuedDefendWaypoint())
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree != IA_TypedWpTree.None)
             RemoveAllOrders(false);
 
-        if (m_defendClearScheduled)
+        if (m_typedClearScheduled)
             return;
 
-        m_defendClearScheduled = true;
-        GetGame().GetCallqueue().CallLater(this.FlushPendingAfterDefendClear, DEFEND_ACTIVITY_CLEAR_MS, false);
+        m_typedClearScheduled = true;
+        GetGame().GetCallqueue().CallLater(this.FlushPendingAfterTypedClear, TYPED_WP_TREE_CLEAR_MS, false);
     }
 
-    protected void FlushPendingAfterDefendClear()
+    protected void FlushPendingAfterTypedClear()
     {
-        m_defendClearScheduled = false;
+        m_typedClearScheduled = false;
         if (!m_isSpawned || !m_group)
         {
             DiscardPendingWaypoints();
@@ -2336,7 +2370,7 @@ class IA_AiGroup
             return;
         }
 
-        m_flushingDefendClear = true;
+        m_flushingTypedClear = true;
 
         int orderCount = m_pendingOrderOrigins.Count();
         int i;
@@ -2358,7 +2392,7 @@ class IA_AiGroup
         }
         m_pendingWaypoints.Clear();
 
-        m_flushingDefendClear = false;
+        m_flushingTypedClear = false;
     }
 
     protected void DiscardPendingWaypoints()
@@ -3276,7 +3310,7 @@ class IA_AiGroup
         // so we must NOT wipe them here. All other states get a clean slate.
         if (m_tacticalState != IA_GroupTacticalState.Approaching)
         {
-            CancelPendingDefendClear();
+            CancelPendingTypedClear();
             RemoveAllOrders();
         }
         
