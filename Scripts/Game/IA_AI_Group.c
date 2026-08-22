@@ -2025,6 +2025,14 @@ class IA_AiGroup
             {
                 if (IsCurrentWaypointGetInNearest())
                     RemoveAllOrders(false);
+                // Same as the overfill path: dropping GetIn must restore
+                // the drive, or a dumped-on-contact crew with a straggler
+                // sits at the hull with no orders for the rest of the fight.
+                if (m_drivingTarget != vector.Zero)
+                {
+                    if (!IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget))
+                        IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
+                }
                 return;
             }
 
