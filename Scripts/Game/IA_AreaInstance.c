@@ -2051,7 +2051,7 @@ class IA_AreaInstance
                 if (primaryThreatLocation != vector.Zero)
                     assaultTarget = primaryThreatLocation;
                 else
-                    assaultTarget = m_area.GetOrigin();
+                    assaultTarget = GetAreaReinforceHold();
 
                 if (g.IsEngagedWithEnemy())
                 {
@@ -2198,7 +2198,11 @@ class IA_AreaInstance
             // Determine correct target based on FINAL assigned state
             if (finalAssignedState == IA_GroupTacticalState.Defending || finalAssignedState == IA_GroupTacticalState.DefendPatrol)
             {
-                if (finalAssignedState == IA_GroupTacticalState.Defending && isUnderAttack)
+                if (ShouldReinforceZoneInsteadOfPoint())
+                {
+                    targetForState = GetAreaReinforceHold();
+                }
+                else if (finalAssignedState == IA_GroupTacticalState.Defending && isUnderAttack)
                 {
                     // When under attack use a random position within the inner ~60% of the area for defenders
                     float defenseRadius = m_area.GetRadius() * 0.4;
@@ -2229,7 +2233,7 @@ class IA_AreaInstance
             {
                 // Fallback if assigned Flank but threat is gone: Attack towards origin
                 finalAssignedState = IA_GroupTacticalState.Attacking;
-                targetForState = m_area.GetOrigin();
+                targetForState = GetAreaReinforceHold();
                 //Print(string.Format("[AreaInstance.MilitaryTask] Group %1 fallback Flank -> Attack Origin", g.GetOrigin().ToString()), LogLevel.DEBUG);
                 m_assignedGroupStates.Set(g, finalAssignedState); // Correct map assignment
                 needsRoleUpdate.Insert(g, true); // Mark as needing enforcement
@@ -4683,8 +4687,14 @@ class IA_AreaInstance
                 // Give initial orders based on defend mode or normal mode
                 vector targetPos;
                 IA_GroupTacticalState initialState;
+                bool zoneReinforce = ShouldReinforceZoneInsteadOfPoint();
                 
-                if (m_isInDefendMode && m_defendTarget != vector.Zero)
+                if (zoneReinforce)
+                {
+                    targetPos = GetAreaReinforceHold();
+                    initialState = IA_GroupTacticalState.Approaching;
+                }
+                else if (m_isInDefendMode && m_defendTarget != vector.Zero)
                 {
                     targetPos = m_defendTarget;
                     initialState = IA_GroupTacticalState.Attacking;
@@ -4702,8 +4712,18 @@ class IA_AreaInstance
                 
                 AddMilitaryGroup(grp);
                 
+                // Radio towers (and other zone-reinforce sites) hold the surrounding
+                // fight, not the marker origin. A persistent S&D on a 30 m pad never ends.
+                if (zoneReinforce)
+                {
+                    m_assignedGroupStates.Set(grp, IA_GroupTacticalState.Approaching);
+                    grp.RemoveAllOrders();
+                    grp.AddOrder(targetPos, IA_AiOrder.Move, true);
+                    Print(string.Format("[SpawnReinforcementWave] Zone reinforce hold at %1 for %2.",
+                        targetPos.ToString(), m_area.GetName()), LogLevel.DEBUG);
+                }
                 // Defend fireteams: ~70% bee-line assault, ~30% flank via neighboring sector staging
-                if (forDefendMission && m_isInDefendMode && m_defendTarget != vector.Zero)
+                else if (forDefendMission && m_isInDefendMode && m_defendTarget != vector.Zero)
                 {
                     if (IA_Game.rng.RandFloat01() < 0.30)
                     {
@@ -5445,6 +5465,39 @@ class IA_AreaInstance
 	// --- END ADDED ---
 
     // --- BEGIN ADDED: Radio Tower Defense Methods ---
+    //! Radio-tower markers are ~30 m. Pinning waves to that origin parks them on the mast.
+    private bool ShouldReinforceZoneInsteadOfPoint()
+    {
+        if (!m_area)
+            return false;
+        if (m_area.GetAreaType() == IA_AreaType.RadioTower)
+            return true;
+        return false;
+    }
+
+    //! Hold in the surrounding fight, not on the marker itself.
+    private vector GetAreaReinforceHold()
+    {
+        if (!m_area)
+            return vector.Zero;
+
+        vector origin = m_area.GetOrigin();
+        if (!ShouldReinforceZoneInsteadOfPoint())
+            return origin;
+
+        float areaRadius = m_area.GetRadius();
+        float minR = 80;
+        float maxR = 250;
+        if (areaRadius > minR)
+            minR = areaRadius * 0.5;
+        if (areaRadius > maxR)
+            maxR = areaRadius;
+
+        vector holdPos = IA_Game.rng.GenerateRandomPointInRadius(minR, maxR, origin);
+        holdPos[1] = GetGame().GetWorld().GetSurfaceY(holdPos[0], holdPos[2]);
+        return holdPos;
+    }
+
     bool IsRadioTowerDefenseActive()
     {
         return m_isRadioTowerDefenseActive;
@@ -5494,8 +5547,8 @@ class IA_AreaInstance
             // Notify players that reinforcements have started and give instructions
             TriggerGlobalNotification("RadioTowerDefenseStarted", m_area.GetName());
 
-            // Use existing defend mode to make AI target the tower
-            SetDefendMode(true, m_area.GetOrigin());
+            // Waves reinforce the surrounding zone. Pinning them to the mast with
+            // defend-mode S&D parks every group on the pad for the rest of the fight.
 
             // Calculate target AI count, same as defend mission
             Print(string.Format("[IA_RadioTowerDefense] Calculated target AI count: %1 (scale factor: %2)", m_radioTowerTargetAICount, scaleFactor), LogLevel.DEBUG);
@@ -5513,8 +5566,6 @@ class IA_AreaInstance
         else
         {
             Print(string.Format("[IA_AreaInstance] Radio Tower Defense DEACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
-            // Return AI to normal behavior
-            SetDefendMode(false);
             m_radioTowerDefenseFaction = null;
         }
     }
