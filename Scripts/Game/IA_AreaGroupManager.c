@@ -34,11 +34,11 @@ class IA_AreaGroupManager
     // --- QRF (Quick Reaction Force) System ---
 
     // Check cadence
-    private const int QRF_CHECK_INTERVAL = 60; // seconds
+    private const int QRF_CHECK_INTERVAL = 30; // seconds
     private int m_lastQRFCheckTime = 0;
 
     // Single cooldown and chance for the whole QRF system
-    private const int QRF_COOLDOWN = 300; // 300 seconds
+    private const int QRF_COOLDOWN = 120; // seconds
     private const float QRF_CHANCE = 0.2;
     private int m_lastQRFTime = 0;
     private bool m_qrfRetryPending = false;
