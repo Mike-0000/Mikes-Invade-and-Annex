@@ -183,6 +183,7 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 ## AI / behavior trees
 
 - **`Group.bt` only re-runs `SCR_AIDecideActivity` every 0.3s.** Typed waypoint trees re-read `GetCurrentWaypoint()` with no `WaypointIn` and `NodeError` unless the class matches: `ActivityDefend.bt` needs `SCR_DefendWaypoint`, `GetInNearestVehicle.bt` (from `ActivityGetIn.bt`) needs `SCR_BoardingTimedWaypoint`. Same-frame `RemoveAllOrders` + Move/S&D/GetOut leaves the old tree running. Leave current null until the next DecideActivity, or wait ~400 ms. GetInNearest is `Autocomplete 0`, so it stays current until removed. Evidence: `Group.bt` Idle Period 0.3; `SCR_AIGetDefendWaypointParameters.c:21`; `SCR_AIGetInNearestWaypointParameters.c:20`; `runtime:` `Wrong class of provided Waypoint!`
+- **`SCR_AIToggleMaxLOD` OnAbort NodeErrors if `AgentIn` was never written.** `HandleFailedNavlinkDoor.bt` (from `MoveToLocation.bt`) keeps a Parallel sibling with `m_bPerformOnAbort 1` that AllowMaxLODs on abort. `GetVariableIn` is false until `SCR_AISelectDoorOperatorAgent` writes `agent`; aborting the move first is `No agent provided!`. Vanilla already treats a written-null agent as SUCCESS. Evidence: `SCR_AIToggleMaxLOD.c:31-48`; `HandleFailedNavlinkDoor.bt`; `runtime:` MoveToLocation / HandleFailedNavlinkDoor OnAbort.
 
 ## Prefabs, configs, resources
 
@@ -211,6 +212,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-21 — `SCR_AIToggleMaxLOD` OnAbort NodeErrors when `HandleFailedNavlinkDoor.bt` is aborted before `AgentIn` is written (`SCR_AIToggleMaxLOD.c:31-48`, `runtime:` No agent provided!).
 - 2026-08-21 — `null` cannot be passed for an enum argument (`Cannot convert 'Class' to 'int'`; `compiler: IA_AI_Group.c`).
 - 2026-08-21 — `Group.bt` DecideActivity idles 0.3s; `ActivityDefend.bt` and `GetInNearestVehicle.bt` re-read `GetCurrentWaypoint()` and NodeError on the wrong class (`SCR_AIGetDefendWaypointParameters.c:21`, `SCR_AIGetInNearestWaypointParameters.c:20`, `runtime:` Wrong class of provided Waypoint).
 - 2026-08-21 — `GetCompartments` is not recursive, but hull `RegisterCompartments 1` already lists child turret slots; walking children double-counts BRDM-2 / BTR hatches (`SCR_CompartmentAccessComponent.c`, `BRDM2_base.et`, `runtime:` overfill GetIn loop).
