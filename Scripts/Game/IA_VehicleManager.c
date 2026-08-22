@@ -899,6 +899,17 @@ class IA_VehicleManager: GenericEntity
         }
     }
 
+    static void CollectVehicleSeatsByRole(IEntity vehicle, notnull array<BaseCompartmentSlot> pilots, notnull array<BaseCompartmentSlot> turrets, notnull array<BaseCompartmentSlot> cargo, bool skipOccupied)
+    {
+        pilots.Clear();
+        turrets.Clear();
+        cargo.Clear();
+        if (!vehicle)
+            return;
+
+        CollectVehicleCrewSeatsRecursive(vehicle, pilots, turrets, cargo, skipOccupied);
+    }
+
     static bool VehicleCrewSeatsHaveTurret(notnull array<BaseCompartmentSlot> slots)
     {
         int n = slots.Count();
@@ -992,54 +1003,74 @@ class IA_VehicleManager: GenericEntity
         
         if (scaledCompartmentCount > compartmentCount)
             scaledCompartmentCount = compartmentCount;
-        
 
-        
-        // Create the AI group for the vehicle with the scaled number of units
-        IA_AiGroup group;
-        
+        IA_AiGroup crewGroup;
+        IA_AiGroup passengerGroup;
+
         if (faction == IA_Faction.CIV)
         {
-            group = IA_AiGroup.CreateCivilianGroupForVehicle(vehicle, scaledCompartmentCount);
+            crewGroup = IA_AiGroup.CreateCivilianGroupForVehicle(vehicle, scaledCompartmentCount);
+            if (!crewGroup)
+                return null;
+
+            if (!crewGroup.IsSpawned())
+                crewGroup.Spawn();
+
+            crewGroup.AssignVehicle(vehicle, destination);
+            GetGame().GetCallqueue().CallLater(_PlaceSpawnedUnitsInVehicle, 12500, false, vehicle, crewGroup, passengerGroup, destination);
+            return crewGroup;
         }
-        else
+
+        ref array<BaseCompartmentSlot> pilots = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> turrets = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> cargo = new array<BaseCompartmentSlot>();
+        CollectVehicleSeatsByRole(vehicle, pilots, turrets, cargo, true);
+
+        int crewSeats = pilots.Count() + turrets.Count();
+        int cargoSeats = cargo.Count();
+        int crewUnits = crewSeats;
+        if (crewUnits < 1)
+            crewUnits = 1;
+        if (crewUnits > scaledCompartmentCount && cargoSeats == 0)
+            crewUnits = scaledCompartmentCount;
+        if (crewUnits > compartmentCount)
+            crewUnits = compartmentCount;
+
+        int cargoUnits = 0;
+        if (cargoSeats > 0)
         {
-            // For military, use standard approach
-            group = IA_AiGroup.CreateGroupForVehicle(vehicle, faction, scaledCompartmentCount, AreaFaction);
+            cargoUnits = scaledCompartmentCount - crewUnits;
+            if (cargoUnits < 0)
+                cargoUnits = 0;
+            if (cargoUnits > cargoSeats)
+                cargoUnits = cargoSeats;
         }
-        
-        if (!group)
-        {
-           //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Failed to create group for vehicle", LogLevel.ERROR);
+
+        crewGroup = IA_AiGroup.CreateGroupForVehicle(vehicle, faction, crewUnits, AreaFaction, false);
+        if (!crewGroup)
             return null;
-        }
-        
-        
-        // For civilian factions, don't add to military groups
-        if (faction != IA_Faction.CIV)
+
+        crewGroup.MarkAsVehicleCrew();
+        areaInstance.AddMilitaryGroup(crewGroup);
+        if (!crewGroup.IsSpawned())
+            crewGroup.Spawn();
+        crewGroup.AssignVehicle(vehicle, destination);
+
+        if (cargoUnits > 0)
         {
-            // Add group to area instance using the public method
-            areaInstance.AddMilitaryGroup(group);
+            passengerGroup = IA_AiGroup.CreateGroupForVehicle(vehicle, faction, cargoUnits, AreaFaction, true);
+            if (passengerGroup)
+            {
+                passengerGroup.ConfigureAsVehiclePassengers(crewGroup, vehicle, destination);
+                areaInstance.AddMilitaryGroup(passengerGroup);
+                if (!passengerGroup.IsSpawned())
+                    passengerGroup.Spawn();
+                crewGroup.SetLinkedPassengerGroup(passengerGroup);
+            }
         }
-        
-        // Spawn the group if needed
-        if (!group.IsSpawned())
-        {
-           //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Spawning group", LogLevel.NORMAL);
-            group.Spawn();
-        }
-        
-        // First assign the vehicle and destination to the group - this works for both military and civilian
-       //// Print(("[DEBUG_VEHICLE_UNITS] Assigning vehicle and destination to group", LogLevel.NORMAL);
-        group.AssignVehicle(vehicle, destination);
-        
-        // Then directly teleport units into the vehicle instead of making them walk to it
-       //// Print(("[DEBUG_VEHICLE_UNITS] Placing units in vehicle", LogLevel.NORMAL);
-        GetGame().GetCallqueue().CallLater(_PlaceSpawnedUnitsInVehicle, 12500, false, vehicle, group, destination);
-        
-       //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Vehicle and destination assigned to group", LogLevel.NORMAL);
-        
-        return group;
+
+        GetGame().GetCallqueue().CallLater(_PlaceSpawnedUnitsInVehicle, 12500, false, vehicle, crewGroup, passengerGroup, destination);
+        return crewGroup;
     }
     
     // Find a random road entity in the zone around the given position
@@ -1259,72 +1290,82 @@ class IA_VehicleManager: GenericEntity
         return fallbackPoint;
     }
     
-    // Helper method called after a delay to place units in the vehicle
-    private static void _PlaceSpawnedUnitsInVehicle(Vehicle vehicle, IA_AiGroup aiGroup, vector destination)
+    protected static void SeatCharactersInSlots(Vehicle vehicle, notnull array<SCR_ChimeraCharacter> characters, notnull array<BaseCompartmentSlot> slots)
     {
-        if (!vehicle || !aiGroup)
-            return;
-            
-       //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: Attempting to place units in vehicle", LogLevel.NORMAL);
-       //// Print(("[DEBUG_CIV_VEHICLE] Vehicle: " + vehicle + ", Destination: " + destination, LogLevel.NORMAL);
-
-        // Get the characters from the group
-        array<SCR_ChimeraCharacter> characters = aiGroup.GetGroupCharacters();
-        if (characters.IsEmpty())
+        int charIndex = 0;
+        int charCount = characters.Count();
+        int slotCount = slots.Count();
+        int i;
+        for (i = 0; i < slotCount && charIndex < charCount; i++)
         {
-           //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No characters found in AI group", LogLevel.WARNING);
-            return;
-        }
-        
-       //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: Found " + characters.Count() + " characters", LogLevel.NORMAL);
-
-        array<BaseCompartmentSlot> usableCompartments = {};
-        CollectVehicleCrewSeats(vehicle, usableCompartments, true);
-        if (usableCompartments.IsEmpty())
-        {
-            //// Print(("[DEBUG_CIV_VEHICLE] _PlaceSpawnedUnitsInVehicle: No compartments found", LogLevel.WARNING);
-             return;
-        }
-
-        // Fill Pilot, then Turret, then Cargo (CollectVehicleCrewSeats order).
-        int passengerIndex = 0;
-        int seatCount = usableCompartments.Count();
-        for (int i = 0; i < seatCount && passengerIndex < characters.Count(); i++)
-        {
-            BaseCompartmentSlot compartment = usableCompartments[i];
+            BaseCompartmentSlot compartment = slots[i];
             if (!compartment || compartment.GetOccupant())
                 continue;
 
-            SCR_ChimeraCharacter passenger = characters[passengerIndex];
-            if (!passenger)
-            {
-                passengerIndex++;
+            SCR_ChimeraCharacter occupant = characters[charIndex];
+            charIndex = charIndex + 1;
+            if (!occupant)
                 continue;
-            }
-            CompartmentAccessComponent accessComponent = CompartmentAccessComponent.Cast(passenger.FindComponent(CompartmentAccessComponent));
+
+            CompartmentAccessComponent accessComponent = CompartmentAccessComponent.Cast(occupant.FindComponent(CompartmentAccessComponent));
             if (accessComponent)
-            {
                 accessComponent.GetInVehicle(vehicle, compartment, true, -1, ECloseDoorAfterActions.CLOSE_DOOR, true);
+        }
+    }
+
+    // Helper method called after a delay to place units in the vehicle
+    private static void _PlaceSpawnedUnitsInVehicle(Vehicle vehicle, IA_AiGroup crewGroup, IA_AiGroup passengerGroup, vector destination)
+    {
+        if (!vehicle || !crewGroup)
+            return;
+
+        array<SCR_ChimeraCharacter> crewCharacters = crewGroup.GetGroupCharacters();
+        if (crewCharacters.IsEmpty())
+            return;
+
+        if (crewGroup.GetFaction() == IA_Faction.CIV || !passengerGroup)
+        {
+            array<BaseCompartmentSlot> usableCompartments = {};
+            CollectVehicleCrewSeats(vehicle, usableCompartments, true);
+            SeatCharactersInSlots(vehicle, crewCharacters, usableCompartments);
+
+            if (crewGroup.GetFaction() == IA_Faction.CIV)
+            {
+                crewGroup.ForceDrivingState(true);
+                GetGame().GetCallqueue().CallLater(CheckCiviliansInVehicle, 5000, true, vehicle, crewGroup, destination);
             }
 
-            passengerIndex++;
+            UpdateVehicleWaypoint(vehicle, crewGroup, destination);
+            return;
         }
 
-        // For civilians specifically, make sure driving state is properly set
-        if (aiGroup.GetFaction() == IA_Faction.CIV)
+        ref array<BaseCompartmentSlot> pilots = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> turrets = new array<BaseCompartmentSlot>();
+        ref array<BaseCompartmentSlot> cargo = new array<BaseCompartmentSlot>();
+        CollectVehicleSeatsByRole(vehicle, pilots, turrets, cargo, true);
+
+        ref array<BaseCompartmentSlot> crewSlots = new array<BaseCompartmentSlot>();
+        int n;
+        int i;
+        n = pilots.Count();
+        for (i = 0; i < n; i++)
         {
-            // Make sure the driving state is set so civilians start driving
-            aiGroup.ForceDrivingState(true);
-            
-            // For civilians, set up a recurring check to make sure they're still in the vehicle
-            // This ensures they get back in if they somehow exit
-            GetGame().GetCallqueue().CallLater(CheckCiviliansInVehicle, 5000, true, vehicle, aiGroup, destination);
+            crewSlots.Insert(pilots[i]);
+        }
+        n = turrets.Count();
+        for (i = 0; i < n; i++)
+        {
+            crewSlots.Insert(turrets[i]);
         }
 
-        // Create waypoint for the vehicle to drive to using the AI group we already created
-        // This needs to happen *after* units are successfully placed, especially the driver.
-       //// Print(("[DEBUG_CIV_VEHICLE] Creating waypoint for vehicle to drive to: " + destination, LogLevel.NORMAL);
-        UpdateVehicleWaypoint(vehicle, aiGroup, destination);
+        SeatCharactersInSlots(vehicle, crewCharacters, crewSlots);
+
+        array<SCR_ChimeraCharacter> passengerCharacters = passengerGroup.GetGroupCharacters();
+        if (!passengerCharacters.IsEmpty())
+            SeatCharactersInSlots(vehicle, passengerCharacters, cargo);
+
+        passengerGroup.IssuePassengerMountHold();
+        UpdateVehicleWaypoint(vehicle, crewGroup, destination);
     }
     
     // Helper method to periodically check if civilians are still in their vehicle and order them back in if not
@@ -1446,8 +1487,7 @@ class IA_VehicleManager: GenericEntity
         SCR_AIWaypoint waypoint = SCR_AIWaypoint.Cast(waypointEntity);
         if (waypoint)
         {
-            // Set a very high priority to ensure this waypoint takes precedence
-            waypoint.SetPriorityLevel(20);
+            waypoint.SetPriorityLevel(IA_AiGroup.WP_PRIORITY_DRIVE);
             // Print(("[VEHICLE_DEBUG] Setting waypoint priority to 2000", LogLevel.NORMAL);
             
             // Check if the group is in defending state before adding vehicle waypoint

@@ -391,7 +391,7 @@ class IA_AreaGroupManager
                 SCR_AIWaypoint w = SCR_AIWaypoint.Cast(ent);
                 if (w)
                 {
-                    w.SetPriorityLevel(30);
+                    w.SetPriorityLevel(IA_AiGroup.WP_PRIORITY_FIGHT);
                     grp.AddWaypoint(w);
                 }
             }
@@ -466,60 +466,9 @@ class IA_AreaGroupManager
         if (forDefendMission)
             vehicleGroup.EnableDefendModeTracking(true, objectivePos);
 
-        // Branch behavior by vehicle class: trucks dismount and defend; APC/Armor lock to S&D
-        bool vIsTruck = false; bool vIsAPC = false; bool vIsArmored = false;
-        DetermineVehicleClass(selectedVehicle, vIsTruck, vIsAPC, vIsArmored);
-        if (vIsTruck && !vIsAPC && !vIsArmored)
-        {
-            // Replace any existing vehicle waypoint with a high-priority Move waypoint (priority 2000)
-            vehicleGroup.RemoveAllOrders(true);
-            ResourceName moveWpRes = "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";
-            Resource moveRes = Resource.Load(moveWpRes);
-            if (moveRes)
-            {
-                EntitySpawnParams wpParams = EntitySpawnParams();
-                wpParams.TransformMode = ETransformMode.WORLD;
-                wpParams.Transform[3] = driveTarget;
-                IEntity wpEnt = GetGame().SpawnEntityPrefab(moveRes, null, wpParams);
-                SCR_AIWaypoint wp = SCR_AIWaypoint.Cast(wpEnt);
-                if (wp)
-                {
-                    wp.SetPriorityLevel(100);
-                    vehicleGroup.AddWaypoint(wp);
-                }
-            }
-
-            // Poll until arrival, then order dismount and assault the objective
-            GetGame().GetCallqueue().CallLater(this.QRF_PollTruckArrival, 3000, false, selectedVehicle, vehicleGroup, areaInst, objectivePos, driveTarget);
-        }
-        else
-        {
-            // APC/Armor: keep only move waypoints; set priority to 15 for the move waypoint
-            SCR_AIWaypoint currentWp = null;
-            if (!vehicleGroup.HasActiveWaypoint())
-            {
-                // Create one if missing
-                ResourceName moveWpRes2 = "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";
-                Resource moveRes2 = Resource.Load(moveWpRes2);
-                if (moveRes2)
-                {
-                    EntitySpawnParams wpParams2 = EntitySpawnParams();
-                    wpParams2.TransformMode = ETransformMode.WORLD;
-                    wpParams2.Transform[3] = driveTarget;
-                    IEntity wpEnt2 = GetGame().SpawnEntityPrefab(moveRes2, null, wpParams2);
-                    currentWp = SCR_AIWaypoint.Cast(wpEnt2);
-                    if (currentWp) vehicleGroup.AddWaypoint(currentWp);
-                }
-            }
-            else
-            {
-                // We can't directly get the group's waypoint from here; assume the last added move is active and priority was set.
-            }
-            if (currentWp)
-            {
-                currentWp.SetPriorityLevel(40);
-            }
-        }
+        // Crew keeps the drive Move at WP_PRIORITY_DRIVE. Cargo is a sibling
+        // group that dumps on arrival or close contact.
+        GetGame().GetCallqueue().CallLater(this.QRF_PollTruckArrival, 3000, false, selectedVehicle, vehicleGroup, areaInst, objectivePos, driveTarget);
         return true;
     }
 
@@ -699,9 +648,15 @@ class IA_AreaGroupManager
         // If arrived, dismount and schedule defend
         if (IA_VehicleManager.HasVehicleReachedDestination(vehicle, driveTarget))
         {
-            group.RemoveAllOrders(true);
+            IA_AiGroup passengers = group.GetLinkedPassengerGroup();
+            if (passengers)
+            {
+                passengers.DumpPassengersAndAssault(areaOrigin);
+                return;
+            }
+
+            group.RemoveAllOrders(false);
             group.AddOrder(areaOrigin, IA_AiOrder.GetOutOfVehicle, true);
-            // After 30 seconds, add a defend waypoint
             GetGame().GetCallqueue().CallLater(this.QRF_AddDefendAfterDisembark, 30000, false, group, areaOrigin);
             return;
         }

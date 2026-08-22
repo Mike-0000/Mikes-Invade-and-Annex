@@ -104,6 +104,15 @@ class IA_AiGroup
     private vector      m_drivingTarget = vector.Zero;
     private int         m_lastVehicleOrderTime = 0;
     private const int   VEHICLE_ORDER_UPDATE_INTERVAL = 5;
+    private bool        m_isVehicleCrewGroup = false;
+    private bool        m_isVehiclePassengerGroup = false;
+    private bool        m_mountedUntilDump = false;
+    private bool        m_passengerDumped = false;
+    private int         m_passengerMountTime = 0;
+    private IEntity     m_passengerVehicle = null;
+    private vector      m_passengerAssaultTarget = vector.Zero;
+    private IA_AiGroup  m_linkedCrewGroup = null;
+    private IA_AiGroup  m_linkedPassengerGroup = null;
     
     // Danger state tracking
     private float       m_currentDangerLevel = 0.0;
@@ -118,8 +127,16 @@ class IA_AiGroup
     private const float GUNSHOT_AUDIBLE_DISTANCE = 500.0;
     private const float SUPPRESSED_AUDIBLE_DISTANCE = 90.0;
     private const float EXPLOSION_REACT_DISTANCE = 220.0;
-    private const float VEHICLE_PRIORITY_MOVE_LEVEL = 200.0;
-	private const float CIVILIAN_VEHICLE_PRIORITY_MOVE_LEVEL = 400.0;
+    static const int WP_PRIORITY_PATROL = 0;
+    static const int WP_PRIORITY_FIGHT = 15;
+    static const int WP_PRIORITY_DEFEND = 20;
+    static const int WP_PRIORITY_GET_IN = 20;
+    static const int WP_PRIORITY_GET_OUT = 0;
+    static const int WP_PRIORITY_DRIVE = 20;
+    static const int WP_PRIORITY_ESCAPE = 350;
+    private const float CIVILIAN_VEHICLE_PRIORITY_MOVE_LEVEL = 400.0;
+    private const int PASSENGER_MIN_RIDE_S = 10;
+    private const float PASSENGER_DUMP_CONTACT_M = 200.0;
 
     // Logging and rate limiting
     private static const int BEHAVIOR_LOG_RATE_LIMIT_SECONDS = 3;
@@ -381,7 +398,7 @@ class IA_AiGroup
         return grp;
     }
 
-    static IA_AiGroup CreateGroupForVehicle(Vehicle vehicle, IA_Faction faction, int unitCount, Faction AreaFaction)
+    static IA_AiGroup CreateGroupForVehicle(Vehicle vehicle, IA_Faction faction, int unitCount, Faction AreaFaction, bool passengerOnly = false)
     {
         if (!vehicle || unitCount <= 0)
             return null;
@@ -390,7 +407,8 @@ class IA_AiGroup
 
         IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, faction, unitCount);
         grp.m_isCivilian = false;
-        grp.m_referencedEntity = vehicle; // Store vehicle reference for later use
+        if (!passengerOnly)
+            grp.m_referencedEntity = vehicle;
 
 		Resource groupRes;
 		switch(faction){
@@ -805,11 +823,13 @@ class IA_AiGroup
         m_lastOrderPosition = origin;
         m_lastOrderTime = System.GetUnixTime();
         
-        // If this is a vehicle group, update vehicle orders first
-        if (m_isDriving)
+        // Driving groups keep Move/drive on the vehicle ticker. GetIn/GetOut
+        // must still become waypoints or passengers never dump and stragglers
+        // never remount.
+        if (m_isDriving && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.GetOutOfVehicle)
         {
             UpdateVehicleOrders();
-            return; // Let the vehicle order system handle it
+            return;
         }
         
         if (!m_isSpawned)
@@ -877,8 +897,8 @@ class IA_AiGroup
         }
         // --- END WATER CHECK ---
 		
-        // For vehicle orders, snap to nearest road - EXCEPT GetInVehicle orders which should go directly to the vehicle
-        if (m_isDriving && order != IA_AiOrder.GetInVehicle)
+        // For vehicle orders, snap to nearest road - EXCEPT GetIn/GetOut which go to the hull
+        if (m_isDriving && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.GetOutOfVehicle)
         {
 
             int currentActiveGroup = IA_VehicleManager.GetActiveGroup();
@@ -1032,9 +1052,9 @@ class IA_AiGroup
             return;
         }
 
-        if (m_isDriving)
+        if (m_isDriving && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.GetOutOfVehicle)
         {
-            w.SetPriorityLevel(VEHICLE_PRIORITY_MOVE_LEVEL); // Keep vehicles as is
+            w.SetPriorityLevel(WP_PRIORITY_DRIVE);
         }
         else
         {
@@ -1044,8 +1064,7 @@ class IA_AiGroup
                 IA_AssassinationObjective assassinObj = IA_AssassinationObjective.Cast(m_OwningSideObjective);
                 if (assassinObj && assassinObj.IsHVTGroup(this))
                 {
-                    // HVT gets highest priority defend
-                    w.SetPriorityLevel(300);
+                    w.SetPriorityLevel(WP_PRIORITY_DEFEND);
                     
                     // Set tight completion radius for HVT
                     if (w.Type().IsInherited(SCR_DefendWaypoint))
@@ -1057,12 +1076,11 @@ class IA_AiGroup
                         }
                     }
                     
-                    Print(string.Format("[IA_AiGroup.AddOrder] Set HVT waypoint priority to 1250 with 4m completion radius", this), LogLevel.DEBUG);
+                    Print(string.Format("[IA_AiGroup.AddOrder] Set HVT waypoint priority to %1 with 4m completion radius", WP_PRIORITY_DEFEND), LogLevel.DEBUG);
                 }
                 else
                 {
-                    // Guards get high but not maximum priority
-                    w.SetPriorityLevel(140);
+                    w.SetPriorityLevel(WP_PRIORITY_FIGHT);
                     
                     // Set wider completion radius for guards
                     if (w.Type().IsInherited(SCR_DefendWaypoint))
@@ -1074,17 +1092,18 @@ class IA_AiGroup
                         }
                     }
                     
-                    Print(string.Format("[IA_AiGroup.AddOrder] Set Guard waypoint priority to 300 with 15-40m completion radius", this), LogLevel.DEBUG);
+                    Print(string.Format("[IA_AiGroup.AddOrder] Set Guard waypoint priority to %1 with 15-40m completion radius", WP_PRIORITY_FIGHT), LogLevel.DEBUG);
                 }
             }
             else
             {
-                // Dynamic priority for regular infantry based on situation
                 int priorityLevel = CalculateWaypointPriority(order);
                 w.SetPriorityLevel(priorityLevel);
             }
             // --- END MODIFIED ---
         }
+
+        ApplyBoardingAllowance(w, order);
 
         // --- BEGIN ADDED: Additional logging before adding waypoint to group ---
         if (order == IA_AiOrder.Defend)
@@ -2042,6 +2061,180 @@ class IA_AiGroup
         m_isDriving = state;
     }
 
+    void MarkAsVehicleCrew()
+    {
+        m_isVehicleCrewGroup = true;
+    }
+
+    bool IsVehicleCrewGroup()
+    {
+        return m_isVehicleCrewGroup;
+    }
+
+    bool IsVehiclePassengerGroup()
+    {
+        return m_isVehiclePassengerGroup;
+    }
+
+    bool ShouldSkipInfantryOrders()
+    {
+        if (m_isDriving || m_isVehicleCrewGroup)
+            return true;
+
+        if (m_isVehiclePassengerGroup && !m_passengerDumped)
+            return true;
+
+        return false;
+    }
+
+    IA_AiGroup GetLinkedPassengerGroup()
+    {
+        return m_linkedPassengerGroup;
+    }
+
+    void SetLinkedPassengerGroup(IA_AiGroup passengerGroup)
+    {
+        m_linkedPassengerGroup = passengerGroup;
+    }
+
+    void ConfigureAsVehiclePassengers(IA_AiGroup crewGroup, IEntity vehicle, vector assaultTarget)
+    {
+        m_isVehiclePassengerGroup = true;
+        m_mountedUntilDump = true;
+        m_passengerDumped = false;
+        m_linkedCrewGroup = crewGroup;
+        m_passengerVehicle = vehicle;
+        m_passengerAssaultTarget = assaultTarget;
+        m_isDriving = false;
+        m_referencedEntity = null;
+    }
+
+    void IssuePassengerMountHold()
+    {
+        if (!m_isVehiclePassengerGroup || m_passengerDumped)
+            return;
+
+        vector holdPos = GetOrigin();
+        if (m_passengerVehicle)
+            holdPos = m_passengerVehicle.GetOrigin();
+
+        RemoveAllOrders(false);
+        AddOrder(holdPos, IA_AiOrder.GetInVehicle, true);
+        m_mountedUntilDump = true;
+        if (m_passengerMountTime == 0)
+            m_passengerMountTime = System.GetUnixTime();
+    }
+
+    void DumpPassengersAndAssault(vector assaultOverride = vector.Zero)
+    {
+        if (!m_isVehiclePassengerGroup || m_passengerDumped)
+            return;
+
+        m_passengerDumped = true;
+        m_mountedUntilDump = false;
+        if (assaultOverride != vector.Zero)
+            m_passengerAssaultTarget = assaultOverride;
+
+        RemoveAllOrders(false);
+
+        vector outPos = GetOrigin();
+        if (m_passengerVehicle)
+            outPos = m_passengerVehicle.GetOrigin();
+
+        AddOrder(outPos, IA_AiOrder.GetOutOfVehicle, true);
+
+        vector assault = m_passengerAssaultTarget;
+        if (assault == vector.Zero && m_linkedCrewGroup)
+            assault = m_linkedCrewGroup.GetDrivingTarget();
+        if (assault == vector.Zero)
+            assault = outPos;
+
+        AddOrder(assault, IA_AiOrder.SearchAndDestroy, false);
+        m_tacticalState = IA_GroupTacticalState.Attacking;
+        m_tacticalStateTarget = assault;
+        m_isStateManagedByAuthority = true;
+        Print(string.Format("[IA_AiGroup] Passenger group dumped and assaulting %1", assault.ToString()), LogLevel.DEBUG);
+    }
+
+    protected void ApplyBoardingAllowance(SCR_AIWaypoint waypoint, IA_AiOrder order)
+    {
+        if (!waypoint)
+            return;
+
+        SCR_BoardingWaypoint boarding = SCR_BoardingWaypoint.Cast(waypoint);
+        if (!boarding)
+            return;
+
+        if (order == IA_AiOrder.GetOutOfVehicle)
+        {
+            boarding.SetAllowance(false, false, true);
+            return;
+        }
+
+        if (order != IA_AiOrder.GetInVehicle)
+            return;
+
+        if (m_isVehiclePassengerGroup)
+            boarding.SetAllowance(false, false, true);
+        else if (m_isVehicleCrewGroup)
+            boarding.SetAllowance(true, true, false);
+    }
+
+    protected void TryDumpPassengersIfNeeded()
+    {
+        if (!m_isVehiclePassengerGroup || m_passengerDumped || !m_mountedUntilDump)
+            return;
+
+        if (m_passengerMountTime > 0)
+        {
+            int rideS = System.GetUnixTime() - m_passengerMountTime;
+            if (rideS < PASSENGER_MIN_RIDE_S)
+                return;
+        }
+
+        IEntity vehEnt = m_passengerVehicle;
+        if (m_linkedCrewGroup)
+        {
+            IEntity crewVeh = m_linkedCrewGroup.GetReferencedEntity();
+            if (crewVeh)
+                vehEnt = crewVeh;
+        }
+
+        Vehicle veh = Vehicle.Cast(vehEnt);
+        if (veh)
+        {
+            if (SCR_AIVehicleUsability.VehicleIsOnFire(veh) || !SCR_AIVehicleUsability.VehicleCanMove(veh))
+            {
+                DumpPassengersAndAssault();
+                return;
+            }
+
+            vector dest = m_passengerAssaultTarget;
+            if (m_linkedCrewGroup)
+            {
+                vector crewDest = m_linkedCrewGroup.GetDrivingTarget();
+                if (crewDest != vector.Zero)
+                    dest = crewDest;
+            }
+
+            if (dest != vector.Zero && IA_VehicleManager.HasVehicleReachedDestination(veh, dest))
+            {
+                DumpPassengersAndAssault();
+                return;
+            }
+        }
+
+        if (m_currentDangerLevel > 0.6 && m_lastDangerPosition != vector.Zero)
+        {
+            vector worldPos = GetOrigin();
+            if (veh)
+                worldPos = veh.GetOrigin();
+
+            if (vector.Distance(worldPos, m_lastDangerPosition) < PASSENGER_DUMP_CONTACT_M)
+                DumpPassengersAndAssault();
+        }
+    }
+
     void ProcessReactions()
     {
         // This function is now a no-op as reaction processing is handled by the area instance
@@ -2201,6 +2394,12 @@ class IA_AiGroup
     {
         if (m_isMortarCrew)
             return;
+
+        if (m_isVehiclePassengerGroup && m_mountedUntilDump && !m_passengerDumped)
+        {
+            TryDumpPassengersIfNeeded();
+            return;
+        }
 
         // If the group is in the Escaping state, it must not be interrupted.
         if (m_tacticalState == IA_GroupTacticalState.Escaping)
@@ -2845,73 +3044,34 @@ class IA_AiGroup
     // Make sure CalculateWaypointPriority is defined as a public method
     int CalculateWaypointPriority(IA_AiOrder order)
     {
-        // Base priority level starts at 0
-        int priority = 0;
-        
-        // Increase priority based on order type
+        // Level is added to the vanilla activity score. Stay at or below
+        // FIGHT (15) so soldier Attack 90 still wins. Do not stack combat
+        // bonuses — last-man + engaged already walked past players.
         switch (order)
         {
             case IA_AiOrder.SearchAndDestroy:
-                priority += 15;
-                break;
-			case IA_AiOrder.VehicleMove:
-                return 0;
+                return WP_PRIORITY_FIGHT;
+            case IA_AiOrder.VehicleMove:
+                return WP_PRIORITY_PATROL;
             case IA_AiOrder.Defend:
-                return 20;
-			case IA_AiOrder.DefendSmall:
-                return 40;
+                return WP_PRIORITY_DEFEND;
+            case IA_AiOrder.DefendSmall:
+                return WP_PRIORITY_FIGHT;
             case IA_AiOrder.GetInVehicle:
-                priority += 100;  // Vehicle mounting is important
-                break;
+                return WP_PRIORITY_GET_IN;
+            case IA_AiOrder.GetOutOfVehicle:
+                return WP_PRIORITY_GET_OUT;
             case IA_AiOrder.PriorityMove:
-                // Escape must ignore combat. All other PriorityMove must stay below
-                // soldier attack (70/90) or they walk past players.
                 if (m_tacticalState == IA_GroupTacticalState.Escaping)
-                    return 350;
-                return 15;
+                    return WP_PRIORITY_ESCAPE;
+                return WP_PRIORITY_FIGHT;
             case IA_AiOrder.Move:
-                return 15;
+                return WP_PRIORITY_FIGHT;
             case IA_AiOrder.Patrol:
-                priority += 1;  // Patrol orders lowest priority
-                break;
+                return WP_PRIORITY_PATROL;
         }
-        
-        // Increase priority if in danger
-        if (m_currentDangerLevel > 0.0)
-        {
-            priority += Math.Round(1 * m_currentDangerLevel);
-        }
-        
-        // Increase priority if engaged with enemy
-        if (IsEngagedWithEnemy())
-        {
-            priority += 15;
-        }
-        
-        // Adjust priority based on group strength
-        int aliveCount = GetAliveCount();
-        if (aliveCount == 2)
-        {
-            // Small groups prioritize their orders more (survival focused)
-            priority += 10;
-        }
-        if (aliveCount == 1)
-        {
-            // Small groups prioritize their orders more (survival focused)
-            priority += 30;
-        }
-        
-        // More recent danger events increase priority
-        if (m_lastDangerEventTime > 0)
-        {
-            int timeSinceLastDanger = System.GetUnixTime() - m_lastDangerEventTime;
-            if (timeSinceLastDanger < 30)
-            {
-                priority += 5; // Recent danger gets higher priority
-            }
-        }
-        
-        return priority;
+
+        return WP_PRIORITY_PATROL;
     }
 
     // Improved flanking position calculation
@@ -3242,6 +3402,14 @@ class IA_AiGroup
             }
         }
         // Special handling for vehicle groups
+        else if (m_isVehiclePassengerGroup)
+        {
+            SetTacticalState(IA_GroupTacticalState.InVehicle, m_passengerAssaultTarget, null, true);
+            IssuePassengerMountHold();
+            Print("[IA_AiGroup.OnStaggeredSpawningComplete] Passenger group held on cargo GetIn", LogLevel.DEBUG);
+            ScheduleNextStateEvaluation();
+            SetupDeathListener();
+        }
         else if (m_referencedEntity)
         {
             // Order units to get in the vehicle immediately

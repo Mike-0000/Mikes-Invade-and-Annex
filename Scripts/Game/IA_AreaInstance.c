@@ -698,9 +698,9 @@ class IA_AreaInstance
                 return; // Don't change the group's tactical state
             }
 
-            // Vehicle groups already have a hull reference. Do not assign infantry
+            // Vehicle crew / cargo already have hull roles. Do not assign infantry
             // Defend/Attack; DefendWaypoint.OnDeselected GetOuts every turret.
-            if (group.IsDriving() || group.GetReferencedEntity())
+            if (group.IsDriving() || group.GetReferencedEntity() || group.IsVehicleCrewGroup() || group.IsVehiclePassengerGroup())
             {
                 Print("[AreaInstance.AddMilitaryGroup] Vehicle group, assigning InVehicle", LogLevel.DEBUG);
                 m_assignedGroupStates.Insert(group, IA_GroupTacticalState.InVehicle);
@@ -1400,7 +1400,7 @@ class IA_AreaInstance
         foreach (IA_AiGroup g : m_military)
         {
             if (!g || g.GetAliveCount() == 0) continue;
-            if (g.IsDriving()) continue; // Skip driving groups for role assignment
+            if (g.ShouldSkipInfantryOrders()) continue;
             
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
             if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
@@ -1948,7 +1948,7 @@ class IA_AreaInstance
         int postReassignmentOther = 0;
         foreach (IA_AiGroup g_log : m_military)
         {
-            if (!g_log || g_log.GetAliveCount() == 0 || g_log.IsDriving()) continue;
+            if (!g_log || g_log.GetAliveCount() == 0 || g_log.ShouldSkipInfantryOrders()) continue;
             IA_GroupTacticalState finalState = IA_GroupTacticalState.Neutral;
             if (m_assignedGroupStates.Find(g_log, finalState)) {
                 if (finalState == IA_GroupTacticalState.Defending || finalState == IA_GroupTacticalState.DefendPatrol)
@@ -1970,10 +1970,11 @@ class IA_AreaInstance
         {
              if (!g || g.GetAliveCount() == 0) continue;
              
-             if (g.IsDriving())
+             if (g.ShouldSkipInfantryOrders())
              {
-                 g.UpdateVehicleOrders(); // Ensure driving groups get their orders updated
-                 continue; // Still skip the subsequent role assignment and idle logic for driving groups
+                 if (g.IsDriving() || g.IsVehicleCrewGroup())
+                     g.UpdateVehicleOrders();
+                 continue;
              }
              
              // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
@@ -2020,9 +2021,9 @@ class IA_AreaInstance
                 else // Group is still under "forced S&D" status
                 {
                     // Do not disturb vehicle waypoints while driving
-                    if (g.IsDriving())
+                    if (g.ShouldSkipInfantryOrders())
                     {
-                        continue; // Keep current driving waypointing intact
+                        continue;
                     }
                     // Only refresh if they have lost their active waypoint
                     if (!g.HasActiveWaypoint())
@@ -2088,7 +2089,7 @@ class IA_AreaInstance
                 int currentAttackerCount = 0;
                 foreach (IA_AiGroup atg : m_military)
                 {
-                    if (atg && atg.GetAliveCount() > 0 && !atg.IsDriving())
+                    if (atg && atg.GetAliveCount() > 0 && !atg.ShouldSkipInfantryOrders())
                     {
                         IA_GroupTacticalState ats = atg.GetTacticalState();
                         if (ats == IA_GroupTacticalState.Attacking)
@@ -2480,7 +2481,7 @@ class IA_AreaInstance
                 
                 // Find healthy defenders to convert to attackers
                 foreach (IA_AiGroup g : m_military) {
-                    if (!g || g.GetAliveCount() < 3 || g.IsDriving())
+                    if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders())
                         continue;
                         
                     IA_GroupTacticalState groupState;
@@ -2522,7 +2523,7 @@ class IA_AreaInstance
 
         foreach (IA_AiGroup g : m_military)
         {
-            if (!g || g.GetAliveCount() == 0 || g.IsDriving()) continue;
+            if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders()) continue;
             
             // Get the current state and check for attacking/flanking groups.
             // Approaching groups are fully protected from contact-timeout conversion —
@@ -2594,7 +2595,7 @@ class IA_AreaInstance
                 
                 foreach (IA_AiGroup g : m_military)
                 {
-                    if (!g || g.GetAliveCount() == 0 || g.IsDriving()) continue;
+                    if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders()) continue;
                     
                     IA_GroupTacticalState currentGrpState = g.GetTacticalState();
                     
@@ -3694,7 +3695,7 @@ class IA_AreaInstance
         // Process only military groups
         foreach (IA_AiGroup group : allGroups)
         {
-            if (!group || !group.IsSpawned() || group.GetAliveCount() == 0 || group.IsDriving())
+            if (!group || !group.IsSpawned() || group.GetAliveCount() == 0 || group.ShouldSkipInfantryOrders())
                 continue;
             
             if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
@@ -3882,8 +3883,7 @@ class IA_AreaInstance
        //     group.GetOrigin().ToString(), currentTime), LogLevel.DEBUG);
         // --- END ADDED ---
         
-        // Skip if group is driving
-        if (group.IsDriving())
+        if (group.ShouldSkipInfantryOrders())
             return;
         
         int aliveCount = group.GetAliveCount();
@@ -3992,8 +3992,7 @@ class IA_AreaInstance
         }
         // --- END ADDED ---
         
-        // Skip for civilians and vehicles
-        if (group.IsDriving())
+        if (group.ShouldSkipInfantryOrders())
             return;
         
         int aliveCount = group.GetAliveCount();
@@ -4080,7 +4079,7 @@ class IA_AreaInstance
         }
         
         // Update legacy engagement system
-        if (!group.IsEngagedWithEnemy() && !group.IsDriving())
+        if (!group.IsEngagedWithEnemy() && !group.ShouldSkipInfantryOrders())
         {
             IA_Faction sourceFaction = reaction.GetSourceFaction();
             if (sourceFaction != IA_Faction.NONE)
@@ -4094,7 +4093,7 @@ class IA_AreaInstance
         }
         
         // New approach: Use tactical state system
-        if (!group.IsDriving())
+        if (!group.ShouldSkipInfantryOrders())
         {
             vector threatPos = reaction.GetSourcePosition();
             int aliveCount = group.GetAliveCount();
@@ -4443,7 +4442,7 @@ class IA_AreaInstance
         
         foreach (IA_AiGroup g_threat : m_military)
         {
-            if (!g_threat || g_threat.GetAliveCount() == 0 || g_threat.IsDriving())
+            if (!g_threat || g_threat.GetAliveCount() == 0 || g_threat.ShouldSkipInfantryOrders())
                 continue;
                 
             totalAvailableGroups++; // Count available groups here
@@ -4561,7 +4560,7 @@ class IA_AreaInstance
 
             foreach (IA_AiGroup g : m_military)
             {
-                if (!g || g.GetAliveCount() < 3 || g.IsDriving() || convertCount >= neededAttackers)
+                if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || convertCount >= neededAttackers)
                     continue;
                     
                 IA_GroupTacticalState state;
