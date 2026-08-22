@@ -1212,6 +1212,68 @@ class IA_VehicleManager: GenericEntity
         }
         return FindFallbackNavigationPoint(originalPosition, initialMaxDistance, groupNumber);
     }
+
+    static vector FindRoadInAnnulus(vector center, float minRadius, float maxRadius, int groupNumber = -1)
+    {
+        if (center == vector.Zero || maxRadius <= 0)
+            return vector.Zero;
+
+        if (minRadius < 0)
+            minRadius = 0;
+        if (minRadius > maxRadius)
+            minRadius = maxRadius;
+
+        AIWorld aiWorld = GetGame().GetAIWorld();
+        SCR_AIWorld scrAiWorld = SCR_AIWorld.Cast(aiWorld);
+        if (!scrAiWorld)
+            return vector.Zero;
+
+        RoadNetworkManager roadMngr = scrAiWorld.GetRoadNetworkManager();
+        if (!roadMngr)
+            return vector.Zero;
+
+        array<BaseRoad> roads = {};
+        vector aabbMin = Vector(center[0] - maxRadius, center[1] - 1000, center[2] - maxRadius);
+        vector aabbMax = Vector(center[0] + maxRadius, center[1] + 1000, center[2] + maxRadius);
+        roadMngr.GetRoadsInAABB(aabbMin, aabbMax, roads);
+        if (roads.IsEmpty())
+            return vector.Zero;
+
+        float minSq = minRadius * minRadius;
+        float maxSq = maxRadius * maxRadius;
+        array<vector> validPoints = {};
+        array<vector> pointsOnCurrentRoad = {};
+
+        foreach (BaseRoad road : roads)
+        {
+            if (!road)
+                continue;
+
+            pointsOnCurrentRoad.Clear();
+            road.GetPoints(pointsOnCurrentRoad);
+            if (pointsOnCurrentRoad.IsEmpty())
+                continue;
+
+            foreach (vector point : pointsOnCurrentRoad)
+            {
+                float distSq = vector.DistanceSq(center, point);
+                if (distSq >= minSq && distSq <= maxSq)
+                    validPoints.Insert(point);
+            }
+        }
+
+        if (validPoints.IsEmpty())
+            return vector.Zero;
+
+        int pickMax = validPoints.Count();
+        if (pickMax <= 0)
+            return vector.Zero;
+
+        int randomIndex = Math.RandomInt(0, pickMax);
+        if (randomIndex >= pickMax)
+            randomIndex = pickMax - 1;
+        return validPoints[randomIndex];
+    }
     
     // Filter function for road entities
     static bool FilterRoadEntities(IEntity entity)

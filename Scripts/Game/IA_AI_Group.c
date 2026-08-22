@@ -189,6 +189,8 @@ class IA_AiGroup
     private vector m_defendTarget = vector.Zero;
     // True when spawned by a defend / radio-tower / side-obj assault wave (not leftover garrison).
     private bool m_isDefendWaveGroup = false;
+    private bool m_bInboundSimPinned = false;
+    private vector m_vInboundTarget = vector.Zero;
     
     // Staggered spawning state
     private int m_pendingUnitsToSpawn = 0;
@@ -2820,6 +2822,7 @@ class IA_AiGroup
         {
             return;
         }
+        UnpinInboundSimulation();
         m_isSpawned = false;
         
         if (m_isDriving || m_referencedEntity)
@@ -3147,6 +3150,8 @@ class IA_AiGroup
         
         if (!IsSpawned() || !m_group)
             return;
+
+        TickInboundSimulation();
         
         // Evaluate danger state
         EvaluateDangerState();
@@ -3212,6 +3217,94 @@ class IA_AiGroup
     bool IsDefendWaveGroup()
     {
         return m_isDefendWaveGroup;
+    }
+
+    void EnableInboundSimulation(vector target)
+    {
+        m_bInboundSimPinned = true;
+        m_vInboundTarget = target;
+        RequestInboundNavmeshLoad();
+        PinInboundAgents();
+        ScheduleNextStateEvaluation();
+        Print(string.Format("[IA][InboundSim] pin target=%1", target.ToString()), LogLevel.NORMAL);
+    }
+
+    protected void RequestInboundNavmeshLoad()
+    {
+        AIWorld aiWorld = GetGame().GetAIWorld();
+        if (!aiWorld)
+            return;
+
+        vector spawnPos = GetOrigin();
+        if (spawnPos == vector.Zero)
+            spawnPos = m_staggeredSpawnPos;
+        if (spawnPos != vector.Zero)
+            aiWorld.RequestNavmeshLoad(spawnPos);
+        if (m_vInboundTarget != vector.Zero)
+            aiWorld.RequestNavmeshLoad(m_vInboundTarget);
+    }
+
+    protected void PinInboundAgents()
+    {
+        if (!m_bInboundSimPinned || !m_group)
+            return;
+
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        int maxLod = AIAgent.GetMaxLOD();
+        int nextToLast = maxLod - 1;
+        if (nextToLast < 0)
+            nextToLast = 0;
+
+        foreach (AIAgent agent : agents)
+        {
+            if (!agent)
+                continue;
+
+            if (agent.GetLOD() == maxLod)
+                agent.SetLOD(nextToLast);
+
+            agent.PreventMaxLOD();
+        }
+    }
+
+    protected void UnpinInboundSimulation()
+    {
+        if (!m_bInboundSimPinned)
+            return;
+
+        m_bInboundSimPinned = false;
+
+        if (m_group)
+        {
+            array<AIAgent> agents = {};
+            m_group.GetAgents(agents);
+            foreach (AIAgent agent : agents)
+            {
+                if (agent)
+                    agent.AllowMaxLOD();
+            }
+        }
+
+        Print("[IA][InboundSim] unpin", LogLevel.NORMAL);
+    }
+
+    protected void TickInboundSimulation()
+    {
+        if (!m_bInboundSimPinned)
+            return;
+
+        if (!m_group || GetAliveCount() == 0)
+        {
+            UnpinInboundSimulation();
+            return;
+        }
+
+        if (m_vInboundTarget == vector.Zero)
+            return;
+
+        if (vector.Distance(GetOrigin(), m_vInboundTarget) < IA_SpawnPlacement.ARRIVE_UNPIN_M)
+            UnpinInboundSimulation();
     }
 
     // Add a public setter for the assigned area
@@ -3307,6 +3400,7 @@ class IA_AiGroup
         {
             SetupDeathListenerForUnit(charEntity);
             m_unitsSpawnedCount++;
+            PinInboundAgents();
         }
         
         // Decrement pending count and schedule next spawn
@@ -3352,6 +3446,7 @@ class IA_AiGroup
 
         SetupDeathListenerForUnit(charEntity);
         m_unitsSpawnedCount++;
+        PinInboundAgents();
     }
 
     void FinalizeStaggeredSpawn()
@@ -3528,6 +3623,7 @@ class IA_AiGroup
         {
             SetupDeathListenerForUnit(charEntity); // Setup death listener for the added unit
             m_unitsSpawnedCount++;
+            PinInboundAgents();
         }
         
         // Decrement pending count and schedule next spawn

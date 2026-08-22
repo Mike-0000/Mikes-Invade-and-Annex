@@ -28,9 +28,6 @@ class IA_PendingStateRequest
 //! Single CallLater payload so reinforcement spawns don't drop AreaFaction / unit count.
 class IA_ReinforcementSpawnRequest
 {
-    int m_maxAttempts;
-    ref array<vector> m_playerPositions;
-    float m_safeRadiusSq;
     Faction m_areaFaction;
     bool m_forDefendMission;
     int m_sectorIndex;
@@ -2631,7 +2628,9 @@ class IA_AreaInstance
             // Add slight random delay to spread out spawning
             if (IA_Game.rng.RandInt(0, 100) < 60) // 60% chance to process on any given cycle
             {
-                vector pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 1.2, m_area.GetRadius() * 1.3, m_area.GetOrigin());
+                vector pos = IA_SpawnPlacement.FindInboundInfantrySpawn(m_area.GetOrigin(), -1);
+                if (pos == vector.Zero)
+                    return;
                 m_aiAttackers.SpawnNextGroup(pos, m_AreaFaction);
             }
             return;
@@ -2904,33 +2903,10 @@ class IA_AreaInstance
                 }
             }
             
-            // Try to find a road position near the perimeter for more realistic spawning
-            float spawnDistance = m_area.GetRadius() * 1.2;
-            float randomAngle = IA_Game.rng.RandInt(0, 360);
-            float rad = randomAngle * Math.PI / 180.0;
-            
             vector origin = m_area.GetOrigin();
-            vector perimeterPoint;
-            perimeterPoint[0] = origin[0] + Math.Cos(rad) * spawnDistance;
-            perimeterPoint[1] = origin[1];
-            perimeterPoint[2] = origin[2] + Math.Sin(rad) * spawnDistance;
-            perimeterPoint[1] = GetGame().GetWorld().GetSurfaceY(perimeterPoint[0], perimeterPoint[2]);
-            
-            // Try to find a road near this perimeter point
-            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(perimeterPoint, 150, activeGroup);
-            vector spawnPos;
-            
-            // If a road position was found, use it, otherwise use the perimeter point
-            if (roadPos != vector.Zero)
-            {
-                spawnPos = roadPos;
-                //////Print("[DEBUG] SpawnVehicleReinforcements: Found road location near perimeter at " + spawnPos, LogLevel.DEBUG);
-            }
-            else
-            {
-                spawnPos = perimeterPoint;
-                //////Print("[DEBUG] SpawnVehicleReinforcements: No road found, using perimeter position at " + spawnPos, LogLevel.DEBUG);
-            }
+            vector spawnPos = IA_SpawnPlacement.FindInboundVehicleSpawn(origin, activeGroup, -1);
+            if (spawnPos == vector.Zero)
+                continue;
             
             // Use military vehicles only
             Vehicle spawnedVehicle = IA_VehicleManager.SpawnRandomVehicle(m_faction, false, true, spawnPos, m_AreaFaction);
@@ -2942,6 +2918,8 @@ class IA_AreaInstance
                 
                 // Create AI units and place them in the vehicle
                 IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(spawnedVehicle, m_faction, m_area.GetOrigin(), this, m_AreaFaction);
+                if (vehicleGroup)
+                    vehicleGroup.EnableInboundSimulation(m_area.GetOrigin());
             }
             else
             {
@@ -3088,32 +3066,10 @@ class IA_AreaInstance
             activeGroup = IA_VehicleManager.GetActiveGroup();
         }
         
-        // Calculate a spawn position on the perimeter of the area
-        float randomAngle = IA_Game.rng.RandInt(0, 360);
-        float rad = randomAngle * Math.PI / 180.0;
-        
         vector origin = m_area.GetOrigin();
-        vector perimeterPoint;
-        perimeterPoint[0] = origin[0] + Math.Cos(rad) * (m_area.GetRadius() * 1.2);
-        perimeterPoint[1] = origin[1];
-        perimeterPoint[2] = origin[2] + Math.Sin(rad) * (m_area.GetRadius() * 1.2);
-        perimeterPoint[1] = GetGame().GetWorld().GetSurfaceY(perimeterPoint[0], perimeterPoint[2]);
-        
-        // Try to find a road near this perimeter point
-        vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(perimeterPoint, 150, activeGroup);
-        vector spawnPos;
-        
-        // If a road position was found, use it, otherwise use the perimeter point
-        if (roadPos != vector.Zero)
-        {
-            spawnPos = roadPos;
-            //////Print("[DEBUG] ScheduleVehicleReplacement: Found road location near perimeter at " + spawnPos, LogLevel.DEBUG);
-        }
-        else
-        {
-            spawnPos = perimeterPoint;
-            //////Print("[DEBUG] ScheduleVehicleReplacement: No road found, using perimeter position at " + spawnPos, LogLevel.DEBUG);
-        }
+        vector spawnPos = IA_SpawnPlacement.FindInboundVehicleSpawn(origin, activeGroup, -1);
+        if (spawnPos == vector.Zero)
+            return;
         
         // Spawn a new military vehicle
         Vehicle replacementVehicle = IA_VehicleManager.SpawnRandomVehicle(m_faction, false, true, spawnPos, m_AreaFaction);
@@ -3125,6 +3081,8 @@ class IA_AreaInstance
             
             // Place units in the vehicle
             IA_AiGroup vehicleGroup = IA_VehicleManager.PlaceUnitsInVehicle(replacementVehicle, m_faction, m_area.GetOrigin(), this, m_AreaFaction);
+            if (vehicleGroup)
+                vehicleGroup.EnableInboundSimulation(m_area.GetOrigin());
         }
         else
         {
@@ -4639,13 +4597,6 @@ class IA_AreaInstance
         Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
             m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
 
-        const int MAX_SPAWN_ATTEMPTS = 12; // Max tries to find a safe spot
-        const float SAFE_SPAWN_RADIUS_SQ = 400 * 400;
-
-        // Get player positions once per wave
-        ref array<vector> playerPositions = new array<vector>();
-        GetAllPlayerPositions(playerPositions);
-
         for (int i = 0; i < actualSpawnCount; i++)
         {
 			int sectorIndex = (m_reinforcementGroupsSpawned + i) % 4;
@@ -4654,9 +4605,6 @@ class IA_AreaInstance
 				unitCountOverride = defendFireteamSizes[i];
 
 			ref IA_ReinforcementSpawnRequest request = new IA_ReinforcementSpawnRequest();
-			request.m_maxAttempts = MAX_SPAWN_ATTEMPTS;
-			request.m_playerPositions = playerPositions;
-			request.m_safeRadiusSq = SAFE_SPAWN_RADIUS_SQ;
 			request.m_areaFaction = AreaFaction;
 			request.m_forDefendMission = forDefendMission;
 			request.m_sectorIndex = sectorIndex;
@@ -4674,108 +4622,25 @@ class IA_AreaInstance
 		if (!request)
 			return;
 
-		SpawnReinforcementEnactor(request.m_maxAttempts, request.m_playerPositions, request.m_safeRadiusSq, request.m_areaFaction, request.m_forDefendMission, request.m_sectorIndex, request.m_unitCountOverride);
+		SpawnReinforcementEnactor(request.m_areaFaction, request.m_forDefendMission, request.m_sectorIndex, request.m_unitCountOverride);
 	}
 
-	bool SpawnReinforcementEnactor(int MAX_SPAWN_ATTEMPTS, array<vector> playerPositions, float SAFE_SPAWN_RADIUS_SQ, Faction AreaFaction, bool forDefendMission = false, int sectorIndex = 0, int unitCountOverride = -1){
+	bool SpawnReinforcementEnactor(Faction AreaFaction, bool forDefendMission = false, int sectorIndex = 0, int unitCountOverride = -1){
 	
 		    if (!m_area)
 		        return false;
 
-		    vector spawnPos = vector.Zero;
-            bool safeSpawnFound = false;
 			bool spawnedAny = false;
 
-			// Compass sector so successive waves don't pile onto the same road.
-			float sectorStartAngle = sectorIndex * (Math.PI2 * 0.25);
-			float sectorEndAngle = sectorStartAngle + (Math.PI2 * 0.25);
-
-            for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)
-            {
-                // 1. Calculate potential Spawn Position (inside attempt loop)
-                // Increase search radius with each attempt
-                float spawnMinRadius = 220 + (attempt*40);
-                float spawnMaxRadius = 420 + (attempt*40);
-                
-                // --- BEGIN MODIFIED: Use defend target as center when in defend mode ---
                 vector center;
                 if (m_isInDefendMode && m_defendTarget != vector.Zero)
-                {
                     center = m_defendTarget;
-                    Print(string.Format("[SpawnReinforcementEnactor] Using defend target %1 as spawn center", center.ToString()), LogLevel.DEBUG);
-                }
                 else
-                {
                     center = m_area.GetOrigin();
-                }
-                // --- END MODIFIED ---
-                
-                // Try finding a road nearby first 
-                int activeGroup = -1;
-                array<IA_AreaMarker> markers = IA_AreaMarker.GetAreaMarkersForArea(m_area.GetName());
-                if (markers && !markers.IsEmpty() && markers[0]) activeGroup = markers[0].m_areaGroup; 
-                if (activeGroup < 0) activeGroup = IA_VehicleManager.GetActiveGroup();
-                vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(center, spawnMaxRadius, activeGroup, spawnMinRadius); 
-                
-				bool usedSectorFallback = false;
-                if (roadPos != vector.Zero)
-                {
-					float roadDX = roadPos[0] - center[0];
-					float roadDZ = roadPos[2] - center[2];
-					float roadAngle = Math.Atan2(roadDZ, roadDX);
-					if (roadAngle < 0)
-						roadAngle = roadAngle + Math.PI2;
 
-					bool inSector = false;
-					if (roadAngle >= sectorStartAngle && roadAngle < sectorEndAngle)
-						inSector = true;
-
-					if (inSector)
-						spawnPos = roadPos;
-					else
-						usedSectorFallback = true;
-                }
-                else 
-                { 
-					usedSectorFallback = true;
-                }
-
-				if (usedSectorFallback)
-				{
-					float angle = sectorStartAngle + (IA_Game.rng.RandFloat01() * (sectorEndAngle - sectorStartAngle));
-                    float dist = IA_Game.rng.RandFloatXY(spawnMinRadius, spawnMaxRadius);
-                    spawnPos[0] = center[0] + Math.Cos(angle) * dist;
-                    spawnPos[2] = center[2] + Math.Sin(angle) * dist;
-                    spawnPos[1] = GetGame().GetWorld().GetSurfaceY(spawnPos[0], spawnPos[2]);
-                }
-
-                // 2. Check distance to players
-                bool isSafe = true;
-                if (playerPositions)
-                {
-                    foreach (vector playerPos : playerPositions)
-                    {
-                        if (vector.DistanceSq(spawnPos, playerPos) < SAFE_SPAWN_RADIUS_SQ)
-                        {
-                            isSafe = false;
-                            break;
-                        }
-                    }
-                }
-
-                // 3. If safe, proceed and break attempt loop
-                if (isSafe)
-                {
-                    safeSpawnFound = true;
-                    break;
-                }
-            } // End of attempt loop
-
-            // If no safe spawn was found after all attempts, skip this group
-            if (!safeSpawnFound)
-            {
-                return false;
-            }
+                vector spawnPos = IA_SpawnPlacement.FindInboundInfantrySpawn(center, sectorIndex);
+                if (spawnPos == vector.Zero)
+                    return false;
 
             // 4. Create Group (with scaling) - Only if safe spot found
             int scaledUnitCount;
@@ -4802,7 +4667,7 @@ class IA_AreaInstance
             if (scaledUnitCount < 1)
                 scaledUnitCount = 1;
 
-            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, scaledUnitCount, AreaFaction);
+            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, scaledUnitCount, AreaFaction, false, true);
 
             // 5. Spawn and Integrate
             if (grp)
@@ -4833,6 +4698,7 @@ class IA_AreaInstance
                 }
                 
                 grp.SetTacticalState(initialState, targetPos, null, true);
+                grp.EnableInboundSimulation(targetPos);
                 
                 AddMilitaryGroup(grp);
                 
@@ -4946,22 +4812,9 @@ class IA_AreaInstance
     // --- BEGIN ADDED: Helper to get player positions ---
     static void GetAllPlayerPositions(out array<vector> playerPositions)
     {
-        playerPositions.Clear(); // Ensure the output array is empty
-        PlayerManager playerManager = GetGame().GetPlayerManager();
-        if (!playerManager)
-            return;
-
-        array<int> playerIds = {};
-        playerManager.GetAllPlayers(playerIds);
-
-        foreach (int playerId : playerIds)
-        {
-            IEntity playerEntity = playerManager.GetPlayerControlledEntity(playerId);
-            if (playerEntity)
-            {
-                playerPositions.Insert(playerEntity.GetOrigin());
-            }
-        }
+        if (!playerPositions)
+            playerPositions = new array<vector>();
+        IA_SpawnPlacement.CollectPlayerPositions(playerPositions);
     }
     // --- END ADDED ---
 
@@ -5782,60 +5635,10 @@ class IA_AreaInstance
     {
         // This combines logic from SpawnReinforcementEnactor and the arming step.
         
-        // 1. Find safe spawn point
-        vector spawnPos = vector.Zero;
-        bool safeSpawnFound = false;
-        const int MAX_SPAWN_ATTEMPTS = 12;
-        const float SAFE_SPAWN_RADIUS_SQ = 400 * 400;
-    
-        array<vector> playerPositions = {};
-        GetAllPlayerPositions(playerPositions);
-        
         vector center = m_area.GetOrigin();
-    
-        for (int attempt = 0; attempt < MAX_SPAWN_ATTEMPTS; attempt++)
-        {
-            float spawnMinRadius = 90 + (attempt * 40);
-            float spawnMaxRadius = 320 + (attempt * 40);
-            
-            int activeGroup = GetAreaGroup();
-            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(center, spawnMaxRadius, activeGroup, spawnMinRadius); 
-            
-            if (roadPos != vector.Zero)
-            {
-                spawnPos = roadPos;
-            }
-            else 
-            { 
-                float angle = IA_Game.rng.RandFloat01() * Math.PI2;
-                float dist = IA_Game.rng.RandFloatXY(spawnMinRadius, spawnMaxRadius);
-                spawnPos[0] = center[0] + Math.Cos(angle) * dist;
-                spawnPos[2] = center[2] + Math.Sin(angle) * dist;
-                spawnPos[1] = GetGame().GetWorld().GetSurfaceY(spawnPos[0], spawnPos[2]);
-            }
-    
-            bool isSafe = true;
-            foreach (vector playerPos : playerPositions)
-            {
-                if (vector.DistanceSq(spawnPos, playerPos) < SAFE_SPAWN_RADIUS_SQ)
-                {
-                    isSafe = false;
-                    break;
-                }
-            }
-    
-            if (isSafe)
-            {
-                safeSpawnFound = true;
-                break;
-            }
-        }
-    
-        if (!safeSpawnFound)
-        {
-            Print(string.Format("[AreaInstance] Failed to find safe spawn point for hostile civilian reinforcement in area %1.", m_area.GetName()), LogLevel.WARNING);
+        vector spawnPos = IA_SpawnPlacement.FindInboundInfantrySpawn(center, -1);
+        if (spawnPos == vector.Zero)
             return;
-        }
     
         // 2. Create the group
         float scaleFactor = IA_Game.GetAIScaleFactor();
@@ -5856,12 +5659,14 @@ class IA_AreaInstance
             if (m_isInDefendMode && m_defendTarget != vector.Zero)
             {
                 grp.SetDefendMode(true, m_defendTarget);
+                grp.EnableInboundSimulation(m_defendTarget);
             }
             else
             {
                 // Fallback to original behavior if not in defend mode for some reason.
                 vector targetPos = m_area.GetOrigin();
                 grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+                grp.EnableInboundSimulation(targetPos);
             }
 
             AddMilitaryGroup(grp); // Add them to the military roster since they are combatants

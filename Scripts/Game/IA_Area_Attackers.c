@@ -40,11 +40,13 @@ class IA_AreaAttackers
         int unitCount = IA_SquadCount(st, m_faction);
         
         // Use CreateMilitaryGroupFromUnits instead of CreateMilitaryGroup
-        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(origin, m_faction, unitCount, AreaFaction);
+        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(origin, m_faction, unitCount, AreaFaction, false, true);
         
         m_groups.Insert(grp);
         //Print("[DEBUG] New military group created and inserted.", LogLevel.NORMAL);
         grp.Spawn();
+        if (m_area)
+            grp.EnableInboundSimulation(m_area.GetOrigin());
 
         if (m_groups.Count() == m_groupCount)
         {
