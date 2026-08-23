@@ -131,24 +131,25 @@ class IA_AreaGroupManager
             return;
         }
 
-        // 5) Randomly select ONE QRF type to spawn (9 slots, 2 airborne)
-        int idx = Math.RandomInt(0, 9);
+        // 5) One QRF type. 10 slots: airborne 30, mechanized 30, motorized 20,
+        // infantry 10, armoured 10. Non-airborne keep their old relative share.
+        int idx = Math.RandomInt(0, 10);
         IA_QRFType selectedType;
         switch (idx)
         {
             case 0: selectedType = IA_QRFType.Infantry; break;
             case 1: selectedType = IA_QRFType.Armoured; break;
             case 2:
+            case 3:
+                selectedType = IA_QRFType.Motorized;
+                break;
             case 4:
             case 5:
+            case 6:
                 selectedType = IA_QRFType.Mechanized;
                 break;
-            case 7:
-            case 8:
-                selectedType = IA_QRFType.Airborne;
-                break;
             default:
-                selectedType = IA_QRFType.Motorized;
+                selectedType = IA_QRFType.Airborne;
                 break;
         }
 
