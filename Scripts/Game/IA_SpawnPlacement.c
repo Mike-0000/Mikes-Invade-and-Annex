@@ -2,7 +2,7 @@ class IA_SpawnPlacement
 {
 	static const float PLAYER_MIN_M = 280.0;
 	static const float PLAYER_MAX_M = 550.0;
-	static const float DESPAWN_PLAYER_SAFE_M = 400.0;
+	static const float DESPAWN_PLAYER_SAFE_M = 750.0;
 	static const float FIGHT_NEAR_AO_M = 700.0;
 	static const float CENTER_MIN_M = 220.0;
 	static const float CENTER_MAX_M = 550.0;
