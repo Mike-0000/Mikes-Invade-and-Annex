@@ -220,9 +220,9 @@ class IA_AiGroup
     private bool m_bKeepAltitude = false;
     private int m_iAirborneInFlight = 0;
     private vector m_vAirDropTarget = vector.Zero;
-    private float m_fAirSpawnRadius = 100;
+    private float m_fAirSpawnRadius = 250;
     private float m_fAirLzMin = 50;
-    private float m_fAirLzMax = 80;
+    private float m_fAirLzMax = 120;
     private MHJ_AiDropDirector m_airDirector;
     private IA_AreaInstance m_airDropArea;
     

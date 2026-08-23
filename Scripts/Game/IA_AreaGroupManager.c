@@ -633,7 +633,7 @@ class IA_AreaGroupManager
             grp.SetAssignedArea(areaInst.GetArea());
             if (forDefendMission)
                 grp.SetDefendMode(true, lz);
-            grp.BeginAirborneDrop(director, lz, areaInst, 100, 50, 80);
+            grp.BeginAirborneDrop(director, lz, areaInst, 250, 50, 120);
             areaInst.AddMilitaryGroup(grp);
 
             int delayMs = teamIndex * 150;
