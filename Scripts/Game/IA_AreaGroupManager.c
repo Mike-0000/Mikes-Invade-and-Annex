@@ -4,7 +4,8 @@ enum IA_QRFType
     Infantry,
     Motorized,
     Mechanized,
-    Armoured
+    Armoured,
+    Airborne
 }
 
 class IA_AreaGroupManager
@@ -119,17 +120,25 @@ class IA_AreaGroupManager
             return;
         }
 
-        // 5) Randomly select ONE QRF type to spawn
-        int idx = Math.RandomInt(0, 7); 
+        // 5) Randomly select ONE QRF type to spawn (9 slots, 2 airborne)
+        int idx = Math.RandomInt(0, 9);
         IA_QRFType selectedType;
         switch (idx)
         {
             case 0: selectedType = IA_QRFType.Infantry; break;
             case 1: selectedType = IA_QRFType.Armoured; break;
-			case 4:
-			case 5:
-            case 2: selectedType = IA_QRFType.Mechanized; break;
-            default: selectedType = IA_QRFType.Motorized; break;  // 3,6,7
+            case 2:
+            case 4:
+            case 5:
+                selectedType = IA_QRFType.Mechanized;
+                break;
+            case 7:
+            case 8:
+                selectedType = IA_QRFType.Airborne;
+                break;
+            default:
+                selectedType = IA_QRFType.Motorized;
+                break;
         }
 
         // Resolve final target as the closest area's origin to the computed danger position
@@ -159,8 +168,60 @@ class IA_AreaGroupManager
             case IA_QRFType.Motorized:  return "Motorized QRF";
             case IA_QRFType.Mechanized: return "Mechanized QRF";
             case IA_QRFType.Armoured:   return "Armoured QRF";
+            case IA_QRFType.Airborne:   return "Airborne QRF";
         }
         return "QRF";
+    }
+
+    bool ForceSpawnQRF(IA_QRFType type)
+    {
+        if (m_bShutDown)
+            return false;
+        if (!Replication.IsServer())
+            return false;
+        if (!m_areaInstances || m_areaInstances.IsEmpty())
+        {
+            Print("[IA][Admin] Force QRF failed: no area instances", LogLevel.WARNING);
+            return false;
+        }
+
+        IA_AreaInstance closestArea = null;
+        vector targetPos = vector.Zero;
+        if (!ComputeGroupThreatTarget(targetPos) || targetPos == vector.Zero)
+        {
+            int i;
+            int count = m_areaInstances.Count();
+            for (i = 0; i < count; i++)
+            {
+                IA_AreaInstance inst = m_areaInstances[i];
+                if (!inst || inst.IsShutDown() || !inst.GetArea())
+                    continue;
+                targetPos = inst.GetArea().GetOrigin();
+                closestArea = inst;
+                break;
+            }
+        }
+
+        if (targetPos == vector.Zero)
+        {
+            Print("[IA][Admin] Force QRF failed: no target area", LogLevel.WARNING);
+            return false;
+        }
+
+        if (!closestArea)
+            targetPos = ResolveClosestAreaTarget(targetPos, closestArea);
+        if (!closestArea)
+        {
+            Print("[IA][Admin] Force QRF failed: could not resolve area", LogLevel.WARNING);
+            return false;
+        }
+
+        bool spawned = SpawnQRFForTarget(type, targetPos, closestArea, null, false, false);
+        if (spawned)
+            m_lastQRFTime = System.GetUnixTime();
+        else
+            Print("[IA][Admin] Force QRF spawn failed for " + QRFTypeToString(type), LogLevel.WARNING);
+        return spawned;
     }
 
     //! One mid-hold vehicle pulse for Defend missions. Biased truck/APC; rare armour. No pure infantry.
@@ -350,6 +411,11 @@ class IA_AreaGroupManager
                 success = (a1 || a2 || inf);
                 break;
             }
+            case IA_QRFType.Airborne:
+            {
+                success = SpawnAirborneQRF(targetAreaInst, enemyGameFaction, targetPos, forDefendMission);
+                break;
+            }
         }
 
         if (success)
@@ -444,6 +510,87 @@ class IA_AreaGroupManager
         // Lock S&D order to this threat for the lifetime of this reinforcement
         IA_LockGroupToSearchAndDestroy(areaInst, grp, targetPos);
         return true;
+    }
+
+    private bool SpawnAirborneQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool forDefendMission = false)
+    {
+        if (!areaInst || !enemyGameFaction)
+            return false;
+
+        float scale = IA_Game.GetAIScaleFactor();
+        int jumperCount = Math.Round(14 * scale);
+        if (jumperCount < 10)
+            jumperCount = 10;
+        if (jumperCount > 24)
+            jumperCount = 24;
+
+        vector lz = targetPos;
+        if (lz == vector.Zero)
+            lz = areaInst.GetArea().GetOrigin();
+
+        BaseWorld world = GetGame().GetWorld();
+        float terrainY = 0;
+        if (world)
+            terrainY = world.GetSurfaceY(lz[0], lz[2]);
+        lz[1] = terrainY;
+
+        vector release = lz;
+        vector wind = MHJ_FlightAero.WindWorld(terrainY + MHJ_Constants.AI_DROP_AGL, 0);
+        wind[1] = 0;
+        if (wind.Length() > 0.2)
+        {
+            vector upwind = wind * -1;
+            upwind.Normalize();
+            release = release + upwind * 120;
+        }
+        release[1] = terrainY + MHJ_Constants.AI_DROP_AGL;
+
+        MHJ_AiDropDirector director = MHJ_AiDropDirector.SpawnStick(lz);
+        if (!director)
+        {
+            Print("[QRF] Airborne miss: drop stick refused or missing.", LogLevel.WARNING);
+            return false;
+        }
+
+        int remaining = jumperCount;
+        int teamIndex = 0;
+        bool spawnedAny = false;
+        while (remaining > 0)
+        {
+            int teamSize = 5;
+            if (remaining <= 6)
+                teamSize = remaining;
+            if (teamSize < 1)
+                break;
+
+            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(release, IA_Faction.USSR, teamSize, enemyGameFaction, false, true, true);
+            if (!grp)
+            {
+                remaining = remaining - teamSize;
+                continue;
+            }
+
+            grp.SetAssignedArea(areaInst.GetArea());
+            if (forDefendMission)
+                grp.SetDefendMode(true, lz);
+            grp.BeginAirborneDrop(director, lz, areaInst, 100, 50, 80);
+            areaInst.AddMilitaryGroup(grp);
+            grp.EnableInboundSimulation(lz);
+
+            int delayMs = teamIndex * 150;
+            if (delayMs <= 0)
+                grp.SpawnNextUnit();
+            else
+                GetGame().GetCallqueue().CallLater(grp.SpawnNextUnit, delayMs, false);
+
+            spawnedAny = true;
+            remaining = remaining - teamSize;
+            teamIndex = teamIndex + 1;
+        }
+
+        if (!spawnedAny)
+            Print("[QRF] Airborne miss: no fireteams created.", LogLevel.WARNING);
+        return spawnedAny;
     }
 
     private bool SpawnVehicleQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool preferAPC, bool allowTrucks, bool armourOnly, vector preferredSpawn, bool forDefendMission = false)

@@ -217,6 +217,9 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		ref MUI_Row actionRow = runtime.CreateRow("actionRow");
 		actionRow.SetGap(12);
 
+		ref MUI_Button actionsBtn = runtime.CreateButton("Mission Actions", "actions");
+		actionsBtn.GetOnClicked().Insert(OnMikesActions);
+
 		ref MUI_Button promoteBtn = runtime.CreateButton("Promote Self", "promote");
 		promoteBtn.GetOnClicked().Insert(OnMikesPromoteSelf);
 
@@ -227,6 +230,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		ref MUI_Button closeBtn = runtime.CreateButton("Close", "close");
 		closeBtn.GetOnClicked().Insert(OnMUIBack);
 
+		actionRow.AddChild(actionsBtn);
 		actionRow.AddChild(promoteBtn);
 		actionRow.AddChild(completeBtn);
 		actionRow.AddChild(closeBtn);
@@ -474,6 +478,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			factionKey,
 			haloMaxPlayers
 		);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnMikesActions()
+	{
+		GetGame().GetMenuManager().CloseMenu(this);
+		GetGame().GetMenuManager().OpenMenu(ChimeraMenuPreset.IA_AdminActionsMenu);
 	}
 
 	//------------------------------------------------------------------------------------------------

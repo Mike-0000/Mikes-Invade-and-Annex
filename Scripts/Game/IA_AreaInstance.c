@@ -883,7 +883,7 @@ class IA_AreaInstance
             
             // --- BEGIN MODIFIED: Don't override defend mode groups ---
             // Check if the group is already in defend mode - if so, don't change its state
-            if (group.IsInDefendMode() || group.IsObjectiveUnit() || group.IsMortarCrew())
+            if (group.IsInDefendMode() || group.IsObjectiveUnit() || group.IsMortarCrew() || group.IsAirborneDrop())
             {
                 Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, objective unit, or mortar crew, preserving existing tactical state"), LogLevel.DEBUG);
                 // Still add to our state tracking for consistency, but don't override

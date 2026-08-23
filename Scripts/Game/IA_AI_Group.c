@@ -216,6 +216,15 @@ class IA_AiGroup
     private bool m_isDefendWaveGroup = false;
     private bool m_bInboundSimPinned = false;
     private vector m_vInboundTarget = vector.Zero;
+    private bool m_bAirborneDrop = false;
+    private bool m_bKeepAltitude = false;
+    private int m_iAirborneInFlight = 0;
+    private vector m_vAirDropTarget = vector.Zero;
+    private float m_fAirSpawnRadius = 100;
+    private float m_fAirLzMin = 50;
+    private float m_fAirLzMax = 80;
+    private MHJ_AiDropDirector m_airDirector;
+    private IA_AreaInstance m_airDropArea;
     
     // Staggered spawning state
     private int m_pendingUnitsToSpawn = 0;
@@ -507,14 +516,14 @@ class IA_AiGroup
     // - You need the group immediately (e.g., for vehicle spawning, reinforcements)
     // - You already have a good spawn position
     // - Performance is not a concern (small number of groups)
-    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false)
+    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false)
     {
         if (unitCount <= 0)
             return null;
 
         // For backward compatibility, create the group immediately at the initial position
         // The async road search should be initiated separately by callers that want it
-        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup, useExactPosition);
+        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup, useExactPosition, keepAltitude);
     }
     
     // Start an async road search and group creation
@@ -663,7 +672,7 @@ class IA_AiGroup
 	
     
     // Create a military group at a specific position (no road search)
-    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false)
+    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false)
     {
         if (unitCount <= 0)
             return null;
@@ -722,11 +731,12 @@ class IA_AiGroup
         }
 
         vector groundPos = finalSpawnPos;
-		if (!HVTGroup)
+		if (!HVTGroup && !keepAltitude)
         {
 	        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
 	        groundPos[1] = groundY;
 		}
+        grp.m_bKeepAltitude = keepAltitude;
         grp.m_group.SetOrigin(groundPos);
 
         // Set up staggered spawning state
@@ -737,8 +747,9 @@ class IA_AiGroup
         grp.m_staggeredAreaFaction = AreaFaction;
         
         Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Starting staggered spawning of %1 units for faction %2 at %3", unitCount, faction, finalSpawnPos.ToString()), LogLevel.NORMAL);
-        
-        grp.SpawnNextUnit();
+
+        if (!keepAltitude)
+            grp.SpawnNextUnit();
 
         return grp;
     }
@@ -3658,6 +3669,96 @@ class IA_AiGroup
         return m_isDefendWaveGroup;
     }
 
+    bool IsAirborneDrop()
+    {
+        return m_bAirborneDrop;
+    }
+
+    void BeginAirborneDrop(MHJ_AiDropDirector director, vector target, IA_AreaInstance areaInst, float spawnRadius, float lzMin, float lzMax)
+    {
+        m_bAirborneDrop = true;
+        m_bKeepAltitude = true;
+        m_airDirector = director;
+        m_vAirDropTarget = target;
+        m_airDropArea = areaInst;
+        m_fAirSpawnRadius = spawnRadius;
+        m_fAirLzMin = lzMin;
+        m_fAirLzMax = lzMax;
+        m_iAirborneInFlight = 0;
+        if (director)
+            director.GetOnJumperFinished().Insert(OnAirborneJumperFinished);
+    }
+
+    void OnAirborneJumperFinished(IEntity character)
+    {
+        if (!m_bAirborneDrop)
+            return;
+        if (!ContainsCharacter(character))
+            return;
+
+        m_iAirborneInFlight = m_iAirborneInFlight - 1;
+        if (m_iAirborneInFlight > 0)
+            return;
+
+        ReleaseAirborneToAttack();
+    }
+
+    protected bool ContainsCharacter(IEntity character)
+    {
+        if (!character)
+            return false;
+
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        int count = characters.Count();
+        int i;
+        for (i = 0; i < count; i++)
+        {
+            if (characters[i] == character)
+                return true;
+        }
+        return false;
+    }
+
+    protected void ReleaseAirborneToAttack()
+    {
+        if (!m_bAirborneDrop)
+            return;
+
+        m_bAirborneDrop = false;
+        RemoveAllOrders(true);
+        AddOrder(m_vAirDropTarget, IA_AiOrder.SearchAndDestroy, true);
+        SetTacticalState(IA_GroupTacticalState.Attacking, m_vAirDropTarget, null, true);
+        if (m_airDropArea)
+            m_airDropArea.RegisterForcedReinforcementSND(this, m_vAirDropTarget, true);
+
+        Print(string.Format("[IA][Airborne] Fireteam landed, S&D at %1", m_vAirDropTarget.ToString()), LogLevel.NORMAL);
+    }
+
+    protected void RegisterAirborneJumper(IEntity charEntity)
+    {
+        if (!m_bAirborneDrop || !m_airDirector)
+            return;
+
+        ChimeraCharacter jumper = ChimeraCharacter.Cast(charEntity);
+        if (!jumper)
+            return;
+
+        vector lz = m_vAirDropTarget;
+        if (IA_Game.rng)
+            lz = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
+        BaseWorld world = GetGame().GetWorld();
+        if (world)
+            lz[1] = world.GetSurfaceY(lz[0], lz[2]);
+
+        if (!m_airDirector.AddJumper(jumper, lz))
+        {
+            Print("[IA][Airborne] Director rejected jumper", LogLevel.WARNING);
+            return;
+        }
+
+        m_iAirborneInFlight = m_iAirborneInFlight + 1;
+    }
+
     void EnableInboundSimulation(vector target)
     {
         m_bInboundSimPinned = true;
@@ -3795,7 +3896,13 @@ class IA_AiGroup
         
         // Generate spawn position
         vector unitSpawnPos = m_staggeredSpawnPos;
-        if (!m_HVTGroup)
+        if (m_bAirborneDrop)
+        {
+            vector offset = IA_Game.rng.GenerateRandomPointInRadius(8, m_fAirSpawnRadius, vector.Zero);
+            unitSpawnPos[0] = m_staggeredSpawnPos[0] + offset[0];
+            unitSpawnPos[2] = m_staggeredSpawnPos[2] + offset[2];
+        }
+        else if (!m_HVTGroup)
         {
             unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
         }
@@ -3840,6 +3947,7 @@ class IA_AiGroup
             SetupDeathListenerForUnit(charEntity);
             m_unitsSpawnedCount++;
             PinInboundAgents();
+            RegisterAirborneJumper(charEntity);
         }
         
         // Decrement pending count and schedule next spawn
@@ -3886,6 +3994,7 @@ class IA_AiGroup
         SetupDeathListenerForUnit(charEntity);
         m_unitsSpawnedCount++;
         PinInboundAgents();
+        RegisterAirborneJumper(charEntity);
     }
 
     void FinalizeStaggeredSpawn()
@@ -3963,6 +4072,12 @@ class IA_AiGroup
             if (m_isMortarCrew)
             {
                 Print("[IA_AiGroup.OnStaggeredSpawningComplete] Mortar crew, skipping default DefendPatrol", LogLevel.DEBUG);
+            }
+            else if (m_bAirborneDrop)
+            {
+                Print("[IA_AiGroup.OnStaggeredSpawningComplete] Airborne drop, holding orders until land", LogLevel.NORMAL);
+                if (m_iAirborneInFlight <= 0)
+                    ReleaseAirborneToAttack();
             }
             else if (!IsInDefendMode() && !m_lastAssignedArea)
             {
