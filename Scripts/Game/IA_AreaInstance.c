@@ -5714,8 +5714,15 @@ class IA_AreaInstance
             return;
         }
 
-        // Use the async road search version
-        IA_AiGroup.StartAsyncMilitaryGroupCreation(spawnPos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, useExactPosition);
+        vector safePos;
+        bool exact;
+        if (!IA_SpawnPlacement.ResolveOccupyingSpawn(spawnPos, m_area.GetOrigin(), useExactPosition, safePos, exact))
+        {
+            Print(string.Format("[IA][AreaInstance] occupying spawn skipped, no inbound point away from players at %1", spawnPos.ToString()), LogLevel.WARNING);
+            return;
+        }
+
+        IA_AiGroup.StartAsyncMilitaryGroupCreation(safePos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, exact);
     }
     
     // Callback for when async group creation completes
