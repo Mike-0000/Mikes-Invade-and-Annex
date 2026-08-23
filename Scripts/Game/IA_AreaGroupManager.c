@@ -47,15 +47,26 @@ class IA_AreaGroupManager
     private Faction m_qrfRetryFaction;
     private bool m_qrfRetryDefend = false;
 
+    private const int AIRBORNE_QRF_DELAY_MIN_MS = 40000;
+    private const int AIRBORNE_QRF_DELAY_MAX_MS = 60000;
+    private bool m_bAirbornePending = false;
+    private vector m_airborneTarget = vector.Zero;
+    private IA_AreaInstance m_airborneArea;
+    private Faction m_airborneFaction;
+    private bool m_airborneDefend = false;
+
     // Entry point called periodically (from MissionInitializer) to evaluate spawning of QRFs for the whole area group
     void Shutdown()
     {
         m_bShutDown = true;
         m_qrfRetryPending = false;
+        m_bAirbornePending = false;
         ScriptCallQueue queue = GetGame().GetCallqueue();
         if (queue)
         {
             queue.Remove(OnQRFRetry);
+            queue.Remove(OnAirborneQRFSpawn);
+            queue.Remove(OnAirborneQRFSpawnRetry);
             queue.Remove(QRF_PollTruckArrival);
             queue.Remove(QRF_AddDefendAfterDisembark);
         }
@@ -413,7 +424,7 @@ class IA_AreaGroupManager
             }
             case IA_QRFType.Airborne:
             {
-                success = SpawnAirborneQRF(targetAreaInst, enemyGameFaction, targetPos, forDefendMission);
+                success = ScheduleAirborneQRF(targetAreaInst, enemyGameFaction, targetPos, forDefendMission);
                 break;
             }
         }
@@ -510,6 +521,59 @@ class IA_AreaGroupManager
         // Lock S&D order to this threat for the lifetime of this reinforcement
         IA_LockGroupToSearchAndDestroy(areaInst, grp, targetPos);
         return true;
+    }
+
+    private bool ScheduleAirborneQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool forDefendMission)
+    {
+        if (m_bAirbornePending)
+        {
+            Print("[QRF] Airborne miss: drop already pending.", LogLevel.WARNING);
+            return false;
+        }
+        if (!areaInst || !enemyGameFaction)
+            return false;
+
+        m_bAirbornePending = true;
+        m_airborneArea = areaInst;
+        m_airborneFaction = enemyGameFaction;
+        m_airborneTarget = targetPos;
+        m_airborneDefend = forDefendMission;
+
+        int span = AIRBORNE_QRF_DELAY_MAX_MS - AIRBORNE_QRF_DELAY_MIN_MS;
+        if (span < 0)
+            span = 0;
+        int delayMs = AIRBORNE_QRF_DELAY_MIN_MS;
+        if (IA_Game.rng)
+            delayMs = delayMs + IA_Game.rng.RandInt(0, span + 1);
+        else
+            delayMs = delayMs + Math.RandomInt(0, span + 1);
+
+        GetGame().GetCallqueue().CallLater(this.OnAirborneQRFSpawn, delayMs, false);
+        Print(string.Format("[QRF] Airborne inbound, drop in %1s.", (delayMs / 1000).ToString()), LogLevel.NORMAL);
+        return true;
+    }
+
+    void OnAirborneQRFSpawn()
+    {
+        m_bAirbornePending = false;
+        if (m_bShutDown)
+            return;
+        if (!m_airborneArea || m_airborneArea.IsShutDown())
+            return;
+        if (!SpawnAirborneQRF(m_airborneArea, m_airborneFaction, m_airborneTarget, m_airborneDefend))
+        {
+            Print("[QRF] Airborne drop failed after inbound warning; retrying in 15s.", LogLevel.WARNING);
+            GetGame().GetCallqueue().CallLater(this.OnAirborneQRFSpawnRetry, 15000, false);
+        }
+    }
+
+    void OnAirborneQRFSpawnRetry()
+    {
+        if (m_bShutDown)
+            return;
+        if (!m_airborneArea || m_airborneArea.IsShutDown())
+            return;
+        SpawnAirborneQRF(m_airborneArea, m_airborneFaction, m_airborneTarget, m_airborneDefend);
     }
 
     private bool SpawnAirborneQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool forDefendMission = false)
