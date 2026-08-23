@@ -188,6 +188,7 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 ## Prefabs, configs, resources
 
 - Assets are **`ResourceName`**, usually `{GUID}path/to/file.et`. Do not hardcode raw filesystem paths.
+- **A hand-authored `.meta` GUID that Workbench has not imported is not a resource.** `Resource.Load` can still spawn by path (`Wrong GUID/name for resource`) but `RplComponent` then fails `Attempting to insert an entity with invalid prefab resource GUID`. Script-spawn `GenericEntity` / `SpawnEntity(typename)` or reuse a GUID Workbench already registered. Evidence: `runtime:` `MHJ_AiDropStick.et` `{C4E8A27B1F906E01}` and `MHJ_AiCanopyVisual.et` `{C4E8A27B1F906E02}`.
 - Spawn with prefab APIs + `EntitySpawnParams`. Validate world + resource before spawn.
 - Prefabs `.et`, configs `.conf`, layouts `.layout`. Addon identity is `addon.gproj` (`ID`, `GUID`, `Dependencies`).
 - Engine dependency GUID: **`58D0FB3206B6F859`**. Mike's UI: **`B3F91C6A4E275D08`**. Map HUD: **`D8E4A1C07B359F26`**.
@@ -212,6 +213,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-22 — Hand-authored `.meta` GUIDs that Workbench never imported spawn by path then fail RPL insert (`Wrong GUID/name`, `invalid prefab resource GUID`; `runtime:` AI drop stick/visual).
 - 2026-08-21 — `SCR_AIToggleMaxLOD` OnAbort NodeErrors when `HandleFailedNavlinkDoor.bt` is aborted before `AgentIn` is written (`SCR_AIToggleMaxLOD.c:31-48`, `runtime:` No agent provided!).
 - 2026-08-21 — `null` cannot be passed for an enum argument (`Cannot convert 'Class' to 'int'`; `compiler: IA_AI_Group.c`).
 - 2026-08-21 — `Group.bt` DecideActivity idles 0.3s; `ActivityDefend.bt` and `GetInNearestVehicle.bt` re-read `GetCurrentWaypoint()` and NodeError on the wrong class (`SCR_AIGetDefendWaypointParameters.c:21`, `SCR_AIGetInNearestWaypointParameters.c:20`, `runtime:` Wrong class of provided Waypoint).
