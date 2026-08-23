@@ -66,6 +66,18 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void IA_AskForceQRF(int type)
+	{
+		if (Replication.IsServer())
+		{
+			IA_ForceQRFIfAdmin(type);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_ForceQRF, type);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
 	protected void RpcAsk_IA_UpdateAdminConfig(string packed)
 	{
@@ -98,6 +110,13 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_PromoteSelf()
 	{
 		IA_PromoteSelfIfAdmin();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_ForceQRF(int type)
+	{
+		IA_ForceQRFIfAdmin(type);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -190,6 +209,31 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	protected void IA_ForceQRFIfAdmin(int type)
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Force QRF rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (!init)
+		{
+			Print("[IA][Admin] Force QRF rejected: mission initializer missing", LogLevel.ERROR);
+			return;
+		}
+
+		IA_AreaGroupManager mgr = init.GetCurrentAreaGroupManager();
+		if (!mgr)
+		{
+			Print("[IA][Admin] Force QRF rejected: no area group manager", LogLevel.WARNING);
+			return;
+		}
+
+		mgr.ForceSpawnQRF(type);
+	}
+
 	protected bool IA_IsAdminCaller()
 	{
 		if (!Replication.IsRunning())

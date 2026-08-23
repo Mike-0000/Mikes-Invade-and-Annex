@@ -218,7 +218,12 @@ class IA_MissionInitializer : GenericEntity
 			if(Math.RandomInt(1,20) > 1) // 95% chance to use a modded faction
 				actualFactions.Remove(actualFactions.Find(factionManager.GetFactionByKey("USSR")));
 		}
-		return actualFactions[Math.RandomInt(0, actualFactions.Count()-1)];
+		int factionCount = actualFactions.Count();
+		if (factionCount <= 0)
+			return null;
+		if (factionCount == 1)
+			return actualFactions[0];
+		return actualFactions[Math.RandomInt(0, factionCount)];
 	}
 	
 	void ProceedToNextZone()

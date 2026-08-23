@@ -61,6 +61,39 @@ class IA_SpawnPlacement
 		return false;
 	}
 
+	//! Occupying / scale-up spawn is not inbound. If the requested town point is
+	//! inside PLAYER_MIN_M, move it to a legal inbound point. When a fight is
+	//! already near the AO, keep the point exact so later road-search cannot
+	//! walk it onto a player. Returns false if no safe point exists.
+	static bool ResolveOccupyingSpawn(vector requested, vector center, bool wasExact, out vector outPos, out bool outExact)
+	{
+		outPos = requested;
+		outExact = wasExact;
+
+		if (requested == vector.Zero || center == vector.Zero)
+			return false;
+
+		ref array<vector> players = new array<vector>();
+		CollectPlayerPositions(players);
+
+		if (IsNearAnyPlayer(requested, players, PLAYER_MIN_M))
+		{
+			vector inbound = FindInboundInfantrySpawn(center, -1);
+			if (inbound == vector.Zero)
+				return false;
+
+			Print(string.Format("[IA][SpawnPlacement] occupying relocate from %1 to %2", requested.ToString(), inbound.ToString()), LogLevel.NORMAL);
+			outPos = inbound;
+			outExact = true;
+			return true;
+		}
+
+		if (IsFightNearAo(center, players))
+			outExact = true;
+
+		return true;
+	}
+
 	static bool IsLegalInbound(vector pos, vector center, array<vector> players, float centerMax, bool applyPlayerMax)
 	{
 		if (pos == vector.Zero)

@@ -8,6 +8,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Panel m_PageCiv;
 	protected ref MUI_Panel m_PageArty;
 	protected ref MUI_Panel m_PageHq;
+	protected ref MUI_Panel m_PageQrf;
+
+	protected ref MUI_Button m_QrfInfantryBtn;
+	protected ref MUI_Button m_QrfMotorizedBtn;
+	protected ref MUI_Button m_QrfMechanizedBtn;
+	protected ref MUI_Button m_QrfArmouredBtn;
+	protected ref MUI_Button m_QrfAirborneBtn;
 
 	protected ref MUI_NumericField m_AIField;
 	protected ref MUI_NumericField m_StaticAIField;
@@ -68,6 +75,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Tabs.AddTab("Civilians");
 		m_Tabs.AddTab("Artillery");
 		m_Tabs.AddTab("HQ");
+		m_Tabs.AddTab("QRF");
 		m_Tabs.GetOnChanged().Insert(OnAdminTabChanged);
 
 		ref MUI_ScrollView scroll = runtime.CreateScrollView("scroll");
@@ -79,6 +87,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageCiv = MakePage(runtime, "pageCiv");
 		m_PageArty = MakePage(runtime, "pageArty");
 		m_PageHq = MakePage(runtime, "pageHq");
+		m_PageQrf = MakePage(runtime, "pageQrf");
 
 		m_AIField = runtime.CreateNumericField("AI scale multiplier", "ai");
 		m_AIField.SetRange(0.1, 10);
@@ -184,10 +193,42 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageHq.AddChild(factionLbl);
 		m_PageHq.AddChild(m_FactionDrop);
 
+		ref MUI_Label qrfLbl = runtime.CreateLabel("Spawn QRF through the normal mission path", "qrfLbl");
+		qrfLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		qrfLbl.SetMuted(true);
+
+		m_QrfInfantryBtn = runtime.CreateButton("Infantry QRF", "qrfInf");
+		m_QrfInfantryBtn.GetOnClicked().Insert(OnQrfInfantry);
+		m_QrfMotorizedBtn = runtime.CreateButton("Motorized QRF", "qrfMotor");
+		m_QrfMotorizedBtn.GetOnClicked().Insert(OnQrfMotorized);
+		m_QrfMechanizedBtn = runtime.CreateButton("Mechanized QRF", "qrfMech");
+		m_QrfMechanizedBtn.GetOnClicked().Insert(OnQrfMechanized);
+		m_QrfArmouredBtn = runtime.CreateButton("Armoured QRF", "qrfArmour");
+		m_QrfArmouredBtn.GetOnClicked().Insert(OnQrfArmoured);
+		m_QrfAirborneBtn = runtime.CreateButton("Airborne QRF", "qrfAir");
+		m_QrfAirborneBtn.MakeAccent();
+		m_QrfAirborneBtn.GetOnClicked().Insert(OnQrfAirborne);
+
+		ref MUI_Row qrfRow1 = runtime.CreateRow("qrfRow1");
+		qrfRow1.SetGap(12);
+		qrfRow1.AddChild(m_QrfInfantryBtn);
+		qrfRow1.AddChild(m_QrfMotorizedBtn);
+		qrfRow1.AddChild(m_QrfMechanizedBtn);
+
+		ref MUI_Row qrfRow2 = runtime.CreateRow("qrfRow2");
+		qrfRow2.SetGap(12);
+		qrfRow2.AddChild(m_QrfArmouredBtn);
+		qrfRow2.AddChild(m_QrfAirborneBtn);
+
+		m_PageQrf.AddChild(qrfLbl);
+		m_PageQrf.AddChild(qrfRow1);
+		m_PageQrf.AddChild(qrfRow2);
+
 		scroll.AddChild(m_PageScaling);
 		scroll.AddChild(m_PageCiv);
 		scroll.AddChild(m_PageArty);
 		scroll.AddChild(m_PageHq);
+		scroll.AddChild(m_PageQrf);
 
 		ref MUI_Panel footerBtns = runtime.CreatePanel("footerBtns");
 		footerBtns.GetStyle().m_Fill = Color.FromInt(0);
@@ -273,6 +314,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_PageArty.SetVisible(index == 2);
 		if (m_PageHq)
 			m_PageHq.SetVisible(index == 3);
+		if (m_PageQrf)
+			m_PageQrf.SetVisible(index == 4);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -474,6 +517,44 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			factionKey,
 			haloMaxPlayers
 		);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnQrfInfantry()
+	{
+		RequestQRF(IA_QRFType.Infantry);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnQrfMotorized()
+	{
+		RequestQRF(IA_QRFType.Motorized);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnQrfMechanized()
+	{
+		RequestQRF(IA_QRFType.Mechanized);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnQrfArmoured()
+	{
+		RequestQRF(IA_QRFType.Armoured);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnQrfAirborne()
+	{
+		RequestQRF(IA_QRFType.Airborne);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void RequestQRF(IA_QRFType type)
+	{
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+			pc.IA_AskForceQRF(type);
 	}
 
 	//------------------------------------------------------------------------------------------------

@@ -49,6 +49,8 @@ class IA_Game
     private const float MIN_SCALE_FACTOR = 0.8;      // Minimum scaling for solo players
     private const float BASELINE_SCALE_FACTOR = 1.07; // Baseline scaling (at BASELINE_PLAYER_COUNT)
     private const float MAX_SCALE_FACTOR = 1.8;      // Maximum scaling cap for high player counts
+    private const int AIRBORNE_QRF_JUMPERS_MIN = 14;
+    private const int AIRBORNE_QRF_JUMPERS_MAX = 40;
 
     // Static method to set the current area instance
     static void SetCurrentAreaInstance(IA_AreaInstance instance)
@@ -242,6 +244,27 @@ class IA_Game
 
         // Return unmodified dynamic scale factor
         return dynamicScaleFactor;
+    }
+
+    //! 14 jumpers at min AI scale, 40 at 80+ (max scale 1.8). Same curve as GetAIScaleFactor.
+    static int GetAirborneQRFJumperCount()
+    {
+        float scale = GetAIScaleFactor();
+        float span = MAX_SCALE_FACTOR - MIN_SCALE_FACTOR;
+        float t = 0;
+        if (span > 0.001)
+            t = (scale - MIN_SCALE_FACTOR) / span;
+        if (t < 0)
+            t = 0;
+        if (t > 1)
+            t = 1;
+
+        int count = Math.Round(AIRBORNE_QRF_JUMPERS_MIN + t * (AIRBORNE_QRF_JUMPERS_MAX - AIRBORNE_QRF_JUMPERS_MIN));
+        if (count < AIRBORNE_QRF_JUMPERS_MIN)
+            count = AIRBORNE_QRF_JUMPERS_MIN;
+        if (count > AIRBORNE_QRF_JUMPERS_MAX)
+            count = AIRBORNE_QRF_JUMPERS_MAX;
+        return count;
     }
     
     // Calculate max vehicles based on player count (also using a more gentle scaling curve)
