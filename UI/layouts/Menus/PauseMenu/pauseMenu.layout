@@ -552,79 +552,11 @@ FrameWidgetClass {
                 HorizontalAlign 0
                }
                Clipping Ancestor
-               Text "I&A Admin Config"
+               Text "Invade and Annex Admin Options"
                "Font Size" 20
                "Min Font Size" 20
                "Vertical Alignment" Center
                FontProperties FontProperties "{5CF76978B6444251}" {
-                Font "{3E7733BAC8C831F6}UI/Fonts/RobotoCondensed/RobotoCondensed_Regular.fnt"
-               }
-               "Line Spacing" 10
-              }
-             }
-            }
-           }
-          }
-         }
-        }
-       }
-      }
-      ButtonWidgetClass "{686635B6A4DDAE00}" {
-       Name "Invade and Annex Admin Actions"
-       Slot LayoutSlot "{686635B7C48BE001}" {
-        HorizontalAlign 3
-        VerticalAlign 1
-       }
-       "Z Order" 5
-       Clipping False
-       components {
-        SCR_ModularButtonComponent "{5ED6B465C4BE35E4}" {
-         m_bCanBeToggled 1
-         m_bToggledOnlyThroughApi 1
-         m_eEventReturnValue 2147483644
-         m_bFocusOnMouseEnter 1
-        }
-        IA_PauseMenuAdminActionsButtonComponent "{686635B6F1FE0EC5}" {
-        }
-       }
-       style blank
-       {
-        SizeLayoutWidgetClass "{686635B6A4DDAE03}" {
-         Name "SizeLayout"
-         Slot ButtonWidgetSlot "{5CD890E37E89BE6C}" {
-          HorizontalAlign 3
-          Padding 7 0 0 0
-         }
-         "Inherit Color" 1
-         AllowHeightOverride 1
-         HeightOverride 54
-         {
-          OverlayWidgetClass "{686635B6A4DDAE05}" {
-           Name "Overlay"
-           Slot AlignableSlot "{5CD890E36382E6DF}" {
-            HorizontalAlign 3
-           }
-           "Inherit Color" 1
-           {
-            HorizontalLayoutWidgetClass "{686635B6A4DC21ED}" {
-             Name "HorizontalLayout0"
-             Slot OverlayWidgetSlot "{5CD8921D7464C91C}" {
-              HorizontalAlign 0
-              VerticalAlign 3
-              Padding 40 10 10 10
-             }
-             {
-              TextWidgetClass "{686635B6A4DC18C3}" {
-               Name "ButtonLabel"
-               Slot LayoutSlot "{5CD8921D50CDADC5}" {
-                HorizontalAlign 0
-               }
-               Clipping Ancestor
-               Text "I&A Admin Actions"
-               "Font Size" 20
-               "Min Font Size" 20
-               "Vertical Alignment" Center
-               FontProperties FontProperties "{5CF76978B6444261}" {
                 Font "{3E7733BAC8C831F6}UI/Fonts/RobotoCondensed/RobotoCondensed_Regular.fnt"
                }
                "Line Spacing" 10
