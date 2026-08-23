@@ -575,7 +575,6 @@ class IA_AreaGroupManager
                 grp.SetDefendMode(true, lz);
             grp.BeginAirborneDrop(director, lz, areaInst, 100, 50, 80);
             areaInst.AddMilitaryGroup(grp);
-            grp.EnableInboundSimulation(lz);
 
             int delayMs = teamIndex * 150;
             if (delayMs <= 0)

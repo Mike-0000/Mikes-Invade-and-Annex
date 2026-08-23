@@ -859,6 +859,9 @@ class IA_AiGroup
             UpdateVehicleOrders();
             return;
         }
+
+        if (m_bAirborneDrop)
+            return;
         
         if (!m_isSpawned)
         {
@@ -3725,6 +3728,8 @@ class IA_AiGroup
             return;
 
         m_bAirborneDrop = false;
+        ResumeAirborneCombatAI();
+        EnableInboundSimulation(m_vAirDropTarget);
         RemoveAllOrders(true);
         AddOrder(m_vAirDropTarget, IA_AiOrder.SearchAndDestroy, true);
         SetTacticalState(IA_GroupTacticalState.Attacking, m_vAirDropTarget, null, true);
@@ -3757,6 +3762,37 @@ class IA_AiGroup
         }
 
         m_iAirborneInFlight = m_iAirborneInFlight + 1;
+        SuspendAirborneCombatAI();
+    }
+
+    protected void SuspendAirborneCombatAI()
+    {
+        if (!m_group)
+            return;
+
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            if (agent)
+                agent.DeactivateAI();
+        }
+        m_group.DeactivateAI();
+    }
+
+    protected void ResumeAirborneCombatAI()
+    {
+        if (!m_group)
+            return;
+
+        m_group.ActivateAI();
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            if (agent)
+                agent.ActivateAI();
+        }
     }
 
     void EnableInboundSimulation(vector target)
