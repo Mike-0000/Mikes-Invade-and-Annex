@@ -582,12 +582,7 @@ class IA_AreaGroupManager
         if (!areaInst || !enemyGameFaction)
             return false;
 
-        float scale = IA_Game.GetAIScaleFactor();
-        int jumperCount = Math.Round(14 * scale);
-        if (jumperCount < 10)
-            jumperCount = 10;
-        if (jumperCount > 24)
-            jumperCount = 24;
+        int jumperCount = IA_Game.GetAirborneQRFJumperCount();
 
         vector lz = targetPos;
         if (lz == vector.Zero)
