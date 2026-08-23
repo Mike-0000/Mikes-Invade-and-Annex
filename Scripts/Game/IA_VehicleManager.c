@@ -1030,6 +1030,9 @@ class IA_VehicleManager: GenericEntity
            //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Missing vehicle or area instance", LogLevel.WARNING);
             return null;
         }
+
+        if (areaInstance.IsShutDown())
+            return null;
         
         array<BaseCompartmentSlot> usableCompartments = {};
         CollectVehicleCrewSeats(vehicle, usableCompartments, true);
@@ -1438,6 +1441,8 @@ class IA_VehicleManager: GenericEntity
     private static void _PlaceSpawnedUnitsInVehicle(Vehicle vehicle, IA_AiGroup crewGroup, IA_AiGroup passengerGroup, vector destination)
     {
         if (!vehicle || !crewGroup)
+            return;
+        if (!crewGroup.GetSCR_AIGroup())
             return;
 
         array<SCR_ChimeraCharacter> crewCharacters = crewGroup.GetGroupCharacters();
