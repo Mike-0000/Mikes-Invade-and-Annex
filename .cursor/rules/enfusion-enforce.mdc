@@ -189,6 +189,7 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 
 - Assets are **`ResourceName`**, usually `{GUID}path/to/file.et`. Do not hardcode raw filesystem paths.
 - **A hand-authored `.meta` GUID that Workbench has not imported is not a resource.** `Resource.Load` can still spawn by path (`Wrong GUID/name for resource`) but `RplComponent` then fails `Attempting to insert an entity with invalid prefab resource GUID`. Script-spawn `GenericEntity` / `SpawnEntity(typename)` or reuse a GUID Workbench already registered. Evidence: `runtime:` `MHJ_AiDropStick.et` `{C4E8A27B1F906E01}` and `MHJ_AiCanopyVisual.et` `{C4E8A27B1F906E02}`.
+- **`SetObject` `$remap` source names must exist on that VObject.** Prefab `MeshObject` `SourceMaterial "01__Default"` is not a slot on the raw `ParachuteMK3.xob` (Chute/Line only). Remapping it is `Source material do not exist`. Build the remap from `VObject.GetMaterials`. Evidence: `runtime:` AI drop visuals; `VObject.c`; player canopy remaps after the prefab already assigned that slot.
 - Spawn with prefab APIs + `EntitySpawnParams`. Validate world + resource before spawn.
 - Prefabs `.et`, configs `.conf`, layouts `.layout`. Addon identity is `addon.gproj` (`ID`, `GUID`, `Dependencies`).
 - Engine dependency GUID: **`58D0FB3206B6F859`**. Mike's UI: **`B3F91C6A4E275D08`**. Map HUD: **`D8E4A1C07B359F26`**.
@@ -213,6 +214,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-22 — `SetObject` `$remap` fails if the source name is not on that VObject; `01__Default` is a prefab MeshObject slot, not a ParachuteMK3.xob material (`runtime:` AI drop visuals).
 - 2026-08-22 — Hand-authored `.meta` GUIDs that Workbench never imported spawn by path then fail RPL insert (`Wrong GUID/name`, `invalid prefab resource GUID`; `runtime:` AI drop stick/visual).
 - 2026-08-21 — `SCR_AIToggleMaxLOD` OnAbort NodeErrors when `HandleFailedNavlinkDoor.bt` is aborted before `AgentIn` is written (`SCR_AIToggleMaxLOD.c:31-48`, `runtime:` No agent provided!).
 - 2026-08-21 — `null` cannot be passed for an enum argument (`Cannot convert 'Class' to 'int'`; `compiler: IA_AI_Group.c`).
