@@ -886,6 +886,7 @@ class IA_MissionInitializer : GenericEntity
 		// Load config file if specified
 		LoadConfig();
 		ApplyAdminOverrides();
+		IA_RadioRelayGrid.EnsureSpawned();
 
         // Set this instance as the reference for IA_AreaMarker
         IA_AreaMarker.SetMissionInitializer(this);
@@ -963,6 +964,7 @@ class IA_MissionInitializer : GenericEntity
         
 		if (Replication.IsServer())
 		{
+			GetGame().GetCallqueue().CallLater(IA_RadioRelayGrid.EnsureSpawned, 100, false);
 			GetGame().GetCallqueue().CallLater(IA_ApiHandler.GetInstance().Init, 5000, false);
 		}
 		
