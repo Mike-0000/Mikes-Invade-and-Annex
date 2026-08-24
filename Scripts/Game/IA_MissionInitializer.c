@@ -1484,9 +1484,11 @@ class IA_MissionInitializer : GenericEntity
 	//------------------------------------------------------------------------------------------------
 	//! Fills parallel arrays with every live capture HUD slot (Capturing / Paused /
 	//! Contested / Complete). Occupied 0% zones are included. Hidden slots are omitted.
-	void GetCaptureHudSlots(notnull array<string> areas, notnull array<int> states, notnull array<float> progress)
+	//! origins/radii are the server capture sphere so clients can occupancy-test
+	//! runtime zones (mortar pits) that never replicate as AreaMarker entities.
+	void GetCaptureHudSlots(notnull array<string> areas, notnull array<int> states, notnull array<float> progress, notnull array<vector> origins, notnull array<float> radii)
 	{
-		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, progress);
+		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, progress, origins, radii);
 	}
 
 	string GetCaptureHudArea()
@@ -1527,6 +1529,12 @@ class IA_MissionInitializer : GenericEntity
 	//! Multiple zones can be live at once; each area name is its own slot.
 	static void PublishCaptureHud(string areaName, IA_CaptureHudState state, float progress)
 	{
+		PublishCaptureHud(areaName, state, progress, vector.Zero, 0);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static void PublishCaptureHud(string areaName, IA_CaptureHudState state, float progress, vector origin, float radius)
+	{
 		if (!Replication.IsServer())
 			return;
 
@@ -1534,21 +1542,31 @@ class IA_MissionInitializer : GenericEntity
 		if (!inst)
 			return;
 
-		inst.ApplyCaptureHud(areaName, state, progress);
+		inst.ApplyCaptureHud(areaName, state, progress, origin, radius);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void ApplyCaptureHud(string areaName, IA_CaptureHudState state, float progress)
 	{
+		ApplyCaptureHud(areaName, state, progress, vector.Zero, 0);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyCaptureHud(string areaName, IA_CaptureHudState state, float progress, vector origin, float radius)
+	{
 		if (progress < 0)
 			progress = 0;
 		if (progress > 1)
 			progress = 1;
+		if (radius < 0)
+			radius = 0;
 
 		ref array<string> areas = new array<string>();
 		ref array<int> states = new array<int>();
 		ref array<float> values = new array<float>();
-		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, values);
+		ref array<vector> origins = new array<vector>();
+		ref array<float> radii = new array<float>();
+		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, values, origins, radii);
 
 		if (state == IA_CaptureHudState.Hidden)
 		{
@@ -1568,7 +1586,9 @@ class IA_MissionInitializer : GenericEntity
 			areas.Remove(hiddenIdx);
 			states.Remove(hiddenIdx);
 			values.Remove(hiddenIdx);
-			CommitCaptureHudPacked(areas, states, values);
+			origins.Remove(hiddenIdx);
+			radii.Remove(hiddenIdx);
+			CommitCaptureHudPacked(areas, states, values, origins, radii);
 			return;
 		}
 
@@ -1586,35 +1606,47 @@ class IA_MissionInitializer : GenericEntity
 				areas.Set(evict, SanitizeCaptureHudArea(areaName));
 				states.Set(evict, state);
 				values.Set(evict, progress);
+				origins.Set(evict, origin);
+				radii.Set(evict, radius);
 			}
 			else
 			{
 				areas.Insert(SanitizeCaptureHudArea(areaName));
 				states.Insert(state);
 				values.Insert(progress);
+				origins.Insert(origin);
+				radii.Insert(radius);
 			}
 		}
 		else
 		{
 			bool stateChanged = states[idx] != state;
 			bool progressChanged = Math.AbsFloat(values[idx] - progress) >= 0.008;
-			if (!stateChanged && !progressChanged)
+			bool originMissing = false;
+			if (radius > 0 && radii[idx] <= 0)
+				originMissing = true;
+			if (!stateChanged && !progressChanged && !originMissing)
 				return;
 
 			states.Set(idx, state);
 			values.Set(idx, progress);
+			if (radius > 0)
+			{
+				origins.Set(idx, origin);
+				radii.Set(idx, radius);
+			}
 		}
 
-		CommitCaptureHudPacked(areas, states, values);
+		CommitCaptureHudPacked(areas, states, values, origins, radii);
 
 		if (state == IA_CaptureHudState.Complete)
 			GetGame().GetCallqueue().CallLater(this.TryHideCompletedCaptureHud, 2600, false, areaName);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void CommitCaptureHudPacked(notnull array<string> areas, notnull array<int> states, notnull array<float> progress)
+	protected void CommitCaptureHudPacked(notnull array<string> areas, notnull array<int> states, notnull array<float> progress, notnull array<vector> origins, notnull array<float> radii)
 	{
-		string packed = PackCaptureHud(areas, states, progress);
+		string packed = PackCaptureHud(areas, states, progress, origins, radii);
 		if (m_sCaptureHudPacked_Rpl == packed)
 			return;
 
@@ -1655,9 +1687,19 @@ class IA_MissionInitializer : GenericEntity
 	//------------------------------------------------------------------------------------------------
 	protected static void UnpackCaptureHudPacked(string packed, notnull array<string> areas, notnull array<int> states, notnull array<float> progress)
 	{
+		ref array<vector> origins = new array<vector>();
+		ref array<float> radii = new array<float>();
+		UnpackCaptureHudPacked(packed, areas, states, progress, origins, radii);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static void UnpackCaptureHudPacked(string packed, notnull array<string> areas, notnull array<int> states, notnull array<float> progress, notnull array<vector> origins, notnull array<float> radii)
+	{
 		areas.Clear();
 		states.Clear();
 		progress.Clear();
+		origins.Clear();
+		radii.Clear();
 		if (packed.IsEmpty())
 			return;
 
@@ -1685,20 +1727,42 @@ class IA_MissionInitializer : GenericEntity
 			if (value > 1)
 				value = 1;
 
+			vector origin = vector.Zero;
+			float radius = 0;
+			if (tokens.Count() >= 7)
+			{
+				origin[0] = tokens[3].ToFloat();
+				origin[1] = tokens[4].ToFloat();
+				origin[2] = tokens[5].ToFloat();
+				radius = tokens[6].ToFloat();
+			}
+			else if (tokens.Count() >= 6)
+			{
+				origin[0] = tokens[3].ToFloat();
+				origin[2] = tokens[4].ToFloat();
+				radius = tokens[5].ToFloat();
+			}
+
 			areas.Insert(area);
 			states.Insert(state);
 			progress.Insert(value);
+			origins.Insert(origin);
+			radii.Insert(radius);
 		}
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected static string PackCaptureHud(notnull array<string> areas, notnull array<int> states, notnull array<float> progress)
+	protected static string PackCaptureHud(notnull array<string> areas, notnull array<int> states, notnull array<float> progress, notnull array<vector> origins, notnull array<float> radii)
 	{
 		int count = areas.Count();
 		if (count > states.Count())
 			count = states.Count();
 		if (count > progress.Count())
 			count = progress.Count();
+		if (count > origins.Count())
+			count = origins.Count();
+		if (count > radii.Count())
+			count = radii.Count();
 		if (count > CAPTURE_HUD_MAX)
 			count = CAPTURE_HUD_MAX;
 
@@ -1716,7 +1780,14 @@ class IA_MissionInitializer : GenericEntity
 			if (milli > 1000)
 				milli = 1000;
 
-			string slot = string.Format("%1|%2|%3", area, states[i], milli);
+			int ix = Math.Round(origins[i][0]);
+			int iy = Math.Round(origins[i][1]);
+			int iz = Math.Round(origins[i][2]);
+			int ir = Math.Round(radii[i]);
+			if (ir < 0)
+				ir = 0;
+
+			string slot = string.Format("%1|%2|%3|%4|%5|%6|%7", area, states[i], milli, ix, iy, iz, ir);
 			if (packed.IsEmpty())
 				packed = slot;
 			else

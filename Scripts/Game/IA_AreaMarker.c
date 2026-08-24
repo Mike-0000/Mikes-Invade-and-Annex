@@ -1560,23 +1560,54 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     }
 
 	//------------------------------------------------------------------------------------------------
+	//! World pose of the locally controlled pawn. Seated characters need
+	//! GetWorldTransform; GetOrigin() is parent-relative inside a vehicle.
+	static bool TryGetLocalPlayerWorldPos(out vector pos)
+	{
+		pos = vector.Zero;
+		PlayerController pc = GetGame().GetPlayerController();
+		if (!pc)
+			return false;
+
+		IEntity pawn = pc.GetControlledEntity();
+		if (!pawn)
+			return false;
+
+		vector mat[4];
+		pawn.GetWorldTransform(mat);
+		pos = mat[3];
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Occupancy test used by the capture HUD when the zone marker is not
+	//! present on this machine (runtime mortar pits have no registered prefab
+	//! GUID, so clients never receive the replica).
+	static bool IsLocalPlayerInsideWorldSphere(vector origin, float radius)
+	{
+		if (radius <= 0)
+			return false;
+
+		vector pos;
+		if (!TryGetLocalPlayerWorldPos(pos))
+			return false;
+
+		float dx = pos[0] - origin[0];
+		float dz = pos[2] - origin[2];
+		return (dx * dx + dz * dz) <= radius * radius;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	//! Fills `names` with capturable area names whose radius contains the local pawn.
-	//! Used by the objective HUD so capture bars are occupancy-local.
+	//! Used by the objective HUD so capture bars are occupancy-local. Runtime
+	//! mortar pits are usually absent here; the HUD also tests packed origins.
 	static void CollectAreasContainingLocalPlayer(notnull array<string> names)
 	{
 		names.Clear();
 
-		PlayerController pc = GetGame().GetPlayerController();
-		if (!pc)
+		vector pos;
+		if (!TryGetLocalPlayerWorldPos(pos))
 			return;
-
-		IEntity pawn = pc.GetControlledEntity();
-		if (!pawn)
-			return;
-
-		vector mat[4];
-		pawn.GetWorldTransform(mat);
-		vector pos = mat[3];
 
 		array<IA_AreaMarker> markers = GetAllMarkers();
 		int count = markers.Count();
@@ -1729,7 +1760,16 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         float progress = 0;
         if (CAPTURE_TIME_SECONDS > 0)
             progress = m_captureProgress / CAPTURE_TIME_SECONDS;
-        IA_MissionInitializer.PublishCaptureHud(m_areaName, state, progress);
+
+        vector origin = m_origin;
+        if (origin == vector.Zero)
+            origin = GetOrigin();
+
+        float radius = m_radius;
+        if (radius <= 0)
+            radius = m_fZoneRadius;
+
+        IA_MissionInitializer.PublishCaptureHud(m_areaName, state, progress, origin, radius);
     }
     
     // Trigger notification to all players
