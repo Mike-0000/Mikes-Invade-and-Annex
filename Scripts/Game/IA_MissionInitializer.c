@@ -590,14 +590,15 @@ class IA_MissionInitializer : GenericEntity
 			}
 		}
 		
-		// --- BEGIN ADDED: Check if defend mission is active and return early ---
 		IA_Game gameInstance = IA_Game.Instantiate();
 		if (gameInstance && gameInstance.HasActiveDefendMission())
 		{
-			//Print("[IA_MissionInitializer] Defend mission is active, waiting for completion before checking zones", LogLevel.DEBUG);
+			if (!m_currentAreaGroupManager && m_currentAreaInstances)
+				m_currentAreaGroupManager = new IA_AreaGroupManager(m_currentAreaInstances);
+			if (m_currentAreaGroupManager)
+				m_currentAreaGroupManager.QRFTask();
 			return;
 		}
-		// --- END ADDED ---
 		
 		////Print("Running CheckCurrentZoneComplete",LogLevel.NORMAL);
 		if (!m_currentAreaInstances)
@@ -750,7 +751,7 @@ class IA_MissionInitializer : GenericEntity
 			// --- BEGIN ADDED: Check for defend mission before proceeding ---
 			if (CheckAndStartDefendMission(currentGroup))
 			{
-				ForceFinishAllCurrentAreaInstances();
+				ForceFinishCurrentAreaInstancesExceptDefend();
 				GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
 				GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
 				Print("[IA_MissionInitializer] Defend mission started for group " + currentGroup + ". Delaying progression.", LogLevel.NORMAL);
@@ -807,6 +808,34 @@ class IA_MissionInitializer : GenericEntity
 		{
 			if (instance)
 				instance.ForceFinish();
+		}
+	}
+
+	//! Keep the defend-wave host alive. ForceFinish cancels pending CallLater
+	//! fireteams and refuses later SpawnReinforcementWave calls.
+	private void ForceFinishCurrentAreaInstancesExceptDefend()
+	{
+		if (!m_currentAreaInstances)
+			return;
+
+		IA_Game gameInstance = IA_Game.Instantiate();
+		IA_DefendMission defend = null;
+		if (gameInstance)
+			defend = gameInstance.GetActiveDefendMission();
+
+		foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
+		{
+			if (!instance)
+				continue;
+			if (defend && defend.IsHostingArea(instance))
+			{
+				string areaName = "unknown";
+				if (instance.GetArea())
+					areaName = instance.GetArea().GetName();
+				Print("[IA][Defend] Keeping host area " + areaName + " alive for defense waves", LogLevel.NORMAL);
+				continue;
+			}
+			instance.ForceFinish();
 		}
 	}
 
