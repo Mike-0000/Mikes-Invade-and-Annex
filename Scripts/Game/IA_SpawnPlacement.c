@@ -11,7 +11,13 @@ class IA_SpawnPlacement
 	static const int SAME_RADIUS_TRIES = 8;
 	static const float EMPTY_CYLINDER_R = 0.6;
 	static const float EMPTY_SEARCH_R = 18.0;
+	static const float UNIT_SEARCH_R = 6.0;
 	static const float NAVMESH_REACH_M = 12.0;
+	static const float WALKABLE_RAISE_M = 8.0;
+	static const float WALKABLE_DOWN_M = 20.0;
+	static const float STAND_CLEARANCE_M = 1.9;
+	static const float SURFACE_BIAS_M = 0.05;
+	static const float MAX_ABOVE_TERRAIN_M = 4.5;
 	static const string NAVMESH_PROJECT = "Soldiers";
 
 	static void CollectPlayerPositions(array<vector> positions)
@@ -90,6 +96,17 @@ class IA_SpawnPlacement
 
 		if (IsFightNearAo(center, players))
 			outExact = true;
+
+		outPos = SnapInfantryPos(outPos, EMPTY_SEARCH_R);
+		if (IsNearAnyPlayer(outPos, players, PLAYER_MIN_M))
+		{
+			vector inbound = FindInboundInfantrySpawn(center, -1);
+			if (inbound == vector.Zero)
+				return false;
+
+			outPos = inbound;
+			outExact = true;
+		}
 
 		return true;
 	}
@@ -196,6 +213,115 @@ class IA_SpawnPlacement
 		return false;
 	}
 
+	//! GetSurfaceY is the terrain mesh only. Rocks and building slabs sit above it,
+	//! so snapping infantry Y to terrain puts them inside that collision.
+	static bool HasStandRoom(vector pos)
+	{
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		ref TraceParam up = new TraceParam();
+		up.Start = pos + Vector(0, 0.12, 0);
+		up.End = up.Start + Vector(0, STAND_CLEARANCE_M, 0);
+		up.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		float coef = world.TraceMove(up, null);
+		if (coef < 1.0)
+			return false;
+
+		return true;
+	}
+
+	static bool TryWalkableAt(vector sample, out vector outPos)
+	{
+		outPos = vector.Zero;
+
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		float terrainY = world.GetSurfaceY(sample[0], sample[2]);
+		float oceanY = world.GetOceanHeight(sample[0], sample[2]);
+
+		vector start;
+		start[0] = sample[0];
+		start[1] = terrainY + WALKABLE_RAISE_M;
+		start[2] = sample[2];
+
+		ref TraceParam down = new TraceParam();
+		down.Start = start;
+		down.End = start - Vector(0, WALKABLE_DOWN_M, 0);
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS | TraceFlags.OCEAN;
+		float coef = world.TraceMove(down, null);
+		if (coef >= 1.0)
+			return false;
+
+		vector hit = start - Vector(0, coef * WALKABLE_DOWN_M, 0);
+		hit[1] = hit[1] + SURFACE_BIAS_M;
+
+		if (hit[1] <= oceanY)
+			return false;
+
+		float aboveTerrain = hit[1] - terrainY;
+		if (aboveTerrain > MAX_ABOVE_TERRAIN_M)
+			return false;
+
+		if (!HasStandRoom(hit))
+			return false;
+
+		if (!SCR_WorldTools.TraceCilinderUtil(hit + Vector(0, 1.0, 0), EMPTY_CYLINDER_R, 2.0, TraceFlags.ENTS | TraceFlags.OCEAN, world))
+			return false;
+
+		outPos = hit;
+		return true;
+	}
+
+	//! Finds a nearby point with standing room on the first WORLD|ENTS surface,
+	//! not the terrain mesh. Search radius 0 only tests the sample.
+	static bool TryFindWalkableInfantryPos(vector sample, float searchRadius, out vector outPos)
+	{
+		outPos = vector.Zero;
+		if (TryWalkableAt(sample, outPos))
+			return true;
+
+		if (searchRadius <= 0.5)
+			return false;
+
+		int rings = 4;
+		int ring;
+		for (ring = 1; ring <= rings; ring++)
+		{
+			float ringF = ring;
+			float ringsF = rings;
+			float radius = searchRadius * (ringF / ringsF);
+			int steps = 6 * ring;
+			int step;
+			for (step = 0; step < steps; step++)
+			{
+				float stepF = step;
+				float stepsF = steps;
+				float angle = Math.PI2 * (stepF / stepsF);
+				vector probe;
+				probe[0] = sample[0] + Math.Cos(angle) * radius;
+				probe[2] = sample[2] + Math.Sin(angle) * radius;
+				probe[1] = sample[1];
+				if (TryWalkableAt(probe, outPos))
+					return true;
+			}
+		}
+
+		return false;
+	}
+
+	static vector SnapInfantryPos(vector sample, float searchRadius)
+	{
+		vector walked;
+		if (TryFindWalkableInfantryPos(sample, searchRadius, walked))
+			return walked;
+
+		return sample;
+	}
+
 	static bool TrySnapInfantryPoint(vector sample, vector center, array<vector> players, float centerMax, bool applyPlayerMax, out vector outPos)
 	{
 		outPos = vector.Zero;
@@ -203,11 +329,9 @@ class IA_SpawnPlacement
 			return false;
 
 		vector emptyPos;
-		bool foundEmpty = SCR_WorldTools.FindEmptyTerrainPosition(emptyPos, sample, EMPTY_SEARCH_R, EMPTY_CYLINDER_R, 2.0, TraceFlags.ENTS | TraceFlags.OCEAN);
-		if (!foundEmpty)
+		if (!TryFindWalkableInfantryPos(sample, EMPTY_SEARCH_R, emptyPos))
 			return false;
 
-		emptyPos[1] = GetGame().GetWorld().GetSurfaceY(emptyPos[0], emptyPos[2]);
 		if (IsInOcean(emptyPos))
 			return false;
 
@@ -229,12 +353,8 @@ class IA_SpawnPlacement
 					vector reachable = emptyPos;
 					if (navmesh.GetReachablePoint(emptyPos, NAVMESH_REACH_M, reachable))
 					{
-						if (reachable != vector.Zero)
-						{
-							reachable[1] = GetGame().GetWorld().GetSurfaceY(reachable[0], reachable[2]);
-							if (!IsInOcean(reachable))
-								candidate = reachable;
-						}
+						if (reachable != vector.Zero && !IsInOcean(reachable) && HasStandRoom(reachable))
+							candidate = reachable;
 					}
 				}
 			}

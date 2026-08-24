@@ -3478,8 +3478,7 @@ class IA_AreaInstance
         for (int i = 0; i < number; i = i + 1)
         {
             vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() / 3, m_area.GetOrigin());
-            float y = GetGame().GetWorld().GetSurfaceY(pos[0], pos[2]);
-            pos[1] = y;
+            pos = IA_SpawnPlacement.SnapInfantryPos(pos, IA_SpawnPlacement.EMPTY_SEARCH_R);
             IA_AiGroup civ = IA_AiGroup.CreateCivilianGroup(pos);
             civ.SetOwningAreaInstance(this);
             

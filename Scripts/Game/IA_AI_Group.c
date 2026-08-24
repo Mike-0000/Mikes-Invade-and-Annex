@@ -697,6 +697,9 @@ class IA_AiGroup
         }
         // --- END MODIFIED ---
 
+        if (!keepAltitude)
+            finalSpawnPos = IA_SpawnPlacement.SnapInfantryPos(finalSpawnPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
+
         IA_AiGroup grp = new IA_AiGroup(finalSpawnPos, IA_SquadType.Riflemen, faction, unitCount, HVTGroup);
         grp.m_isCivilian = false;
 
@@ -731,11 +734,6 @@ class IA_AiGroup
         }
 
         vector groundPos = finalSpawnPos;
-		if (!HVTGroup && !keepAltitude)
-        {
-	        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-	        groundPos[1] = groundY;
-		}
         grp.m_bKeepAltitude = keepAltitude;
         grp.m_group.SetOrigin(groundPos);
 
@@ -1392,7 +1390,10 @@ class IA_AiGroup
                 return false;
             }
             
-            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSurfaceAdjustedSpawnParams(spawnPos));
+            if (!m_bKeepAltitude)
+                spawnPos = IA_SpawnPlacement.SnapInfantryPos(spawnPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
+
+            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(spawnPos));
             if (!charEntity)
             {
                 return false;
@@ -1440,8 +1441,8 @@ class IA_AiGroup
             groundPos = m_group.GetOrigin(); // Fallback to m_group's current origin
         }
 
-        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-        groundPos[1] = groundY;
+        if (!m_bKeepAltitude)
+            groundPos = IA_SpawnPlacement.SnapInfantryPos(groundPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
         m_group.SetOrigin(groundPos);
         m_lastConfirmedPosition = groundPos;
             
@@ -3941,6 +3942,11 @@ class IA_AiGroup
         else if (!m_HVTGroup)
         {
             unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+            vector walked;
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(unitSpawnPos, IA_SpawnPlacement.UNIT_SEARCH_R, walked))
+                unitSpawnPos = walked;
+            else
+                unitSpawnPos = m_staggeredSpawnPos;
         }
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
@@ -4172,6 +4178,11 @@ class IA_AiGroup
         
         // Generate spawn position
         vector unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+        vector walked;
+        if (IA_SpawnPlacement.TryFindWalkableInfantryPos(unitSpawnPos, IA_SpawnPlacement.UNIT_SEARCH_R, walked))
+            unitSpawnPos = walked;
+        else
+            unitSpawnPos = m_staggeredSpawnPos;
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
         {
@@ -4489,9 +4500,7 @@ class IA_AiGroup
             return null;
         }
     
-        vector groundPos = spawnPos;
-        float groundY = GetGame().GetWorld().GetSurfaceY(groundPos[0], groundPos[2]);
-        groundPos[1] = groundY;
+        vector groundPos = IA_SpawnPlacement.SnapInfantryPos(spawnPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
         grp.m_group.SetOrigin(groundPos);
     
         // KEY DIFFERENCE: Use civilian prefabs
