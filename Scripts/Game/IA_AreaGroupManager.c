@@ -34,11 +34,15 @@ class IA_AreaGroupManager
 
     // Check cadence
     private const int QRF_CHECK_INTERVAL = 30; // seconds
+    private const int DEFEND_QRF_CHECK_INTERVAL = 20; // seconds
     private int m_lastQRFCheckTime = 0;
 
     // Single cooldown and chance for the whole QRF system
     private const int QRF_COOLDOWN = 120; // seconds
     private const float QRF_CHANCE = 0.2;
+    private const int DEFEND_QRF_COOLDOWN = 75; // seconds
+    private const float DEFEND_QRF_CHANCE = 0.50;
+    private const float DEFEND_AIRBORNE_CHANCE = 0.35;
     private int m_lastQRFTime = 0;
     private bool m_qrfRetryPending = false;
     private IA_QRFType m_qrfRetryType;
@@ -78,98 +82,146 @@ class IA_AreaGroupManager
             return;
         if (!Replication.IsServer())
             return; // QRF is server-authoritative only
+
+        IA_DefendMission defend = GetActiveDefendMission();
+        bool forDefend = false;
+        if (defend)
+            forDefend = true;
+
         int currentTime = System.GetUnixTime();
-        if (IA_MissionInitializer.IsQRFDisabled())
-            return; // QRF globally disabled
+        if (!forDefend && IA_MissionInitializer.IsQRFDisabled())
+            return; // QRF globally disabled (defend holds still get QRF)
+
+        int checkInterval = QRF_CHECK_INTERVAL;
+        int cooldown = QRF_COOLDOWN;
+        float chance = QRF_CHANCE;
+        if (forDefend)
+        {
+            checkInterval = DEFEND_QRF_CHECK_INTERVAL;
+            cooldown = DEFEND_QRF_COOLDOWN;
+            chance = DEFEND_QRF_CHANCE;
+        }
+
+        if (currentTime - m_lastQRFCheckTime < checkInterval)
+            return;
+        m_lastQRFCheckTime = currentTime;
         Print(string.Format("[QRF] Running for group with %1 areas.", m_areaInstances.Count()), LogLevel.NORMAL);
 
-        // 1) Check interval
-        if (currentTime - m_lastQRFCheckTime < QRF_CHECK_INTERVAL)
+        IA_AreaInstance closestArea = null;
+        vector finalTarget = vector.Zero;
+        if (forDefend)
         {
-            Print(string.Format("[QRF] Check skipped: interval not yet met. %1s remaining.", QRF_CHECK_INTERVAL - (currentTime - m_lastQRFCheckTime)), LogLevel.NORMAL);
-            return;
-        }
-        m_lastQRFCheckTime = currentTime;
-
-        // 2) Verify at least one area in this group is under attack
-        bool groupUnderAttack = false;
-        foreach (IA_AreaInstance instance : m_areaInstances)
-        {
-            if (instance && instance.IsUnderAttack())
+            closestArea = defend.GetHostArea();
+            finalTarget = defend.GetDefendPoint();
+            if (!closestArea || closestArea.IsShutDown() || finalTarget == vector.Zero)
             {
-                groupUnderAttack = true;
-                break;
+                Print("[QRF] Defend QRF aborted: no live host area or defend point.", LogLevel.WARNING);
+                return;
             }
         }
-        if (!groupUnderAttack)
+        else
         {
-            Print("[QRF] Check failed: No area in the group is under attack.", LogLevel.NORMAL);
-            return;
+            bool groupUnderAttack = false;
+            foreach (IA_AreaInstance instance : m_areaInstances)
+            {
+                if (instance && !instance.IsShutDown() && instance.IsUnderAttack())
+                {
+                    groupUnderAttack = true;
+                    break;
+                }
+            }
+            if (!groupUnderAttack)
+            {
+                Print("[QRF] Check failed: No area in the group is under attack.", LogLevel.NORMAL);
+                return;
+            }
+
+            vector targetPos;
+            bool hasTarget = ComputeGroupThreatTarget(targetPos);
+            if (!hasTarget || targetPos == vector.Zero)
+            {
+                Print("[QRF] Aborted: No valid recent danger events to target.", LogLevel.NORMAL);
+                return;
+            }
+
+            finalTarget = ResolveClosestAreaTarget(targetPos, closestArea);
+            if (finalTarget == vector.Zero || !closestArea)
+            {
+                Print("[QRF] Failed to resolve closest area target; aborting QRF.", LogLevel.WARNING);
+                return;
+            }
         }
 
-        // 3) Determine target location using the same logic as Artillery (median of recent danger events, clamped by distance)
-        vector targetPos;
-        bool hasTarget = ComputeGroupThreatTarget(targetPos);
-        if (!hasTarget || targetPos == vector.Zero)
+        if (currentTime - m_lastQRFTime < cooldown)
         {
-            Print("[QRF] Aborted: No valid recent danger events to target.", LogLevel.NORMAL);
-            return;
-        }
-
-        // 4) Global cooldown and chance gate for QRF
-        if (currentTime - m_lastQRFTime < QRF_COOLDOWN)
-        {
-            int remaining = QRF_COOLDOWN - (currentTime - m_lastQRFTime);
+            int remaining = cooldown - (currentTime - m_lastQRFTime);
             Print(string.Format("[QRF] Global cooldown active: %1s remaining.", remaining), LogLevel.NORMAL);
             return;
         }
 
         float roll = IA_Game.rng.RandFloat01();
-        if (roll > QRF_CHANCE)
+        if (roll > chance)
         {
-            Print(string.Format("[QRF] Global chance failed (roll %1 > %2).", roll, QRF_CHANCE), LogLevel.NORMAL);
+            Print(string.Format("[QRF] Global chance failed (roll %1 > %2).", roll, chance), LogLevel.NORMAL);
             return;
         }
 
-        // 5) One QRF type. 10 slots: airborne 30, mechanized 30, motorized 20,
-        // infantry 10, armoured 10. Non-airborne keep their old relative share.
-        int idx = Math.RandomInt(0, 10);
-        IA_QRFType selectedType;
-        switch (idx)
-        {
-            case 0: selectedType = IA_QRFType.Infantry; break;
-            case 1: selectedType = IA_QRFType.Armoured; break;
-            case 2:
-            case 3:
-                selectedType = IA_QRFType.Motorized;
-                break;
-            case 4:
-            case 5:
-            case 6:
-                selectedType = IA_QRFType.Mechanized;
-                break;
-            default:
-                selectedType = IA_QRFType.Airborne;
-                break;
-        }
-
-        // Resolve final target as the closest area's origin to the computed danger position
-        IA_AreaInstance closestArea = null;
-        vector finalTarget = ResolveClosestAreaTarget(targetPos, closestArea);
-        if (finalTarget == vector.Zero || !closestArea)
-        {
-            Print("[QRF] Failed to resolve closest area target; aborting QRF.", LogLevel.WARNING);
-            return;
-        }
+        IA_QRFType selectedType = SelectQRFType(forDefend);
 
         Print(string.Format("[QRF] Selected %1; closest area '%2'; final target %3. Attempting spawn...",
             QRFTypeToString(selectedType), closestArea.GetArea().GetName(), finalTarget.ToString()), LogLevel.NORMAL);
 
-        bool spawned = SpawnQRFForTarget(selectedType, finalTarget, closestArea, null, false, false);
+        bool spawned = SpawnQRFForTarget(selectedType, finalTarget, closestArea, null, forDefend, false);
         if (spawned)
         {
             m_lastQRFTime = currentTime;
         }
+    }
+
+    private IA_DefendMission GetActiveDefendMission()
+    {
+        IA_Game game = IA_Game.Instantiate();
+        if (!game)
+            return null;
+
+        IA_DefendMission defend = game.GetActiveDefendMission();
+        if (!defend || !defend.IsActive())
+            return null;
+        return defend;
+    }
+
+    //! Capture QRF: 10 slots (airborne 30, mech 30, motorized 20, infantry 10, armour 10).
+    //! Defend QRF: 35% airborne, remaining 65% keeps those non-airborne relative shares.
+    private IA_QRFType SelectQRFType(bool forDefend)
+    {
+        if (forDefend)
+        {
+            if (IA_Game.rng.RandFloat01() < DEFEND_AIRBORNE_CHANCE)
+                return IA_QRFType.Airborne;
+
+            int idx = Math.RandomInt(0, 7);
+            switch (idx)
+            {
+                case 0: return IA_QRFType.Infantry;
+                case 1: return IA_QRFType.Armoured;
+                case 2:
+                case 3: return IA_QRFType.Motorized;
+            }
+            return IA_QRFType.Mechanized;
+        }
+
+        int slot = Math.RandomInt(0, 10);
+        switch (slot)
+        {
+            case 0: return IA_QRFType.Infantry;
+            case 1: return IA_QRFType.Armoured;
+            case 2:
+            case 3: return IA_QRFType.Motorized;
+            case 4:
+            case 5:
+            case 6: return IA_QRFType.Mechanized;
+        }
+        return IA_QRFType.Airborne;
     }
 
     private string QRFTypeToString(IA_QRFType type)
@@ -236,7 +288,7 @@ class IA_AreaGroupManager
         return spawned;
     }
 
-    //! One mid-hold vehicle pulse for Defend missions. Biased truck/APC; rare armour. No pure infantry.
+    //! One mid-hold QRF pulse for Defend missions. Uses defend type weights (35% airborne).
     bool SpawnDefendVehicleBeat(IA_AreaInstance areaInst, vector defendPoint, Faction enemyFaction)
     {
         if (!Replication.IsServer())
@@ -256,17 +308,9 @@ class IA_AreaGroupManager
             return false;
         }
 
-        // Motorized ~55%, Mechanized ~35%, Armoured ~10%
-        float roll = IA_Game.rng.RandFloat01();
-        IA_QRFType type;
-        if (roll < 0.55)
-            type = IA_QRFType.Motorized;
-        else if (roll < 0.90)
-            type = IA_QRFType.Mechanized;
-        else
-            type = IA_QRFType.Armoured;
+        IA_QRFType type = SelectQRFType(true);
 
-        Print(string.Format("[QRF] Defend vehicle beat selected %1 toward %2",
+        Print(string.Format("[QRF] Defend mid-hold beat selected %1 toward %2",
             QRFTypeToString(type), defendPoint.ToString()), LogLevel.NORMAL);
 
         return SpawnQRFForTarget(type, defendPoint, areaInst, enemyFaction, true, false);
@@ -753,6 +797,7 @@ class IA_AreaGroupManager
         foreach (IA_AreaInstance inst : m_areaInstances)
         {
             if (!inst || !inst.GetArea()) continue;
+            if (inst.IsShutDown()) continue;
             vector origin = inst.GetArea().GetOrigin();
             float dSq = vector.DistanceSq(origin, position);
             if (dSq < bestDistSq)

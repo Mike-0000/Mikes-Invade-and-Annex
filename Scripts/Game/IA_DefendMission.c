@@ -554,6 +554,11 @@ class IA_DefendMission
             Print("[IA_DefendMission] Invalid area for wave spawn", LogLevel.WARNING);
             return;
         }
+        if (targetArea.IsShutDown())
+        {
+            Print(string.Format("[IA_DefendMission] Cannot spawn wave: host area %1 is shut down", targetArea.m_area.GetName()), LogLevel.ERROR);
+            return;
+        }
         
         float scaleFactor = IA_Game.GetAIScaleFactor();
         int baseBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
@@ -677,6 +682,32 @@ class IA_DefendMission
     vector GetDefendPoint()
     {
         return m_defendPoint;
+    }
+
+    IA_AreaInstance GetHostArea()
+    {
+        foreach (IA_AreaInstance area : m_affectedAreas)
+        {
+            if (area && !area.IsShutDown())
+                return area;
+        }
+
+        if (m_affectedAreas.IsEmpty())
+            return null;
+        return m_affectedAreas[0];
+    }
+
+    bool IsHostingArea(IA_AreaInstance area)
+    {
+        if (!area)
+            return false;
+
+        foreach (IA_AreaInstance hosted : m_affectedAreas)
+        {
+            if (hosted == area)
+                return true;
+        }
+        return false;
     }
     
     int GetGroupID()

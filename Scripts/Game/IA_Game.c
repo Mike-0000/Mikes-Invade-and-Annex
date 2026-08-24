@@ -329,7 +329,13 @@ class IA_Game
 	    if (m_activeDefendMission && m_activeDefendMission.IsActive())
 	    {
 	        m_activeDefendMission.UpdateDefendMission();
-	        // Defend mission will handle its own completion and notification
+	        IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+	        if (init)
+	        {
+	            IA_AreaGroupManager qrfMgr = init.GetCurrentAreaGroupManager();
+	            if (qrfMgr)
+	                qrfMgr.QRFTask();
+	        }
 	    }
 	    
 	    // --- BEGIN MODIFIED: Update Side Objective Manager ---
