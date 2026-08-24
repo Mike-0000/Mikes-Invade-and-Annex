@@ -4,6 +4,8 @@
 //! plus one IA_DefendHud; they Hug their chrome and pack left-to-right. Align
 //! 0.25 sits the group halfway between the left edge and screen center.
 //! Capture tiles only appear for zones the local player is standing in.
+//! Runtime mortar pits are occupancy-tested from packed origin/radius because
+//! those markers are not present on clients.
 //------------------------------------------------------------------------------------------------
 class IA_ObjectiveHudStrip : MUI_Row
 {
@@ -16,6 +18,8 @@ class IA_ObjectiveHudStrip : MUI_Row
 	protected ref array<string> m_aAreas;
 	protected ref array<int> m_aStates;
 	protected ref array<float> m_aProgress;
+	protected ref array<vector> m_aOrigins;
+	protected ref array<float> m_aRadii;
 	protected ref array<string> m_aInside;
 	protected string m_sLastPacked;
 
@@ -29,6 +33,8 @@ class IA_ObjectiveHudStrip : MUI_Row
 		m_aAreas = new array<string>();
 		m_aStates = new array<int>();
 		m_aProgress = new array<float>();
+		m_aOrigins = new array<vector>();
+		m_aRadii = new array<float>();
 		m_aInside = new array<string>();
 		m_sLastPacked = "";
 	}
@@ -78,6 +84,8 @@ class IA_ObjectiveHudStrip : MUI_Row
 		m_aAreas.Clear();
 		m_aStates.Clear();
 		m_aProgress.Clear();
+		m_aOrigins.Clear();
+		m_aRadii.Clear();
 		m_aInside.Clear();
 	}
 
@@ -101,12 +109,14 @@ class IA_ObjectiveHudStrip : MUI_Row
 		{
 			m_sLastPacked = packed;
 			if (init)
-				init.GetCaptureHudSlots(m_aAreas, m_aStates, m_aProgress);
+				init.GetCaptureHudSlots(m_aAreas, m_aStates, m_aProgress, m_aOrigins, m_aRadii);
 			else
 			{
 				m_aAreas.Clear();
 				m_aStates.Clear();
 				m_aProgress.Clear();
+				m_aOrigins.Clear();
+				m_aRadii.Clear();
 			}
 		}
 
@@ -116,7 +126,7 @@ class IA_ObjectiveHudStrip : MUI_Row
 		int i;
 		for (i = 0; i < slotCount; i++)
 		{
-			if (m_aInside.Find(m_aAreas[i]) < 0)
+			if (!IsLocalPlayerInSlot(i))
 				continue;
 
 			IA_CaptureHudState state = IA_CaptureHud.DecodeState(m_aStates[i]);
@@ -136,10 +146,30 @@ class IA_ObjectiveHudStrip : MUI_Row
 				continue;
 			if (tile.IsIdle())
 				continue;
-			if (m_aInside.Find(tile.GetShownArea()) >= 0)
+			int shownSlot = SlotIndexForArea(tile.GetShownArea());
+			if (shownSlot >= 0 && IsLocalPlayerInSlot(shownSlot))
 				continue;
 			tile.ApplyServer("", IA_CaptureHudState.Hidden, 0);
 		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool IsLocalPlayerInSlot(int slot)
+	{
+		if (slot < 0)
+			return false;
+		if (slot >= m_aAreas.Count())
+			return false;
+
+		if (m_aInside.Find(m_aAreas[slot]) >= 0)
+			return true;
+
+		if (slot >= m_aOrigins.Count())
+			return false;
+		if (slot >= m_aRadii.Count())
+			return false;
+
+		return IA_AreaMarker.IsLocalPlayerInsideWorldSphere(m_aOrigins[slot], m_aRadii[slot]);
 	}
 
 	//------------------------------------------------------------------------------------------------

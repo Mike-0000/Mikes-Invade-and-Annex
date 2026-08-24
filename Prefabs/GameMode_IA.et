@@ -359,12 +359,19 @@ SCR_BaseGameMode : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
      m_bIsPlayable 1
     }
     SCR_Faction "{56DEAC40D3C2E623}" {
-     m_bShowInWelcomeScreenIfNonPlayable 0
+     m_bIsPlayable 0
+     m_eShowInWelcomeScreenOverride NEVERSHOW
     }
     SCR_Faction "{56DEAC40D132400B}" {
-     m_bShowInWelcomeScreenIfNonPlayable 0
+     m_bIsPlayable 0
+     m_eShowInWelcomeScreenOverride NEVERSHOW
+    }
+    SCR_Faction "{607AA5C7A94496DA}" {
+     m_bIsPlayable 0
+     m_eShowInWelcomeScreenOverride NEVERSHOW
     }
    }
+   m_bCanChangeFactionsPlayable 0
   }
   RadioManagerEntity : "{B8E09FAB91C4ECCD}Prefabs/Radio/RadioManager.et" {
    ID "656F20E3AC61EE60"

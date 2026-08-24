@@ -48,17 +48,11 @@ class IA_AISpawnPoint : ScriptedGameTriggerEntity
     {
         vector origin = GetOrigin();
         float radius = m_fSpawnRadius;
-        if (radius < 1)
-            return origin;
+        vector pos = origin;
+        if (radius >= 1)
+            pos = IA_Game.rng.GenerateRandomPointInRadius(1, radius, origin);
 
-        vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, radius, origin);
-        BaseWorld world = GetGame().GetWorld();
-        if (!world)
-            return pos;
-
-        float y = world.GetSurfaceY(pos[0], pos[2]);
-        pos[1] = y;
-        return pos;
+        return IA_SpawnPlacement.SnapInfantryPos(pos, IA_SpawnPlacement.EMPTY_SEARCH_R);
     }
 
     static array<IA_AISpawnPoint> GetAllSpawnPoints()
