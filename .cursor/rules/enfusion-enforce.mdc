@@ -203,6 +203,7 @@ Enfusion has **no WebView**. Widgets are the compositor (Canvas, text, EditBox).
 
 - **`EditBoxWidget.ActivateWriteMode` keeps native widget focus.** A visible EditBox without `IGNORE_CURSOR` sits above the compositor and can eat every later click. `OnWriteModeLeave` from hiding / re-activating the same shared box can Detach a field you just attached. Shared IME bridges must `IGNORE_CURSOR`, switch fields without hiding, ignore stale leave for a frame, and re-`BeginEditing` when the already-focused field is clicked again. Evidence: `EditBoxWidget.c`; `WidgetFlags.IGNORE_CURSOR`; `runtime: HALO planner` second numeric field unclickable until menu reopen.
 - **`SCR_MapMarkersUI.CleanupMarkerEditWidget` always calls `m_CursorModule.HandleDialog(false)`.** Configs that omit `SCR_MapCursorModule` (HALO planner) leave that pointer null, so `CloseMap` NPEs on Jump/Cancel. Null-check before HandleDialog; do not add a cursor module just to satisfy close — it steals click-to-drop. Evidence: `SCR_MapMarkersUI.c:581`; `runtime: MHJ_MapHost.CloseOwnMap` after Jump.
+- **`m_bShowInWelcomeScreenIfNonPlayable` was replaced by `m_eShowInWelcomeScreenOverride`.** NONE hides non-playable factions; ALWAYSSHOW shows even if not playable (FIA/INDFOR); NEVERSHOW hides. Stale prefab fields are ignored, so the deploy faction list can show every faction. Evidence: `SCR_Faction.c`; `INDFOR.conf`; `SCR_FactionRequestUIComponent.c`.
 
 Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer rule / `F:\Mikes-UI\README.md`.
 
@@ -215,6 +216,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-24 — `m_bShowInWelcomeScreenIfNonPlayable` was replaced by `m_eShowInWelcomeScreenOverride`; FIA/INDFOR uses ALWAYSSHOW so stale I&A overrides no longer hide non-player factions (`SCR_Faction.c`, `INDFOR.conf`, `SCR_FactionRequestUIComponent.c`).
 - 2026-08-23 — `SCR_AIProcessFailedMovementResult` NPEs on `GetLeaderEntity().GetOrigin()` when the group has no leader (`SCR_AIProcessFailedMovementResult.c:59`, `runtime:` `#return` NULL).
 - 2026-08-22 — `SetObject` `$remap` fails if the source name is not on that VObject; `01__Default` is a prefab MeshObject slot, not a ParachuteMK3.xob material (`runtime:` AI drop visuals).
 - 2026-08-22 — Hand-authored `.meta` GUIDs that Workbench never imported spawn by path then fail RPL insert (`Wrong GUID/name`, `invalid prefab resource GUID`; `runtime:` AI drop stick/visual).

@@ -89,6 +89,7 @@ class IA_MissionInitializer : GenericEntity
 	// --- END ADDED ---
 
 	protected static const int CAPTURE_HUD_MAX = 6;
+	protected static const string PLAYER_FACTION_KEY = "US";
 
 	[RplProp()]
 	string m_sCaptureHudPacked_Rpl = "";
@@ -925,10 +926,39 @@ class IA_MissionInitializer : GenericEntity
 	
 	
 	
+	protected void RestrictPlayableFactions()
+	{
+		SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
+		if (!factionManager)
+		{
+			Print("[IA][Mission] Faction manager missing; cannot restrict playable factions.", LogLevel.WARNING);
+			return;
+		}
+
+		array<Faction> factions = {};
+		factionManager.GetFactionsList(factions);
+		int count = factions.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			SCR_Faction scrFaction = SCR_Faction.Cast(factions[i]);
+			if (!scrFaction)
+				continue;
+
+			bool playable = false;
+			if (scrFaction.GetFactionKey() == PLAYER_FACTION_KEY)
+				playable = true;
+
+			scrFaction.InitFactionIsPlayable(playable);
+		}
+	}
+
     override void EOnInit(IEntity owner)
     {
         super.EOnInit(owner);
 		s_instance = this;
+		RestrictPlayableFactions();
+		GetGame().GetCallqueue().CallLater(RestrictPlayableFactions, 0, false);
 		GetGame().GetCallqueue().CallLater(InitDelayed, 5000, false, owner);
         
 		if (Replication.IsServer())
