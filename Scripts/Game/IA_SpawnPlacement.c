@@ -238,24 +238,27 @@ class IA_SpawnPlacement
 		return true;
 	}
 
+	//! Traced downward from above the position, not up from it: a ray leaving a
+	//! building through the underside of its roof can miss one-sided collision,
+	//! which reports an interior as open sky.
 	static bool HasOpenSky(vector pos)
 	{
 		BaseWorld world = GetGame().GetWorld();
 		if (!world)
 			return false;
 
-		ref TraceParam up = new TraceParam();
-		up.Start = pos + Vector(0, 0.12, 0);
-		up.End = up.Start + Vector(0, OPEN_SKY_M, 0);
-		up.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
-		float coef = world.TraceMove(up, null);
+		ref TraceParam down = new TraceParam();
+		down.Start = pos + Vector(0, OPEN_SKY_M, 0);
+		down.End = pos + Vector(0, 0.17, 0);
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		float coef = world.TraceMove(down, null);
 		if (coef < 1.0)
 			return false;
 
 		return true;
 	}
 
-	//! Streets and rooftops are valid. Interiors fail the open-sky up-trace.
+	//! Streets and rooftops are valid. Interiors fail the open-sky test.
 	//! Does not use TryWalkableAt — that helper rejects anything above MAX_ABOVE_TERRAIN_M.
 	static bool TryDropLzAt(vector sample, out vector outPos)
 	{

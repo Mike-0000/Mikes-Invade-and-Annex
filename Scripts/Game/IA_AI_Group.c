@@ -3789,7 +3789,11 @@ class IA_AiGroup
 
         if (!m_airDirector.AddJumper(jumper, lz))
         {
-            Print("[IA][Airborne] Director rejected jumper", LogLevel.WARNING);
+            // No autopilot slot means nothing steers or stops this pawn. Left at
+            // drop altitude it free-falls ~380 m and can end up anywhere, so put
+            // it on the LZ instead.
+            Print("[IA][Airborne] Director rejected jumper, placing on LZ", LogLevel.WARNING);
+            jumper.SetOrigin(lz);
             return;
         }
 
