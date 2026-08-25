@@ -19,6 +19,8 @@ class IA_SpawnPlacement
 	static const float SURFACE_BIAS_M = 0.05;
 	static const float MAX_ABOVE_TERRAIN_M = 4.5;
 	static const float OPEN_SKY_M = 12.0;
+	static const float DROP_LZ_RAISE_M = 30.0;
+	static const float DROP_LZ_DOWN_M = 40.0;
 	static const float DROP_LZ_SEARCH_R = 40.0;
 	static const float DROP_LZ_SEARCH_WIDE_R = 80.0;
 	static const int DROP_LZ_SAMPLE_TRIES = 4;
@@ -253,22 +255,53 @@ class IA_SpawnPlacement
 		return true;
 	}
 
+	//! Streets and rooftops are valid. Interiors fail the open-sky up-trace.
+	//! Does not use TryWalkableAt — that helper rejects anything above MAX_ABOVE_TERRAIN_M.
 	static bool TryDropLzAt(vector sample, out vector outPos)
 	{
 		outPos = vector.Zero;
-		if (!TryWalkableAt(sample, outPos))
+
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
 			return false;
 
-		if (!HasOpenSky(outPos))
-		{
-			outPos = vector.Zero;
-			return false;
-		}
+		float terrainY = world.GetSurfaceY(sample[0], sample[2]);
+		float oceanY = world.GetOceanHeight(sample[0], sample[2]);
 
+		vector start;
+		start[0] = sample[0];
+		start[1] = terrainY + DROP_LZ_RAISE_M;
+		start[2] = sample[2];
+
+		ref TraceParam down = new TraceParam();
+		down.Start = start;
+		down.End = start - Vector(0, DROP_LZ_DOWN_M, 0);
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS | TraceFlags.OCEAN;
+		float coef = world.TraceMove(down, null);
+		if (coef >= 1.0)
+			return false;
+
+		vector hit = start - Vector(0, coef * DROP_LZ_DOWN_M, 0);
+		hit[1] = hit[1] + SURFACE_BIAS_M;
+
+		if (hit[1] <= oceanY)
+			return false;
+
+		if (!HasStandRoom(hit))
+			return false;
+
+		if (!HasOpenSky(hit))
+			return false;
+
+		if (!SCR_WorldTools.TraceCilinderUtil(hit + Vector(0, 1.0, 0), EMPTY_CYLINDER_R, 2.0, TraceFlags.ENTS | TraceFlags.OCEAN, world))
+			return false;
+
+		outPos = hit;
 		return true;
 	}
 
-	//! Outdoor LZ: walkable WORLD|ENTS surface plus open sky so interiors fail.
+	//! Open-sky LZ: first WORLD|ENTS surface with stand room and no ceiling.
+	//! Rooftops are allowed; rooms are not.
 	static bool TryFindDropLz(vector sample, float searchRadius, out vector outPos)
 	{
 		outPos = vector.Zero;
