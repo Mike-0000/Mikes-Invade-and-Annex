@@ -42,7 +42,8 @@ class IA_AreaGroupManager
     private const float QRF_CHANCE = 0.2;
     private const int DEFEND_QRF_COOLDOWN = 75; // seconds
     private const float DEFEND_QRF_CHANCE = 0.50;
-    private const float DEFEND_AIRBORNE_CHANCE = 0.35;
+    private const float AIRBORNE_CHANCE = 0.20;
+    private const float DEFEND_AIRBORNE_CHANCE = 0.25;
     private int m_lastQRFTime = 0;
     private bool m_qrfRetryPending = false;
     private IA_QRFType m_qrfRetryType;
@@ -190,38 +191,26 @@ class IA_AreaGroupManager
         return defend;
     }
 
-    //! Capture QRF: 10 slots (airborne 30, mech 30, motorized 20, infantry 10, armour 10).
-    //! Defend QRF: 35% airborne, remaining 65% keeps those non-airborne relative shares.
+    //! Capture QRF: 20% airborne. Defend QRF: 25% airborne.
+    //! Remaining weight keeps non-airborne relative shares (mech 3, motorized 2, infantry 1, armour 1).
     private IA_QRFType SelectQRFType(bool forDefend)
     {
+        float airborneChance = AIRBORNE_CHANCE;
         if (forDefend)
-        {
-            if (IA_Game.rng.RandFloat01() < DEFEND_AIRBORNE_CHANCE)
-                return IA_QRFType.Airborne;
+            airborneChance = DEFEND_AIRBORNE_CHANCE;
 
-            int idx = Math.RandomInt(0, 7);
-            switch (idx)
-            {
-                case 0: return IA_QRFType.Infantry;
-                case 1: return IA_QRFType.Armoured;
-                case 2:
-                case 3: return IA_QRFType.Motorized;
-            }
-            return IA_QRFType.Mechanized;
-        }
+        if (IA_Game.rng.RandFloat01() < airborneChance)
+            return IA_QRFType.Airborne;
 
-        int slot = Math.RandomInt(0, 10);
-        switch (slot)
+        int idx = Math.RandomInt(0, 7);
+        switch (idx)
         {
             case 0: return IA_QRFType.Infantry;
             case 1: return IA_QRFType.Armoured;
             case 2:
             case 3: return IA_QRFType.Motorized;
-            case 4:
-            case 5:
-            case 6: return IA_QRFType.Mechanized;
         }
-        return IA_QRFType.Airborne;
+        return IA_QRFType.Mechanized;
     }
 
     private string QRFTypeToString(IA_QRFType type)
@@ -288,7 +277,7 @@ class IA_AreaGroupManager
         return spawned;
     }
 
-    //! One mid-hold QRF pulse for Defend missions. Uses defend type weights (35% airborne).
+    //! One mid-hold QRF pulse for Defend missions. Uses defend type weights (25% airborne).
     bool SpawnDefendVehicleBeat(IA_AreaInstance areaInst, vector defendPoint, Faction enemyFaction)
     {
         if (!Replication.IsServer())
