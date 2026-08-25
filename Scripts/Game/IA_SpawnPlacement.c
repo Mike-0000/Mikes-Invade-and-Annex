@@ -18,6 +18,10 @@ class IA_SpawnPlacement
 	static const float STAND_CLEARANCE_M = 1.9;
 	static const float SURFACE_BIAS_M = 0.05;
 	static const float MAX_ABOVE_TERRAIN_M = 4.5;
+	static const float OPEN_SKY_M = 12.0;
+	static const float DROP_LZ_SEARCH_R = 40.0;
+	static const float DROP_LZ_SEARCH_WIDE_R = 80.0;
+	static const int DROP_LZ_SAMPLE_TRIES = 4;
 	static const string NAVMESH_PROJECT = "Soldiers";
 
 	static void CollectPlayerPositions(array<vector> positions)
@@ -230,6 +234,74 @@ class IA_SpawnPlacement
 			return false;
 
 		return true;
+	}
+
+	static bool HasOpenSky(vector pos)
+	{
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		ref TraceParam up = new TraceParam();
+		up.Start = pos + Vector(0, 0.12, 0);
+		up.End = up.Start + Vector(0, OPEN_SKY_M, 0);
+		up.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		float coef = world.TraceMove(up, null);
+		if (coef < 1.0)
+			return false;
+
+		return true;
+	}
+
+	static bool TryDropLzAt(vector sample, out vector outPos)
+	{
+		outPos = vector.Zero;
+		if (!TryWalkableAt(sample, outPos))
+			return false;
+
+		if (!HasOpenSky(outPos))
+		{
+			outPos = vector.Zero;
+			return false;
+		}
+
+		return true;
+	}
+
+	//! Outdoor LZ: walkable WORLD|ENTS surface plus open sky so interiors fail.
+	static bool TryFindDropLz(vector sample, float searchRadius, out vector outPos)
+	{
+		outPos = vector.Zero;
+		if (TryDropLzAt(sample, outPos))
+			return true;
+
+		if (searchRadius <= 0.5)
+			return false;
+
+		int rings = 4;
+		int ring;
+		for (ring = 1; ring <= rings; ring++)
+		{
+			float ringF = ring;
+			float ringsF = rings;
+			float radius = searchRadius * (ringF / ringsF);
+			int steps = 6 * ring;
+			int step;
+			for (step = 0; step < steps; step++)
+			{
+				float stepF = step;
+				float stepsF = steps;
+				float angle = Math.PI2 * (stepF / stepsF);
+				vector probe;
+				probe[0] = sample[0] + Math.Cos(angle) * radius;
+				probe[2] = sample[2] + Math.Sin(angle) * radius;
+				probe[1] = sample[1];
+				if (TryDropLzAt(probe, outPos))
+					return true;
+			}
+		}
+
+		return false;
 	}
 
 	static bool TryWalkableAt(vector sample, out vector outPos)

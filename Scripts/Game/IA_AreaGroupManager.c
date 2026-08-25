@@ -621,14 +621,19 @@ class IA_AreaGroupManager
         if (lz == vector.Zero)
             lz = areaInst.GetArea().GetOrigin();
 
-        BaseWorld world = GetGame().GetWorld();
-        float terrainY = 0;
-        if (world)
-            terrainY = world.GetSurfaceY(lz[0], lz[2]);
-        lz[1] = terrainY;
+        vector dropLz;
+        if (!IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
+        {
+            if (!IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz))
+            {
+                Print("[QRF] Airborne miss: no open-sky LZ.", LogLevel.WARNING);
+                return false;
+            }
+        }
+        lz = dropLz;
 
         vector release = lz;
-        vector wind = MHJ_FlightAero.WindWorld(terrainY + MHJ_Constants.AI_DROP_AGL, 0);
+        vector wind = MHJ_FlightAero.WindWorld(lz[1] + MHJ_Constants.AI_DROP_AGL, 0);
         wind[1] = 0;
         if (wind.Length() > 0.2)
         {
@@ -636,7 +641,7 @@ class IA_AreaGroupManager
             upwind.Normalize();
             release = release + upwind * 120;
         }
-        release[1] = terrainY + MHJ_Constants.AI_DROP_AGL;
+        release[1] = lz[1] + MHJ_Constants.AI_DROP_AGL;
 
         MHJ_AiDropDirector director = MHJ_AiDropDirector.SpawnStick(lz);
         if (!director)

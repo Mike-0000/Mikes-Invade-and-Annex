@@ -3750,11 +3750,42 @@ class IA_AiGroup
             return;
 
         vector lz = m_vAirDropTarget;
-        if (IA_Game.rng)
-            lz = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
-        BaseWorld world = GetGame().GetWorld();
-        if (world)
-            lz[1] = world.GetSurfaceY(lz[0], lz[2]);
+        bool foundLz = false;
+        int attempt;
+        for (attempt = 0; attempt < IA_SpawnPlacement.DROP_LZ_SAMPLE_TRIES; attempt++)
+        {
+            vector sample = m_vAirDropTarget;
+            if (IA_Game.rng)
+                sample = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
+
+            vector dropLz;
+            if (IA_SpawnPlacement.TryFindDropLz(sample, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
+            {
+                lz = dropLz;
+                foundLz = true;
+                break;
+            }
+        }
+
+        if (!foundLz)
+        {
+            vector dropLz;
+            if (IA_SpawnPlacement.TryFindDropLz(m_vAirDropTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz))
+            {
+                lz = dropLz;
+                foundLz = true;
+            }
+        }
+
+        if (!foundLz)
+        {
+            Print("[IA][Airborne] Drop LZ open-sky miss, falling back to walkable", LogLevel.WARNING);
+            vector walked;
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(m_vAirDropTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, walked))
+                lz = walked;
+            else
+                lz = IA_SpawnPlacement.SnapInfantryPos(m_vAirDropTarget, IA_SpawnPlacement.EMPTY_SEARCH_R);
+        }
 
         if (!m_airDirector.AddJumper(jumper, lz))
         {
