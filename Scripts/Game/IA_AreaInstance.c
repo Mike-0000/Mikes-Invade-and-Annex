@@ -148,6 +148,7 @@ class IA_AreaInstance
     private vector m_defendTarget = vector.Zero;
     private bool m_garrisonPostsLoaded = false;
     private ref array<vector> m_availableGarrisonPosts;
+    private bool m_bBuildingGarrisonSpawned = false;
     
     // --- BEGIN ADDED: Radio Tower Defense Mode ---
     private bool m_isRadioTowerDefenseActive = false;
@@ -2874,6 +2875,8 @@ class IA_AreaInstance
             return;
         }
 
+        SpawnBuildingGarrisonGroups(AreaFaction);
+
         // Apply player scaling to number of groups
         int scaledNumberOfGroupsToSpawn = Math.Round(number * m_aiScaleFactor);
         if (scaledNumberOfGroupsToSpawn < 1 && number > 0) scaledNumberOfGroupsToSpawn = 1; // Ensure at least one group if original number > 0
@@ -2883,16 +2886,11 @@ class IA_AreaInstance
         ////Print(string.Format("[PLAYER_SCALING] GenerateRandomAiGroups for Area %1: Original=%2, ScaledGroupsToSpawn=%3 (scale factor: %4)", 
         //    m_area.GetName(), number, scaledNumberOfGroupsToSpawn, m_aiScaleFactor), LogLevel.DEBUG);
         
-        // Manual IA_GmHoldPost markers inside this area pin occupying AI in
-        // that building with Hold. CoverPost auto-garrison fills leftover groups.
-        // IA_AISpawnPoint markers override default scatter if none of those remain.
+        // Manual IA_AISpawnPoint markers inside this area override default scatter.
+        // Building Hold groups spawn separately and do not consume these occupying slots.
         ref array<IA_AISpawnPoint> spawnPoints = IA_AISpawnPoint.GetSpawnPointsInArea(m_area);
         Print(string.Format("[IA_AreaInstance] Found %1 spawn points inside area %2.", spawnPoints.Count(), m_area.GetName()), LogLevel.NORMAL);
 		int accumulatedDelay = 0;
-
-        int gmHoldCount = IA_GmHoldPost.CountUnclaimedInArea(m_area);
-        if (gmHoldCount > scaledNumberOfGroupsToSpawn)
-            scaledNumberOfGroupsToSpawn = gmHoldCount;
 
         for (int i = 0; i < scaledNumberOfGroupsToSpawn; i = i + 1)
         {
@@ -2920,14 +2918,7 @@ class IA_AreaInstance
             float holdRadius = 0;
 
             vector garrisonPost;
-            if (IA_GmHoldPost.TryClaimOneInArea(m_area, garrisonPost, holdRadius))
-            {
-                pos = garrisonPost;
-                holdTarget = garrisonPost;
-                useExactPos = true;
-                holdPost = true;
-            }
-            else if (TryTakeGarrisonPost(garrisonPost))
+            if (TryTakeGarrisonPost(garrisonPost))
             {
                 pos = garrisonPost;
                 holdTarget = garrisonPost;
@@ -5729,6 +5720,94 @@ class IA_AreaInstance
     IA_Area GetArea()
     {
         return m_area;
+    }
+
+    protected int BuildingGarrisonUnitCount()
+    {
+        int n = IA_SquadCount(IA_SquadType.Firesquad, m_faction);
+        n = Math.Round(n * m_aiScaleFactor);
+        if (n < 3)
+            n = 3;
+        if (n > 5)
+            n = 5;
+        return n;
+    }
+
+    //! Extra fireteams that Hold inside a few buildings. Occupying patrols are untouched.
+    protected void SpawnBuildingGarrisonGroups(Faction areaFactionForGroupTask)
+    {
+        if (m_bBuildingGarrisonSpawned)
+            return;
+        m_bBuildingGarrisonSpawned = true;
+
+        if (!Replication.IsServer())
+            return;
+        if (!m_area)
+            return;
+        if (m_area.GetAreaType() == IA_AreaType.MortarPit)
+            return;
+
+        Faction spawnFaction = areaFactionForGroupTask;
+        if (!spawnFaction)
+            spawnFaction = m_AreaFaction;
+
+        int want = IA_BuildingHoldFinder.CountForAreaType(m_area.GetAreaType());
+        int spawned = 0;
+        int delay = 0;
+        int units = BuildingGarrisonUnitCount();
+
+        ref array<IA_GmHoldPost> gmPosts = IA_GmHoldPost.GetHoldPostsInArea(m_area);
+        int g;
+        int gmCount = gmPosts.Count();
+        for (g = 0; g < gmCount; g++)
+        {
+            IA_GmHoldPost post = gmPosts[g];
+            if (!post)
+                continue;
+            if (post.IsClaimed())
+                continue;
+
+            vector pos;
+            float radius;
+            if (!post.TryClaim(pos, radius))
+                continue;
+
+            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, pos, units, spawnFaction, true, true, pos, radius);
+            delay = delay + Math.RandomInt(400, 1200);
+            spawned = spawned + 1;
+        }
+
+        int stillWant = want - spawned;
+        if (stillWant > 0)
+        {
+            ref array<ref IA_BuildingHoldSpot> spots = new array<ref IA_BuildingHoldSpot>();
+            IA_BuildingHoldFinder.FindInteriorSpots(m_area.GetOrigin(), m_area.GetRadius(), stillWant, spots);
+            int s;
+            int spotCount = spots.Count();
+            for (s = 0; s < spotCount; s++)
+            {
+                IA_BuildingHoldSpot spot = spots[s];
+                if (!spot)
+                    continue;
+                if (IA_GmHoldPost.HasHoldNear(spot.m_pos, IA_BuildingHoldFinder.MIN_SEP_M))
+                    continue;
+
+                IA_GmHoldPost autoPost = IA_GmHoldPost.SpawnAt(spot.m_pos, spot.m_radius);
+                vector pos = spot.m_pos;
+                float radius = spot.m_radius;
+                if (autoPost)
+                {
+                    if (!autoPost.TryClaim(pos, radius))
+                        continue;
+                }
+
+                GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, pos, units, spawnFaction, true, true, pos, radius);
+                delay = delay + Math.RandomInt(400, 1200);
+                spawned = spawned + 1;
+            }
+        }
+
+        Print(string.Format("[IA_AreaInstance] Building garrison: %1 extra Hold groups in %2", spawned, m_area.GetName()), LogLevel.NORMAL);
     }
 	
     // --- END ADDED ---

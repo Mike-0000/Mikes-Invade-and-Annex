@@ -1,6 +1,6 @@
 // IA_GmHoldPost.c
-// GM-placeable building hold. Occupying groups claimed against this marker
-// get IA_AiOrder.Hold (vanilla Wait, infinite) so they stay inside the building.
+// GM-placeable building hold. Dedicated building-garrison groups (not occupying
+// patrols) claim these and get IA_AiOrder.Hold (vanilla Wait, infinite).
 
 class IA_GmHoldPostClass : ScriptedGameTriggerEntityClass
 {
@@ -79,6 +79,54 @@ class IA_GmHoldPost : ScriptedGameTriggerEntity
 		radius = GetHoldRadius();
 		Print(string.Format("[IA_GmHoldPost] Claimed building hold at %1 radius %2 m", pos.ToString(), radius), LogLevel.NORMAL);
 		return true;
+	}
+
+	static IA_GmHoldPost SpawnAt(vector pos, float radius)
+	{
+		if (!Replication.IsServer())
+			return null;
+		if (pos == vector.Zero)
+			return null;
+
+		Resource res = Resource.Load(PREFAB);
+		if (!res)
+		{
+			Print("[IA_GmHoldPost] Failed to load building-hold prefab", LogLevel.ERROR);
+			return null;
+		}
+
+		IEntity ent = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(pos));
+		IA_GmHoldPost post = IA_GmHoldPost.Cast(ent);
+		if (!post)
+		{
+			Print("[IA_GmHoldPost] Spawned entity is not IA_GmHoldPost", LogLevel.ERROR);
+			if (ent)
+				IA_Game.AddEntityToGc(ent);
+			return null;
+		}
+
+		if (radius > 0)
+			post.SetHoldRadius(radius);
+
+		Print(string.Format("[IA_GmHoldPost] Spawned building hold at %1 radius %2 m", post.GetOrigin().ToString(), post.GetHoldRadius()), LogLevel.NORMAL);
+		return post;
+	}
+
+	static bool HasHoldNear(vector pos, float distM)
+	{
+		float distSq = distM * distM;
+		array<IA_GmHoldPost> allPosts = GetAllHoldPosts();
+		int i;
+		int count = allPosts.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_GmHoldPost post = allPosts[i];
+			if (!post)
+				continue;
+			if (vector.DistanceSq(post.GetOrigin(), pos) <= distSq)
+				return true;
+		}
+		return false;
 	}
 
 	static IA_GmHoldPost FromEditorItem(Managed item)

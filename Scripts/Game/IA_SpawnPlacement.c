@@ -584,6 +584,67 @@ class IA_SpawnPlacement
 		return false;
 	}
 
+	//! Floor under a roof. First WORLD|ENTS hit from above is the roof; a second
+	//! down-trace finds the standing position. Open-sky / no-stand rejects courtyards and roofs.
+	static bool TryInteriorStandPos(float x, float z, float roofTopY, float minY, out vector outPos)
+	{
+		outPos = vector.Zero;
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		float terrainY = world.GetSurfaceY(x, z);
+		float startY = roofTopY + 2;
+		if (startY < terrainY + 3)
+			startY = terrainY + 8;
+
+		float endY = minY;
+		if (endY > startY - 2)
+			endY = terrainY - 0.5;
+
+		vector start = Vector(x, startY, z);
+		vector end = Vector(x, endY, z);
+
+		ref TraceParam down = new TraceParam();
+		down.Start = start;
+		down.End = end;
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		float coef = world.TraceMove(down, null);
+		if (coef >= 1.0)
+			return false;
+
+		float span = startY - endY;
+		vector firstHit = start;
+		firstHit[1] = startY - (coef * span);
+
+		if (firstHit[1] < terrainY + 1.8)
+			return false;
+
+		float drop = 0.35;
+		while (drop <= 1.45)
+		{
+			vector start2 = firstHit;
+			start2[1] = firstHit[1] - drop;
+			down.Start = start2;
+			down.End = end;
+			coef = world.TraceMove(down, null);
+			if (coef < 1.0)
+			{
+				float span2 = start2[1] - endY;
+				vector floorPos = start2;
+				floorPos[1] = start2[1] - (coef * span2) + SURFACE_BIAS_M;
+				if (HasStandRoom(floorPos) && !HasOpenSky(floorPos))
+				{
+					outPos = floorPos;
+					return true;
+				}
+			}
+			drop = drop + 0.35;
+		}
+
+		return false;
+	}
+
 	//! Vanilla building garrison: CoverPost / ObservationPost smart actions
 	//! on structures. Used with IA_AiOrder.Hold (Wait waypoint, infinite).
 	static void FindGarrisonPosts(vector center, float radius, notnull array<vector> outPosts)
