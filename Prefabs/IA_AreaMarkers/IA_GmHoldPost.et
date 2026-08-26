@@ -1,0 +1,13 @@
+IA_GmHoldPost {
+ ID "1A6D47B0E6C35C00"
+ components {
+  RplComponent "{1A6D47B0E6C35C02}" {
+  }
+ }
+ Flags 1027
+ coords 0 0 0
+ TriggerShapeType Sphere
+ SphereRadius 8
+ PeriodicQueries 0
+ m_fHoldRadius 8
+}

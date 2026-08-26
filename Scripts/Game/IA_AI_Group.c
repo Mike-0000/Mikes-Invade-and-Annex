@@ -57,6 +57,7 @@ class IA_RoadSearchState
     bool m_keepAltitude = false;
     bool m_holdPost = false;
     vector m_holdTarget = vector.Zero;
+    float m_holdRadius = 0;
     
     // Search state
     int m_currentDistanceIndex = 0;
@@ -229,6 +230,7 @@ class IA_AiGroup
     private bool m_bKeepAltitude = false;
     private bool m_isHoldingPost = false;
     private vector m_holdPost = vector.Zero;
+    private float m_holdRadius = 0;
     private int m_iAirborneInFlight = 0;
     private vector m_vAirDropTarget = vector.Zero;
     private float m_fAirSpawnRadius = 250;
@@ -542,7 +544,7 @@ class IA_AiGroup
     // - Creating multiple groups at startup (prevents frame drops)
     // - Road position is important for AI navigation
     // - You can handle the group creation callback
-    static void StartAsyncMilitaryGroupCreation(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, IA_AreaInstance callbackInstance = null, bool useExactPosition = false, bool keepAltitude = false, bool holdPost = false, vector holdTarget = vector.Zero)
+    static void StartAsyncMilitaryGroupCreation(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, IA_AreaInstance callbackInstance = null, bool useExactPosition = false, bool keepAltitude = false, bool holdPost = false, vector holdTarget = vector.Zero, float holdRadius = 0)
     {
         if (unitCount <= 0)
             return;
@@ -551,6 +553,7 @@ class IA_AiGroup
         
         // Create search state
         IA_RoadSearchState searchState = new IA_RoadSearchState(initialPos, faction, unitCount, AreaFaction, activeGroup, useExactPosition, keepAltitude, holdPost, holdTarget);
+        searchState.m_holdRadius = holdRadius;
         if (callbackInstance)
         {
             searchState.SetCallback(callbackInstance, "OnAsyncGroupCreated");
@@ -674,7 +677,7 @@ class IA_AiGroup
             vector holdAt = searchState.m_holdTarget;
             if (holdAt == vector.Zero)
                 holdAt = searchState.m_foundSpawnPos;
-            grp.SetHoldPost(holdAt);
+            grp.SetHoldPost(holdAt, searchState.m_holdRadius);
             grp.SpawnNextUnit();
         }
             
@@ -1177,7 +1180,10 @@ class IA_AiGroup
             if (waitWp)
             {
                 waitWp.SetHoldingTime(-1);
-                waitWp.SetCompletionRadius(5);
+                float holdR = m_holdRadius;
+                if (holdR < 3)
+                    holdR = 5;
+                waitWp.SetCompletionRadius(holdR);
             }
         }
 
@@ -3762,11 +3768,12 @@ class IA_AiGroup
         return m_isInDefendMode;
     }
 
-    void SetHoldPost(vector pos)
+    void SetHoldPost(vector pos, float radius = 0)
     {
         m_isHoldingPost = true;
         m_holdPost = pos;
         m_bKeepAltitude = true;
+        m_holdRadius = radius;
     }
 
     bool IsHoldingPost()

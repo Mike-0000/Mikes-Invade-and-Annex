@@ -721,6 +721,37 @@ class IA_GmDirector
 	}
 
 	//------------------------------------------------------------------------------------------------
+	IA_GmHoldPost PlaceHoldPost(vector pos, float radius)
+	{
+		if (!Replication.IsServer())
+			return null;
+
+		Resource res = Resource.Load(IA_GmHoldPost.PREFAB);
+		if (!res)
+		{
+			Print("[IA_GmDirector] Failed to load building-hold prefab", LogLevel.ERROR);
+			return null;
+		}
+
+		IEntity ent = GetGame().SpawnEntityPrefab(res, null, IA_CreateSurfaceAdjustedSpawnParams(pos));
+		IA_GmHoldPost post = IA_GmHoldPost.Cast(ent);
+		if (!post)
+		{
+			Print("[IA_GmDirector] Spawned entity is not IA_GmHoldPost", LogLevel.ERROR);
+			if (ent)
+				IA_Game.AddEntityToGc(ent);
+			return null;
+		}
+
+		if (radius > 0)
+			post.SetHoldRadius(radius);
+
+		vector origin = post.GetOrigin();
+		Print(string.Format("[IA_GmDirector] Placed building hold at %1 radius %2", origin.ToString(), post.GetHoldRadius()), LogLevel.NORMAL);
+		return post;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	IA_SideObjectiveMarker FindNearestSideMarker(vector pos, float maxDist)
 	{
 		array<IA_SideObjectiveMarker> markers = IA_SideObjectiveMarker.GetAllMarkers();

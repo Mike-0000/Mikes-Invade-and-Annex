@@ -221,6 +221,18 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void IA_AskGmPlaceHoldPost(float x, float z, float radius)
+	{
+		if (Replication.IsServer())
+		{
+			IA_GmPlaceHoldPostIfAdmin(x, z, radius);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_GmPlaceHoldPost, x, z, radius);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void IA_AskGmActivateStaging()
 	{
 		if (Replication.IsServer())
@@ -308,6 +320,13 @@ modded class SCR_PlayerController
 
 	//------------------------------------------------------------------------------------------------
 	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_GmPlaceHoldPost(float x, float z, float radius)
+	{
+		IA_GmPlaceHoldPostIfAdmin(x, z, radius);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
 	protected void RpcAsk_IA_GmActivateStaging()
 	{
 		IA_GmActivateStagingIfAdmin();
@@ -381,6 +400,18 @@ modded class SCR_PlayerController
 		string placedName = marker.GetAreaName();
 		dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], groupId, placedRadius, placedName);
 		Rpc(RpcDo_IA_GmSitePlaced, marker.GetAreaType(), origin[0], origin[2], groupId, placedRadius, placedName);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_GmPlaceHoldPostIfAdmin(float x, float z, float radius)
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] GM building hold rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_GmDirector.GetInstance().PlaceHoldPost(Vector(x, 0, z), radius);
 	}
 
 	//------------------------------------------------------------------------------------------------

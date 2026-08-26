@@ -1,0 +1,16 @@
+IA_GmHoldPost : "{1A6D47B0E6C35C01}Prefabs/IA_AreaMarkers/IA_GmHoldPost.et" {
+ ID "1A6D47B0E6C35C10"
+ coords 0 0 0
+ components {
+  SCR_EditableSystemComponent "1A6D47B0E6C35C12" : "{6FA0A85CFC5420AD}Prefabs/Editor/Components/Systems_SCR_EditableEntityComponent.ct" {
+   m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35C13" {
+    Name "I&A Building Hold"
+    Description "Pins occupying AI inside this building with a Hold (Wait) order. Place on the floor you want them to occupy. Default radius 8 m; change with F6."
+    Icon "{B3FBE7D84E42508A}UI/Textures/Editor/EditableEntities/Systems/EditableEntity_System_Respawn.edds"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
+   }
+  }
+ }
+}

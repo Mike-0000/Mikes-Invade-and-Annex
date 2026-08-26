@@ -189,11 +189,15 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		AddChip(runtime, typeRow2, m_TypeBtns, "Defend", CHIP_TYPE, 8);
 		AddChip(runtime, typeRow2, m_TypeBtns, "HVT", CHIP_TYPE, 9);
 
+		ref MUI_Row typeRow3 = runtime.CreateRow("typeRow3");
+		typeRow3.SetGap(6);
+		AddChip(runtime, typeRow3, m_TypeBtns, "Building", CHIP_TYPE, 10);
+
 		m_NameField = runtime.CreateTextField("Objective name", "objName");
 		m_NameField.SetHeight(52);
 		m_NameField.SetMinHeight(52);
 
-		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live adds to the current AO without replacing existing sites.", "destLbl");
+		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live adds to the current AO. Building hold pins occupying AI inside with Hold (default 8 m).", "destLbl");
 		destLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		destLbl.SetMuted(true);
 
@@ -292,6 +296,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		card.AddChild(placeHdr);
 		card.AddChild(typeRow1);
 		card.AddChild(typeRow2);
+		card.AddChild(typeRow3);
 		card.AddChild(m_NameField);
 		card.AddChild(destLbl);
 		card.AddChild(bucketRow);
@@ -335,6 +340,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		else if (kind == CHIP_QRF)
 			m_iQrf = index;
 		RefreshChipLooks();
+		UpdatePlaceButtons();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -401,7 +407,12 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		{
 			m_PlaceBtn.SetEnabled(m_bHasUserPoint);
 			if (m_bHasUserPoint)
-				m_PlaceBtn.SetText("Place objective");
+			{
+				if (m_iType == 10)
+					m_PlaceBtn.SetText("Place building hold");
+				else
+					m_PlaceBtn.SetText("Place objective");
+			}
 			else
 				m_PlaceBtn.SetText("Click map first");
 		}
@@ -489,10 +500,22 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (m_RadiusField)
 			radius = m_RadiusField.GetValue();
 
-		IA_AreaType areaType = SelectedAreaType();
-		IA_GmBucket bucket = SelectedBucket();
 		float dropX = m_Picker.GetDropX();
 		float dropZ = m_Picker.GetDropZ();
+
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (m_iType == 10)
+		{
+			if (pc)
+				pc.IA_AskGmPlaceHoldPost(dropX, dropZ, radius);
+			RefreshLists();
+			GetGame().GetCallqueue().CallLater(this.RefreshLists, 250, false);
+			GetGame().GetCallqueue().CallLater(this.RefreshLists, 800, false);
+			return;
+		}
+
+		IA_AreaType areaType = SelectedAreaType();
+		IA_GmBucket bucket = SelectedBucket();
 		if (radius <= 0)
 			radius = IA_GmDirector.DefaultRadiusForType(areaType);
 
@@ -500,7 +523,6 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (m_NameField)
 			name = m_NameField.GetText();
 
-		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
 		if (pc)
 			pc.IA_AskGmPlaceSite(areaType, dropX, dropZ, bucket, name, radius);
 

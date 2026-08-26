@@ -2883,11 +2883,16 @@ class IA_AreaInstance
         ////Print(string.Format("[PLAYER_SCALING] GenerateRandomAiGroups for Area %1: Original=%2, ScaledGroupsToSpawn=%3 (scale factor: %4)", 
         //    m_area.GetName(), number, scaledNumberOfGroupsToSpawn, m_aiScaleFactor), LogLevel.DEBUG);
         
-        // Manual IA_AISpawnPoint markers inside this area override default scatter.
-        // If none exist, keep the original random-in-area spawn.
+        // Manual IA_GmHoldPost markers inside this area pin occupying AI in
+        // that building with Hold. CoverPost auto-garrison fills leftover groups.
+        // IA_AISpawnPoint markers override default scatter if none of those remain.
         ref array<IA_AISpawnPoint> spawnPoints = IA_AISpawnPoint.GetSpawnPointsInArea(m_area);
         Print(string.Format("[IA_AreaInstance] Found %1 spawn points inside area %2.", spawnPoints.Count(), m_area.GetName()), LogLevel.NORMAL);
 		int accumulatedDelay = 0;
+
+        int gmHoldCount = IA_GmHoldPost.CountUnclaimedInArea(m_area);
+        if (gmHoldCount > scaledNumberOfGroupsToSpawn)
+            scaledNumberOfGroupsToSpawn = gmHoldCount;
 
         for (int i = 0; i < scaledNumberOfGroupsToSpawn; i = i + 1)
         {
@@ -2898,18 +2903,37 @@ class IA_AreaInstance
             }
             
             IA_SquadType st = IA_GetRandomSquadType();
+            int unitCountBasedOnSquadType = IA_SquadCount(st, m_faction); 
+            int scaledUnitCountForThisGroup = Math.Round(unitCountBasedOnSquadType * m_aiScaleFactor);
+            if (scaledUnitCountForThisGroup < 1 && unitCountBasedOnSquadType > 0)
+                scaledUnitCountForThisGroup = 1;
+            else if (scaledUnitCountForThisGroup < 0)
+                scaledUnitCountForThisGroup = 0;
+
+            if (scaledUnitCountForThisGroup <= 0) 
+                continue;
+
             vector pos = vector.Zero;
             bool useExactPos = false;
             bool holdPost = false;
             vector holdTarget = vector.Zero;
+            float holdRadius = 0;
 
             vector garrisonPost;
-            if (TryTakeGarrisonPost(garrisonPost))
+            if (IA_GmHoldPost.TryClaimOneInArea(m_area, garrisonPost, holdRadius))
             {
                 pos = garrisonPost;
                 holdTarget = garrisonPost;
                 useExactPos = true;
                 holdPost = true;
+            }
+            else if (TryTakeGarrisonPost(garrisonPost))
+            {
+                pos = garrisonPost;
+                holdTarget = garrisonPost;
+                useExactPos = true;
+                holdPost = true;
+                holdRadius = 5;
             }
 
             if (pos == vector.Zero && !spawnPoints.IsEmpty())
@@ -2932,18 +2956,7 @@ class IA_AreaInstance
                 useExactPos = false;
             }
             
-            int unitCountBasedOnSquadType = IA_SquadCount(st, m_faction); 
-            int scaledUnitCountForThisGroup = Math.Round(unitCountBasedOnSquadType * m_aiScaleFactor); // Apply scaling to unit count of *this* group
-            if (scaledUnitCountForThisGroup < 1 && unitCountBasedOnSquadType > 0) scaledUnitCountForThisGroup = 1; // Ensure at least one unit if squad type had units
-            else if (scaledUnitCountForThisGroup < 0) scaledUnitCountForThisGroup = 0;
-
-            if (scaledUnitCountForThisGroup <= 0) 
-            {
-                ////Print("[IA_AreaInstance.GenerateRandomAiGroups] Invalid scaled unit count (" + scaledUnitCountForThisGroup + ") for squad type " + st + ", skipping group scheduling.", LogLevel.DEBUG);
-                continue;
-            }
-            
-            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction, useExactPos, holdPost, holdTarget);
+            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction, useExactPos, holdPost, holdTarget, holdRadius);
             ////Print(string.Format("[IA_AreaInstance.GenerateRandomAiGroups] Area %1: Scheduled group %2/%3 spawn. Pos: %4, Units: %5. Delay: %6ms",
             //    m_area.GetName(), i + 1, scaledNumberOfGroupsToSpawn, pos.ToString(), scaledUnitCountForThisGroup, accumulatedDelay), LogLevel.DEBUG);
             
@@ -5721,7 +5734,7 @@ class IA_AreaInstance
     // --- END ADDED ---
     
     // --- BEGIN ADDED: Helper to spawn a single AI group with delay and add it ---
-    private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask, bool useExactPosition = false, bool holdPost = false, vector holdTarget = vector.Zero)
+    private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask, bool useExactPosition = false, bool holdPost = false, vector holdTarget = vector.Zero, float holdRadius = 0)
     {
         if (m_bShutDown)
             return;
@@ -5753,7 +5766,7 @@ class IA_AreaInstance
                     safePos = inbound;
             }
 
-            IA_AiGroup.StartAsyncMilitaryGroupCreation(safePos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, exact, keepAltitude, true, holdAt);
+            IA_AiGroup.StartAsyncMilitaryGroupCreation(safePos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, exact, keepAltitude, true, holdAt, holdRadius);
             return;
         }
 
@@ -5778,6 +5791,7 @@ class IA_AreaInstance
             if (!m_availableGarrisonPosts)
                 m_availableGarrisonPosts = new array<vector>();
             IA_SpawnPlacement.FindGarrisonPosts(m_area.GetOrigin(), m_area.GetRadius(), m_availableGarrisonPosts);
+            IA_GmHoldPost.ExcludeCoveredPositions(m_availableGarrisonPosts, m_area);
             Print(string.Format("[IA_AreaInstance] Found %1 CoverPost/ObservationPost hold spots in %2", m_availableGarrisonPosts.Count(), m_area.GetName()), LogLevel.NORMAL);
         }
 
