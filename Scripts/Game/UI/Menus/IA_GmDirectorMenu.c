@@ -16,6 +16,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	protected ref MUI_Label m_StagingList;
 	protected ref MUI_Label m_CoordLabel;
 	protected ref MUI_NumericField m_RadiusField;
+	protected ref MUI_TextField m_NameField;
 	protected ref MUI_Button m_PlaceBtn;
 	protected ref MUI_Button m_QrfBtn;
 	protected ref array<ref MUI_Button> m_TypeBtns;
@@ -138,7 +139,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		liveHeader.SetKicker("STAGING DESK");
 		liveHeader.SetIntro(0.22, 0.4, 18);
 
-		ref MUI_Label subtitle = runtime.CreateLabel("Click the map, then Place. Drag pans, wheel zooms.", "subtitle");
+		ref MUI_Label subtitle = runtime.CreateLabel("Click the map, then Place. Name is optional.", "subtitle");
 		subtitle.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		subtitle.SetMuted(true);
 
@@ -187,6 +188,10 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		AddChip(runtime, typeRow2, m_TypeBtns, "Defend", CHIP_TYPE, 8);
 		AddChip(runtime, typeRow2, m_TypeBtns, "HVT", CHIP_TYPE, 9);
 
+		m_NameField = runtime.CreateTextField("Objective name", "objName");
+		m_NameField.SetHeight(52);
+		m_NameField.SetMinHeight(52);
+
 		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live joins the current AO.", "destLbl");
 		destLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		destLbl.SetMuted(true);
@@ -212,7 +217,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		placeRow.SetGap(8);
 		m_PlaceBtn = runtime.CreateButton("Place objective", "place");
 		m_PlaceBtn.MakeAccent();
-		m_PlaceBtn.SetCompact();
+		StyleDirectorChip(m_PlaceBtn);
 		m_PlaceBtn.SetEnabled(false);
 		m_PlaceBtn.GetOnClicked().Insert(OnPlaceObjective);
 		placeRow.AddChild(m_PlaceBtn);
@@ -233,7 +238,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		ref MUI_Row qrfRow = runtime.CreateRow("qrfRow");
 		qrfRow.SetGap(8);
 		m_QrfBtn = runtime.CreateButton("Spawn QRF here", "qrf");
-		m_QrfBtn.SetCompact();
+		StyleDirectorChip(m_QrfBtn);
 		m_QrfBtn.SetEnabled(false);
 		m_QrfBtn.GetOnClicked().Insert(OnSpawnQrf);
 		qrfRow.AddChild(m_QrfBtn);
@@ -250,11 +255,11 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		ref MUI_Row actions = runtime.CreateRow("actions");
 		actions.SetGap(8);
 		ref MUI_Button activateBtn = runtime.CreateButton("Activate Staging", "activate");
-		activateBtn.SetCompact();
+		StyleDirectorChip(activateBtn);
 		activateBtn.GetOnClicked().Insert(OnActivateStaging);
 		ref MUI_Button completeBtn = runtime.CreateButton("Complete Live", "complete");
 		completeBtn.MakeDanger();
-		completeBtn.SetCompact();
+		StyleDirectorChip(completeBtn);
 		completeBtn.GetOnClicked().Insert(OnCompleteLive);
 		actions.AddChild(activateBtn);
 		actions.AddChild(completeBtn);
@@ -262,10 +267,10 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		ref MUI_Row actions2 = runtime.CreateRow("actions2");
 		actions2.SetGap(8);
 		ref MUI_Button sideBtn = runtime.CreateButton("Start assassination", "side");
-		sideBtn.SetCompact();
+		StyleDirectorChip(sideBtn);
 		sideBtn.GetOnClicked().Insert(OnStartSide);
 		ref MUI_Button closeBtn = runtime.CreateButton("Close", "close");
-		closeBtn.SetCompact();
+		StyleDirectorChip(closeBtn);
 		closeBtn.GetOnClicked().Insert(OnMUIBack);
 		actions2.AddChild(sideBtn);
 		actions2.AddChild(closeBtn);
@@ -279,6 +284,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		card.AddChild(placeHdr);
 		card.AddChild(typeRow1);
 		card.AddChild(typeRow2);
+		card.AddChild(m_NameField);
 		card.AddChild(destLbl);
 		card.AddChild(bucketRow);
 		card.AddChild(m_RadiusField);
@@ -302,7 +308,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	protected void AddChip(notnull MUI_Runtime runtime, notnull MUI_Row row, notnull array<ref MUI_Button> store, string text, int kind, int index)
 	{
 		ref MUI_Button b = runtime.CreateButton(text, text);
-		b.SetCompact();
+		StyleDirectorChip(b);
 		ref IA_GmDirectorChipBind bind = new IA_GmDirectorChipBind();
 		bind.Init(this, kind, index);
 		b.GetOnClicked().Insert(bind.OnClicked);
@@ -348,8 +354,23 @@ class IA_GmDirectorMenu : MUI_MenuBase
 				b.MakeAccent();
 			else
 				b.MakeDefault();
-			b.SetCompact();
+			StyleDirectorChip(b);
 		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void StyleDirectorChip(notnull MUI_Button b)
+	{
+		b.SetHeight(28);
+		b.SetMinHeight(28);
+		b.SetMinWidth(52);
+		b.GetStyle().m_fRadius = 6;
+		int fontSize = MUI_Theme.FONT_SMALL;
+		MUI_ThemeData theme = b.GetTheme();
+		if (theme)
+			fontSize = theme.FONT_SMALL;
+		b.GetStyle().m_iFontSize = fontSize;
+		b.InvalidatePaint();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -452,12 +473,20 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (radius <= 0)
 			radius = IA_GmDirector.DefaultRadiusForType(areaType);
 
+		string name = "";
+		if (m_NameField)
+			name = m_NameField.GetText();
+
+		string pinName = name;
+		if (pinName.IsEmpty())
+			pinName = IA_GmDirector.AreaTypeToString(areaType);
+
 		IA_GmDirector dir = IA_GmDirector.GetInstance();
-		dir.RememberPlacedSite(areaType, dropX, dropZ, dir.GetGroupIdForBucket(bucket), radius, IA_GmDirector.AreaTypeToString(areaType));
+		dir.RememberPlacedSite(areaType, dropX, dropZ, dir.GetGroupIdForBucket(bucket), radius, pinName);
 
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
 		if (pc)
-			pc.IA_AskGmPlaceSite(areaType, dropX, dropZ, bucket, "", radius);
+			pc.IA_AskGmPlaceSite(areaType, dropX, dropZ, bucket, name, radius);
 
 		RefreshLists();
 		GetGame().GetCallqueue().CallLater(this.RefreshLists, 250, false);

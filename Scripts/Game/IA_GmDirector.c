@@ -265,6 +265,69 @@ class IA_GmDirector
 	}
 
 	//------------------------------------------------------------------------------------------------
+	IA_AreaMarker FindMarkerNear(float x, float z, float maxDist)
+	{
+		ref array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+		if (!markers)
+			return null;
+
+		vector pos = Vector(x, 0, z);
+		IA_AreaMarker best = null;
+		float bestDist = maxDist;
+		int i;
+		int count = markers.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_AreaMarker marker = markers[i];
+			if (!marker)
+				continue;
+			vector origin = marker.GetOrigin();
+			origin[1] = 0;
+			float dist = vector.Distance(origin, pos);
+			if (dist > bestDist)
+				continue;
+			bestDist = dist;
+			best = marker;
+		}
+		return best;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void RenameSite(notnull IA_AreaMarker marker, string name)
+	{
+		if (name.IsEmpty())
+			return;
+
+		string oldName = marker.GetAreaName();
+		marker.SetAreaName(name);
+
+		IA_Game game = IA_Game.Instantiate();
+		if (game && !oldName.IsEmpty())
+		{
+			IA_AreaInstance inst = game.GetAreaInstance(oldName);
+			if (inst)
+			{
+				IA_Area area = inst.GetArea();
+				if (area)
+					area.SetName(name);
+			}
+		}
+
+		vector origin = marker.GetOrigin();
+		RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], marker.m_areaGroup, marker.GetRadius(), name);
+		Print(string.Format("[IA_GmDirector] Renamed site to '%1'", name), LogLevel.NORMAL);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void RenameSiteAt(float x, float z, string name)
+	{
+		IA_AreaMarker marker = FindMarkerNear(x, z, 80);
+		if (!marker)
+			return;
+		RenameSite(marker, name);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void RememberPlacedSite(int type, float x, float z, int groupId, float radius, string name)
 	{
 		if (!m_KnownSites)

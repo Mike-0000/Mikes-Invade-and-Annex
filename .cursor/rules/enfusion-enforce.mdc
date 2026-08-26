@@ -211,6 +211,7 @@ Enfusion has **no WebView**. Widgets are the compositor (Canvas, text, EditBox).
 - **`EditBoxWidget.ActivateWriteMode` keeps native widget focus.** A visible EditBox without `IGNORE_CURSOR` sits above the compositor and can eat every later click. `OnWriteModeLeave` from hiding / re-activating the same shared box can Detach a field you just attached. Shared IME bridges must `IGNORE_CURSOR`, switch fields without hiding, ignore stale leave for a frame, and re-`BeginEditing` when the already-focused field is clicked again. Evidence: `EditBoxWidget.c`; `WidgetFlags.IGNORE_CURSOR`; `runtime: HALO planner` second numeric field unclickable until menu reopen.
 - **`SCR_MapMarkersUI` assumes `m_CursorModule` is set.** `CleanupMarkerEditWidget` calls `HandleDialog(false)` and `OnInputMapSelect` calls `GetCursorState()` with no null check. Configs that omit `SCR_MapCursorModule` (HALO planner, GM Director via `MHJ_MapHost`) leave that pointer null. `MapSelect` still binds, so every click NPEs. Null-check both; strip MapSelect on cursor-less maps; do not add a cursor module just to satisfy close — it steals click-to-drop. Evidence: `SCR_MapMarkersUI.c:581` / `:1061`; `runtime: MHJ_MapHost.CloseOwnMap` after Jump; `runtime:` GM Director `OnInputMapSelect`.
 - **`m_bShowInWelcomeScreenIfNonPlayable` was replaced by `m_eShowInWelcomeScreenOverride`.** NONE hides non-playable factions; ALWAYSSHOW shows even if not playable (FIA/INDFOR); NEVERSHOW hides. Stale prefab fields are ignored, so the deploy faction list can show every faction. Evidence: `SCR_Faction.c`; `INDFOR.conf`; `SCR_FactionRequestUIComponent.c`.
+- **F6 `SCR_BaseEditorAttributeVar` is a 12-byte vector (int/float/bool/vector).** Free-form strings cannot ride `ConfirmEditingServer`. Apply the string on the owner client (`m_bIsServer 0`) and RPC it, or pack into the vector. Evidence: `SCR_BaseEditorAttributeVar.c` `SNAPSHOT_SIZE_VALUE`; `SCR_AttributesManagerEditorComponent.c` ConfirmEditingServer.
 
 Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer rule / `F:\Mikes-UI\README.md`.
 
@@ -223,6 +224,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-25 — F6 attribute vars are a 12-byte vector; strings must apply client-side and RPC (`SCR_BaseEditorAttributeVar.c`, `SCR_AttributesManagerEditorComponent.c`).
 - 2026-08-25 — `Math.RandomInt` max is exclusive; `RandomInt(0, Count()-1)` with two items always returns 0 (`Math.c`, `runtime:` stacked GM vehicle spawns).
 - 2026-08-25 — `Attribute` defaults do not apply on script `new`; placeable registries stay unexposed and editor attributes NPE in GetDynamicDescriptionArray (`SCR_PlaceableEntitiesRegistry.c`, `SCR_BaseEditorAttribute.c:68`, `runtime:` F6 on IA_GmRadiusEditorAttribute).
 - 2026-08-25 — `SCR_MapMarkersUI.OnInputMapSelect` NPEs on a null `m_CursorModule` the same way `CleanupMarkerEditWidget` does (`SCR_MapMarkersUI.c:1061`, `runtime:` GM Director / HALO planner clicks).

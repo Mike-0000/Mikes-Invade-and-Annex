@@ -269,6 +269,18 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void IA_AskGmRenameSite(float x, float z, string name)
+	{
+		if (Replication.IsServer())
+		{
+			IA_GmRenameSiteIfAdmin(x, z, name);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_GmRenameSite, x, z, name);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
 	protected void RpcAsk_IA_GmPlaceSite(int type, float x, float z, int bucket, string name, float radius)
 	{
@@ -301,6 +313,13 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_GmHotAdd(float x, float z)
 	{
 		IA_GmHotAddIfAdmin(x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_GmRenameSite(float x, float z, string name)
+	{
+		IA_GmRenameSiteIfAdmin(x, z, name);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -421,6 +440,24 @@ modded class SCR_PlayerController
 
 		if (best)
 			IA_GmDirector.GetInstance().HotAdd(best);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_GmRenameSiteIfAdmin(float x, float z, string name)
+	{
+		if (!IA_IsAdminCaller())
+			return;
+		if (name.IsEmpty())
+			return;
+
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		dir.RenameSiteAt(x, z, name);
+		IA_AreaMarker marker = dir.FindMarkerNear(x, z, 80);
+		if (!marker)
+			return;
+
+		vector origin = marker.GetOrigin();
+		Rpc(RpcDo_IA_GmSitePlaced, marker.GetAreaType(), origin[0], origin[2], marker.m_areaGroup, marker.GetRadius(), marker.GetAreaName());
 	}
 
 	//------------------------------------------------------------------------------------------------
