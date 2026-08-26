@@ -1,44 +1,45 @@
 //------------------------------------------------------------------------------------------------
-//! Puts I&A capture-site wrappers into the vanilla Game Master content browser.
+//! Puts I&A capture-site wrappers into the Game Master content browser.
 //! Prefabs under PrefabsEditable/IA are not collected unless they sit in a
 //! SCR_PlaceableEntitiesRegistry on SCR_PlacingEditorComponentClass.
+//! Load the conf (do not `new` the registry): Attribute m_bExposed is private and
+//! stays false on script `new`, so GetPrefabs(onlyExposed=true) would insert empty
+//! names and the cards would never appear.
 //------------------------------------------------------------------------------------------------
 modded class SCR_PlacingEditorComponentClass
 {
+	protected static const ResourceName IA_SITES_REGISTRY = "{1A6D47B0E6C35B01}Configs/Editor/PlaceableEntities/IA_Sites.conf";
+
 	protected bool m_bIAGmPlaceables;
 	protected ref SCR_PlaceableEntitiesRegistry m_IARegistry;
-	protected ref array<ResourceName> m_IAPrefabs;
 
 	//------------------------------------------------------------------------------------------------
 	protected void IA_EnsurePlaceables()
 	{
 		if (m_bIAGmPlaceables)
 			return;
-		m_bIAGmPlaceables = true;
-
-		m_IAPrefabs = new array<ResourceName>();
-		m_IAPrefabs.Insert("{1A6D47B0E6C35924}PrefabsEditable/IA/E_IA_Town.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35914}PrefabsEditable/IA/E_IA_City.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35934}PrefabsEditable/IA/E_IA_Property.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35944}PrefabsEditable/IA/E_IA_Military.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35954}PrefabsEditable/IA/E_IA_SmallMilitary.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35964}PrefabsEditable/IA/E_IA_Docks.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35974}PrefabsEditable/IA/E_IA_RadioTower.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35984}PrefabsEditable/IA/E_IA_MortarPit.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35994}PrefabsEditable/IA/E_IA_Defend.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35A03}PrefabsEditable/IA/E_IA_SideObjective.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35A13}PrefabsEditable/IA/E_IA_HVT.et");
-		m_IAPrefabs.Insert("{1A6D47B0E6C35A23}PrefabsEditable/IA/E_IA_AISpawnPoint.et");
-
-		m_IARegistry = new SCR_PlaceableEntitiesRegistry();
-		m_IARegistry.SetPrefabs(m_IAPrefabs);
-
 		if (!m_Registries)
 			return;
 
+		Resource configContainer = BaseContainerTools.LoadContainer(IA_SITES_REGISTRY);
+		if (!configContainer || !configContainer.IsValid())
+		{
+			Print("[IA] Placeable registry conf failed to load", LogLevel.ERROR);
+			return;
+		}
+
+		m_IARegistry = SCR_PlaceableEntitiesRegistry.Cast(BaseContainerTools.CreateInstanceFromContainer(configContainer.GetResource().ToBaseContainer()));
+		if (!m_IARegistry)
+		{
+			Print("[IA] Placeable registry conf is not SCR_PlaceableEntitiesRegistry", LogLevel.ERROR);
+			return;
+		}
+
+		m_bIAGmPlaceables = true;
 		m_aIndexes.Insert(m_iPrefabCount);
-		m_iPrefabCount = m_iPrefabCount + m_IAPrefabs.Count();
+		m_iPrefabCount = m_iPrefabCount + m_IARegistry.GetPrefabs().Count();
 		m_Registries.Insert(m_IARegistry);
+		Print(string.Format("[IA] Registered %1 I&A sites in the Game Master content browser", m_IARegistry.GetPrefabs().Count()), LogLevel.NORMAL);
 	}
 
 	//------------------------------------------------------------------------------------------------

@@ -7,10 +7,11 @@ IA_AreaMarker : "{4C3443FA0E441870}Prefabs/IA_AreaMarkers/IA_Property.et" {
  m_areaType "Property"
  m_radius 80
  components {
-  SCR_EditableEntityComponent "1A6D47B0E6C35931" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
-   m_EntityType SYSTEM
+  SCR_EditableSystemComponent "1A6D47B0E6C35931" : "{6FA0A85CFC5420AD}Prefabs/Editor/Components/Systems_SCR_EditableEntityComponent.ct" {
    m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35932" {
     Name "I&A Property"
+    Description "Invade and Annex capture site. Place, then Activate Staging from the Director."
+    Icon "{3E3FB434FBFA4872}UI/Textures/Editor/EditableEntities/Objectives/EditableEntity_Objective_Attack.edds"
     m_aAuthoredLabels {
      ENTITYTYPE_SYSTEM
     }

@@ -7,10 +7,11 @@ IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et"
  m_areaType "DefendObjective"
  m_radius 50
  components {
-  SCR_EditableEntityComponent "1A6D47B0E6C35991" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
-   m_EntityType SYSTEM
+  SCR_EditableSystemComponent "1A6D47B0E6C35991" : "{6FA0A85CFC5420AD}Prefabs/Editor/Components/Systems_SCR_EditableEntityComponent.ct" {
    m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35992" {
     Name "I&A Defend"
+    Description "Invade and Annex defend site. Place, then Activate Staging from the Director."
+    Icon "{67810F4A72E6FB54}UI/Textures/Editor/EditableEntities/Objectives/EditableEntity_Objective_Defend.edds"
     m_aAuthoredLabels {
      ENTITYTYPE_SYSTEM
     }

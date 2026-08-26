@@ -7,10 +7,11 @@ IA_AreaMarker : "{7ADD348E46715524}Prefabs/IA_AreaMarkers/IA_SmallMilitary.et" {
  m_areaType "SmallMilitary"
  m_radius 80
  components {
-  SCR_EditableEntityComponent "1A6D47B0E6C35951" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
-   m_EntityType SYSTEM
+  SCR_EditableSystemComponent "1A6D47B0E6C35951" : "{6FA0A85CFC5420AD}Prefabs/Editor/Components/Systems_SCR_EditableEntityComponent.ct" {
    m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35952" {
     Name "I&A Small Military"
+    Description "Invade and Annex capture site. Place, then Activate Staging from the Director."
+    Icon "{EA975C03DF5422AD}UI/Textures/Editor/EditableEntities/Systems/EditableEntity_System_Arsenal.edds"
     m_aAuthoredLabels {
      ENTITYTYPE_SYSTEM
     }
