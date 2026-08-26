@@ -159,14 +159,52 @@ class IA_MissionInitializer : GenericEntity
 	    
 	    return groupsArray[m_currentIndex];
 	}
-	void FinishGame(){
-	
+	void FinishGame()
+	{
+		if (!Replication.IsServer())
+			return;
+
 		SCR_BaseGameMode scr_gm = SCR_BaseGameMode.Cast(GetGame().GetGameMode());
+		if (!scr_gm)
+			return;
+
 		SCR_FactionManager factMan = SCR_FactionManager.Cast(GetGame().GetFactionManager());
-		array<int> factIntArray = {factMan.GetFactionIndex(factMan.GetFactionByKey("US"))};
-		SCR_GameModeEndData gamemodeEndData = SCR_GameModeEndData.Create(EGameOverTypes.VICTORY, null, factIntArray);
+		if (!factMan)
+			return;
+
+		Faction winner = factMan.GetFactionByKey("US");
+		if (!winner)
+			winner = FindFirstPlayableFaction(factMan);
+		if (!winner)
+			return;
+
+		array<int> factIntArray = {};
+		factIntArray.Insert(factMan.GetFactionIndex(winner));
+		// VICTORY is a single-player end type. MP BaseGameOverScreensConfig has no
+		// VICTORY entry, so the fade HUD is removed and nothing replaces it.
+		// Conflict uses SCORELIMIT + winner faction so the manager maps to
+		// FACTION_VICTORY_SCORE / FACTION_DEFEAT_SCORE.
+		SCR_GameModeEndData gamemodeEndData = SCR_GameModeEndData.Create(EGameOverTypes.ENDREASON_SCORELIMIT, null, factIntArray);
 		scr_gm.EndGameMode(gamemodeEndData);
-	
+	}
+
+	protected Faction FindFirstPlayableFaction(notnull SCR_FactionManager factMan)
+	{
+		array<Faction> factions = {};
+		factMan.GetFactionsList(factions);
+		int count = factions.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			SCR_Faction playable = SCR_Faction.Cast(factions[i]);
+			if (!playable)
+				continue;
+			if (!playable.IsPlayable())
+				continue;
+			return playable;
+		}
+
+		return null;
 	}
 	
 	Faction GetRandomEnemyFaction(){
