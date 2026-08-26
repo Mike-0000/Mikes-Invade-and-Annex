@@ -600,25 +600,40 @@ class IA_AreaGroupManager
 
     void OnAirborneQRFSpawn()
     {
-        m_bAirbornePending = false;
         if (m_bShutDown)
+        {
+            m_bAirbornePending = false;
             return;
+        }
         if (!m_airborneArea || m_airborneArea.IsShutDown())
+        {
+            m_bAirbornePending = false;
             return;
+        }
         if (!SpawnAirborneQRF(m_airborneArea, m_airborneFaction, m_airborneTarget, m_airborneDefend))
         {
             Print("[QRF] Airborne drop failed after inbound warning; retrying in 15s.", LogLevel.WARNING);
+            // Keep m_bAirbornePending set so a second ScheduleAirborneQRF cannot race the retry.
             GetGame().GetCallqueue().CallLater(this.OnAirborneQRFSpawnRetry, 15000, false);
+            return;
         }
+        m_bAirbornePending = false;
     }
 
     void OnAirborneQRFSpawnRetry()
     {
         if (m_bShutDown)
+        {
+            m_bAirbornePending = false;
             return;
+        }
         if (!m_airborneArea || m_airborneArea.IsShutDown())
+        {
+            m_bAirbornePending = false;
             return;
+        }
         SpawnAirborneQRF(m_airborneArea, m_airborneFaction, m_airborneTarget, m_airborneDefend);
+        m_bAirbornePending = false;
     }
 
     private bool SpawnAirborneQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool forDefendMission = false)
@@ -637,6 +652,30 @@ class IA_AreaGroupManager
         if (world)
             terrainY = world.GetSurfaceY(lz[0], lz[2]);
         lz[1] = terrainY;
+
+        // Stick / home LZ must be dry. GetSurfaceY under ocean is the seabed.
+        if (IA_SpawnPlacement.IsInOcean(lz))
+        {
+            vector dry = IA_SpawnPlacement.FindInboundInfantrySpawn(areaInst.GetArea().GetOrigin(), -1);
+            if (dry == vector.Zero)
+            {
+                Print("[QRF] Airborne miss: landing zone is ocean and no dry inbound point.", LogLevel.WARNING);
+                return false;
+            }
+            lz = dry;
+            if (world)
+                terrainY = world.GetSurfaceY(lz[0], lz[2]);
+            lz[1] = terrainY;
+        }
+        else
+        {
+            vector walked;
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(lz, IA_SpawnPlacement.EMPTY_SEARCH_R, walked))
+            {
+                lz = walked;
+                terrainY = lz[1];
+            }
+        }
 
         vector release = lz;
         vector wind = MHJ_FlightAero.WindWorld(terrainY + MHJ_Constants.AI_DROP_AGL, 0);

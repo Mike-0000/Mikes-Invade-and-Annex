@@ -219,6 +219,7 @@ class IA_AiGroup
     private bool m_bAirborneDrop = false;
     private bool m_bKeepAltitude = false;
     private int m_iAirborneInFlight = 0;
+    private int m_iAirborneRegisterRetries = 0;
     private vector m_vAirDropTarget = vector.Zero;
     private float m_fAirSpawnRadius = 250;
     private float m_fAirLzMin = 50;
@@ -3275,6 +3276,11 @@ class IA_AiGroup
         }
         UnpinInboundSimulation();
         m_isSpawned = false;
+        m_bAirborneDrop = false;
+        m_iAirborneInFlight = 0;
+        ScriptCallQueue despawnQueue = GetGame().GetCallqueue();
+        if (despawnQueue)
+            despawnQueue.Remove(this.EnsureAirborneJumpersRegistered);
         
         if (m_isDriving || m_referencedEntity)
         {
@@ -3689,6 +3695,7 @@ class IA_AiGroup
         m_fAirLzMin = lzMin;
         m_fAirLzMax = lzMax;
         m_iAirborneInFlight = 0;
+        m_iAirborneRegisterRetries = 0;
         if (director)
             director.GetOnJumperFinished().Insert(OnAirborneJumperFinished);
     }
@@ -3700,7 +3707,8 @@ class IA_AiGroup
         if (!ContainsCharacter(character))
             return;
 
-        m_iAirborneInFlight = m_iAirborneInFlight - 1;
+        if (m_iAirborneInFlight > 0)
+            m_iAirborneInFlight = m_iAirborneInFlight - 1;
         if (m_iAirborneInFlight > 0)
             return;
 
@@ -3729,6 +3737,10 @@ class IA_AiGroup
             return;
 
         m_bAirborneDrop = false;
+        m_iAirborneRegisterRetries = 0;
+        ScriptCallQueue queue = GetGame().GetCallqueue();
+        if (queue)
+            queue.Remove(this.EnsureAirborneJumpersRegistered);
         ResumeAirborneCombatAI();
         EnableInboundSimulation(m_vAirDropTarget);
         RemoveAllOrders(true);
@@ -3740,6 +3752,67 @@ class IA_AiGroup
         Print(string.Format("[IA][Airborne] Fireteam landed, S&D at %1", m_vAirDropTarget.ToString()), LogLevel.NORMAL);
     }
 
+    //! Prefer a dry walkable LZ. Coastal 50-120 m samples often sit on ocean floor via GetSurfaceY.
+    protected vector PickAirborneLz()
+    {
+        BaseWorld world = GetGame().GetWorld();
+        vector firstDry = vector.Zero;
+        bool haveDry = false;
+        int attempt;
+        for (attempt = 0; attempt < 12; attempt++)
+        {
+            vector candidate = m_vAirDropTarget;
+            if (IA_Game.rng)
+                candidate = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
+
+            if (world)
+                candidate[1] = world.GetSurfaceY(candidate[0], candidate[2]);
+
+            if (IA_SpawnPlacement.IsInOcean(candidate))
+                continue;
+
+            vector walked;
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(candidate, IA_SpawnPlacement.EMPTY_SEARCH_R, walked))
+            {
+                if (!IA_SpawnPlacement.IsInOcean(walked))
+                    return walked;
+            }
+
+            if (!haveDry)
+            {
+                firstDry = candidate;
+                haveDry = true;
+            }
+        }
+
+        if (haveDry)
+            return firstDry;
+
+        vector fallback = m_vAirDropTarget;
+        if (world)
+            fallback[1] = world.GetSurfaceY(fallback[0], fallback[2]);
+
+        if (!IA_SpawnPlacement.IsInOcean(fallback))
+        {
+            vector walkedTarget;
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(fallback, IA_SpawnPlacement.EMPTY_SEARCH_R, walkedTarget))
+            {
+                if (!IA_SpawnPlacement.IsInOcean(walkedTarget))
+                    return walkedTarget;
+            }
+            return fallback;
+        }
+
+        if (m_airDropArea && m_airDropArea.GetArea())
+        {
+            vector inbound = IA_SpawnPlacement.FindInboundInfantrySpawn(m_airDropArea.GetArea().GetOrigin(), -1);
+            if (inbound != vector.Zero)
+                return inbound;
+        }
+
+        return fallback;
+    }
+
     protected void RegisterAirborneJumper(IEntity charEntity)
     {
         if (!m_bAirborneDrop || !m_airDirector)
@@ -3749,12 +3822,10 @@ class IA_AiGroup
         if (!jumper)
             return;
 
-        vector lz = m_vAirDropTarget;
-        if (IA_Game.rng)
-            lz = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
-        BaseWorld world = GetGame().GetWorld();
-        if (world)
-            lz[1] = world.GetSurfaceY(lz[0], lz[2]);
+        if (MHJ_AiDropDirector.IsActiveJumper(jumper))
+            return;
+
+        vector lz = PickAirborneLz();
 
         if (!m_airDirector.AddJumper(jumper, lz))
         {
@@ -3764,6 +3835,89 @@ class IA_AiGroup
 
         m_iAirborneInFlight = m_iAirborneInFlight + 1;
         SuspendAirborneCombatAI();
+    }
+
+    //! Do not ReleaseAirborneToAttack while inFlight==0 after spawn — that re-enables
+    //! Group.bt mid-air (GetInNearest NodeError). Retry AddJumper (RplId often invalid
+    //! on the spawn frame), then emergency-land only after retries are exhausted.
+    protected void EnsureAirborneJumpersRegistered()
+    {
+        if (!m_bAirborneDrop)
+            return;
+
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        int count = characters.Count();
+        int unregistered = 0;
+        int i;
+        for (i = 0; i < count; i++)
+        {
+            SCR_ChimeraCharacter ch = characters[i];
+            if (!ch)
+                continue;
+
+            ChimeraCharacter jumper = ChimeraCharacter.Cast(ch);
+            if (jumper && MHJ_AiDropDirector.IsActiveJumper(jumper))
+                continue;
+
+            RegisterAirborneJumper(ch);
+            jumper = ChimeraCharacter.Cast(ch);
+            if (!jumper || !MHJ_AiDropDirector.IsActiveJumper(jumper))
+                unregistered = unregistered + 1;
+        }
+
+        if (unregistered <= 0 && count > 0)
+        {
+            m_iAirborneRegisterRetries = 0;
+            return;
+        }
+
+        if (m_iAirborneRegisterRetries < 8)
+        {
+            m_iAirborneRegisterRetries = m_iAirborneRegisterRetries + 1;
+            GetGame().GetCallqueue().CallLater(this.EnsureAirborneJumpersRegistered, 250, false);
+            return;
+        }
+
+        Print("[IA][Airborne] Director never accepted jumpers; emergency ground release", LogLevel.ERROR);
+        ForceAirborneEmergencyLand();
+    }
+
+    protected void ForceAirborneEmergencyLand()
+    {
+        if (!m_bAirborneDrop)
+            return;
+
+        vector lz = PickAirborneLz();
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        int count = characters.Count();
+        int i;
+        for (i = 0; i < count; i++)
+        {
+            SCR_ChimeraCharacter ch = characters[i];
+            if (!ch)
+                continue;
+
+            ChimeraCharacter jumper = ChimeraCharacter.Cast(ch);
+            if (jumper && MHJ_AiDropDirector.IsActiveJumper(jumper))
+                continue;
+
+            vector pos = lz;
+            if (IA_Game.rng)
+            {
+                vector offset = IA_Game.rng.GenerateRandomPointInRadius(1, 8, vector.Zero);
+                pos[0] = lz[0] + offset[0];
+                pos[2] = lz[2] + offset[2];
+            }
+            pos[1] = lz[1] + 0.1;
+            if (IA_SpawnPlacement.IsInOcean(pos))
+                pos = lz;
+            ch.SetOrigin(pos);
+        }
+
+        if (m_iAirborneInFlight > 0)
+            return;
+
+        ReleaseAirborneToAttack();
     }
 
     protected void SuspendAirborneCombatAI()
@@ -4119,7 +4273,7 @@ class IA_AiGroup
             {
                 Print("[IA_AiGroup.OnStaggeredSpawningComplete] Airborne drop, holding orders until land", LogLevel.NORMAL);
                 if (m_iAirborneInFlight <= 0)
-                    ReleaseAirborneToAttack();
+                    EnsureAirborneJumpersRegistered();
             }
             else if (!IsInDefendMode() && !m_lastAssignedArea)
             {
