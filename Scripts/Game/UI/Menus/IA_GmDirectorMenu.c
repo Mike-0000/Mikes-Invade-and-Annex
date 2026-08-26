@@ -131,17 +131,39 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		subtitle.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		subtitle.SetMuted(true);
 
+		ref MUI_Row lists = runtime.CreateRow("lists");
+		lists.SetGap(12);
+		lists.SetGrow(1);
+		lists.SetFillHeight();
+
+		ref MUI_Panel liveCol = runtime.CreatePanel("liveCol");
+		liveCol.GetStyle().m_Fill = Color.FromInt(0);
+		liveCol.SetGrow(1);
+		liveCol.SetFillHeight();
+		liveCol.SetGap(2);
 		ref MUI_Label liveHdr = runtime.CreateLabel("LIVE", "liveHdr");
 		liveHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		liveHdr.SetMuted(true);
+		liveHdr.SetBold(true);
 		m_LiveList = runtime.CreateLabel("(empty)", "liveList");
 		m_LiveList.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		liveCol.AddChild(liveHdr);
+		liveCol.AddChild(m_LiveList);
 
+		ref MUI_Panel stagingCol = runtime.CreatePanel("stagingCol");
+		stagingCol.GetStyle().m_Fill = Color.FromInt(0);
+		stagingCol.SetGrow(1);
+		stagingCol.SetFillHeight();
+		stagingCol.SetGap(2);
 		ref MUI_Label stagingHdr = runtime.CreateLabel("STAGING", "stagingHdr");
 		stagingHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		stagingHdr.SetMuted(true);
+		stagingHdr.SetBold(true);
 		m_StagingList = runtime.CreateLabel("(empty)", "stagingList");
 		m_StagingList.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		stagingCol.AddChild(stagingHdr);
+		stagingCol.AddChild(m_StagingList);
+
+		lists.AddChild(liveCol);
+		lists.AddChild(stagingCol);
 
 		ref MUI_Hairline placeLine = runtime.CreateHairline("placeLine");
 		ref MUI_Label placeHdr = runtime.CreateLabel("PLACE OBJECTIVE", "placeHdr");
@@ -251,10 +273,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 
 		card.AddChild(liveHeader);
 		card.AddChild(subtitle);
-		card.AddChild(liveHdr);
-		card.AddChild(m_LiveList);
-		card.AddChild(stagingHdr);
-		card.AddChild(m_StagingList);
+		card.AddChild(lists);
 		card.AddChild(placeLine);
 		card.AddChild(placeHdr);
 		card.AddChild(typeRow1);
@@ -268,10 +287,6 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		card.AddChild(qrfHdr);
 		card.AddChild(qrfTypeRow);
 		card.AddChild(qrfRow);
-		ref MUI_Spacer railGrow = runtime.CreateSpacer(0, "railGrow");
-		railGrow.SetFillHeight();
-		railGrow.SetGrow(1);
-		card.AddChild(railGrow);
 		card.AddChild(actions);
 		card.AddChild(actions2);
 
@@ -332,6 +347,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 				b.MakeAccent();
 			else
 				b.MakeDefault();
+			b.SetCompact();
 		}
 	}
 
@@ -506,7 +522,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 			if (!marker)
 				continue;
 			if (!text.IsEmpty())
-				text = text + "  ·  ";
+				text = text + "\n";
 			text = text + marker.GetAreaName();
 		}
 		if (text.IsEmpty())
