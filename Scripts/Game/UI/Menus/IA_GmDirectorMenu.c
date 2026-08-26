@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------------------------
 //! Game Master map workstation. Places the same IA_AreaMarker prefabs as the
 //! vanilla editor, through IA_GmDirector. Native MapWidget is owned by MHJ_MapHost.
+//! Map click only sets a location. Place / QRF buttons commit it.
 //------------------------------------------------------------------------------------------------
 class IA_GmDirectorMenu : MUI_MenuBase
 {
@@ -9,12 +10,13 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	protected ref MUI_Label m_LiveList;
 	protected ref MUI_Label m_StagingList;
 	protected ref MUI_Dropdown m_TypeDrop;
-	protected ref MUI_Toggle m_LiveBucket;
-	protected ref MUI_Toggle m_QrfClick;
+	protected ref MUI_Dropdown m_BucketDrop;
 	protected ref MUI_Dropdown m_QrfType;
 	protected ref MUI_Label m_CoordLabel;
 	protected ref MUI_NumericField m_RadiusField;
-	protected bool m_bIgnoreFirstPick;
+	protected ref MUI_Button m_PlaceBtn;
+	protected ref MUI_Button m_QrfBtn;
+	protected bool m_bHasUserPoint;
 	protected bool m_bClosingMap;
 
 	//------------------------------------------------------------------------------------------------
@@ -30,7 +32,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (!IsMUIOpen())
 			return;
 
-		m_bIgnoreFirstPick = true;
+		m_bHasUserPoint = false;
 		m_Map = new MHJ_MapHost();
 		if (m_Map.Open(m_wRoot, GetRuntime()))
 		{
@@ -43,6 +45,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		}
 
 		RefreshLists();
+		UpdatePlaceButtons();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -51,6 +54,15 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		super.OnMenuUpdate(tDelta);
 		if (m_Map)
 			m_Map.Tick(m_Picker);
+
+		MUI_Runtime runtime = GetRuntime();
+		if (!runtime)
+			return;
+
+		if (m_Picker && m_Picker.IsFocused())
+			runtime.SetPromptText("<action name='MenuSelect' scale='1.35'/>  Set location", "<action name='MenuBack' scale='1.35'/>  Back");
+		else
+			runtime.SetPromptText("<action name='MenuSelect' scale='1.35'/>  Select", "<action name='MenuBack' scale='1.35'/>  Back");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -87,7 +99,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		split.SetIntro(0.06, 0.55, 46);
 
 		ref MUI_Card card = runtime.CreateCard("card");
-		card.SetWidth(440);
+		card.SetWidth(460);
 		card.SetFillHeight();
 		card.SetPadding(28);
 		card.SetPaddingTRBL(22, 28, 24, 28);
@@ -98,9 +110,13 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		liveHeader.SetKicker("INVADE AND ANNEX  //  STAGING DESK");
 		liveHeader.SetIntro(0.22, 0.4, 18);
 
-		ref MUI_Label subtitle = runtime.CreateLabel("Click the map to place a site. Drag pans, wheel zooms. Default bucket is Staging.", "subtitle");
+		ref MUI_Label subtitle = runtime.CreateLabel("Click the map to set a location, then press Place. Drag pans, wheel zooms.", "subtitle");
 		subtitle.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		subtitle.SetMuted(true);
+
+		ref MUI_ScrollView lists = runtime.CreateScrollView("lists");
+		lists.SetViewportHeight(110);
+		lists.SetGap(8);
 
 		ref MUI_Label liveHdr = runtime.CreateLabel("LIVE", "liveHdr");
 		liveHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
@@ -114,7 +130,17 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_StagingList = runtime.CreateLabel("(empty)", "stagingList");
 		m_StagingList.SetFontSize(runtime.GetTheme().FONT_SMALL);
 
-		ref MUI_Label typeLbl = runtime.CreateLabel("Site type", "typeLbl");
+		lists.AddChild(liveHdr);
+		lists.AddChild(m_LiveList);
+		lists.AddChild(stagingHdr);
+		lists.AddChild(m_StagingList);
+
+		ref MUI_Hairline placeLine = runtime.CreateHairline("placeLine");
+		ref MUI_Label placeHdr = runtime.CreateLabel("PLACE OBJECTIVE", "placeHdr");
+		placeHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		placeHdr.SetMuted(true);
+
+		ref MUI_Label typeLbl = runtime.CreateLabel("Type", "typeLbl");
 		typeLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		typeLbl.SetMuted(true);
 		m_TypeDrop = runtime.CreateDropdown("siteType");
@@ -130,14 +156,36 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_TypeDrop.AddItem("Assassination");
 		m_TypeDrop.SetIndex(0);
 
-		m_LiveBucket = runtime.CreateToggle("Place into Live", "liveBucket");
+		ref MUI_Label destLbl = runtime.CreateLabel("Destination", "destLbl");
+		destLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		destLbl.SetMuted(true);
+		m_BucketDrop = runtime.CreateDropdown("bucket");
+		m_BucketDrop.AddItem("Staging (press Activate later)");
+		m_BucketDrop.AddItem("Live (spawn into the current AO)");
+		m_BucketDrop.SetIndex(0);
+
 		m_RadiusField = runtime.CreateNumericField("Radius (0 = type default)", "radius");
 		m_RadiusField.SetRange(0, 400);
 		m_RadiusField.SetStep(5);
 		m_RadiusField.SetDecimals(0);
 		m_RadiusField.SetValue(0);
 
-		m_QrfClick = runtime.CreateToggle("Next click spawns QRF", "qrfClick");
+		m_CoordLabel = runtime.CreateLabel("No location yet — click the map", "coords");
+		m_CoordLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		m_CoordLabel.SetMuted(true);
+
+		ref MUI_Row placeRow = runtime.CreateRow("placeRow");
+		placeRow.SetGap(12);
+		m_PlaceBtn = runtime.CreateButton("Place objective", "place");
+		m_PlaceBtn.MakeAccent();
+		m_PlaceBtn.SetEnabled(false);
+		m_PlaceBtn.GetOnClicked().Insert(OnPlaceObjective);
+		placeRow.AddChild(m_PlaceBtn);
+
+		ref MUI_Hairline qrfLine = runtime.CreateHairline("qrfLine");
+		ref MUI_Label qrfHdr = runtime.CreateLabel("QRF AT LOCATION", "qrfHdr");
+		qrfHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		qrfHdr.SetMuted(true);
 		m_QrfType = runtime.CreateDropdown("qrfType");
 		m_QrfType.AddItem("Infantry");
 		m_QrfType.AddItem("Motorized");
@@ -146,9 +194,12 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_QrfType.AddItem("Airborne");
 		m_QrfType.SetIndex(0);
 
-		m_CoordLabel = runtime.CreateLabel("Click the map to set a point", "coords");
-		m_CoordLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		m_CoordLabel.SetMuted(true);
+		ref MUI_Row qrfRow = runtime.CreateRow("qrfRow");
+		qrfRow.SetGap(12);
+		m_QrfBtn = runtime.CreateButton("Spawn QRF here", "qrf");
+		m_QrfBtn.SetEnabled(false);
+		m_QrfBtn.GetOnClicked().Insert(OnSpawnQrf);
+		qrfRow.AddChild(m_QrfBtn);
 
 		m_Picker = new MHJ_MapPicker();
 		runtime.Adopt(m_Picker);
@@ -162,7 +213,6 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		ref MUI_Row actions = runtime.CreateRow("actions");
 		actions.SetGap(12);
 		ref MUI_Button activateBtn = runtime.CreateButton("Activate Staging", "activate");
-		activateBtn.MakeAccent();
 		activateBtn.GetOnClicked().Insert(OnActivateStaging);
 		ref MUI_Button completeBtn = runtime.CreateButton("Complete Live", "complete");
 		completeBtn.MakeDanger();
@@ -181,17 +231,20 @@ class IA_GmDirectorMenu : MUI_MenuBase
 
 		card.AddChild(liveHeader);
 		card.AddChild(subtitle);
-		card.AddChild(liveHdr);
-		card.AddChild(m_LiveList);
-		card.AddChild(stagingHdr);
-		card.AddChild(m_StagingList);
+		card.AddChild(lists);
+		card.AddChild(placeLine);
+		card.AddChild(placeHdr);
 		card.AddChild(typeLbl);
 		card.AddChild(m_TypeDrop);
-		card.AddChild(m_LiveBucket);
+		card.AddChild(destLbl);
+		card.AddChild(m_BucketDrop);
 		card.AddChild(m_RadiusField);
-		card.AddChild(m_QrfClick);
-		card.AddChild(m_QrfType);
 		card.AddChild(m_CoordLabel);
+		card.AddChild(placeRow);
+		card.AddChild(qrfLine);
+		card.AddChild(qrfHdr);
+		card.AddChild(m_QrfType);
+		card.AddChild(qrfRow);
 		ref MUI_Spacer railGrow = runtime.CreateSpacer(0, "railGrow");
 		railGrow.SetFillHeight();
 		railGrow.SetGrow(1);
@@ -209,25 +262,36 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	protected void OnPickerChanged()
 	{
-		if (!m_Picker)
-			return;
+		m_bHasUserPoint = true;
+		UpdatePlaceButtons();
+	}
 
+	//------------------------------------------------------------------------------------------------
+	protected void UpdatePlaceButtons()
+	{
+		string coordText = "No location yet — click the map";
+		if (m_bHasUserPoint && m_Picker)
+			coordText = string.Format("Location  %1  %2", m_Picker.GetDropX(), m_Picker.GetDropZ());
 		if (m_CoordLabel)
-			m_CoordLabel.SetText(string.Format("Point  %1  %2", m_Picker.GetDropX(), m_Picker.GetDropZ()));
+			m_CoordLabel.SetText(coordText);
 
-		if (m_bIgnoreFirstPick)
+		if (m_PlaceBtn)
 		{
-			m_bIgnoreFirstPick = false;
-			return;
+			m_PlaceBtn.SetEnabled(m_bHasUserPoint);
+			if (m_bHasUserPoint)
+				m_PlaceBtn.SetText("Place objective");
+			else
+				m_PlaceBtn.SetText("Click map first");
 		}
 
-		if (m_QrfClick && m_QrfClick.IsChecked())
+		if (m_QrfBtn)
 		{
-			RequestQrfAtClick();
-			return;
+			m_QrfBtn.SetEnabled(m_bHasUserPoint);
+			if (m_bHasUserPoint)
+				m_QrfBtn.SetText("Spawn QRF here");
+			else
+				m_QrfBtn.SetText("Click map first");
 		}
-
-		RequestPlaceAtClick();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -258,6 +322,14 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	}
 
 	//------------------------------------------------------------------------------------------------
+	protected IA_GmBucket SelectedBucket()
+	{
+		if (m_BucketDrop && m_BucketDrop.GetIndex() == 1)
+			return IA_GmBucket.Live;
+		return IA_GmBucket.Staging;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected IA_QRFType SelectedQrfType()
 	{
 		int idx = 0;
@@ -275,14 +347,12 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void RequestPlaceAtClick()
+	protected void OnPlaceObjective()
 	{
+		if (!m_bHasUserPoint)
+			return;
 		if (!m_Picker || !m_Picker.HasDrop())
 			return;
-
-		int bucket = IA_GmBucket.Staging;
-		if (m_LiveBucket && m_LiveBucket.IsChecked())
-			bucket = IA_GmBucket.Live;
 
 		float radius = 0;
 		if (m_RadiusField)
@@ -290,14 +360,16 @@ class IA_GmDirectorMenu : MUI_MenuBase
 
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
 		if (pc)
-			pc.IA_AskGmPlaceSite(SelectedAreaType(), m_Picker.GetDropX(), m_Picker.GetDropZ(), bucket, "", radius);
+			pc.IA_AskGmPlaceSite(SelectedAreaType(), m_Picker.GetDropX(), m_Picker.GetDropZ(), SelectedBucket(), "", radius);
 
 		GetGame().GetCallqueue().CallLater(this.RefreshLists, 400, false);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void RequestQrfAtClick()
+	protected void OnSpawnQrf()
 	{
+		if (!m_bHasUserPoint)
+			return;
 		if (!m_Picker || !m_Picker.HasDrop())
 			return;
 
@@ -327,7 +399,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	{
 		float x = 0;
 		float z = 0;
-		if (m_Picker && m_Picker.HasDrop())
+		if (m_bHasUserPoint && m_Picker && m_Picker.HasDrop())
 		{
 			x = m_Picker.GetDropX();
 			z = m_Picker.GetDropZ();
