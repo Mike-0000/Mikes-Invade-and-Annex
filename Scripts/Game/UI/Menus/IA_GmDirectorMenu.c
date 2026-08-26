@@ -131,39 +131,29 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		subtitle.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		subtitle.SetMuted(true);
 
-		ref MUI_Row lists = runtime.CreateRow("lists");
-		lists.SetGap(12);
-		lists.SetGrow(1);
-		lists.SetFillHeight();
+		// Stack in the card. A row of Fill-width columns measures each pane as the
+		// full rail width, so Staging paints over the map and a FillHeight lists
+		// row pushes every chip and action below the screen.
+		ref MUI_Panel sites = runtime.CreatePanel("sites");
+		sites.GetStyle().m_Fill = Color.FromInt(0);
+		sites.SetGap(2);
 
-		ref MUI_Panel liveCol = runtime.CreatePanel("liveCol");
-		liveCol.GetStyle().m_Fill = Color.FromInt(0);
-		liveCol.SetGrow(1);
-		liveCol.SetFillHeight();
-		liveCol.SetGap(2);
 		ref MUI_Label liveHdr = runtime.CreateLabel("LIVE", "liveHdr");
 		liveHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		liveHdr.SetBold(true);
 		m_LiveList = runtime.CreateLabel("(empty)", "liveList");
 		m_LiveList.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		liveCol.AddChild(liveHdr);
-		liveCol.AddChild(m_LiveList);
 
-		ref MUI_Panel stagingCol = runtime.CreatePanel("stagingCol");
-		stagingCol.GetStyle().m_Fill = Color.FromInt(0);
-		stagingCol.SetGrow(1);
-		stagingCol.SetFillHeight();
-		stagingCol.SetGap(2);
 		ref MUI_Label stagingHdr = runtime.CreateLabel("STAGING", "stagingHdr");
 		stagingHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		stagingHdr.SetBold(true);
 		m_StagingList = runtime.CreateLabel("(empty)", "stagingList");
 		m_StagingList.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		stagingCol.AddChild(stagingHdr);
-		stagingCol.AddChild(m_StagingList);
 
-		lists.AddChild(liveCol);
-		lists.AddChild(stagingCol);
+		sites.AddChild(liveHdr);
+		sites.AddChild(m_LiveList);
+		sites.AddChild(stagingHdr);
+		sites.AddChild(m_StagingList);
 
 		ref MUI_Hairline placeLine = runtime.CreateHairline("placeLine");
 		ref MUI_Label placeHdr = runtime.CreateLabel("PLACE OBJECTIVE", "placeHdr");
@@ -273,7 +263,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 
 		card.AddChild(liveHeader);
 		card.AddChild(subtitle);
-		card.AddChild(lists);
+		card.AddChild(sites);
 		card.AddChild(placeLine);
 		card.AddChild(placeHdr);
 		card.AddChild(typeRow1);
