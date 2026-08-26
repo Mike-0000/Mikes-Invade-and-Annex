@@ -2,20 +2,29 @@
 //! Game Master map workstation. Places the same IA_AreaMarker prefabs as the
 //! vanilla editor, through IA_GmDirector. Native MapWidget is owned by MHJ_MapHost.
 //! Map click only sets a location. Place / QRF buttons commit it.
+//! Types, destination, QRF, and Live/Staging lists stay on the rail — no dropdowns or scroll.
 //------------------------------------------------------------------------------------------------
 class IA_GmDirectorMenu : MUI_MenuBase
 {
+	protected static const int CHIP_TYPE = 0;
+	protected static const int CHIP_BUCKET = 1;
+	protected static const int CHIP_QRF = 2;
+
 	protected ref MHJ_MapHost m_Map;
 	protected ref MHJ_MapPicker m_Picker;
 	protected ref MUI_Label m_LiveList;
 	protected ref MUI_Label m_StagingList;
-	protected ref MUI_Dropdown m_TypeDrop;
-	protected ref MUI_Dropdown m_BucketDrop;
-	protected ref MUI_Dropdown m_QrfType;
 	protected ref MUI_Label m_CoordLabel;
 	protected ref MUI_NumericField m_RadiusField;
 	protected ref MUI_Button m_PlaceBtn;
 	protected ref MUI_Button m_QrfBtn;
+	protected ref array<ref MUI_Button> m_TypeBtns;
+	protected ref array<ref MUI_Button> m_BucketBtns;
+	protected ref array<ref MUI_Button> m_QrfBtns;
+	protected ref array<ref IA_GmDirectorChipBind> m_Binds;
+	protected int m_iType;
+	protected int m_iBucket;
+	protected int m_iQrf;
 	protected bool m_bHasUserPoint;
 	protected bool m_bClosingMap;
 
@@ -85,6 +94,14 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	override void BuildUI(notnull MUI_Runtime runtime)
 	{
+		m_TypeBtns = new array<ref MUI_Button>();
+		m_BucketBtns = new array<ref MUI_Button>();
+		m_QrfBtns = new array<ref MUI_Button>();
+		m_Binds = new array<ref IA_GmDirectorChipBind>();
+		m_iType = 0;
+		m_iBucket = 0;
+		m_iQrf = 0;
+
 		ref MUI_Panel overlay = runtime.CreatePanel("overlay");
 		overlay.MakeOverlay();
 		overlay.GetStyle().m_Fill = Color.FromInt(0);
@@ -94,29 +111,25 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		ref MUI_Row split = runtime.CreateRow("split");
 		split.SetFillWidth();
 		split.SetFillHeight();
-		split.SetGap(16);
-		split.SetPadding(20);
+		split.SetGap(12);
+		split.SetPadding(16);
 		split.SetIntro(0.06, 0.55, 46);
 
 		ref MUI_Card card = runtime.CreateCard("card");
-		card.SetWidth(460);
+		card.SetWidth(540);
 		card.SetFillHeight();
-		card.SetPadding(28);
-		card.SetPaddingTRBL(22, 28, 24, 28);
-		card.SetGap(10);
+		card.SetPadding(16);
+		card.SetPaddingTRBL(16, 16, 16, 16);
+		card.SetGap(6);
 		card.SetIntro(0.16, 0.4, 18);
 
 		ref MUI_LiveHeader liveHeader = runtime.CreateLiveHeader("GM DIRECTOR", "liveHeader");
 		liveHeader.SetKicker("INVADE AND ANNEX  //  STAGING DESK");
 		liveHeader.SetIntro(0.22, 0.4, 18);
 
-		ref MUI_Label subtitle = runtime.CreateLabel("Click the map to set a location, then press Place. Drag pans, wheel zooms.", "subtitle");
+		ref MUI_Label subtitle = runtime.CreateLabel("Click the map, then Place. Drag pans, wheel zooms.", "subtitle");
 		subtitle.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		subtitle.SetMuted(true);
-
-		ref MUI_ScrollView lists = runtime.CreateScrollView("lists");
-		lists.SetViewportHeight(110);
-		lists.SetGap(8);
 
 		ref MUI_Label liveHdr = runtime.CreateLabel("LIVE", "liveHdr");
 		liveHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
@@ -130,54 +143,53 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_StagingList = runtime.CreateLabel("(empty)", "stagingList");
 		m_StagingList.SetFontSize(runtime.GetTheme().FONT_SMALL);
 
-		lists.AddChild(liveHdr);
-		lists.AddChild(m_LiveList);
-		lists.AddChild(stagingHdr);
-		lists.AddChild(m_StagingList);
-
 		ref MUI_Hairline placeLine = runtime.CreateHairline("placeLine");
 		ref MUI_Label placeHdr = runtime.CreateLabel("PLACE OBJECTIVE", "placeHdr");
 		placeHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		placeHdr.SetMuted(true);
 
-		ref MUI_Label typeLbl = runtime.CreateLabel("Type", "typeLbl");
-		typeLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		typeLbl.SetMuted(true);
-		m_TypeDrop = runtime.CreateDropdown("siteType");
-		m_TypeDrop.AddItem("Town");
-		m_TypeDrop.AddItem("City");
-		m_TypeDrop.AddItem("Property");
-		m_TypeDrop.AddItem("Military");
-		m_TypeDrop.AddItem("Small military");
-		m_TypeDrop.AddItem("Docks");
-		m_TypeDrop.AddItem("Radio tower");
-		m_TypeDrop.AddItem("Mortar pit");
-		m_TypeDrop.AddItem("Defend");
-		m_TypeDrop.AddItem("Assassination");
-		m_TypeDrop.SetIndex(0);
+		ref MUI_Row typeRow1 = runtime.CreateRow("typeRow1");
+		typeRow1.SetGap(6);
+		AddChip(runtime, typeRow1, m_TypeBtns, "Town", CHIP_TYPE, 0);
+		AddChip(runtime, typeRow1, m_TypeBtns, "City", CHIP_TYPE, 1);
+		AddChip(runtime, typeRow1, m_TypeBtns, "Property", CHIP_TYPE, 2);
+		AddChip(runtime, typeRow1, m_TypeBtns, "Military", CHIP_TYPE, 3);
+		AddChip(runtime, typeRow1, m_TypeBtns, "Small mil", CHIP_TYPE, 4);
 
-		ref MUI_Label destLbl = runtime.CreateLabel("Destination", "destLbl");
+		ref MUI_Row typeRow2 = runtime.CreateRow("typeRow2");
+		typeRow2.SetGap(6);
+		AddChip(runtime, typeRow2, m_TypeBtns, "Docks", CHIP_TYPE, 5);
+		AddChip(runtime, typeRow2, m_TypeBtns, "Radio", CHIP_TYPE, 6);
+		AddChip(runtime, typeRow2, m_TypeBtns, "Mortar", CHIP_TYPE, 7);
+		AddChip(runtime, typeRow2, m_TypeBtns, "Defend", CHIP_TYPE, 8);
+		AddChip(runtime, typeRow2, m_TypeBtns, "HVT", CHIP_TYPE, 9);
+
+		ref MUI_Label destLbl = runtime.CreateLabel("Into  —  Staging waits for Activate. Live joins the current AO.", "destLbl");
 		destLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		destLbl.SetMuted(true);
-		m_BucketDrop = runtime.CreateDropdown("bucket");
-		m_BucketDrop.AddItem("Staging (press Activate later)");
-		m_BucketDrop.AddItem("Live (spawn into the current AO)");
-		m_BucketDrop.SetIndex(0);
+
+		ref MUI_Row bucketRow = runtime.CreateRow("bucketRow");
+		bucketRow.SetGap(6);
+		AddChip(runtime, bucketRow, m_BucketBtns, "Staging", CHIP_BUCKET, 0);
+		AddChip(runtime, bucketRow, m_BucketBtns, "Live", CHIP_BUCKET, 1);
 
 		m_RadiusField = runtime.CreateNumericField("Radius (0 = type default)", "radius");
 		m_RadiusField.SetRange(0, 400);
 		m_RadiusField.SetStep(5);
 		m_RadiusField.SetDecimals(0);
 		m_RadiusField.SetValue(0);
+		m_RadiusField.SetHeight(52);
+		m_RadiusField.SetMinHeight(52);
 
 		m_CoordLabel = runtime.CreateLabel("No location yet — click the map", "coords");
 		m_CoordLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		m_CoordLabel.SetMuted(true);
 
 		ref MUI_Row placeRow = runtime.CreateRow("placeRow");
-		placeRow.SetGap(12);
+		placeRow.SetGap(8);
 		m_PlaceBtn = runtime.CreateButton("Place objective", "place");
 		m_PlaceBtn.MakeAccent();
+		m_PlaceBtn.SetCompact();
 		m_PlaceBtn.SetEnabled(false);
 		m_PlaceBtn.GetOnClicked().Insert(OnPlaceObjective);
 		placeRow.AddChild(m_PlaceBtn);
@@ -186,17 +198,19 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		ref MUI_Label qrfHdr = runtime.CreateLabel("QRF AT LOCATION", "qrfHdr");
 		qrfHdr.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		qrfHdr.SetMuted(true);
-		m_QrfType = runtime.CreateDropdown("qrfType");
-		m_QrfType.AddItem("Infantry");
-		m_QrfType.AddItem("Motorized");
-		m_QrfType.AddItem("Mechanized");
-		m_QrfType.AddItem("Armoured");
-		m_QrfType.AddItem("Airborne");
-		m_QrfType.SetIndex(0);
+
+		ref MUI_Row qrfTypeRow = runtime.CreateRow("qrfTypeRow");
+		qrfTypeRow.SetGap(6);
+		AddChip(runtime, qrfTypeRow, m_QrfBtns, "Infantry", CHIP_QRF, 0);
+		AddChip(runtime, qrfTypeRow, m_QrfBtns, "Motor", CHIP_QRF, 1);
+		AddChip(runtime, qrfTypeRow, m_QrfBtns, "Mech", CHIP_QRF, 2);
+		AddChip(runtime, qrfTypeRow, m_QrfBtns, "Armor", CHIP_QRF, 3);
+		AddChip(runtime, qrfTypeRow, m_QrfBtns, "Air", CHIP_QRF, 4);
 
 		ref MUI_Row qrfRow = runtime.CreateRow("qrfRow");
-		qrfRow.SetGap(12);
+		qrfRow.SetGap(8);
 		m_QrfBtn = runtime.CreateButton("Spawn QRF here", "qrf");
+		m_QrfBtn.SetCompact();
 		m_QrfBtn.SetEnabled(false);
 		m_QrfBtn.GetOnClicked().Insert(OnSpawnQrf);
 		qrfRow.AddChild(m_QrfBtn);
@@ -211,39 +225,48 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_Picker.SetGrow(1);
 
 		ref MUI_Row actions = runtime.CreateRow("actions");
-		actions.SetGap(12);
+		actions.SetGap(8);
 		ref MUI_Button activateBtn = runtime.CreateButton("Activate Staging", "activate");
+		activateBtn.SetCompact();
 		activateBtn.GetOnClicked().Insert(OnActivateStaging);
 		ref MUI_Button completeBtn = runtime.CreateButton("Complete Live", "complete");
 		completeBtn.MakeDanger();
+		completeBtn.SetCompact();
 		completeBtn.GetOnClicked().Insert(OnCompleteLive);
 		actions.AddChild(activateBtn);
 		actions.AddChild(completeBtn);
 
 		ref MUI_Row actions2 = runtime.CreateRow("actions2");
-		actions2.SetGap(12);
+		actions2.SetGap(8);
 		ref MUI_Button sideBtn = runtime.CreateButton("Start assassination", "side");
+		sideBtn.SetCompact();
 		sideBtn.GetOnClicked().Insert(OnStartSide);
 		ref MUI_Button closeBtn = runtime.CreateButton("Close", "close");
+		closeBtn.SetCompact();
 		closeBtn.GetOnClicked().Insert(OnMUIBack);
 		actions2.AddChild(sideBtn);
 		actions2.AddChild(closeBtn);
 
+		RefreshChipLooks();
+
 		card.AddChild(liveHeader);
 		card.AddChild(subtitle);
-		card.AddChild(lists);
+		card.AddChild(liveHdr);
+		card.AddChild(m_LiveList);
+		card.AddChild(stagingHdr);
+		card.AddChild(m_StagingList);
 		card.AddChild(placeLine);
 		card.AddChild(placeHdr);
-		card.AddChild(typeLbl);
-		card.AddChild(m_TypeDrop);
+		card.AddChild(typeRow1);
+		card.AddChild(typeRow2);
 		card.AddChild(destLbl);
-		card.AddChild(m_BucketDrop);
+		card.AddChild(bucketRow);
 		card.AddChild(m_RadiusField);
 		card.AddChild(m_CoordLabel);
 		card.AddChild(placeRow);
 		card.AddChild(qrfLine);
 		card.AddChild(qrfHdr);
-		card.AddChild(m_QrfType);
+		card.AddChild(qrfTypeRow);
 		card.AddChild(qrfRow);
 		ref MUI_Spacer railGrow = runtime.CreateSpacer(0, "railGrow");
 		railGrow.SetFillHeight();
@@ -257,6 +280,59 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		overlay.AddChild(fx);
 		overlay.AddChild(split);
 		runtime.SetRoot(overlay);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void AddChip(notnull MUI_Runtime runtime, notnull MUI_Row row, notnull array<ref MUI_Button> store, string text, int kind, int index)
+	{
+		ref MUI_Button b = runtime.CreateButton(text, text);
+		b.SetCompact();
+		ref IA_GmDirectorChipBind bind = new IA_GmDirectorChipBind();
+		bind.Init(this, kind, index);
+		b.GetOnClicked().Insert(bind.OnClicked);
+		m_Binds.Insert(bind);
+		store.Insert(b);
+		row.AddChild(b);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void OnChipPicked(int kind, int index)
+	{
+		if (kind == CHIP_TYPE)
+			m_iType = index;
+		else if (kind == CHIP_BUCKET)
+			m_iBucket = index;
+		else if (kind == CHIP_QRF)
+			m_iQrf = index;
+		RefreshChipLooks();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void RefreshChipLooks()
+	{
+		ApplyChipSelection(m_TypeBtns, m_iType);
+		ApplyChipSelection(m_BucketBtns, m_iBucket);
+		ApplyChipSelection(m_QrfBtns, m_iQrf);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyChipSelection(array<ref MUI_Button> buttons, int selected)
+	{
+		if (!buttons)
+			return;
+
+		int i;
+		int n = buttons.Count();
+		for (i = 0; i < n; i++)
+		{
+			MUI_Button b = buttons[i];
+			if (!b)
+				continue;
+			if (i == selected)
+				b.MakeAccent();
+			else
+				b.MakeDefault();
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -297,26 +373,23 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	protected IA_AreaType SelectedAreaType()
 	{
-		int idx = 0;
-		if (m_TypeDrop)
-			idx = m_TypeDrop.GetIndex();
-		if (idx == 1)
+		if (m_iType == 1)
 			return IA_AreaType.City;
-		if (idx == 2)
+		if (m_iType == 2)
 			return IA_AreaType.Property;
-		if (idx == 3)
+		if (m_iType == 3)
 			return IA_AreaType.Military;
-		if (idx == 4)
+		if (m_iType == 4)
 			return IA_AreaType.SmallMilitary;
-		if (idx == 5)
+		if (m_iType == 5)
 			return IA_AreaType.Docks;
-		if (idx == 6)
+		if (m_iType == 6)
 			return IA_AreaType.RadioTower;
-		if (idx == 7)
+		if (m_iType == 7)
 			return IA_AreaType.MortarPit;
-		if (idx == 8)
+		if (m_iType == 8)
 			return IA_AreaType.DefendObjective;
-		if (idx == 9)
+		if (m_iType == 9)
 			return IA_AreaType.Assassination;
 		return IA_AreaType.Town;
 	}
@@ -324,7 +397,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	protected IA_GmBucket SelectedBucket()
 	{
-		if (m_BucketDrop && m_BucketDrop.GetIndex() == 1)
+		if (m_iBucket == 1)
 			return IA_GmBucket.Live;
 		return IA_GmBucket.Staging;
 	}
@@ -332,16 +405,13 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	protected IA_QRFType SelectedQrfType()
 	{
-		int idx = 0;
-		if (m_QrfType)
-			idx = m_QrfType.GetIndex();
-		if (idx == 1)
+		if (m_iQrf == 1)
 			return IA_QRFType.Motorized;
-		if (idx == 2)
+		if (m_iQrf == 2)
 			return IA_QRFType.Mechanized;
-		if (idx == 3)
+		if (m_iQrf == 3)
 			return IA_QRFType.Armoured;
-		if (idx == 4)
+		if (m_iQrf == 4)
 			return IA_QRFType.Airborne;
 		return IA_QRFType.Infantry;
 	}
@@ -436,7 +506,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 			if (!marker)
 				continue;
 			if (!text.IsEmpty())
-				text = text + "\n";
+				text = text + "  ·  ";
 			text = text + marker.GetAreaName();
 		}
 		if (text.IsEmpty())
