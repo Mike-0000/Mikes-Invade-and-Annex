@@ -2691,7 +2691,7 @@ class IA_AreaInstance
                 
                 // Find healthy defenders to convert to attackers
                 foreach (IA_AiGroup g : m_military) {
-                    if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders())
+                    if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison())
                         continue;
                         
                     IA_GroupTacticalState groupState;
@@ -2733,7 +2733,7 @@ class IA_AreaInstance
 
         foreach (IA_AiGroup g : m_military)
         {
-            if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders()) continue;
+            if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison()) continue;
             
             // Get the current state and check for attacking/flanking groups.
             // Approaching groups are fully protected from contact-timeout conversion —
@@ -2805,7 +2805,7 @@ class IA_AreaInstance
                 
                 foreach (IA_AiGroup g : m_military)
                 {
-                    if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders()) continue;
+                    if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison()) continue;
                     
                     IA_GroupTacticalState currentGrpState = g.GetTacticalState();
                     
@@ -4010,6 +4010,9 @@ class IA_AreaInstance
         if (!group)
             return;
 
+        if (group.IsPinnedGarrison())
+            return;
+
         if (targetPos == vector.Zero)
             targetPos = group.GetOrigin();
 
@@ -4025,6 +4028,9 @@ class IA_AreaInstance
     {
 		
         if (!group)
+            return;
+
+        if (group.IsPinnedGarrison())
             return;
         
         if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
@@ -4166,6 +4172,9 @@ class IA_AreaInstance
     {
         if (!group)
             return;
+
+        if (group.IsPinnedGarrison())
+            return;
         
         if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
         {
@@ -4256,6 +4265,9 @@ class IA_AreaInstance
     private void ApplyGroupMemberKilledReactionToGroup(IA_AiGroup group, IA_AIReactionState reaction)
     {
         if (!group || !reaction)
+            return;
+
+        if (group.IsPinnedGarrison())
             return;
         
         if (group.GetTacticalState() == IA_GroupTacticalState.Approaching)
@@ -4564,6 +4576,9 @@ class IA_AreaInstance
     {
         if (!g)
             return;
+
+        if (g.IsPinnedGarrison())
+            return;
             
         // Update our internal group state map
         m_assignedGroupStates.Set(g, requestedState);
@@ -4749,7 +4764,7 @@ class IA_AreaInstance
 
             foreach (IA_AiGroup g : m_military)
             {
-                if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || convertCount >= neededAttackers)
+                if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison() || convertCount >= neededAttackers)
                     continue;
                     
                 IA_GroupTacticalState state;
@@ -5224,7 +5239,7 @@ class IA_AreaInstance
             // Set all existing military groups to defend mode
             foreach (IA_AiGroup group : m_military)
             {
-                if (group && group.IsSpawned())
+                if (group && group.IsSpawned() && !group.IsHoldingPost())
                 {
                     group.SetDefendMode(true, defendPoint);
                 }
@@ -5238,7 +5253,7 @@ class IA_AreaInstance
             // Return all military groups to normal mode
             foreach (IA_AiGroup group : m_military)
             {
-                if (group && group.IsSpawned())
+                if (group && group.IsSpawned() && !group.IsHoldingPost())
                 {
                     group.SetDefendMode(false);
                 }

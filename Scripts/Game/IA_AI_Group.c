@@ -868,6 +868,9 @@ class IA_AiGroup
 
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
+        if (m_isHoldingPost && order != IA_AiOrder.Hold)
+            return;
+
         // Store last order data
         m_lastOrderPosition = origin;
         m_lastOrderTime = System.GetUnixTime();
@@ -1261,6 +1264,9 @@ class IA_AiGroup
 
     void RemoveAllOrders(bool resetLastOrderTime = false)
     {
+        if (m_isHoldingPost && HasHoldWaypoint())
+            return;
+
         if (!m_group)
             return;
                
@@ -3418,6 +3424,13 @@ class IA_AiGroup
     // Add a public SetTacticalState method to replace the one we accidentally removed
     void SetTacticalState(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null, bool fromAuthority = false)
     {
+        if (m_isHoldingPost)
+        {
+            newState = IA_GroupTacticalState.Holding;
+            if (m_holdPost != vector.Zero)
+                targetPos = m_holdPost;
+        }
+
         // Add logging to show the state change
         if (m_tacticalState != newState)
         {
@@ -3456,11 +3469,15 @@ class IA_AiGroup
         
         // Apply orders based on the state.
         // Approaching is the exception: arc routing waypoints were already queued externally,
-        // so we must NOT wipe them here. All other states get a clean slate.
+        // so we must NOT wipe them here. Hold posts keep their Wait even if a
+        // caller asked for Attacking/Defending.
         if (m_tacticalState != IA_GroupTacticalState.Approaching)
         {
-            CancelPendingTypedClear();
-            RemoveAllOrders();
+            if (!(m_isHoldingPost && HasHoldWaypoint()))
+            {
+                CancelPendingTypedClear();
+                RemoveAllOrders();
+            }
         }
         
         switch (m_tacticalState)
@@ -3507,7 +3524,8 @@ class IA_AiGroup
                 else
                     holdPos = m_lastConfirmedPosition;
 
-                AddOrder(holdPos, IA_AiOrder.Hold, true);
+                if (!HasHoldWaypoint())
+                    AddOrder(holdPos, IA_AiOrder.Hold, true);
                 break;
                 
             case IA_GroupTacticalState.Flanking:
@@ -3760,6 +3778,9 @@ class IA_AiGroup
 	
     void SetDefendMode(bool enable, vector defendPoint = vector.Zero)
     {
+        if (m_isHoldingPost)
+            return;
+
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
         
@@ -4455,6 +4476,9 @@ class IA_AiGroup
     // Add this new method before SetTacticalState method
     void RequestTacticalStateChange(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null)
     {
+        if (m_isHoldingPost)
+            return;
+
         // Don't create redundant requests
         if (m_hasPendingStateRequest && m_requestedState == newState)
             return;
