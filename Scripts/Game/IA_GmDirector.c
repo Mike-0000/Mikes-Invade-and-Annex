@@ -17,6 +17,7 @@ class IA_GmDirector
 	protected int m_iStagingGroup;
 	protected int m_iNextGroup;
 	protected ref array<ref IA_GmSiteRecord> m_KnownSites;
+	protected ref array<int> m_ConsumedGroups;
 
 	//------------------------------------------------------------------------------------------------
 	static IA_GmDirector GetInstance()
@@ -33,6 +34,7 @@ class IA_GmDirector
 		m_iStagingGroup = GROUP_BASE;
 		m_iNextGroup = GROUP_BASE + 1;
 		m_KnownSites = new array<ref IA_GmSiteRecord>();
+		m_ConsumedGroups = new array<int>();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -49,6 +51,10 @@ class IA_GmDirector
 	//------------------------------------------------------------------------------------------------
 	static bool IsGameMasterMode()
 	{
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (init && init.HasGameMasterModeEnabled())
+			return true;
+
 		IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
 		if (!cfg)
 			return false;
@@ -125,6 +131,43 @@ class IA_GmDirector
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Staging is every director group that is not the current Live AO (and not excludeGroup).
+	bool IsStagedDirectorGroup(int groupId, int excludeGroup)
+	{
+		if (!IsDirectorGroup(groupId))
+			return false;
+		if (groupId == excludeGroup)
+			return false;
+		if (m_iLiveGroup >= 0 && groupId == m_iLiveGroup)
+			return false;
+		if (IsGroupConsumed(groupId))
+			return false;
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void MarkGroupConsumed(int groupId)
+	{
+		if (!IsDirectorGroup(groupId))
+			return;
+		if (!m_ConsumedGroups)
+			m_ConsumedGroups = new array<int>();
+		if (m_ConsumedGroups.Find(groupId) != -1)
+			return;
+		m_ConsumedGroups.Insert(groupId);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	bool IsGroupConsumed(int groupId)
+	{
+		if (!m_ConsumedGroups)
+			return false;
+		if (m_ConsumedGroups.Find(groupId) == -1)
+			return false;
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	int GetLiveGroupId()
 	{
 		return m_iLiveGroup;
@@ -141,8 +184,13 @@ class IA_GmDirector
 	int GetGroupIdForBucket(IA_GmBucket bucket)
 	{
 		EnsureStarted();
-		if (bucket == IA_GmBucket.Live && m_iLiveGroup >= 0)
-			return m_iLiveGroup;
+		if (bucket == IA_GmBucket.Live)
+		{
+			if (m_iLiveGroup < 0 && Replication.IsServer())
+				BeginLiveGroup();
+			if (m_iLiveGroup >= 0)
+				return m_iLiveGroup;
+		}
 		return m_iStagingGroup;
 	}
 
@@ -181,6 +229,8 @@ class IA_GmDirector
 	//------------------------------------------------------------------------------------------------
 	void SetBuckets(int liveGroup, int stagingGroup)
 	{
+		if (m_iLiveGroup >= 0 && m_iLiveGroup != liveGroup)
+			MarkGroupConsumed(m_iLiveGroup);
 		m_iLiveGroup = liveGroup;
 		if (stagingGroup >= GROUP_BASE)
 			m_iStagingGroup = stagingGroup;
@@ -364,9 +414,8 @@ class IA_GmDirector
 	bool HasStagingNear(float x, float z, float maxDist)
 	{
 		EnsureStarted();
-		int stagingId = GetStagingGroupId();
 		IA_AreaMarker marker = FindMarkerNear(x, z, maxDist);
-		if (marker && marker.m_areaGroup == stagingId)
+		if (marker && IsStagedDirectorGroup(marker.m_areaGroup, m_iLiveGroup))
 			return true;
 
 		if (!m_KnownSites)
@@ -379,7 +428,7 @@ class IA_GmDirector
 			IA_GmSiteRecord rec = m_KnownSites[i];
 			if (!rec)
 				continue;
-			if (rec.m_iGroupId != stagingId)
+			if (!IsStagedDirectorGroup(rec.m_iGroupId, m_iLiveGroup))
 				continue;
 			float dx = rec.m_fX - x;
 			float dz = rec.m_fZ - z;
@@ -396,11 +445,10 @@ class IA_GmDirector
 			return false;
 
 		EnsureStarted();
-		int stagingId = GetStagingGroupId();
 		IA_AreaMarker marker = FindMarkerNear(x, z, 80);
 		if (marker)
 		{
-			if (marker.m_areaGroup != stagingId)
+			if (!IsStagedDirectorGroup(marker.m_areaGroup, m_iLiveGroup))
 			{
 				Print("[IA_GmDirector] Refusing to delete a Live site from Staging remove.", LogLevel.WARNING);
 				return false;
@@ -598,6 +646,49 @@ class IA_GmDirector
 			if (marker.m_areaGroup != groupId)
 				continue;
 			result.Insert(marker);
+		}
+		return result;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	array<IA_AreaMarker> CollectDirectorMarkersExcept(int excludeGroup)
+	{
+		ref array<IA_AreaMarker> result = new array<IA_AreaMarker>();
+		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+		if (!markers)
+			return result;
+
+		int i;
+		int count = markers.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_AreaMarker marker = markers[i];
+			if (!marker)
+				continue;
+			if (!IsStagedDirectorGroup(marker.m_areaGroup, excludeGroup))
+				continue;
+			result.Insert(marker);
+		}
+		return result;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	array<ref IA_GmSiteRecord> CollectDirectorKnownSitesExcept(int excludeGroup)
+	{
+		ref array<ref IA_GmSiteRecord> result = new array<ref IA_GmSiteRecord>();
+		if (!m_KnownSites)
+			return result;
+
+		int i;
+		int n = m_KnownSites.Count();
+		for (i = 0; i < n; i++)
+		{
+			IA_GmSiteRecord rec = m_KnownSites[i];
+			if (!rec)
+				continue;
+			if (!IsStagedDirectorGroup(rec.m_iGroupId, excludeGroup))
+				continue;
+			result.Insert(rec);
 		}
 		return result;
 	}

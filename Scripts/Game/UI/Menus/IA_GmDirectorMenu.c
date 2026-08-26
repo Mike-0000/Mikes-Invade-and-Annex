@@ -500,13 +500,6 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (m_NameField)
 			name = m_NameField.GetText();
 
-		string pinName = name;
-		if (pinName.IsEmpty())
-			pinName = IA_GmDirector.AreaTypeToString(areaType);
-
-		IA_GmDirector dir = IA_GmDirector.GetInstance();
-		dir.RememberPlacedSite(areaType, dropX, dropZ, dir.GetGroupIdForBucket(bucket), radius, pinName);
-
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
 		if (pc)
 			pc.IA_AskGmPlaceSite(areaType, dropX, dropZ, bucket, name, radius);
@@ -590,13 +583,12 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	{
 		IA_GmDirector dir = IA_GmDirector.GetInstance();
 		int liveId = dir.GetLiveGroupId();
-		int stagingId = dir.GetStagingGroupId();
 		ref array<IA_AreaMarker> live = dir.CollectGroupMarkers(liveId);
-		ref array<IA_AreaMarker> staging = dir.CollectGroupMarkers(stagingId);
+		ref array<IA_AreaMarker> staging = dir.CollectDirectorMarkersExcept(liveId);
 		if (m_LiveList)
 			m_LiveList.SetText(FormatSiteList(live, dir.CollectKnownSites(liveId)));
 		if (m_StagingList)
-			m_StagingList.SetText(FormatSiteList(staging, dir.CollectKnownSites(stagingId)));
+			m_StagingList.SetText(FormatSiteList(staging, dir.CollectDirectorKnownSitesExcept(liveId)));
 		RefreshSitePips();
 		UpdatePlaceButtons();
 	}
@@ -645,12 +637,11 @@ class IA_GmDirectorMenu : MUI_MenuBase
 
 		IA_GmDirector dir = IA_GmDirector.GetInstance();
 		int liveId = dir.GetLiveGroupId();
-		int stagingId = dir.GetStagingGroupId();
 		ref array<ref IA_GmSiteRecord> pins = new array<ref IA_GmSiteRecord>();
 		AppendMarkerPins(pins, dir.CollectGroupMarkers(liveId));
-		AppendMarkerPins(pins, dir.CollectGroupMarkers(stagingId));
+		AppendMarkerPins(pins, dir.CollectDirectorMarkersExcept(liveId));
 		AppendKnownPins(pins, dir.CollectKnownSites(liveId));
-		AppendKnownPins(pins, dir.CollectKnownSites(stagingId));
+		AppendKnownPins(pins, dir.CollectDirectorKnownSitesExcept(liveId));
 
 		string key = BuildPipKey(pins);
 		if (key == m_sPipKey && m_SitePips && !m_SitePips.IsEmpty())

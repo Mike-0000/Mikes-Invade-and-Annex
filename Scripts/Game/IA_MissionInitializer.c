@@ -34,6 +34,7 @@ class IA_MissionInitializer : GenericEntity
 	private ref IA_AreaGroupManager m_currentAreaGroupManager;
 	protected ref array<int> m_gmMapGroupQueue;
 	protected int m_iGmMapQueueHead;
+	protected int m_iGmCompletedGroup = -1;
 	
 	// --- BEGIN ADDED: Artillery Cooldown ---
     static int s_artilleryDisabledUntil = 0;
@@ -273,9 +274,29 @@ class IA_MissionInitializer : GenericEntity
 	    
 	    if (m_currentIndex < 0 || m_currentIndex >= groupsArray.Count())
 	    {
-			Print("GAME FINISHED!!! Waiting 30 seconds and ending gamemode.", LogLevel.WARNING);
-	        GetGame().GetCallqueue().CallLater(FinishGame, 30000);
-	        return;
+			if (HasStagedSites())
+			{
+				Print("[IA_MissionInitializer] Zone queue exhausted but Staging still has sites. Activating Staging.", LogLevel.NORMAL);
+				ServerActivateStaging();
+				return;
+			}
+
+			int mapGroup = TakeNextUnusedMapGroup();
+			if (mapGroup >= 0)
+			{
+				if (groupsArray.Find(mapGroup) == -1)
+					groupsArray.Insert(mapGroup);
+				m_currentIndex = groupsArray.Find(mapGroup);
+				if (m_currentIndex < 0)
+					m_currentIndex = 0;
+				Print(string.Format("[IA_MissionInitializer] Zone queue exhausted; starting unused map AO group %1.", mapGroup), LogLevel.NORMAL);
+			}
+			else
+			{
+				Print("GAME FINISHED!!! Waiting 30 seconds and ending gamemode.", LogLevel.WARNING);
+				GetGame().GetCallqueue().CallLater(FinishGame, 30000);
+				return;
+			}
 	    }
 		
 		if (m_currentAreaGroupManager)
@@ -792,9 +813,9 @@ class IA_MissionInitializer : GenericEntity
 		GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
 		GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
 
-		if (IA_GmDirector.IsGameMasterMode())
+		if (ShouldContinueAsDirector(currentGroup))
 		{
-			ContinueAfterAoComplete(delayMs);
+			ContinueAfterAoComplete(delayMs, currentGroup);
 			return;
 		}
 
@@ -808,17 +829,40 @@ class IA_MissionInitializer : GenericEntity
 	}
 	// --- END ADDED ---
 
-	protected void ContinueAfterAoComplete(int delayMs)
+	protected void ContinueAfterAoComplete(int delayMs, int completedGroup = -1)
 	{
 		int finalDelay = delayMs;
 		if (finalDelay < 0)
 			finalDelay = Math.RandomInt(45, 90) * 1000;
 
 		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		m_iGmCompletedGroup = dir.GetLiveGroupId();
+		if (m_iGmCompletedGroup < 0)
+			m_iGmCompletedGroup = completedGroup;
+		if (IA_GmDirector.IsDirectorGroup(m_iGmCompletedGroup))
+			dir.MarkGroupConsumed(m_iGmCompletedGroup);
+
+		int liveId = dir.GetLiveGroupId();
+		int stagingId = dir.GetStagingGroupId();
+		ref array<IA_AreaMarker> stagedMarkers = dir.CollectDirectorMarkersExcept(m_iGmCompletedGroup);
+		int stagedMarkerCount = 0;
+		if (stagedMarkers)
+			stagedMarkerCount = stagedMarkers.Count();
+		ref array<ref IA_GmSiteRecord> stagedKnown = dir.CollectDirectorKnownSitesExcept(m_iGmCompletedGroup);
+		int stagedKnownCount = 0;
+		if (stagedKnown)
+			stagedKnownCount = stagedKnown.Count();
+
+		string gmFlag = "0";
+		if (IA_GmDirector.IsGameMasterMode())
+			gmFlag = "1";
+		Print(string.Format("[IA_MissionInitializer] AO continue gm=%1 live=%2 staging=%3 stagedMarkers=%4 stagedKnown=%5 completed=%6", gmFlag, liveId, stagingId, stagedMarkerCount, stagedKnownCount, m_iGmCompletedGroup), LogLevel.NORMAL);
+
+		bool hasStaged = HasStagedSites();
 		dir.ClearLive();
 		BroadcastGmBuckets();
 
-		if (HasStagedSites())
+		if (hasStaged)
 		{
 			Print("[IA_MissionInitializer] Live complete. Activating Staging.", LogLevel.NORMAL);
 			GetGame().GetCallqueue().CallLater(this.ServerActivateStaging, finalDelay, false);
@@ -842,6 +886,21 @@ class IA_MissionInitializer : GenericEntity
 
 		Print("[IA_MissionInitializer] No Staging and no remaining map AOs. Ending game.", LogLevel.WARNING);
 		GetGame().GetCallqueue().CallLater(FinishGame, 30000);
+	}
+
+	protected bool ShouldContinueAsDirector(int currentGroup)
+	{
+		if (IA_GmDirector.IsGameMasterMode())
+			return true;
+		if (IA_GmDirector.IsDirectorGroup(currentGroup))
+			return true;
+
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		if (dir.GetLiveGroupId() >= 0)
+			return true;
+		if (HasStagedSites())
+			return true;
+		return false;
 	}
 
 	protected void BuildGmMapGroupQueue()
@@ -881,7 +940,11 @@ class IA_MissionInitializer : GenericEntity
 	protected int TakeNextUnusedMapGroup()
 	{
 		if (!m_gmMapGroupQueue)
-			return -1;
+		{
+			if (!ShouldBuildGmMapFallback())
+				return -1;
+			BuildGmMapGroupQueue();
+		}
 
 		while (m_iGmMapQueueHead < m_gmMapGroupQueue.Count())
 		{
@@ -894,15 +957,31 @@ class IA_MissionInitializer : GenericEntity
 		return -1;
 	}
 
+	protected bool ShouldBuildGmMapFallback()
+	{
+		if (IA_GmDirector.IsGameMasterMode())
+			return true;
+		if (IA_GmDirector.IsDirectorGroup(m_iGmCompletedGroup))
+			return true;
+
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		if (dir.GetLiveGroupId() >= 0)
+			return true;
+		return false;
+	}
+
 	protected bool HasStagedSites()
 	{
 		IA_GmDirector dir = IA_GmDirector.GetInstance();
-		int stagingId = dir.GetStagingGroupId();
-		ref array<IA_AreaMarker> staged = dir.CollectGroupMarkers(stagingId);
+		int exclude = dir.GetLiveGroupId();
+		if (m_iGmCompletedGroup >= 0)
+			exclude = m_iGmCompletedGroup;
+
+		ref array<IA_AreaMarker> staged = dir.CollectDirectorMarkersExcept(exclude);
 		if (staged && staged.Count() > 0)
 			return true;
 
-		ref array<ref IA_GmSiteRecord> known = dir.CollectKnownSites(stagingId);
+		ref array<ref IA_GmSiteRecord> known = dir.CollectDirectorKnownSitesExcept(exclude);
 		if (known && known.Count() > 0)
 			return true;
 
@@ -1146,7 +1225,10 @@ class IA_MissionInitializer : GenericEntity
         if (!groupsArray)
             groupsArray = new array<int>();
         if (groupsArray.Find(liveGroup) == -1)
+        {
             groupsArray.Insert(liveGroup);
+            startingLive = true;
+        }
         m_currentIndex = groupsArray.Find(liveGroup);
         if (m_currentIndex < 0)
             m_currentIndex = 0;
@@ -1185,12 +1267,50 @@ class IA_MissionInitializer : GenericEntity
 
         IA_GmDirector dir = IA_GmDirector.GetInstance();
         dir.EnsureStarted();
-        int groupId = dir.GetStagingGroupId();
-        ref array<IA_AreaMarker> staged = dir.CollectGroupMarkers(groupId);
+        int exclude = m_iGmCompletedGroup;
+        SpawnMissingDirectorMarkers(exclude);
+        ref array<IA_AreaMarker> staged = dir.CollectDirectorMarkersExcept(exclude);
         if (!staged || staged.IsEmpty())
         {
             Print("[IA_MissionInitializer] Activate Staging failed: no staged sites.", LogLevel.WARNING);
+            if (m_iGmCompletedGroup >= 0)
+            {
+                int mapGroup = TakeNextUnusedMapGroup();
+                if (mapGroup >= 0)
+                {
+                    if (!groupsArray)
+                        groupsArray = new array<int>();
+                    if (groupsArray.Find(mapGroup) == -1)
+                        groupsArray.Insert(mapGroup);
+                    m_currentIndex = groupsArray.Find(mapGroup);
+                    if (m_currentIndex < 0)
+                        m_currentIndex = 0;
+                    Print(string.Format("[IA_MissionInitializer] Staging empty after complete; starting map AO group %1.", mapGroup), LogLevel.NORMAL);
+                    m_iGmCompletedGroup = -1;
+                    ProceedToNextZone();
+                    return;
+                }
+
+                Print("[IA_MissionInitializer] No Staging and no remaining map AOs after activate. Ending game.", LogLevel.WARNING);
+                m_iGmCompletedGroup = -1;
+                GetGame().GetCallqueue().CallLater(FinishGame, 30000);
+            }
             return;
+        }
+
+        int stagingId = dir.GetStagingGroupId();
+        int i;
+        int n = staged.Count();
+        for (i = 0; i < n; i++)
+        {
+            IA_AreaMarker stagedMarker = staged[i];
+            if (!stagedMarker)
+                continue;
+            if (stagedMarker.m_areaGroup == stagingId)
+                continue;
+            stagedMarker.SetAreaGroup(stagingId);
+            vector origin = stagedMarker.GetOrigin();
+            dir.RememberPlacedSite(stagedMarker.GetAreaType(), origin[0], origin[2], stagingId, stagedMarker.GetRadius(), stagedMarker.GetAreaName());
         }
 
         if (m_currentAreaGroupManager)
@@ -1206,6 +1326,10 @@ class IA_MissionInitializer : GenericEntity
         GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
         GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
 
+        int groupId = stagingId;
+        int previousLive = dir.GetLiveGroupId();
+        if (IA_GmDirector.IsDirectorGroup(previousLive))
+            dir.MarkGroupConsumed(previousLive);
         dir.PromoteStagingToLive();
         if (!groupsArray)
             groupsArray = new array<int>();
@@ -1215,9 +1339,33 @@ class IA_MissionInitializer : GenericEntity
         if (m_currentIndex < 0)
             m_currentIndex = 0;
 
+        m_iGmCompletedGroup = -1;
         Print(string.Format("[IA_MissionInitializer] Activating GM group %1", groupId), LogLevel.NORMAL);
         ProceedToNextZone();
         BroadcastGmBuckets();
+    }
+
+    protected void SpawnMissingDirectorMarkers(int excludeGroup)
+    {
+        IA_GmDirector dir = IA_GmDirector.GetInstance();
+        ref array<ref IA_GmSiteRecord> known = dir.CollectDirectorKnownSitesExcept(excludeGroup);
+        if (!known || known.IsEmpty())
+            return;
+
+        int i;
+        int n = known.Count();
+        for (i = 0; i < n; i++)
+        {
+            IA_GmSiteRecord rec = known[i];
+            if (!rec)
+                continue;
+            IA_AreaMarker existing = dir.FindMarkerNear(rec.m_fX, rec.m_fZ, 80);
+            if (existing)
+                continue;
+
+            vector pos = Vector(rec.m_fX, 0, rec.m_fZ);
+            dir.PlaceSite(rec.m_iType, pos, IA_GmBucket.Staging, rec.m_sName, rec.m_fRadius);
+        }
     }
 
     private void _SpawnAreaInstanceWithDelay(IA_AreaMarker marker, Faction nextAreaFaction, int currentGroup)
@@ -1805,6 +1953,15 @@ class IA_MissionInitializer : GenericEntity
 	static IA_MissionInitializer GetInstance()
 	{
 		return s_instance;
+	}
+
+	bool HasGameMasterModeEnabled()
+	{
+		if (m_bGameMasterMode_Rpl)
+			return true;
+		if (m_config && m_config.m_bGameMasterMode)
+			return true;
+		return false;
 	}
 
 	string GetCaptureHudPacked()
@@ -2490,7 +2647,19 @@ class IA_MissionInitializer : GenericEntity
 		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
 		GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
 		GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
-		ContinueAfterAoComplete(-1);
+
+		int currentGroup = -1;
+		if (groupsArray && groupsArray.IsIndexValid(m_currentIndex))
+			currentGroup = groupsArray[m_currentIndex];
+
+		if (ShouldContinueAsDirector(currentGroup))
+		{
+			ContinueAfterAoComplete(-1, currentGroup);
+			return;
+		}
+
+		m_currentIndex++;
+		GetGame().GetCallqueue().CallLater(ProceedToNextZone, Math.RandomInt(45, 90) * 1000, false);
 	}
 	// --- END ADDED ---
 }
