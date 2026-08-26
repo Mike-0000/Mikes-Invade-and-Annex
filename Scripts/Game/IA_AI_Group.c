@@ -122,6 +122,8 @@ class IA_AiGroup
     private vector      m_passengerAssaultTarget = vector.Zero;
     private IA_AiGroup  m_linkedCrewGroup = null;
     private IA_AiGroup  m_linkedPassengerGroup = null;
+    private bool        m_pendingSeatTeleport = false;
+    private bool        m_bSpawnAtExactPos = false;
     
     // Danger state tracking
     private float       m_currentDangerLevel = 0.0;
@@ -1356,18 +1358,14 @@ class IA_AiGroup
 
         if (m_isCivilian)
         {
-            // For civilians, try to find a road position
-            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(m_initialPosition, 300, IA_VehicleManager.GetActiveGroup());
-            vector spawnPos;
-            
-            // Use road position if found, otherwise use the initial position
-            if (roadPos != vector.Zero) {
-                spawnPos = roadPos;
-            } else {
-                spawnPos = m_initialPosition;
+            vector spawnPos = m_initialPosition;
+            if (!m_bSpawnAtExactPos)
+            {
+                vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(m_initialPosition, 300, IA_VehicleManager.GetActiveGroup());
+                if (roadPos != vector.Zero)
+                    spawnPos = roadPos;
             }
-            
-            // Create the SCR_AIGroup entity for the civilian
+
             Resource groupPrefabRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
             if (!groupPrefabRes)
             {
@@ -1378,39 +1376,52 @@ class IA_AiGroup
 
             if (!m_group)
             {
-                if (groupEntity) IA_Game.AddEntityToGc(groupEntity); // Clean up group entity if it was spawned
-                return false;
-            }
-            
-            // Restore old spawning logic - spawn civilian directly
-            string resourceName = IA_RandomCivilianResourceName();
-            Resource charRes = Resource.Load(resourceName);
-            if (!charRes)
-            {
-                return false;
-            }
-            
-            if (!m_bKeepAltitude)
-                spawnPos = IA_SpawnPlacement.SnapInfantryPos(spawnPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
-
-            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(spawnPos));
-            if (!charEntity)
-            {
+                if (groupEntity) IA_Game.AddEntityToGc(groupEntity);
                 return false;
             }
 
-            // Add the spawned civilian character to the SCR_AIGroup
-            if (!m_group.AddAIEntityToGroup(charEntity))
+            int civCount = m_initialUnitCount;
+            if (civCount < 1)
+                civCount = 1;
+
+            int spawnedCivs = 0;
+            int civIndex;
+            for (civIndex = 0; civIndex < civCount; civIndex++)
             {
-                IA_Game.AddEntityToGc(charEntity); // Clean up character
-                IA_Game.AddEntityToGc(m_group);    // Clean up the group as well since it's unusable
+                vector unitPos = spawnPos;
+                if (civIndex > 0)
+                    unitPos = spawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+
+                if (!m_bKeepAltitude)
+                    unitPos = IA_SpawnPlacement.SnapInfantryPos(unitPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
+
+                string resourceName = IA_RandomCivilianResourceName();
+                Resource charRes = Resource.Load(resourceName);
+                if (!charRes)
+                    continue;
+
+                IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitPos));
+                if (!charEntity)
+                    continue;
+
+                if (!m_group.AddAIEntityToGroup(charEntity))
+                {
+                    IA_Game.AddEntityToGc(charEntity);
+                    continue;
+                }
+
+                SetupDeathListenerForUnit(charEntity);
+                spawnedCivs = spawnedCivs + 1;
+            }
+
+            if (spawnedCivs <= 0)
+            {
+                IA_Game.AddEntityToGc(m_group);
                 m_group = null;
                 return false;
             }
-            // If successfully added, setup death listener for this specific unit
-            SetupDeathListenerForUnit(charEntity);
-            
-            Print(string.Format("[IA_AiGroup.PerformSpawn] Using direct spawning for civilian at %1", spawnPos.ToString()), LogLevel.NORMAL);
+
+            Print(string.Format("[IA_AiGroup.PerformSpawn] Spawned %1 civilians at %2", spawnedCivs, spawnPos.ToString()), LogLevel.NORMAL);
         }
         else // Military group
         {
@@ -2033,6 +2044,13 @@ class IA_AiGroup
         
         if (anyOutside)
         {
+            if (m_pendingSeatTeleport)
+            {
+                if (IsCurrentWaypointGetInNearest())
+                    RemoveAllOrders(false);
+                return;
+            }
+
             // Contact / dump: one crewman on foot (or still getting out) must
             // not replace the drive with GetIn. That waypoint waits for every
             // member, so the seated driver and gunner idle at the hull.
@@ -2144,6 +2162,16 @@ class IA_AiGroup
     void MarkAsVehicleCrew()
     {
         m_isVehicleCrewGroup = true;
+    }
+
+    void SetPendingSeatTeleport(bool pending)
+    {
+        m_pendingSeatTeleport = pending;
+    }
+
+    bool IsPendingSeatTeleport()
+    {
+        return m_pendingSeatTeleport;
     }
 
     bool IsVehicleCrewGroup()
@@ -2452,6 +2480,9 @@ class IA_AiGroup
     void IssuePassengerMountHold()
     {
         if (!m_isVehiclePassengerGroup || m_passengerDumped)
+            return;
+
+        if (m_pendingSeatTeleport)
             return;
 
         m_mountedUntilDump = true;
@@ -3224,8 +3255,14 @@ class IA_AiGroup
         if (!vehicle || unitCount <= 0)
             return null;
 
-        vector spawnPos = vehicle.GetOrigin() + vector.Up; // slightly above vehicle
-        IA_AiGroup grp = IA_AiGroup.CreateCivilianGroup(spawnPos);
+        int count = unitCount;
+        if (count < 1)
+            count = 1;
+
+        vector spawnPos = vehicle.GetOrigin() + vector.Up;
+        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, IA_Faction.CIV, count);
+        grp.m_isCivilian = true;
+        grp.m_bSpawnAtExactPos = true;
         return grp;
     }
 
@@ -3257,8 +3294,10 @@ class IA_AiGroup
         
         // GetInNearest only if someone is actually on foot. Stacking it on the
         // InVehicle Move after a teleport-seat makes GetInNearestVehicle.bt
-        // read a Move waypoint and NodeError.
-        if (m_group && IsAnyMemberOnFoot())
+        // read a Move waypoint and NodeError. Skip it while PlaceUnitsInVehicle
+        // still owns the delayed teleport — nearest-vehicle boarding dumps
+        // occupying troops into a stacked civilian car.
+        if (m_group && IsAnyMemberOnFoot() && !m_pendingSeatTeleport)
         {
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
         }
@@ -4132,7 +4171,7 @@ class IA_AiGroup
         }
         else if (m_referencedEntity)
         {
-            if (IsAnyMemberOnFoot())
+            if (!m_pendingSeatTeleport && IsAnyMemberOnFoot())
                 AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
 
             // Stay InVehicle. DefendPatrol here used to spawn a Defend waypoint whose

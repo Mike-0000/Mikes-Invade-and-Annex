@@ -57,6 +57,7 @@ Prefer **`SCR_`** types over thinner native/`GameCode` types — they have the m
 - **`proto` / `native` / `volatile`** mark C++ bindings. Do not invent `proto` methods in addon code.
 - **`sealed class` cannot be extended.** If you need a hook, find a non-sealed owner or a `modded class` further up.
 - **`foreach (T x : container)`** and `foreach (K k, V v : map)` work. Always brace loops. Cache `Count()` — do not call it as the `for` bound every iteration.
+- **`Math.RandomInt(min, max)` max is exclusive.** `RandomInt(0, 1)` is always 0. `RandomInt(0, Count() - 1)` with 2 items always returns index 0, so every pick is the first element. Use `RandomInt(0, Count())` and clamp if the result equals Count. Evidence: `core/.../Math/Math.c`; `runtime:` GM-placed AOs stacked every vehicle on one road vertex.
 - **`string.Format("%1 …", a)`** and `PrintFormat`. `Print(x, LogLevel.XXX)` — bare `Print()` is a formatter finding.
 - **`vector`** is `<x,y,z>`; index `[0] [1] [2]`. Y is up. `Vector(x,y,z)` constructs. `GetGame().GetWorld().GetSurfaceY(x, z)` is the **terrain mesh only** — rocks, foundations, and buildings are not included. Spawning at that Y clips infantry inside those volumes. Trace down with `TraceFlags.WORLD | ENTS` (or `SCR_WorldTools.FindEmptyTerrainPosition`) from above the sample, keep the hit height, and require standing clearance. Evidence: `Game/Global/SCR_WorldTools.c` `FindEmptyTerrainPosition`; `World.GetSurfaceY`.
 - **Colors:** `Color.FromSRGBA(r,g,b,a)` (sRGB bytes) or `Color.FromInt`. Do not `new Color(0.93, …)` with sRGB floats.
@@ -222,6 +223,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-25 — `Math.RandomInt` max is exclusive; `RandomInt(0, Count()-1)` with two items always returns 0 (`Math.c`, `runtime:` stacked GM vehicle spawns).
 - 2026-08-25 — `Attribute` defaults do not apply on script `new`; placeable registries stay unexposed and editor attributes NPE in GetDynamicDescriptionArray (`SCR_PlaceableEntitiesRegistry.c`, `SCR_BaseEditorAttribute.c:68`, `runtime:` F6 on IA_GmRadiusEditorAttribute).
 - 2026-08-25 — `SCR_MapMarkersUI.OnInputMapSelect` NPEs on a null `m_CursorModule` the same way `CleanupMarkerEditWidget` does (`SCR_MapMarkersUI.c:1061`, `runtime:` GM Director / HALO planner clicks).
 - 2026-08-25 — Script methods cannot exceed 16 arguments (`compiler: IA_MissionInitializer.c` `PackAdminConfig`).
