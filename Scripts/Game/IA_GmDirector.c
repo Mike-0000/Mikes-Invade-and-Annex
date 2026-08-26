@@ -747,7 +747,34 @@ class IA_GmDirector
 			post.SetHoldRadius(radius);
 
 		vector origin = post.GetOrigin();
-		Print(string.Format("[IA_GmDirector] Placed building hold at %1 radius %2", origin.ToString(), post.GetHoldRadius()), LogLevel.NORMAL);
+		IA_AreaInstance liveArea = IA_Game.GetAreaForPosition(origin);
+		if (!liveArea)
+		{
+			IA_AreaMarker marker = IA_AreaMarker.FindMarkerContaining(origin);
+			if (marker)
+			{
+				IA_Game game = IA_Game.Instantiate();
+				if (game)
+					liveArea = game.GetAreaInstance(marker.GetAreaName());
+			}
+
+			if (!liveArea && marker)
+			{
+				Print(string.Format("[IA_GmDirector] Building hold at %1 queued until '%2' goes live", origin.ToString(), marker.GetAreaName()), LogLevel.NORMAL);
+				return post;
+			}
+		}
+
+		if (liveArea)
+		{
+			if (liveArea.TrySpawnHoldPost(post))
+				Print(string.Format("[IA_GmDirector] Placed building hold at %1 radius %2 and spawned Hold AI", origin.ToString(), post.GetHoldRadius()), LogLevel.NORMAL);
+			else
+				Print(string.Format("[IA_GmDirector] Placed building hold at %1 but the covering AO could not spawn AI", origin.ToString()), LogLevel.WARNING);
+			return post;
+		}
+
+		Print(string.Format("[IA_GmDirector] Placed building hold at %1 radius %2 with no covering objective — drop it inside a Live AO or a Staging site", origin.ToString(), post.GetHoldRadius()), LogLevel.WARNING);
 		return post;
 	}
 

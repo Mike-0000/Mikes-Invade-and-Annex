@@ -1070,6 +1070,34 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         return null;
     }
 
+    static IA_AreaMarker FindMarkerContaining(vector position)
+    {
+        array<IA_AreaMarker> markers = GetAllMarkers();
+        if (!markers)
+            return null;
+
+        IA_AreaMarker best = null;
+        float bestRadius = 999999;
+        int i;
+        int count = markers.Count();
+        for (i = 0; i < count; i++)
+        {
+            IA_AreaMarker marker = markers[i];
+            if (!marker)
+                continue;
+            if (!marker.IsPositionInside(position))
+                continue;
+
+            float radius = marker.GetRadius();
+            if (best && radius >= bestRadius)
+                continue;
+            best = marker;
+            bestRadius = radius;
+        }
+
+        return best;
+    }
+
     // Spawn the radio-tower composition (replicated GenericEntity root + tower child).
     protected void SpawnPrefabEntity()
     {

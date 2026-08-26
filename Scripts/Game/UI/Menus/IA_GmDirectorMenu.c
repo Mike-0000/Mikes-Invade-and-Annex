@@ -197,7 +197,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_NameField.SetHeight(52);
 		m_NameField.SetMinHeight(52);
 
-		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live adds to the current AO. Building hold pins occupying AI inside with Hold (default 8 m).", "destLbl");
+		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live adds to the current AO. Building hold spawns a Hold fireteam in that building now if a live AO covers it, or when staging is activated.", "destLbl");
 		destLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		destLbl.SetMuted(true);
 

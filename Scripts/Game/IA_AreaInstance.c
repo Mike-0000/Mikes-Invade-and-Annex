@@ -5748,6 +5748,39 @@ class IA_AreaInstance
         return n;
     }
 
+    //! GM Director and area init both use this. Safe after occupying groups already spawned.
+    bool TrySpawnHoldPost(IA_GmHoldPost post)
+    {
+        if (!post)
+            return false;
+        if (m_bShutDown)
+            return false;
+        if (!m_area)
+            return false;
+        if (m_area.GetAreaType() == IA_AreaType.MortarPit)
+            return false;
+        if (post.IsClaimed())
+            return false;
+
+        vector holdPos = post.GetOrigin();
+        vector spawnPos;
+        if (!IA_BuildingHoldFinder.FindGroundSpawnForHold(holdPos, spawnPos))
+        {
+            spawnPos = holdPos;
+            Print(string.Format("[IA_AreaInstance] No ground-floor spawn for hold at %1, using marker pose", holdPos.ToString()), LogLevel.WARNING);
+        }
+
+        float radius;
+        if (!post.TryClaim(holdPos, radius))
+            return false;
+
+        Faction spawnFaction = m_AreaFaction;
+        int units = BuildingGarrisonUnitCount();
+        GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, 0, false, spawnPos, units, spawnFaction, true, true, holdPos, radius);
+        Print(string.Format("[IA_AreaInstance] Scheduled Hold fireteam for %1 at %2", m_area.GetName(), holdPos.ToString()), LogLevel.NORMAL);
+        return true;
+    }
+
     //! Extra fireteams that Hold inside a few buildings. Occupying patrols are untouched.
     protected void SpawnBuildingGarrisonGroups(Faction areaFactionForGroupTask)
     {
@@ -5779,19 +5812,9 @@ class IA_AreaInstance
             IA_GmHoldPost post = gmPosts[g];
             if (!post)
                 continue;
-            if (post.IsClaimed())
+            if (!TrySpawnHoldPost(post))
                 continue;
 
-            vector holdPos = post.GetOrigin();
-            vector spawnPos;
-            if (!IA_BuildingHoldFinder.FindGroundSpawnForHold(holdPos, spawnPos))
-                continue;
-
-            float radius;
-            if (!post.TryClaim(holdPos, radius))
-                continue;
-
-            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, spawnPos, units, spawnFaction, true, true, holdPos, radius);
             delay = delay + Math.RandomInt(400, 1200);
             spawned = spawned + 1;
         }
