@@ -570,12 +570,14 @@ class IA_GmDirectorMenu : MUI_MenuBase
 			IA_GmSiteRecord rec = known[i];
 			if (!rec)
 				continue;
+			string name = rec.m_sName;
+			if (name.IsEmpty())
+				name = IA_GmDirector.AreaTypeToString(rec.m_iType);
+			if (name.IsEmpty())
+				continue;
 			if (!text.IsEmpty())
 				text = text + "\n";
-			if (rec.m_sName.IsEmpty())
-				text = text + IA_GmDirector.AreaTypeToString(rec.m_iType);
-			else
-				text = text + rec.m_sName;
+			text = text + name;
 		}
 		if (text.IsEmpty())
 			return "(empty)";
@@ -778,9 +780,12 @@ class IA_GmDirectorMenu : MUI_MenuBase
 			IA_AreaMarker marker = markers[i];
 			if (!marker)
 				continue;
+			string name = marker.GetAreaName();
+			if (name.IsEmpty())
+				continue;
 			if (!text.IsEmpty())
 				text = text + "\n";
-			text = text + marker.GetAreaName();
+			text = text + name;
 		}
 		if (text.IsEmpty())
 			return "(empty)";
