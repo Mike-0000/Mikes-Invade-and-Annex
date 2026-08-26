@@ -1123,7 +1123,16 @@ class IA_MissionInitializer : GenericEntity
 
 	// --- BEGIN ADDED: Config Update RPC ---
 	// Rpc has a hard param limit — pack fields into one string.
-	protected static string PackAdminConfig(
+	// Rpc has a hard param limit — pack fields into one string.
+	// Enforce also caps script methods at 16 arguments; GM flags are one bitmask token.
+	static const int GM_MASK_MODE = 1;
+	static const int GM_MASK_AUTO_ACTIVATE = 2;
+	static const int GM_MASK_AUTO_QRF = 4;
+	static const int GM_MASK_AUTO_ARTY = 8;
+	static const int GM_MASK_AUTO_SIDE = 16;
+	static const int GM_MASK_AUTO_SUPPORT = 32;
+
+	static string PackAdminConfig(
 		float civCount,
 		float aiScale,
 		bool disableHeli,
@@ -1139,13 +1148,7 @@ class IA_MissionInitializer : GenericEntity
 		int artyMinDelay,
 		int artyMaxDelay,
 		string enemyFactionKey,
-		int haloMaxPlayers,
-		bool gmMode,
-		bool gmAutoActivate,
-		bool gmAutoQrf,
-		bool gmAutoArty,
-		bool gmAutoSide,
-		bool gmAutoSupport
+		int haloMaxPlayers
 	)
 	{
 		int heliI = 0;
@@ -1160,24 +1163,6 @@ class IA_MissionInitializer : GenericEntity
 		int rolesI = 0;
 		if (enforceRoles)
 			rolesI = 1;
-		int gmI = 0;
-		if (gmMode)
-			gmI = 1;
-		int gmActI = 0;
-		if (gmAutoActivate)
-			gmActI = 1;
-		int gmQrfI = 0;
-		if (gmAutoQrf)
-			gmQrfI = 1;
-		int gmArtyI = 0;
-		if (gmAutoArty)
-			gmArtyI = 1;
-		int gmSideI = 0;
-		if (gmAutoSide)
-			gmSideI = 1;
-		int gmSupI = 0;
-		if (gmAutoSupport)
-			gmSupI = 1;
 
 		string packed = "v1";
 		packed = packed + "|" + civCount.ToString();
@@ -1196,13 +1181,57 @@ class IA_MissionInitializer : GenericEntity
 		packed = packed + "|" + artyMaxDelay.ToString();
 		packed = packed + "|" + enemyFactionKey;
 		packed = packed + "|" + haloMaxPlayers.ToString();
-		packed = packed + "|" + gmI.ToString();
-		packed = packed + "|" + gmActI.ToString();
-		packed = packed + "|" + gmQrfI.ToString();
-		packed = packed + "|" + gmArtyI.ToString();
-		packed = packed + "|" + gmSideI.ToString();
-		packed = packed + "|" + gmSupI.ToString();
 		return packed;
+	}
+
+	static int PackGmAdminMask(
+		bool gmMode,
+		bool gmAutoActivate,
+		bool gmAutoQrf,
+		bool gmAutoArty,
+		bool gmAutoSide,
+		bool gmAutoSupport
+	)
+	{
+		int mask = 0;
+		if (gmMode)
+			mask = mask | GM_MASK_MODE;
+		if (gmAutoActivate)
+			mask = mask | GM_MASK_AUTO_ACTIVATE;
+		if (gmAutoQrf)
+			mask = mask | GM_MASK_AUTO_QRF;
+		if (gmAutoArty)
+			mask = mask | GM_MASK_AUTO_ARTY;
+		if (gmAutoSide)
+			mask = mask | GM_MASK_AUTO_SIDE;
+		if (gmAutoSupport)
+			mask = mask | GM_MASK_AUTO_SUPPORT;
+		return mask;
+	}
+
+	static void SubmitPackedAdminConfig(string packed, bool persist)
+	{
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+		{
+			if (persist)
+				pc.IA_AskPersistAdminConfig(packed);
+			else
+				pc.IA_AskUpdateAdminConfig(packed);
+			return;
+		}
+
+		if (!Replication.IsServer())
+			return;
+
+		IA_MissionInitializer init = GetInstance();
+		if (!init)
+			return;
+
+		if (persist)
+			init.ServerPersistAdminConfig(packed);
+		else
+			init.ApplyPackedAdminConfig(packed);
 	}
 
 	static void UpdateConfig(
@@ -1221,36 +1250,16 @@ class IA_MissionInitializer : GenericEntity
 		int artyMinDelay,
 		int artyMaxDelay,
 		string enemyFactionKey,
-		int haloMaxPlayers,
-		bool gmMode,
-		bool gmAutoActivate,
-		bool gmAutoQrf,
-		bool gmAutoArty,
-		bool gmAutoSide,
-		bool gmAutoSupport
+		int haloMaxPlayers
 	)
 	{
 		string packed = PackAdminConfig(
 			civCount, aiScale, disableHeli, disableGround, artyCooldown,
 			staticAiScale, milVehMult, civVehMult, revoltThresh, enableCiv,
 			enforceRoles, artyChance, artyMinDelay, artyMaxDelay, enemyFactionKey,
-			haloMaxPlayers, gmMode, gmAutoActivate, gmAutoQrf, gmAutoArty,
-			gmAutoSide, gmAutoSupport
+			haloMaxPlayers
 		);
-
-		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
-		if (pc)
-		{
-			pc.IA_AskUpdateAdminConfig(packed);
-			return;
-		}
-
-		if (Replication.IsServer())
-		{
-			IA_MissionInitializer init = GetInstance();
-			if (init)
-				init.ApplyPackedAdminConfig(packed);
-		}
+		SubmitPackedAdminConfig(packed, false);
 	}
 
 	static void PersistConfig(
@@ -1269,36 +1278,16 @@ class IA_MissionInitializer : GenericEntity
 		int artyMinDelay,
 		int artyMaxDelay,
 		string enemyFactionKey,
-		int haloMaxPlayers,
-		bool gmMode,
-		bool gmAutoActivate,
-		bool gmAutoQrf,
-		bool gmAutoArty,
-		bool gmAutoSide,
-		bool gmAutoSupport
+		int haloMaxPlayers
 	)
 	{
 		string packed = PackAdminConfig(
 			civCount, aiScale, disableHeli, disableGround, artyCooldown,
 			staticAiScale, milVehMult, civVehMult, revoltThresh, enableCiv,
 			enforceRoles, artyChance, artyMinDelay, artyMaxDelay, enemyFactionKey,
-			haloMaxPlayers, gmMode, gmAutoActivate, gmAutoQrf, gmAutoArty,
-			gmAutoSide, gmAutoSupport
+			haloMaxPlayers
 		);
-
-		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
-		if (pc)
-		{
-			pc.IA_AskPersistAdminConfig(packed);
-			return;
-		}
-
-		if (Replication.IsServer())
-		{
-			IA_MissionInitializer init = GetInstance();
-			if (init)
-				init.ServerPersistAdminConfig(packed);
-		}
+		SubmitPackedAdminConfig(packed, true);
 	}
 
 	static void ClearPersistedAdminConfig()
@@ -1408,17 +1397,15 @@ class IA_MissionInitializer : GenericEntity
 			gmAutoSupport = m_config.m_bGmAutoPlaceSupport;
 		}
 		if (tokens.Count() > 17)
-			gmMode = tokens[17].ToInt() != 0;
-		if (tokens.Count() > 18)
-			gmAutoActivate = tokens[18].ToInt() != 0;
-		if (tokens.Count() > 19)
-			gmAutoQrf = tokens[19].ToInt() != 0;
-		if (tokens.Count() > 20)
-			gmAutoArty = tokens[20].ToInt() != 0;
-		if (tokens.Count() > 21)
-			gmAutoSide = tokens[21].ToInt() != 0;
-		if (tokens.Count() > 22)
-			gmAutoSupport = tokens[22].ToInt() != 0;
+		{
+			int gmMask = tokens[17].ToInt();
+			gmMode = (gmMask & GM_MASK_MODE) != 0;
+			gmAutoActivate = (gmMask & GM_MASK_AUTO_ACTIVATE) != 0;
+			gmAutoQrf = (gmMask & GM_MASK_AUTO_QRF) != 0;
+			gmAutoArty = (gmMask & GM_MASK_AUTO_ARTY) != 0;
+			gmAutoSide = (gmMask & GM_MASK_AUTO_SIDE) != 0;
+			gmAutoSupport = (gmMask & GM_MASK_AUTO_SUPPORT) != 0;
+		}
 
 		Print(string.Format(
 			"[IA_MissionInitializer] RPC_UpdateConfig: Civ=%1 AI=%2 Heli=%3 Gnd=%4 Arty=%5 Chance=%6 Faction=%7 HALO=%8",

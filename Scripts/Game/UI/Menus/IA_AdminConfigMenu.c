@@ -538,36 +538,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		if (m_GmAutoSupportToggle)
 			gmAutoSupport = m_GmAutoSupportToggle.IsChecked();
 
-		if (persist)
-		{
-			IA_MissionInitializer.PersistConfig(
-				civCount,
-				aiScale,
-				disableHeli,
-				disableGround,
-				artyCooldown,
-				staticAi,
-				milVeh,
-				civVeh,
-				revolt,
-				enableCiv,
-				enforceRoles,
-				artyChance,
-				artyMin,
-				artyMax,
-				factionKey,
-				haloMaxPlayers,
-				gmMode,
-				gmAutoActivate,
-				gmAutoQrf,
-				gmAutoArty,
-				gmAutoSide,
-				gmAutoSupport
-			);
-			return;
-		}
-
-		IA_MissionInitializer.UpdateConfig(
+		string packed = IA_MissionInitializer.PackAdminConfig(
 			civCount,
 			aiScale,
 			disableHeli,
@@ -583,7 +554,9 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			artyMin,
 			artyMax,
 			factionKey,
-			haloMaxPlayers,
+			haloMaxPlayers
+		);
+		int gmMask = IA_MissionInitializer.PackGmAdminMask(
 			gmMode,
 			gmAutoActivate,
 			gmAutoQrf,
@@ -591,6 +564,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			gmAutoSide,
 			gmAutoSupport
 		);
+		packed = packed + "|" + gmMask.ToString();
+		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
 	}
 
 	//------------------------------------------------------------------------------------------------

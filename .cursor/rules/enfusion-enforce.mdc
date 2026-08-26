@@ -47,6 +47,7 @@ Prefer **`SCR_`** types over thinner native/`GameCode` types — they have the m
 - **Every `new` lives in a `ref`** — member (`protected ref T m_x;`), local (`ref T x = new T();`), or `ref array<ref T>`. Missing `ref` on a `Managed` instance → ARC drops it → `NULL pointer` later (often in `AddChild` or the next frame).
 - **`autoptr` is legacy.** Bohemia formatter: remove it on ordinary locals, or replace with `ref` on member arrays. New code uses `ref`.
 - **No `auto`.** Name the type.
+- **Script methods are capped at 16 arguments.** `Maximum arguments count 16 exceeded` fails the Game module. Pack extras into a string or bitmask. RPCs are a tighter cap of **8**. Evidence: `compiler: IA_MissionInitializer.c` `PackAdminConfig`.
 - **`Class` is the super-root. `Managed` is GC'd.** Downcast with `T.Cast(obj)`, then null-check. `IsInherited(typename)`.
 - **`null` is not an enum value.** Enums are ints. `ShouldDefer(null, waypoint)` when the first arg is `IA_AiOrder` is `Cannot convert 'Class' to 'int'`. Split the overload or pass a real enum. Evidence: `compiler: IA_AI_Group.c` `ShouldDeferForTypedWaypointTree`.
 - **`pointer` types cannot be class members.** They are plain C++ pointers with no weak refs and no GC (`Types.c`). `Physics` is `NativeComponent : pointer`, so `protected Physics m_Physics` is `Pointer type 'Physics' can only be used with local variables` and can block the Game script module. Fetch a local with `owner.GetPhysics()`; cache `IEntity` if you need the owner. `global_pointer` is the subtype `Types.c` marks "Safe to store outside local scope". Evidence: `compiler: MHJ_CanopyFlight.c`; `Physics.c`, `NativeComponent.c`, `Types.c`.
@@ -220,6 +221,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-25 — Script methods cannot exceed 16 arguments (`compiler: IA_MissionInitializer.c` `PackAdminConfig`).
 - 2026-08-25 — Unreliable pose RPCs can arrive after a reliable remove and respawn local-only FX if Add is called on a miss (`runtime:` AI drop canopy stuck after land).
 - 2026-08-25 — AI pawn `SetYawPitchRoll` / zero-velocity `SetOrigin` is not a dedicated-client flight pose; local canopy meshes need a heading/path/bank relay (`runtime:` AI drop chute frozen on dedicated).
 - 2026-08-25 — `SetOrigin` motion does not collide, so script-flown AI must sphere-sweep its own step and clamp the descent; landing-time open-sky checks cannot fix it because they trace from inside the building (`SCR_EmptyPositionHelper.c:28-45`, `runtime:` airborne QRF through walls).
