@@ -1232,6 +1232,28 @@ class IA_AiGroup
         return !wps.IsEmpty();
     }
 
+    bool HasHoldWaypoint()
+    {
+        if (!m_group)
+            return false;
+
+        array<AIWaypoint> wps = {};
+        m_group.GetWaypoints(wps);
+        int i;
+        int count = wps.Count();
+        for (i = 0; i < count; i++)
+        {
+            AIWaypoint wp = wps[i];
+            if (!wp)
+                continue;
+            if (SCR_BoardingTimedWaypoint.Cast(wp))
+                continue;
+            if (SCR_TimedWaypoint.Cast(wp))
+                return true;
+        }
+        return false;
+    }
+
     bool IsDriving()
     {
         return m_isDriving;
@@ -2958,8 +2980,11 @@ class IA_AiGroup
 
         if (m_isHoldingPost && m_holdPost != vector.Zero)
         {
-            if (!HasOrders())
+            if (!HasHoldWaypoint())
+            {
+                RemoveAllOrders();
                 AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+            }
             return;
         }
         
@@ -4110,6 +4135,13 @@ class IA_AiGroup
             unitSpawnPos[0] = m_staggeredSpawnPos[0] + offset[0];
             unitSpawnPos[2] = m_staggeredSpawnPos[2] + offset[2];
         }
+        else if (m_isHoldingPost || m_bKeepAltitude)
+        {
+            vector offset = IA_Game.rng.GenerateRandomPointInRadius(0.3, 0.9, vector.Zero);
+            unitSpawnPos[0] = m_staggeredSpawnPos[0] + offset[0];
+            unitSpawnPos[1] = m_staggeredSpawnPos[1];
+            unitSpawnPos[2] = m_staggeredSpawnPos[2] + offset[2];
+        }
         else if (!m_HVTGroup)
         {
             unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
@@ -4291,6 +4323,14 @@ class IA_AiGroup
                 Print("[IA_AiGroup.OnStaggeredSpawningComplete] Airborne drop, holding orders until land", LogLevel.NORMAL);
                 if (m_iAirborneInFlight <= 0)
                     ReleaseAirborneToAttack();
+            }
+            else if (m_isHoldingPost)
+            {
+                vector holdAt = m_holdPost;
+                if (holdAt == vector.Zero)
+                    holdAt = m_staggeredSpawnPos;
+                SetTacticalState(IA_GroupTacticalState.Holding, holdAt, null, true);
+                Print(string.Format("[IA_AiGroup] Applied Hold Wait at %1", holdAt.ToString()), LogLevel.NORMAL);
             }
             else if (!IsInDefendMode() && !m_lastAssignedArea)
             {
