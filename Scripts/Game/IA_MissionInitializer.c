@@ -86,6 +86,24 @@ class IA_MissionInitializer : GenericEntity
 
 	[RplProp()]
 	int m_iHaloJumpMaxPlayers_Rpl = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
+
+	[RplProp()]
+	bool m_bGameMasterMode_Rpl = false;
+
+	[RplProp()]
+	bool m_bGmAutoActivateStaging_Rpl = false;
+
+	[RplProp()]
+	bool m_bGmAutoQrf_Rpl = true;
+
+	[RplProp()]
+	bool m_bGmAutoArty_Rpl = true;
+
+	[RplProp()]
+	bool m_bGmAutoSideMissions_Rpl = false;
+
+	[RplProp()]
+	bool m_bGmAutoPlaceSupport_Rpl = false;
 	// --- END ADDED ---
 
 	protected static const int CAPTURE_HUD_MAX = 6;
@@ -285,9 +303,12 @@ class IA_MissionInitializer : GenericEntity
 	    IA_Game.SetActiveGroupID(currentGroup);
 	    // --- END ADDED ---
 
-	    // Ensure every AO has a MortarPit site (map-authored marker wins over auto-place)
+    // Ensure every AO has a MortarPit site (map-authored marker wins over auto-place)
+    if (IA_GmDirector.IsAutoSupportOn())
+    {
 	    IA_MortarPitPlacer.EnsureForGroup(currentGroup);
 	    IA_AreaMarker.EnsureRadioTowersForGroup(currentGroup);
+    }
 	    
 	    // m_currentAreaInstances.Clear(); // Clear for the new zone group - MOVED LATER
 	    // array<IA_AreaMarker> markersInGroup = {}; - MOVED LATER
@@ -393,70 +414,48 @@ class IA_MissionInitializer : GenericEntity
 	
 	void InitializeNow()
 {
-    // --- BEGIN ADDED: Clear all area definitions at mission start ---
     IA_Game.ClearAllAreaDefinitions();
-    //Print("[IA_MissionInitializer.InitializeNow] Cleared all area definitions from IA_Game.s_allAreas.", LogLevel.NORMAL);
-    // --- END ADDED ---
 
-    ////Print("[DEBUG] IA_MissionInitializer: InitializeNow started.", LogLevel.NORMAL);
-	groupsArray = new array<int>;
-	m_currentAreaInstances = new array<ref IA_AreaInstance>;
-	for (int i = 0; i < m_numberOfGroups; i++)
-        {
-            groupsArray.Insert(i);
-        }
-//    m_shuffledMarkers = {};
-    array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
-    if (markers.IsEmpty())
-    {
-        ////Print("[WARNING] No IA_AreaMarkers found!", LogLevel.WARNING);
-        return;
-    }
-    
-    // Check for duplicate marker names
-    ////Print("[DEBUG_MARKER_NAMES] Checking for duplicate marker names...", LogLevel.WARNING);
-    ref map<string, int> nameCount = new map<string, int>();
-    foreach(IA_AreaMarker marker : markers) {
-        if (!marker) continue;
-        
-        string name = marker.GetAreaName();
-        if (nameCount.Contains(name)) {
-            nameCount[name] = nameCount[name] + 1;
-        } else {
-            nameCount[name] = 1;
-        }
-    }
-    
-    foreach(string name, int count : nameCount) {
-        if (count > 1) {
-            ////Print("[DEBUG_MARKER_NAMES] WARNING: Found duplicate marker name: " + name + " (appears " + count + " times)", LogLevel.ERROR);
-        } else {
-            ////Print("[DEBUG_MARKER_NAMES] Marker name: " + name + " (unique)", LogLevel.NORMAL);
-        }
-    }
-    
-    // Initialize the vehicle manager
+    groupsArray = new array<int>;
+    m_currentAreaInstances = new array<ref IA_AreaInstance>;
+
     Resource vehicleManagerRes = Resource.Load("{07F25000A2274994}Components/VehicleManager.et");
     if (vehicleManagerRes)
     {
         EntitySpawnParams params = EntitySpawnParams();
         GetGame().SpawnEntityPrefab(vehicleManagerRes, null, params);
-        ////Print("[DEBUG] IA_VehicleManager spawned.", LogLevel.NORMAL);
     }
     else
     {
-        ////Print("[WARNING] Failed to load IA_VehicleManager resource!", LogLevel.WARNING);
+        Print("[WARNING] Failed to load IA_VehicleManager resource!", LogLevel.WARNING);
     }
-		
-/*
-    // Randomize order
-    while (!markers.IsEmpty())
+
+    bool gmMode = false;
+    if (m_config && m_config.m_bGameMasterMode)
+        gmMode = true;
+
+    if (gmMode)
     {
-        int i = IA_Game.rng.RandInt(0, markers.Count());
-        m_shuffledMarkers.Insert(markers[i]);
-        markers.Remove(i);
-    }*/
-	Shuffle(groupsArray);
+        m_currentIndex = -1;
+        IA_GmDirector.GetInstance().EnsureStarted();
+        Print("[IA_MissionInitializer] Game Master mode: waiting for Activate Staging.", LogLevel.NORMAL);
+        return;
+    }
+
+    array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+    if (markers.IsEmpty())
+    {
+        Print("[WARNING] No IA_AreaMarkers found!", LogLevel.WARNING);
+        return;
+    }
+
+    int i;
+    for (i = 0; i < m_numberOfGroups; i++)
+    {
+        groupsArray.Insert(i);
+    }
+
+    Shuffle(groupsArray);
     m_currentIndex = 0;
     ProceedToNextZone();
 }
@@ -633,7 +632,6 @@ class IA_MissionInitializer : GenericEntity
 		
 		////Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
 		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
-		array<bool> zoneCompletionStatus = {}; // Track completion for each zone in current group
 		
 		int currentGroup = groupsArray[m_currentIndex];
 		
@@ -649,7 +647,6 @@ class IA_MissionInitializer : GenericEntity
 				continue;
 				
 			// Add this zone to our tracking array, initialized to false
-			zoneCompletionStatus.Insert(false);
 			amountOfZones++;
 			if (marker_counter.GetAreaType() != IA_AreaType.MortarPit)
 				amountOfRequiredZones++;
@@ -664,29 +661,34 @@ class IA_MissionInitializer : GenericEntity
 		
 		////Print("Running CheckCurrentZoneComplete 3",LogLevel.NORMAL);
 		// Now check each marker in the current group
-		int currentZoneIndex = 0; // This will be an index for m_currentAreaInstances and zoneCompletionStatus
-		int actualCompletedZones = 0; // Accurate count of zones currently meeting completion criteria
-		
-		////Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " has " + amountOfZones + " zones to complete.", LogLevel.NORMAL);
+		int actualCompletedZones = 0;
+		IA_Game matchGame = IA_Game.Instantiate();
 		
 		foreach(IA_AreaMarker marker : markers) {
 			if(!marker || marker.m_areaGroup != currentGroup || marker.GetAreaType() == IA_AreaType.DefendObjective)
 				continue;
-			
-			////Print("Running CheckCurrentZoneComplete 3.5 for marker: " + marker.GetAreaName(),LogLevel.NORMAL);
-			// Ensure currentZoneIndex is within bounds for both m_currentAreaInstances and zoneCompletionStatus
-			if(currentZoneIndex >= m_currentAreaInstances.Count() || currentZoneIndex >= zoneCompletionStatus.Count()) {
-				//Print("[ERROR] Index out of bounds. Marker/Instance/StatusArray desync for group " + currentGroup + " at index " + currentZoneIndex, LogLevel.ERROR);
-				return; // Stop processing to prevent crash
+
+			IA_AreaInstance instance = null;
+			if (matchGame)
+				instance = matchGame.GetAreaInstance(marker.GetAreaName());
+			if (!instance && m_currentAreaInstances)
+			{
+				int instCount = m_currentAreaInstances.Count();
+				int instIdx;
+				for (instIdx = 0; instIdx < instCount; instIdx++)
+				{
+					IA_AreaInstance candidate = m_currentAreaInstances[instIdx];
+					if (!candidate || !candidate.GetArea())
+						continue;
+					if (candidate.GetArea().GetName() == marker.GetAreaName())
+					{
+						instance = candidate;
+						break;
+					}
+				}
 			}
-			
-			////Print("Running CheckCurrentZoneComplete 3.75",LogLevel.NORMAL);
-			ref IA_AreaInstance instance = m_currentAreaInstances[currentZoneIndex];
-			if(!instance) {
-			    //Print("[WARNING] Null IA_AreaInstance at index " + currentZoneIndex + " for group " + currentGroup, LogLevel.WARNING);
-			    currentZoneIndex++; // Increment to process next marker correctly
-			    continue;
-			}
+			if (!instance)
+				continue;
 				
 			// Get US faction score (now on 0-1000 scale, representing 0-120 seconds)
 			float factionScore = marker.GetFactionScore("US");
@@ -696,7 +698,6 @@ class IA_MissionInitializer : GenericEntity
 				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " IS complete (Score: " + factionScore + ").", LogLevel.WARNING);
 				if (marker.GetAreaType() != IA_AreaType.MortarPit)
 					actualCompletedZones++;
-				zoneCompletionStatus[currentZoneIndex] = true; // Update status array
 					
 				// Finish the zone task without a toast. Capture and radio-tower
 				// already notified; CompleteCurrentTask skips a second one when
@@ -710,12 +711,8 @@ class IA_MissionInitializer : GenericEntity
 				// Reset capture scores for next time
 				marker.ResetCaptureScores();
 			}
-			else { // factionScore < 1000
-				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " is NOT complete (Score: " + factionScore + ").", LogLevel.NORMAL);
-				zoneCompletionStatus[currentZoneIndex] = false; // Update status array
-				
-				// If score is low AND there's no active task (it might have been finished previously or never created),
-				// then (re)create the task.
+			else {
+				// If score is low AND there's no active task, (re)create it.
 				if (instance.GetCurrentTaskEntity() == null) {
 				    //Print("[DEBUG_ZONE_GROUP] Score low for " + marker.GetAreaName() + " and no active task. (Re)creating task.", LogLevel.WARNING);
 				    vector pos = marker.GetOrigin();
@@ -740,8 +737,6 @@ class IA_MissionInitializer : GenericEntity
 				    instance.QueueTask(taskTitle, taskDesc, pos);
 				}
 			}
-			
-			currentZoneIndex++;
 		}
 		
 		//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " progress: " + actualCompletedZones + "/" + amountOfZones + " zones completed.", LogLevel.WARNING);
@@ -785,18 +780,32 @@ class IA_MissionInitializer : GenericEntity
 		}
 
 		ForceFinishAllCurrentAreaInstances();
-		m_currentIndex++;
-		if (m_currentAreaInstances) m_currentAreaInstances.Clear(); // Clear instances for the completed group
-		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete); // Stop checking this group
+		if (m_currentAreaInstances)
+			m_currentAreaInstances.Clear();
+		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
 		GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
 		GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
+
+		if (IA_GmDirector.IsGameMasterMode())
+		{
+			IA_GmDirector.GetInstance().ClearLive();
+			if (IA_GmDirector.ShouldAutoActivateStaging())
+			{
+				ref array<IA_AreaMarker> staged = IA_GmDirector.GetInstance().CollectGroupMarkers(IA_GmDirector.GetInstance().GetStagingGroupId());
+				if (staged && staged.Count() > 0)
+					GetGame().GetCallqueue().CallLater(this.ServerActivateStaging, 2000, false);
+			}
+			Print("[IA_MissionInitializer] GM Live AO complete. Waiting for Activate Staging.", LogLevel.NORMAL);
+			return;
+		}
+
+		m_currentIndex++;
 		
 		int finalDelay = delayMs;
 		if (finalDelay < 0)
 		    finalDelay = Math.RandomInt(45,90)*1000;
 		    
-		GetGame().GetCallqueue().CallLater(ProceedToNextZone, finalDelay, false); // Start next group
-	
+		GetGame().GetCallqueue().CallLater(ProceedToNextZone, finalDelay, false);
 	}
 	// --- END ADDED ---
 
@@ -971,6 +980,58 @@ class IA_MissionInitializer : GenericEntity
 		// Removed incorrect initialization from here
     }
 
+    void SpawnAreaFromMarker(IA_AreaMarker marker, Faction nextAreaFaction, int currentGroup)
+    {
+        _SpawnAreaInstanceWithDelay(marker, nextAreaFaction, currentGroup);
+        if (m_currentAreaGroupManager && m_currentAreaInstances)
+        {
+            int n = m_currentAreaInstances.Count();
+            if (n > 0)
+                m_currentAreaGroupManager.AddInstance(m_currentAreaInstances[n - 1]);
+        }
+    }
+
+    void ServerActivateStaging()
+    {
+        if (!Replication.IsServer())
+            return;
+
+        IA_GmDirector dir = IA_GmDirector.GetInstance();
+        dir.EnsureStarted();
+        int groupId = dir.GetStagingGroupId();
+        ref array<IA_AreaMarker> staged = dir.CollectGroupMarkers(groupId);
+        if (!staged || staged.IsEmpty())
+        {
+            Print("[IA_MissionInitializer] Activate Staging failed: no staged sites.", LogLevel.WARNING);
+            return;
+        }
+
+        if (m_currentAreaGroupManager)
+        {
+            m_currentAreaGroupManager.Shutdown();
+            delete m_currentAreaGroupManager;
+            m_currentAreaGroupManager = null;
+        }
+        ForceFinishAllCurrentAreaInstances();
+        if (m_currentAreaInstances)
+            m_currentAreaInstances.Clear();
+        GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+        GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
+        GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
+
+        dir.PromoteStagingToLive();
+        if (!groupsArray)
+            groupsArray = new array<int>();
+        if (groupsArray.Find(groupId) == -1)
+            groupsArray.Insert(groupId);
+        m_currentIndex = groupsArray.Find(groupId);
+        if (m_currentIndex < 0)
+            m_currentIndex = 0;
+
+        Print(string.Format("[IA_MissionInitializer] Activating GM group %1", groupId), LogLevel.NORMAL);
+        ProceedToNextZone();
+    }
+
     private void _SpawnAreaInstanceWithDelay(IA_AreaMarker marker, Faction nextAreaFaction, int currentGroup)
     {
         if (!groupsArray || !groupsArray.IsIndexValid(m_currentIndex) || groupsArray[m_currentIndex] != currentGroup)
@@ -1078,7 +1139,13 @@ class IA_MissionInitializer : GenericEntity
 		int artyMinDelay,
 		int artyMaxDelay,
 		string enemyFactionKey,
-		int haloMaxPlayers
+		int haloMaxPlayers,
+		bool gmMode,
+		bool gmAutoActivate,
+		bool gmAutoQrf,
+		bool gmAutoArty,
+		bool gmAutoSide,
+		bool gmAutoSupport
 	)
 	{
 		int heliI = 0;
@@ -1093,6 +1160,24 @@ class IA_MissionInitializer : GenericEntity
 		int rolesI = 0;
 		if (enforceRoles)
 			rolesI = 1;
+		int gmI = 0;
+		if (gmMode)
+			gmI = 1;
+		int gmActI = 0;
+		if (gmAutoActivate)
+			gmActI = 1;
+		int gmQrfI = 0;
+		if (gmAutoQrf)
+			gmQrfI = 1;
+		int gmArtyI = 0;
+		if (gmAutoArty)
+			gmArtyI = 1;
+		int gmSideI = 0;
+		if (gmAutoSide)
+			gmSideI = 1;
+		int gmSupI = 0;
+		if (gmAutoSupport)
+			gmSupI = 1;
 
 		string packed = "v1";
 		packed = packed + "|" + civCount.ToString();
@@ -1111,6 +1196,12 @@ class IA_MissionInitializer : GenericEntity
 		packed = packed + "|" + artyMaxDelay.ToString();
 		packed = packed + "|" + enemyFactionKey;
 		packed = packed + "|" + haloMaxPlayers.ToString();
+		packed = packed + "|" + gmI.ToString();
+		packed = packed + "|" + gmActI.ToString();
+		packed = packed + "|" + gmQrfI.ToString();
+		packed = packed + "|" + gmArtyI.ToString();
+		packed = packed + "|" + gmSideI.ToString();
+		packed = packed + "|" + gmSupI.ToString();
 		return packed;
 	}
 
@@ -1130,14 +1221,21 @@ class IA_MissionInitializer : GenericEntity
 		int artyMinDelay,
 		int artyMaxDelay,
 		string enemyFactionKey,
-		int haloMaxPlayers
+		int haloMaxPlayers,
+		bool gmMode,
+		bool gmAutoActivate,
+		bool gmAutoQrf,
+		bool gmAutoArty,
+		bool gmAutoSide,
+		bool gmAutoSupport
 	)
 	{
 		string packed = PackAdminConfig(
 			civCount, aiScale, disableHeli, disableGround, artyCooldown,
 			staticAiScale, milVehMult, civVehMult, revoltThresh, enableCiv,
 			enforceRoles, artyChance, artyMinDelay, artyMaxDelay, enemyFactionKey,
-			haloMaxPlayers
+			haloMaxPlayers, gmMode, gmAutoActivate, gmAutoQrf, gmAutoArty,
+			gmAutoSide, gmAutoSupport
 		);
 
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
@@ -1171,14 +1269,21 @@ class IA_MissionInitializer : GenericEntity
 		int artyMinDelay,
 		int artyMaxDelay,
 		string enemyFactionKey,
-		int haloMaxPlayers
+		int haloMaxPlayers,
+		bool gmMode,
+		bool gmAutoActivate,
+		bool gmAutoQrf,
+		bool gmAutoArty,
+		bool gmAutoSide,
+		bool gmAutoSupport
 	)
 	{
 		string packed = PackAdminConfig(
 			civCount, aiScale, disableHeli, disableGround, artyCooldown,
 			staticAiScale, milVehMult, civVehMult, revoltThresh, enableCiv,
 			enforceRoles, artyChance, artyMinDelay, artyMaxDelay, enemyFactionKey,
-			haloMaxPlayers
+			haloMaxPlayers, gmMode, gmAutoActivate, gmAutoQrf, gmAutoArty,
+			gmAutoSide, gmAutoSupport
 		);
 
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
@@ -1287,6 +1392,34 @@ class IA_MissionInitializer : GenericEntity
 		if (haloMaxPlayers > 128)
 			haloMaxPlayers = 128;
 
+		bool gmMode = false;
+		bool gmAutoActivate = false;
+		bool gmAutoQrf = true;
+		bool gmAutoArty = true;
+		bool gmAutoSide = false;
+		bool gmAutoSupport = false;
+		if (m_config)
+		{
+			gmMode = m_config.m_bGameMasterMode;
+			gmAutoActivate = m_config.m_bGmAutoActivateStaging;
+			gmAutoQrf = m_config.m_bGmAutoQrf;
+			gmAutoArty = m_config.m_bGmAutoArty;
+			gmAutoSide = m_config.m_bGmAutoSideMissions;
+			gmAutoSupport = m_config.m_bGmAutoPlaceSupport;
+		}
+		if (tokens.Count() > 17)
+			gmMode = tokens[17].ToInt() != 0;
+		if (tokens.Count() > 18)
+			gmAutoActivate = tokens[18].ToInt() != 0;
+		if (tokens.Count() > 19)
+			gmAutoQrf = tokens[19].ToInt() != 0;
+		if (tokens.Count() > 20)
+			gmAutoArty = tokens[20].ToInt() != 0;
+		if (tokens.Count() > 21)
+			gmAutoSide = tokens[21].ToInt() != 0;
+		if (tokens.Count() > 22)
+			gmAutoSupport = tokens[22].ToInt() != 0;
+
 		Print(string.Format(
 			"[IA_MissionInitializer] RPC_UpdateConfig: Civ=%1 AI=%2 Heli=%3 Gnd=%4 Arty=%5 Chance=%6 Faction=%7 HALO=%8",
 			civCount, aiScale, disableHeli, disableGround, artyCooldown, artyChance, enemyFactionKey, haloMaxPlayers
@@ -1312,6 +1445,12 @@ class IA_MissionInitializer : GenericEntity
 			m_config.m_iArtilleryMinDelay = artyMinDelay;
 			m_config.m_iArtilleryMaxDelay = artyMaxDelay;
 			m_config.m_iHaloJumpMaxPlayers = haloMaxPlayers;
+			m_config.m_bGameMasterMode = gmMode;
+			m_config.m_bGmAutoActivateStaging = gmAutoActivate;
+			m_config.m_bGmAutoQrf = gmAutoQrf;
+			m_config.m_bGmAutoArty = gmAutoArty;
+			m_config.m_bGmAutoSideMissions = gmAutoSide;
+			m_config.m_bGmAutoPlaceSupport = gmAutoSupport;
 
 			if (enemyFactionKey != "")
 			{
@@ -1339,6 +1478,12 @@ class IA_MissionInitializer : GenericEntity
 		if (enemyFactionKey != "")
 			m_sDesiredEnemyFactionKey_Rpl = enemyFactionKey;
 		m_iHaloJumpMaxPlayers_Rpl = haloMaxPlayers;
+		m_bGameMasterMode_Rpl = gmMode;
+		m_bGmAutoActivateStaging_Rpl = gmAutoActivate;
+		m_bGmAutoQrf_Rpl = gmAutoQrf;
+		m_bGmAutoArty_Rpl = gmAutoArty;
+		m_bGmAutoSideMissions_Rpl = gmAutoSide;
+		m_bGmAutoPlaceSupport_Rpl = gmAutoSupport;
 
 		Replication.BumpMe();
 	}
@@ -1362,6 +1507,12 @@ class IA_MissionInitializer : GenericEntity
 			m_iArtilleryMinDelay_Rpl = m_config.m_iArtilleryMinDelay;
 			m_iArtilleryMaxDelay_Rpl = m_config.m_iArtilleryMaxDelay;
 			m_iHaloJumpMaxPlayers_Rpl = m_config.m_iHaloJumpMaxPlayers;
+			m_bGameMasterMode_Rpl = m_config.m_bGameMasterMode;
+			m_bGmAutoActivateStaging_Rpl = m_config.m_bGmAutoActivateStaging;
+			m_bGmAutoQrf_Rpl = m_config.m_bGmAutoQrf;
+			m_bGmAutoArty_Rpl = m_config.m_bGmAutoArty;
+			m_bGmAutoSideMissions_Rpl = m_config.m_bGmAutoSideMissions;
+			m_bGmAutoPlaceSupport_Rpl = m_config.m_bGmAutoPlaceSupport;
 
 			m_sDesiredEnemyFactionKey_Rpl = "";
 			if (m_config.m_sDesiredEnemyFactionKeys && m_config.m_sDesiredEnemyFactionKeys.Count() > 0)
@@ -1996,6 +2147,12 @@ class IA_MissionInitializer : GenericEntity
 				clientConfig.m_iArtilleryMinDelay = s_instance.m_iArtilleryMinDelay_Rpl;
 				clientConfig.m_iArtilleryMaxDelay = s_instance.m_iArtilleryMaxDelay_Rpl;
 				clientConfig.m_iHaloJumpMaxPlayers = s_instance.m_iHaloJumpMaxPlayers_Rpl;
+				clientConfig.m_bGameMasterMode = s_instance.m_bGameMasterMode_Rpl;
+				clientConfig.m_bGmAutoActivateStaging = s_instance.m_bGmAutoActivateStaging_Rpl;
+				clientConfig.m_bGmAutoQrf = s_instance.m_bGmAutoQrf_Rpl;
+				clientConfig.m_bGmAutoArty = s_instance.m_bGmAutoArty_Rpl;
+				clientConfig.m_bGmAutoSideMissions = s_instance.m_bGmAutoSideMissions_Rpl;
+				clientConfig.m_bGmAutoPlaceSupport = s_instance.m_bGmAutoPlaceSupport_Rpl;
 
 				if (s_instance.m_sDesiredEnemyFactionKey_Rpl != "")
 				{

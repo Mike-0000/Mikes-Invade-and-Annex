@@ -1,0 +1,18 @@
+IA_AreaMarker : "{EB1E27CA063A3403}Prefabs/IA_AreaMarkers/IA_City.et" {
+ ID "1A6D47B0E6C35910"
+ coords 0 0 0
+ m_areaGroup -1
+ m_fZoneRadius 115
+ m_areaName ""
+ m_areaType "City"
+ m_radius 115
+ components {
+  SCR_EditableEntityComponent "1A6D47B0E6C35911" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
+   m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35912" {
+    Name "I&A City"
+   }
+  }
+  IA_GmSiteComponent "1A6D47B0E6C35913" {
+  }
+ }
+}

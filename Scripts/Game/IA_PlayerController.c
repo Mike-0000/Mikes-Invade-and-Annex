@@ -209,6 +209,205 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void IA_AskGmPlaceSite(int type, float x, float z, int bucket, string name, float radius)
+	{
+		if (Replication.IsServer())
+		{
+			IA_GmPlaceSiteIfAdmin(type, x, z, bucket, name, radius);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_GmPlaceSite, type, x, z, bucket, name, radius);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void IA_AskGmActivateStaging()
+	{
+		if (Replication.IsServer())
+		{
+			IA_GmActivateStagingIfAdmin();
+			return;
+		}
+
+		Rpc(RpcAsk_IA_GmActivateStaging);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void IA_AskForceQRFAt(int type, float x, float z)
+	{
+		if (Replication.IsServer())
+		{
+			IA_ForceQRFAtIfAdmin(type, x, z);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_ForceQRFAt, type, x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void IA_AskGmStartSideAt(float x, float z)
+	{
+		if (Replication.IsServer())
+		{
+			IA_GmStartSideIfAdmin(x, z);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_GmStartSideAt, x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void IA_AskGmHotAdd(float x, float z)
+	{
+		if (Replication.IsServer())
+		{
+			IA_GmHotAddIfAdmin(x, z);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_GmHotAdd, x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_GmPlaceSite(int type, float x, float z, int bucket, string name, float radius)
+	{
+		IA_GmPlaceSiteIfAdmin(type, x, z, bucket, name, radius);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_GmActivateStaging()
+	{
+		IA_GmActivateStagingIfAdmin();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_ForceQRFAt(int type, float x, float z)
+	{
+		IA_ForceQRFAtIfAdmin(type, x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_GmStartSideAt(float x, float z)
+	{
+		IA_GmStartSideIfAdmin(x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_GmHotAdd(float x, float z)
+	{
+		IA_GmHotAddIfAdmin(x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_GmPlaceSiteIfAdmin(int type, float x, float z, int bucket, string name, float radius)
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] GM place rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_GmBucket gmBucket = IA_GmBucket.Staging;
+		if (bucket == IA_GmBucket.Live)
+			gmBucket = IA_GmBucket.Live;
+
+		vector pos = Vector(x, 0, z);
+		IA_AreaType areaType = type;
+		IA_AreaMarker marker = IA_GmDirector.GetInstance().PlaceSite(areaType, pos, gmBucket, name, radius);
+		if (gmBucket == IA_GmBucket.Live && marker)
+			IA_GmDirector.GetInstance().HotAdd(marker);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_GmActivateStagingIfAdmin()
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Activate Staging rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (!init)
+			return;
+
+		init.ServerActivateStaging();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_ForceQRFAtIfAdmin(int type, float x, float z)
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Force QRF at point rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (!init)
+			return;
+
+		IA_AreaGroupManager mgr = init.GetCurrentAreaGroupManager();
+		if (!mgr)
+		{
+			Print("[IA][Admin] Force QRF at point rejected: no area group manager", LogLevel.WARNING);
+			return;
+		}
+
+		mgr.ForceSpawnQRFAt(type, Vector(x, 0, z));
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_GmStartSideIfAdmin(float x, float z)
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Start side mission rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_GmDirector.GetInstance().StartSideAt(Vector(x, 0, z));
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_GmHotAddIfAdmin(float x, float z)
+	{
+		if (!IA_IsAdminCaller())
+			return;
+
+		ref array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+		if (!markers)
+			return;
+
+		vector pos = Vector(x, 0, z);
+		IA_AreaMarker best = null;
+		float bestDist = 80;
+		int i;
+		int count = markers.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_AreaMarker marker = markers[i];
+			if (!marker)
+				continue;
+			vector origin = marker.GetOrigin();
+			origin[1] = 0;
+			float dist = vector.Distance(origin, pos);
+			if (dist > bestDist)
+				continue;
+			bestDist = dist;
+			best = marker;
+		}
+
+		if (best)
+			IA_GmDirector.GetInstance().HotAdd(best);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected void IA_ForceQRFIfAdmin(int type)
 	{
 		if (!IA_IsAdminCaller())

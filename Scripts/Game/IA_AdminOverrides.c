@@ -23,6 +23,12 @@ class IA_AdminOverrides
 	int m_iArtilleryMaxDelay = 70;
 	string m_sEnemyFactionKey;
 	int m_iHaloJumpMaxPlayers = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
+	bool m_bGameMasterMode;
+	bool m_bGmAutoActivateStaging;
+	bool m_bGmAutoQrf = true;
+	bool m_bGmAutoArty = true;
+	bool m_bGmAutoSideMissions;
+	bool m_bGmAutoPlaceSupport;
 
 	//------------------------------------------------------------------------------------------------
 	static string GetPath()
@@ -112,6 +118,12 @@ class IA_AdminOverrides
 		m_iArtilleryMinDelay = config.m_iArtilleryMinDelay;
 		m_iArtilleryMaxDelay = config.m_iArtilleryMaxDelay;
 		m_iHaloJumpMaxPlayers = config.m_iHaloJumpMaxPlayers;
+		m_bGameMasterMode = config.m_bGameMasterMode;
+		m_bGmAutoActivateStaging = config.m_bGmAutoActivateStaging;
+		m_bGmAutoQrf = config.m_bGmAutoQrf;
+		m_bGmAutoArty = config.m_bGmAutoArty;
+		m_bGmAutoSideMissions = config.m_bGmAutoSideMissions;
+		m_bGmAutoPlaceSupport = config.m_bGmAutoPlaceSupport;
 		m_sEnemyFactionKey = "";
 		if (config.m_sDesiredEnemyFactionKeys && config.m_sDesiredEnemyFactionKeys.Count() > 0)
 			m_sEnemyFactionKey = config.m_sDesiredEnemyFactionKeys[0];
@@ -141,6 +153,13 @@ class IA_AdminOverrides
 		if (haloMax > 128)
 			haloMax = 128;
 		config.m_iHaloJumpMaxPlayers = haloMax;
+
+		config.m_bGameMasterMode = m_bGameMasterMode;
+		config.m_bGmAutoActivateStaging = m_bGmAutoActivateStaging;
+		config.m_bGmAutoQrf = m_bGmAutoQrf;
+		config.m_bGmAutoArty = m_bGmAutoArty;
+		config.m_bGmAutoSideMissions = m_bGmAutoSideMissions;
+		config.m_bGmAutoPlaceSupport = m_bGmAutoPlaceSupport;
 
 		if (m_sEnemyFactionKey != "")
 		{
@@ -202,6 +221,30 @@ class IA_AdminOverrides
 		json = json + ",\"artyMin\":" + m_iArtilleryMinDelay.ToString();
 		json = json + ",\"artyMax\":" + m_iArtilleryMaxDelay.ToString();
 		json = json + ",\"haloMax\":" + m_iHaloJumpMaxPlayers.ToString();
+		int gmI = 0;
+		if (m_bGameMasterMode)
+			gmI = 1;
+		int gmActI = 0;
+		if (m_bGmAutoActivateStaging)
+			gmActI = 1;
+		int gmQrfI = 0;
+		if (m_bGmAutoQrf)
+			gmQrfI = 1;
+		int gmArtyI = 0;
+		if (m_bGmAutoArty)
+			gmArtyI = 1;
+		int gmSideI = 0;
+		if (m_bGmAutoSideMissions)
+			gmSideI = 1;
+		int gmSupI = 0;
+		if (m_bGmAutoPlaceSupport)
+			gmSupI = 1;
+		json = json + ",\"gmMode\":" + gmI.ToString();
+		json = json + ",\"gmAutoActivate\":" + gmActI.ToString();
+		json = json + ",\"gmAutoQrf\":" + gmQrfI.ToString();
+		json = json + ",\"gmAutoArty\":" + gmArtyI.ToString();
+		json = json + ",\"gmAutoSide\":" + gmSideI.ToString();
+		json = json + ",\"gmAutoSupport\":" + gmSupI.ToString();
 		json = json + ",\"faction\":\"" + m_sEnemyFactionKey + "\"";
 		json = json + "}";
 		return json;
@@ -240,6 +283,18 @@ class IA_AdminOverrides
 			m_iArtilleryMaxDelay = ExtractValue(json, "artyMax").ToInt();
 		if (HasKey(json, "haloMax"))
 			m_iHaloJumpMaxPlayers = ExtractValue(json, "haloMax").ToInt();
+		if (HasKey(json, "gmMode"))
+			m_bGameMasterMode = ExtractValue(json, "gmMode").ToInt() != 0;
+		if (HasKey(json, "gmAutoActivate"))
+			m_bGmAutoActivateStaging = ExtractValue(json, "gmAutoActivate").ToInt() != 0;
+		if (HasKey(json, "gmAutoQrf"))
+			m_bGmAutoQrf = ExtractValue(json, "gmAutoQrf").ToInt() != 0;
+		if (HasKey(json, "gmAutoArty"))
+			m_bGmAutoArty = ExtractValue(json, "gmAutoArty").ToInt() != 0;
+		if (HasKey(json, "gmAutoSide"))
+			m_bGmAutoSideMissions = ExtractValue(json, "gmAutoSide").ToInt() != 0;
+		if (HasKey(json, "gmAutoSupport"))
+			m_bGmAutoPlaceSupport = ExtractValue(json, "gmAutoSupport").ToInt() != 0;
 		if (HasKey(json, "faction"))
 			m_sEnemyFactionKey = ExtractValue(json, "faction");
 	}

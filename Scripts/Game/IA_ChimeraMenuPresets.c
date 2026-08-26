@@ -1,5 +1,6 @@
 modded enum ChimeraMenuPreset
 {
 	IA_StatisticsMenu,
-	IA_AdminConfigMenu
+	IA_AdminConfigMenu,
+	IA_GmDirectorMenu
 }

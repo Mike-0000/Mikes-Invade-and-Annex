@@ -9,6 +9,14 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Panel m_PageArty;
 	protected ref MUI_Panel m_PageHq;
 	protected ref MUI_Panel m_PageQrf;
+	protected ref MUI_Panel m_PageDirector;
+
+	protected ref MUI_Toggle m_GmModeToggle;
+	protected ref MUI_Toggle m_GmAutoActivateToggle;
+	protected ref MUI_Toggle m_GmAutoQrfToggle;
+	protected ref MUI_Toggle m_GmAutoArtyToggle;
+	protected ref MUI_Toggle m_GmAutoSideToggle;
+	protected ref MUI_Toggle m_GmAutoSupportToggle;
 
 	protected ref MUI_Button m_QrfInfantryBtn;
 	protected ref MUI_Button m_QrfMotorizedBtn;
@@ -66,7 +74,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			"ADMIN CONFIG",
 			"COMMAND UPLINK",
 			"Live mission tuning  •  Changes apply on Save",
-			640
+			880
 		);
 
 		m_Tabs = runtime.CreateTabs("tabs");
@@ -76,6 +84,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Tabs.AddTab("Artillery");
 		m_Tabs.AddTab("HQ");
 		m_Tabs.AddTab("QRF");
+		m_Tabs.AddTab("Director");
 		m_Tabs.GetOnChanged().Insert(OnAdminTabChanged);
 
 		ref MUI_ScrollView scroll = runtime.CreateScrollView("scroll");
@@ -88,6 +97,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageArty = MakePage(runtime, "pageArty");
 		m_PageHq = MakePage(runtime, "pageHq");
 		m_PageQrf = MakePage(runtime, "pageQrf");
+		m_PageDirector = MakePage(runtime, "pageDirector");
 
 		m_AIField = runtime.CreateNumericField("AI scale multiplier", "ai");
 		m_AIField.SetRange(0.1, 10);
@@ -224,11 +234,31 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageQrf.AddChild(qrfRow1);
 		m_PageQrf.AddChild(qrfRow2);
 
+		m_GmModeToggle = runtime.CreateToggle("Game Master mode", "gmMode");
+		m_GmAutoActivateToggle = runtime.CreateToggle("Auto-activate Staging when Live completes", "gmAutoAct");
+		m_GmAutoQrfToggle = runtime.CreateToggle("Auto QRF on Live AOs", "gmAutoQrf");
+		m_GmAutoArtyToggle = runtime.CreateToggle("Auto artillery on Live AOs", "gmAutoArty");
+		m_GmAutoSideToggle = runtime.CreateToggle("Auto side missions", "gmAutoSide");
+		m_GmAutoSupportToggle = runtime.CreateToggle("Auto mortar + radio on Activate", "gmAutoSup");
+
+		ref MUI_Button openDirBtn = runtime.CreateButton("Open Director Map", "openDir");
+		openDirBtn.MakeAccent();
+		openDirBtn.GetOnClicked().Insert(OnOpenDirector);
+
+		m_PageDirector.AddChild(m_GmModeToggle);
+		m_PageDirector.AddChild(m_GmAutoActivateToggle);
+		m_PageDirector.AddChild(m_GmAutoQrfToggle);
+		m_PageDirector.AddChild(m_GmAutoArtyToggle);
+		m_PageDirector.AddChild(m_GmAutoSideToggle);
+		m_PageDirector.AddChild(m_GmAutoSupportToggle);
+		m_PageDirector.AddChild(openDirBtn);
+
 		scroll.AddChild(m_PageScaling);
 		scroll.AddChild(m_PageCiv);
 		scroll.AddChild(m_PageArty);
 		scroll.AddChild(m_PageHq);
 		scroll.AddChild(m_PageQrf);
+		scroll.AddChild(m_PageDirector);
 
 		ref MUI_Panel footerBtns = runtime.CreatePanel("footerBtns");
 		footerBtns.GetStyle().m_Fill = Color.FromInt(0);
@@ -316,6 +346,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_PageHq.SetVisible(index == 3);
 		if (m_PageQrf)
 			m_PageQrf.SetVisible(index == 4);
+		if (m_PageDirector)
+			m_PageDirector.SetVisible(index == 5);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -370,6 +402,18 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_RolesToggle.SetChecked(cfg.m_bEnforceRoleRestrictions);
 		if (m_HaloMaxField)
 			m_HaloMaxField.SetValue(cfg.m_iHaloJumpMaxPlayers);
+		if (m_GmModeToggle)
+			m_GmModeToggle.SetChecked(cfg.m_bGameMasterMode);
+		if (m_GmAutoActivateToggle)
+			m_GmAutoActivateToggle.SetChecked(cfg.m_bGmAutoActivateStaging);
+		if (m_GmAutoQrfToggle)
+			m_GmAutoQrfToggle.SetChecked(cfg.m_bGmAutoQrf);
+		if (m_GmAutoArtyToggle)
+			m_GmAutoArtyToggle.SetChecked(cfg.m_bGmAutoArty);
+		if (m_GmAutoSideToggle)
+			m_GmAutoSideToggle.SetChecked(cfg.m_bGmAutoSideMissions);
+		if (m_GmAutoSupportToggle)
+			m_GmAutoSupportToggle.SetChecked(cfg.m_bGmAutoPlaceSupport);
 
 		if (m_FactionDrop && cfg.m_sDesiredEnemyFactionKeys && cfg.m_sDesiredEnemyFactionKeys.Count() > 0)
 		{
@@ -442,6 +486,12 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		bool enforceRoles = false;
 		int haloMaxPlayers = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
 		string factionKey = "";
+		bool gmMode = false;
+		bool gmAutoActivate = false;
+		bool gmAutoQrf = true;
+		bool gmAutoArty = true;
+		bool gmAutoSide = false;
+		bool gmAutoSupport = false;
 
 		if (m_civField)
 			civCount = m_civField.GetValue();
@@ -475,6 +525,18 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			haloMaxPlayers = m_HaloMaxField.GetText().ToInt();
 		if (m_FactionDrop && m_FactionDrop.GetIndex() > 0)
 			factionKey = m_FactionDrop.GetText();
+		if (m_GmModeToggle)
+			gmMode = m_GmModeToggle.IsChecked();
+		if (m_GmAutoActivateToggle)
+			gmAutoActivate = m_GmAutoActivateToggle.IsChecked();
+		if (m_GmAutoQrfToggle)
+			gmAutoQrf = m_GmAutoQrfToggle.IsChecked();
+		if (m_GmAutoArtyToggle)
+			gmAutoArty = m_GmAutoArtyToggle.IsChecked();
+		if (m_GmAutoSideToggle)
+			gmAutoSide = m_GmAutoSideToggle.IsChecked();
+		if (m_GmAutoSupportToggle)
+			gmAutoSupport = m_GmAutoSupportToggle.IsChecked();
 
 		if (persist)
 		{
@@ -494,7 +556,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 				artyMin,
 				artyMax,
 				factionKey,
-				haloMaxPlayers
+				haloMaxPlayers,
+				gmMode,
+				gmAutoActivate,
+				gmAutoQrf,
+				gmAutoArty,
+				gmAutoSide,
+				gmAutoSupport
 			);
 			return;
 		}
@@ -515,7 +583,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			artyMin,
 			artyMax,
 			factionKey,
-			haloMaxPlayers
+			haloMaxPlayers,
+			gmMode,
+			gmAutoActivate,
+			gmAutoQrf,
+			gmAutoArty,
+			gmAutoSide,
+			gmAutoSupport
 		);
 	}
 
@@ -555,6 +629,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
 		if (pc)
 			pc.IA_AskForceQRF(type);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnOpenDirector()
+	{
+		GetGame().GetMenuManager().CloseMenu(this);
+		GetGame().GetMenuManager().OpenMenu(ChimeraMenuPreset.IA_GmDirectorMenu);
 	}
 
 	//------------------------------------------------------------------------------------------------

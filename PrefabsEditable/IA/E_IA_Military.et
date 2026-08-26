@@ -1,0 +1,18 @@
+IA_AreaMarker : "{0C868FB4A69F9BE8}Prefabs/IA_AreaMarkers/IA_Military.et" {
+ ID "1A6D47B0E6C35940"
+ coords 0 0 0
+ m_areaGroup -1
+ m_fZoneRadius 150
+ m_areaName ""
+ m_areaType "Military"
+ m_radius 150
+ components {
+  SCR_EditableEntityComponent "1A6D47B0E6C35941" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
+   m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35942" {
+    Name "I&A Military"
+   }
+  }
+  IA_GmSiteComponent "1A6D47B0E6C35943" {
+  }
+ }
+}

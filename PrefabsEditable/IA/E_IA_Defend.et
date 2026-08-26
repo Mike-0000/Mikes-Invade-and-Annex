@@ -1,0 +1,18 @@
+IA_AreaMarker : "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et" {
+ ID "1A6D47B0E6C35990"
+ coords 0 0 0
+ m_areaGroup -1
+ m_fZoneRadius 50
+ m_areaName ""
+ m_areaType "DefendObjective"
+ m_radius 50
+ components {
+  SCR_EditableEntityComponent "1A6D47B0E6C35991" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
+   m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35992" {
+    Name "I&A Defend"
+   }
+  }
+  IA_GmSiteComponent "1A6D47B0E6C35993" {
+  }
+ }
+}

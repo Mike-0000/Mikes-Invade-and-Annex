@@ -93,6 +93,9 @@ class IA_AreaGroupManager
         if (!forDefend && IA_MissionInitializer.IsQRFDisabled())
             return; // QRF globally disabled (defend holds still get QRF)
 
+        if (!forDefend && IA_GmDirector.IsAutoQrfOff())
+            return;
+
         int checkInterval = QRF_CHECK_INTERVAL;
         int cooldown = QRF_COOLDOWN;
         float chance = QRF_CHANCE;
@@ -275,6 +278,48 @@ class IA_AreaGroupManager
         else
             Print("[IA][Admin] Force QRF spawn failed for " + QRFTypeToString(type), LogLevel.WARNING);
         return spawned;
+    }
+
+    bool ForceSpawnQRFAt(IA_QRFType type, vector pos)
+    {
+        if (m_bShutDown)
+            return false;
+        if (!Replication.IsServer())
+            return false;
+        if (!m_areaInstances || m_areaInstances.IsEmpty())
+        {
+            Print("[IA][Admin] Force QRF at point failed: no area instances", LogLevel.WARNING);
+            return false;
+        }
+
+        IA_AreaInstance closestArea = null;
+        vector resolved = ResolveClosestAreaTarget(pos, closestArea);
+        if (!closestArea)
+        {
+            Print("[IA][Admin] Force QRF at point failed: could not resolve area", LogLevel.WARNING);
+            return false;
+        }
+
+        vector targetPos = pos;
+        if (targetPos == vector.Zero)
+            targetPos = resolved;
+
+        bool spawned = SpawnQRFForTarget(type, targetPos, closestArea, null, false, false);
+        if (spawned)
+            m_lastQRFTime = System.GetUnixTime();
+        else
+            Print("[IA][Admin] Force QRF at point failed for " + QRFTypeToString(type), LogLevel.WARNING);
+        return spawned;
+    }
+
+    void AddInstance(IA_AreaInstance inst)
+    {
+        if (!inst)
+            return;
+        if (!m_areaInstances)
+            m_areaInstances = new array<ref IA_AreaInstance>();
+        if (m_areaInstances.Find(inst) == -1)
+            m_areaInstances.Insert(inst);
     }
 
     //! One mid-hold QRF pulse for Defend missions. Uses defend type weights (25% airborne).
@@ -929,6 +974,8 @@ class IA_AreaGroupManager
     void ArtilleryStrikeTask()
     {
         if (m_bShutDown)
+            return;
+        if (IA_GmDirector.IsAutoArtyOff())
             return;
 
         int currentTime = System.GetUnixTime();

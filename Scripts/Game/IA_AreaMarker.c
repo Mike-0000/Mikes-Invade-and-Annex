@@ -693,10 +693,26 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     {
         return m_areaName;
     }
+
+    void SetAreaName(string name)
+    {
+        m_areaName = name;
+    }
+
+    void SetAreaGroup(int group)
+    {
+        m_areaGroup = group;
+    }
     
     float GetRadius()
     {
         return m_radius;
+    }
+
+    void SetRadius(float radius)
+    {
+        m_radius = radius;
+        m_fZoneRadius = radius;
     }
     
    
@@ -727,22 +743,31 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         return IA_AreaType.Property; // Fallback
     }
 
-    // Runtime setup for auto-placed mortar pit markers (after SpawnEntityPrefab).
+    // Runtime setup after SpawnEntityPrefab. Mortar pits may omit type.
     void ConfigureRuntime(int areaGroup, string areaName, float radius)
+    {
+        ConfigureRuntime(areaGroup, areaName, radius, "MortarPit");
+    }
+
+    void ConfigureRuntime(int areaGroup, string areaName, float radius, string areaType)
     {
         m_areaGroup = areaGroup;
         m_areaName = areaName;
-        m_areaType = "MortarPit";
+        if (areaType.IsEmpty())
+            m_areaType = "MortarPit";
+        else
+            m_areaType = areaType;
         m_radius = radius;
         m_fZoneRadius = radius;
         m_origin = GetOrigin();
         m_runtimeConfigured = true;
-        EnsureMortarCount();
+        if (GetAreaType() == IA_AreaType.MortarPit)
+            EnsureMortarCount();
 
         if (Replication.IsServer() && s_areaMarkers && s_areaMarkers.Find(this) == -1)
             s_areaMarkers.Insert(this);
 
-        Print(string.Format("[IA_AreaMarker] ConfigureRuntime MortarPit '%1' group %2 count %3 at %4", m_areaName, m_areaGroup, m_mortarCount, m_origin), LogLevel.NORMAL);
+        Print(string.Format("[IA_AreaMarker] ConfigureRuntime '%1' type %2 group %3 at %4", m_areaName, m_areaType, m_areaGroup, m_origin), LogLevel.NORMAL);
     }
 
     int EnsureMortarCount()
