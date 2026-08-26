@@ -269,6 +269,13 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void IA_BroadcastGmBuckets()
+	{
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		Rpc(RpcDo_IA_GmSetBuckets, dir.GetLiveGroupId(), dir.GetStagingGroupId());
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void IA_AskGmRenameSite(float x, float z, string name)
 	{
 		if (Replication.IsServer())
@@ -347,7 +354,7 @@ modded class SCR_PlayerController
 			return;
 
 		if (dir.GetLiveGroupId() != liveBefore)
-			Rpc(RpcDo_IA_GmPromoteStaging);
+			Rpc(RpcDo_IA_GmSetBuckets, dir.GetLiveGroupId(), dir.GetStagingGroupId());
 
 		vector origin = marker.GetOrigin();
 		int groupId = marker.m_areaGroup;
@@ -371,7 +378,8 @@ modded class SCR_PlayerController
 			return;
 
 		init.ServerActivateStaging();
-		Rpc(RpcDo_IA_GmPromoteStaging);
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		Rpc(RpcDo_IA_GmSetBuckets, dir.GetLiveGroupId(), dir.GetStagingGroupId());
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -439,7 +447,13 @@ modded class SCR_PlayerController
 		}
 
 		if (best)
-			IA_GmDirector.GetInstance().HotAdd(best);
+		{
+			IA_GmDirector dir = IA_GmDirector.GetInstance();
+			int liveBefore = dir.GetLiveGroupId();
+			dir.HotAdd(best);
+			if (dir.GetLiveGroupId() != liveBefore)
+				Rpc(RpcDo_IA_GmSetBuckets, dir.GetLiveGroupId(), dir.GetStagingGroupId());
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -498,12 +512,12 @@ modded class SCR_PlayerController
 
 	//------------------------------------------------------------------------------------------------
 	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
-	protected void RpcDo_IA_GmPromoteStaging()
+	protected void RpcDo_IA_GmSetBuckets(int liveGroup, int stagingGroup)
 	{
 		if (Replication.IsServer())
 			return;
 
-		IA_GmDirector.GetInstance().PromoteStagingToLive();
+		IA_GmDirector.GetInstance().SetBuckets(liveGroup, stagingGroup);
 	}
 
 	protected bool IA_IsAdminCaller()

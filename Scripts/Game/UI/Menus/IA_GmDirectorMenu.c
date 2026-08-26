@@ -192,7 +192,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_NameField.SetHeight(52);
 		m_NameField.SetMinHeight(52);
 
-		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live joins the current AO.", "destLbl");
+		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live adds to the current AO without replacing existing sites.", "destLbl");
 		destLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		destLbl.SetMuted(true);
 

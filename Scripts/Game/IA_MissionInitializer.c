@@ -991,6 +991,76 @@ class IA_MissionInitializer : GenericEntity
         }
     }
 
+    //! Append one site to the Live AO. Never tears down existing towns or mortar pits,
+    //! and never promotes the rest of Staging. Activate Staging remains the replace path.
+    void ServerAppendLiveSite(notnull IA_AreaMarker marker)
+    {
+        if (!Replication.IsServer())
+            return;
+
+        IA_GmDirector dir = IA_GmDirector.GetInstance();
+        dir.EnsureStarted();
+
+        int liveGroup = dir.GetLiveGroupId();
+        bool startingLive = false;
+        if (liveGroup < 0)
+        {
+            startingLive = true;
+            liveGroup = dir.BeginLiveGroup();
+        }
+
+        marker.SetAreaGroup(liveGroup);
+
+        string name = marker.GetAreaName();
+        vector origin = marker.GetOrigin();
+        dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], liveGroup, marker.GetRadius(), name);
+
+        IA_Game game = IA_Game.Instantiate();
+        if (game && !name.IsEmpty())
+        {
+            IA_AreaInstance existing = game.GetAreaInstance(name);
+            if (existing)
+            {
+                Print(string.Format("[IA_MissionInitializer] Live site '%1' is already spawned.", name), LogLevel.NORMAL);
+                return;
+            }
+        }
+
+        if (!groupsArray)
+            groupsArray = new array<int>();
+        if (groupsArray.Find(liveGroup) == -1)
+            groupsArray.Insert(liveGroup);
+        m_currentIndex = groupsArray.Find(liveGroup);
+        if (m_currentIndex < 0)
+            m_currentIndex = 0;
+
+        if (!m_currentAreaInstances)
+            m_currentAreaInstances = new array<ref IA_AreaInstance>();
+
+        IA_VehicleManager.SetActiveGroup(liveGroup);
+        IA_Game.SetActiveGroupID(liveGroup);
+
+        if (startingLive)
+        {
+            IA_SessionRankManagerComponent sessionRanks = IA_SessionRankManagerComponent.GetInstance();
+            if (sessionRanks)
+                sessionRanks.BeginAoXpWindow();
+        }
+
+        SpawnAreaFromMarker(marker, GetRandomEnemyFaction(), liveGroup);
+
+        if (!m_currentAreaGroupManager && m_currentAreaInstances)
+            m_currentAreaGroupManager = new IA_AreaGroupManager(m_currentAreaInstances);
+
+        if (startingLive)
+        {
+            GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+            GetGame().GetCallqueue().CallLater(CheckCurrentZoneComplete, 5000, true);
+        }
+
+        Print(string.Format("[IA_MissionInitializer] Appended Live site '%1' to group %2", name, liveGroup), LogLevel.NORMAL);
+    }
+
     void ServerActivateStaging()
     {
         if (!Replication.IsServer())
@@ -1045,6 +1115,9 @@ class IA_MissionInitializer : GenericEntity
             Print("[ERROR] IA_MissionInitializer._SpawnAreaInstanceWithDelay: marker is null!", LogLevel.ERROR);
             return;
         }
+
+        if (!m_currentAreaInstances)
+            m_currentAreaInstances = new array<ref IA_AreaInstance>();
 
         vector pos = marker.GetOrigin();
         string name = marker.GetAreaName();

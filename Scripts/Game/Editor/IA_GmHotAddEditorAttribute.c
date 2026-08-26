@@ -35,5 +35,13 @@ class IA_GmHotAddEditorAttribute : SCR_BaseEditorAttribute
 		if (!marker)
 			return;
 		IA_GmDirector.GetInstance().HotAdd(marker);
+
+		PlayerManager pm = GetGame().GetPlayerManager();
+		if (!pm)
+			return;
+		PlayerController pc = pm.GetPlayerController(playerID);
+		SCR_PlayerController scrPc = SCR_PlayerController.Cast(pc);
+		if (scrPc)
+			scrPc.IA_BroadcastGmBuckets();
 	}
 }

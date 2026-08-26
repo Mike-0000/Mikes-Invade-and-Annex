@@ -15,6 +15,7 @@ class IA_GmDirector
 
 	protected int m_iLiveGroup;
 	protected int m_iStagingGroup;
+	protected int m_iNextGroup;
 	protected ref array<ref IA_GmSiteRecord> m_KnownSites;
 
 	//------------------------------------------------------------------------------------------------
@@ -30,6 +31,7 @@ class IA_GmDirector
 	{
 		m_iLiveGroup = -1;
 		m_iStagingGroup = GROUP_BASE;
+		m_iNextGroup = GROUP_BASE + 1;
 		m_KnownSites = new array<ref IA_GmSiteRecord>();
 	}
 
@@ -38,6 +40,10 @@ class IA_GmDirector
 	{
 		if (m_iStagingGroup < GROUP_BASE)
 			m_iStagingGroup = GROUP_BASE;
+		if (m_iNextGroup <= m_iStagingGroup)
+			m_iNextGroup = m_iStagingGroup + 1;
+		if (m_iLiveGroup >= 0 && m_iNextGroup <= m_iLiveGroup)
+			m_iNextGroup = m_iLiveGroup + 1;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -133,12 +139,44 @@ class IA_GmDirector
 	}
 
 	//------------------------------------------------------------------------------------------------
+	int AllocGroup()
+	{
+		EnsureStarted();
+		int id = m_iNextGroup;
+		m_iNextGroup = m_iNextGroup + 1;
+		return id;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Open a Live AO that does not steal the Staging bucket. Staged markers keep
+	//! their current group so Activate Staging still finds them later.
+	int BeginLiveGroup()
+	{
+		EnsureStarted();
+		if (m_iLiveGroup >= 0)
+			return m_iLiveGroup;
+
+		m_iLiveGroup = AllocGroup();
+		Print(string.Format("[IA_GmDirector] Started Live group %1; staging remains %2", m_iLiveGroup, m_iStagingGroup), LogLevel.NORMAL);
+		return m_iLiveGroup;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void PromoteStagingToLive()
 	{
 		EnsureStarted();
 		m_iLiveGroup = m_iStagingGroup;
-		m_iStagingGroup = m_iLiveGroup + 1;
+		m_iStagingGroup = AllocGroup();
 		Print(string.Format("[IA_GmDirector] Live group is now %1, staging %2", m_iLiveGroup, m_iStagingGroup), LogLevel.NORMAL);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetBuckets(int liveGroup, int stagingGroup)
+	{
+		m_iLiveGroup = liveGroup;
+		if (stagingGroup >= GROUP_BASE)
+			m_iStagingGroup = stagingGroup;
+		EnsureStarted();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -447,15 +485,7 @@ class IA_GmDirector
 		if (!init)
 			return;
 
-		if (m_iLiveGroup >= 0)
-		{
-			marker.SetAreaGroup(m_iLiveGroup);
-			init.SpawnAreaFromMarker(marker, init.GetRandomEnemyFaction(), m_iLiveGroup);
-			return;
-		}
-
-		RegisterMarker(marker, IA_GmBucket.Staging);
-		init.ServerActivateStaging();
+		init.ServerAppendLiveSite(marker);
 	}
 
 	//------------------------------------------------------------------------------------------------
