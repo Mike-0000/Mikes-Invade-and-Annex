@@ -235,7 +235,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageQrf.AddChild(qrfRow2);
 
 		m_GmModeToggle = runtime.CreateToggle("Game Master mode", "gmMode");
-		m_GmAutoActivateToggle = runtime.CreateToggle("Auto-activate Staging when Live completes", "gmAutoAct");
+		m_GmAutoActivateToggle = runtime.CreateToggle("After Live: start Staging, or the next map AO", "gmAutoAct");
 		m_GmAutoQrfToggle = runtime.CreateToggle("Auto QRF on Live AOs", "gmAutoQrf");
 		m_GmAutoArtyToggle = runtime.CreateToggle("Auto artillery on Live AOs", "gmAutoArty");
 		m_GmAutoSideToggle = runtime.CreateToggle("Auto side missions", "gmAutoSide");

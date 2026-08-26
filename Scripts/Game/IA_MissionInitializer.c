@@ -32,6 +32,8 @@ class IA_MissionInitializer : GenericEntity
 	private bool m_civilianRevoltActive = false;
 	private bool m_runOnce = false;
 	private ref IA_AreaGroupManager m_currentAreaGroupManager;
+	protected ref array<int> m_gmMapGroupQueue;
+	protected int m_iGmMapQueueHead;
 	
 	// --- BEGIN ADDED: Artillery Cooldown ---
     static int s_artilleryDisabledUntil = 0;
@@ -303,8 +305,11 @@ class IA_MissionInitializer : GenericEntity
 	    IA_Game.SetActiveGroupID(currentGroup);
 	    // --- END ADDED ---
 
-    // Ensure every AO has a MortarPit site (map-authored marker wins over auto-place)
-    if (IA_GmDirector.IsAutoSupportOn())
+    // Map-authored AOs still get classic mortar/radio support in GM fallback.
+    bool placeSupport = IA_GmDirector.IsAutoSupportOn();
+    if (!IA_GmDirector.IsDirectorGroup(currentGroup))
+        placeSupport = true;
+    if (placeSupport)
     {
 	    IA_MortarPitPlacer.EnsureForGroup(currentGroup);
 	    IA_AreaMarker.EnsureRadioTowersForGroup(currentGroup);
@@ -438,7 +443,8 @@ class IA_MissionInitializer : GenericEntity
     {
         m_currentIndex = -1;
         IA_GmDirector.GetInstance().EnsureStarted();
-        Print("[IA_MissionInitializer] Game Master mode: waiting for Activate Staging.", LogLevel.NORMAL);
+        BuildGmMapGroupQueue();
+        Print("[IA_MissionInitializer] Game Master mode: waiting for Activate Staging. Map AO fallback queue has " + m_gmMapGroupQueue.Count().ToString() + " groups.", LogLevel.NORMAL);
         return;
     }
 
@@ -788,14 +794,7 @@ class IA_MissionInitializer : GenericEntity
 
 		if (IA_GmDirector.IsGameMasterMode())
 		{
-			IA_GmDirector.GetInstance().ClearLive();
-			if (IA_GmDirector.ShouldAutoActivateStaging())
-			{
-				ref array<IA_AreaMarker> staged = IA_GmDirector.GetInstance().CollectGroupMarkers(IA_GmDirector.GetInstance().GetStagingGroupId());
-				if (staged && staged.Count() > 0)
-					GetGame().GetCallqueue().CallLater(this.ServerActivateStaging, 2000, false);
-			}
-			Print("[IA_MissionInitializer] GM Live AO complete. Waiting for Activate Staging.", LogLevel.NORMAL);
+			ContinueAfterAoComplete(delayMs);
 			return;
 		}
 
@@ -808,6 +807,124 @@ class IA_MissionInitializer : GenericEntity
 		GetGame().GetCallqueue().CallLater(ProceedToNextZone, finalDelay, false);
 	}
 	// --- END ADDED ---
+
+	protected void ContinueAfterAoComplete(int delayMs)
+	{
+		int finalDelay = delayMs;
+		if (finalDelay < 0)
+			finalDelay = Math.RandomInt(45, 90) * 1000;
+
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		dir.ClearLive();
+		BroadcastGmBuckets();
+
+		if (HasStagedSites())
+		{
+			Print("[IA_MissionInitializer] Live complete. Activating Staging.", LogLevel.NORMAL);
+			GetGame().GetCallqueue().CallLater(this.ServerActivateStaging, finalDelay, false);
+			return;
+		}
+
+		int mapGroup = TakeNextUnusedMapGroup();
+		if (mapGroup >= 0)
+		{
+			if (!groupsArray)
+				groupsArray = new array<int>();
+			if (groupsArray.Find(mapGroup) == -1)
+				groupsArray.Insert(mapGroup);
+			m_currentIndex = groupsArray.Find(mapGroup);
+			if (m_currentIndex < 0)
+				m_currentIndex = 0;
+			Print(string.Format("[IA_MissionInitializer] Live complete. Staging empty; starting map AO group %1.", mapGroup), LogLevel.NORMAL);
+			GetGame().GetCallqueue().CallLater(this.ProceedToNextZone, finalDelay, false);
+			return;
+		}
+
+		Print("[IA_MissionInitializer] No Staging and no remaining map AOs. Ending game.", LogLevel.WARNING);
+		GetGame().GetCallqueue().CallLater(FinishGame, 30000);
+	}
+
+	protected void BuildGmMapGroupQueue()
+	{
+		m_gmMapGroupQueue = new array<int>();
+		m_iGmMapQueueHead = 0;
+		int i;
+		for (i = 0; i < m_numberOfGroups; i++)
+		{
+			m_gmMapGroupQueue.Insert(i);
+		}
+		Shuffle(m_gmMapGroupQueue);
+	}
+
+	protected bool MapGroupHasSites(int groupId)
+	{
+		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+		if (!markers)
+			return false;
+
+		int i;
+		int count = markers.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_AreaMarker marker = markers[i];
+			if (!marker)
+				continue;
+			if (marker.m_areaGroup != groupId)
+				continue;
+			if (marker.GetAreaType() == IA_AreaType.DefendObjective)
+				continue;
+			return true;
+		}
+		return false;
+	}
+
+	protected int TakeNextUnusedMapGroup()
+	{
+		if (!m_gmMapGroupQueue)
+			return -1;
+
+		while (m_iGmMapQueueHead < m_gmMapGroupQueue.Count())
+		{
+			int groupId = m_gmMapGroupQueue[m_iGmMapQueueHead];
+			m_iGmMapQueueHead = m_iGmMapQueueHead + 1;
+			if (!MapGroupHasSites(groupId))
+				continue;
+			return groupId;
+		}
+		return -1;
+	}
+
+	protected bool HasStagedSites()
+	{
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		int stagingId = dir.GetStagingGroupId();
+		ref array<IA_AreaMarker> staged = dir.CollectGroupMarkers(stagingId);
+		if (staged && staged.Count() > 0)
+			return true;
+
+		ref array<ref IA_GmSiteRecord> known = dir.CollectKnownSites(stagingId);
+		if (known && known.Count() > 0)
+			return true;
+
+		return false;
+	}
+
+	protected void BroadcastGmBuckets()
+	{
+		PlayerManager pm = GetGame().GetPlayerManager();
+		if (!pm)
+			return;
+
+		array<int> ids = {};
+		pm.GetPlayers(ids);
+		if (!ids || ids.IsEmpty())
+			return;
+
+		PlayerController pc = pm.GetPlayerController(ids[0]);
+		SCR_PlayerController scr = SCR_PlayerController.Cast(pc);
+		if (scr)
+			scr.IA_BroadcastGmBuckets();
+	}
 
 	private void ForceFinishAllCurrentAreaInstances()
 	{
@@ -1100,6 +1217,7 @@ class IA_MissionInitializer : GenericEntity
 
         Print(string.Format("[IA_MissionInitializer] Activating GM group %1", groupId), LogLevel.NORMAL);
         ProceedToNextZone();
+        BroadcastGmBuckets();
     }
 
     private void _SpawnAreaInstanceWithDelay(IA_AreaMarker marker, Faction nextAreaFaction, int currentGroup)
@@ -2366,15 +2484,13 @@ class IA_MissionInitializer : GenericEntity
 			m_currentAreaGroupManager = null;
 		}
 		ForceFinishAllCurrentAreaInstances();
-		m_currentIndex++;
-		if (m_currentAreaInstances) 
+		if (m_currentAreaInstances)
 			m_currentAreaInstances.Clear();
-		
-		// Remove the zone completion check and proceed to next zone
+
 		GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
 		GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
 		GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
-		GetGame().GetCallqueue().CallLater(ProceedToNextZone, Math.RandomInt(45,90)*1000, false);
+		ContinueAfterAoComplete(-1);
 	}
 	// --- END ADDED ---
 }

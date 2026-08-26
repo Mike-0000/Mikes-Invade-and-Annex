@@ -93,8 +93,8 @@ class IA_Config{
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Game Master", desc: "Game Master mode: do not auto-start or auto-advance AOs. The GM places and activates sites.")]
 	bool m_bGameMasterMode;
 
-	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Game Master", desc: "When Live completes, automatically activate Staging if it has sites.")]
-	bool m_bGmAutoActivateStaging;
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Game Master", desc: "When Live completes, start Staging if it has sites, otherwise the next unused map AO.")]
+	bool m_bGmAutoActivateStaging = true;
 
 	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Game Master", desc: "Allow automatic QRF while a Live AO is under attack.")]
 	bool m_bGmAutoQrf = true;

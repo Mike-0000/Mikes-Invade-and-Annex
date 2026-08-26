@@ -117,6 +117,14 @@ class IA_GmDirector
 	}
 
 	//------------------------------------------------------------------------------------------------
+	static bool IsDirectorGroup(int groupId)
+	{
+		if (groupId >= GROUP_BASE)
+			return true;
+		return false;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	int GetLiveGroupId()
 	{
 		return m_iLiveGroup;
