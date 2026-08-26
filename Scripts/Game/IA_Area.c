@@ -82,6 +82,11 @@ static IA_Area CreateTransient(string nm, IA_AreaType t, vector org, float rad)
         m_instantiated = val;
     }
 
+    void SetName(string nm)
+    {
+        m_name = nm;
+    }
+
     int GetMilitaryAiGroupCount()
     {
         // Customize based on area type

@@ -90,6 +90,24 @@ class IA_Config{
 	[Attribute(defvalue: "70", UIWidgets.EditBox, category: "Artillery", desc: "Maximum delay (in seconds) from smoke to impact")]
 	int m_iArtilleryMaxDelay;
 
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Game Master", desc: "Game Master mode: do not auto-start or auto-advance AOs. The GM places and activates sites.")]
+	bool m_bGameMasterMode;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Game Master", desc: "When Live completes, start Staging if it has sites, otherwise the next unused map AO.")]
+	bool m_bGmAutoActivateStaging = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Game Master", desc: "Allow automatic QRF while a Live AO is under attack.")]
+	bool m_bGmAutoQrf = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Game Master", desc: "Allow automatic artillery while a Live AO is under attack.")]
+	bool m_bGmAutoArty = true;
+
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Game Master", desc: "Allow automatic side-mission picks (Assassination). Off = GM starts them.")]
+	bool m_bGmAutoSideMissions;
+
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Game Master", desc: "On Activate, auto-place a mortar pit and radio towers like classic I&A.")]
+	bool m_bGmAutoPlaceSupport;
+
  
  // No Getter methods. We reference the variables directly. 
  // Config access is handled through IA_MissionInitializer.GetGlobalConfig()

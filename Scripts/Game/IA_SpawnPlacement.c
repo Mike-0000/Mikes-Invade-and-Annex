@@ -18,6 +18,16 @@ class IA_SpawnPlacement
 	static const float STAND_CLEARANCE_M = 1.9;
 	static const float SURFACE_BIAS_M = 0.05;
 	static const float MAX_ABOVE_TERRAIN_M = 4.5;
+	static const float OPEN_SKY_M = 12.0;
+	static const float GROUND_FLOOR_PROBE_M = 2.15;
+	static const float GROUND_FLOOR_MAX_ABOVE_M = 1.35;
+	static const float INTERIOR_INBOUND_M = 1.7;
+	static const int INTERIOR_WALL_BLOCKED_MIN = 5;
+	static const float DROP_LZ_RAISE_M = 30.0;
+	static const float DROP_LZ_DOWN_M = 40.0;
+	static const float DROP_LZ_SEARCH_R = 40.0;
+	static const float DROP_LZ_SEARCH_WIDE_R = 80.0;
+	static const int DROP_LZ_SAMPLE_TRIES = 4;
 	static const string NAVMESH_PROJECT = "Soldiers";
 
 	static void CollectPlayerPositions(array<vector> positions)
@@ -230,6 +240,108 @@ class IA_SpawnPlacement
 			return false;
 
 		return true;
+	}
+
+	//! Traced downward from above the position, not up from it: a ray leaving a
+	//! building through the underside of its roof can miss one-sided collision,
+	//! which reports an interior as open sky.
+	static bool HasOpenSky(vector pos)
+	{
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		ref TraceParam down = new TraceParam();
+		down.Start = pos + Vector(0, OPEN_SKY_M, 0);
+		down.End = pos + Vector(0, 0.17, 0);
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		float coef = world.TraceMove(down, null);
+		if (coef < 1.0)
+			return false;
+
+		return true;
+	}
+
+	//! Streets and rooftops are valid. Interiors fail the open-sky test.
+	//! Does not use TryWalkableAt — that helper rejects anything above MAX_ABOVE_TERRAIN_M.
+	static bool TryDropLzAt(vector sample, out vector outPos)
+	{
+		outPos = vector.Zero;
+
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		float terrainY = world.GetSurfaceY(sample[0], sample[2]);
+		float oceanY = world.GetOceanHeight(sample[0], sample[2]);
+
+		vector start;
+		start[0] = sample[0];
+		start[1] = terrainY + DROP_LZ_RAISE_M;
+		start[2] = sample[2];
+
+		ref TraceParam down = new TraceParam();
+		down.Start = start;
+		down.End = start - Vector(0, DROP_LZ_DOWN_M, 0);
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS | TraceFlags.OCEAN;
+		float coef = world.TraceMove(down, null);
+		if (coef >= 1.0)
+			return false;
+
+		vector hit = start - Vector(0, coef * DROP_LZ_DOWN_M, 0);
+		hit[1] = hit[1] + SURFACE_BIAS_M;
+
+		if (hit[1] <= oceanY)
+			return false;
+
+		if (!HasStandRoom(hit))
+			return false;
+
+		if (!HasOpenSky(hit))
+			return false;
+
+		if (!SCR_WorldTools.TraceCilinderUtil(hit + Vector(0, 1.0, 0), EMPTY_CYLINDER_R, 2.0, TraceFlags.ENTS | TraceFlags.OCEAN, world))
+			return false;
+
+		outPos = hit;
+		return true;
+	}
+
+	//! Open-sky LZ: first WORLD|ENTS surface with stand room and no ceiling.
+	//! Rooftops are allowed; rooms are not.
+	static bool TryFindDropLz(vector sample, float searchRadius, out vector outPos)
+	{
+		outPos = vector.Zero;
+		if (TryDropLzAt(sample, outPos))
+			return true;
+
+		if (searchRadius <= 0.5)
+			return false;
+
+		int rings = 4;
+		int ring;
+		for (ring = 1; ring <= rings; ring++)
+		{
+			float ringF = ring;
+			float ringsF = rings;
+			float radius = searchRadius * (ringF / ringsF);
+			int steps = 6 * ring;
+			int step;
+			for (step = 0; step < steps; step++)
+			{
+				float stepF = step;
+				float stepsF = steps;
+				float angle = Math.PI2 * (stepF / stepsF);
+				vector probe;
+				probe[0] = sample[0] + Math.Cos(angle) * radius;
+				probe[2] = sample[2] + Math.Sin(angle) * radius;
+				probe[1] = sample[1];
+				if (TryDropLzAt(probe, outPos))
+					return true;
+			}
+		}
+
+		return false;
 	}
 
 	static bool TryWalkableAt(vector sample, out vector outPos)
@@ -474,5 +586,224 @@ class IA_SpawnPlacement
 			return true;
 		}
 		return false;
+	}
+
+	//! Soldier-sized pocket: inbound traces must reach the point. Starting inside
+	//! a thick wall makes short outbound traces look empty (they never hit).
+	//! Eight directions so a long wall does not look like a corridor (only two
+	//! faces blocked, the along-wall rays never leave the solid).
+	static bool HasInteriorBodyClearance(vector floorPos)
+	{
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		vector chest = floorPos + Vector(0, 1.0, 0);
+		float inbound = INTERIOR_INBOUND_M;
+		float diag = inbound * 0.7071;
+		int blocked = 0;
+
+		ref TraceParam t = new TraceParam();
+		t.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+
+		t.Start = chest + Vector(inbound, 0, 0);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(-inbound, 0, 0);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(0, 0, inbound);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(0, 0, -inbound);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(diag, 0, diag);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(-diag, 0, diag);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(diag, 0, -diag);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(-diag, 0, -diag);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		if (blocked >= INTERIOR_WALL_BLOCKED_MIN)
+			return false;
+		return true;
+	}
+
+	//! Ground-floor interior only. Probe starts below typical attic height so the
+	//! first surface is the walkable floor, not a sealed loft.
+	static bool TryGroundFloorStandPos(float x, float z, out vector outPos)
+	{
+		outPos = vector.Zero;
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		float terrainY = world.GetSurfaceY(x, z);
+		float startY = terrainY + GROUND_FLOOR_PROBE_M;
+		float endY = terrainY - 0.4;
+
+		vector start = Vector(x, startY, z);
+		vector end = Vector(x, endY, z);
+
+		ref TraceParam down = new TraceParam();
+		down.Start = start;
+		down.End = end;
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		float coef = world.TraceMove(down, null);
+		if (coef >= 1.0)
+			return false;
+		if (coef < 0.04)
+			return false;
+
+		float span = startY - endY;
+		vector floorPos = start;
+		floorPos[1] = startY - (coef * span) + SURFACE_BIAS_M;
+
+		float aboveTerrain = floorPos[1] - terrainY;
+		if (aboveTerrain < -0.15)
+			return false;
+		if (aboveTerrain > GROUND_FLOOR_MAX_ABOVE_M)
+			return false;
+		if (!HasStandRoom(floorPos))
+			return false;
+		if (HasOpenSky(floorPos))
+			return false;
+		if (!HasInteriorBodyClearance(floorPos))
+			return false;
+
+		outPos = floorPos;
+		return true;
+	}
+
+	//! Floor under a roof. First WORLD|ENTS hit from above is the roof; a second
+	//! down-trace finds the standing position. Open-sky / no-stand rejects courtyards and roofs.
+	static bool TryInteriorStandPos(float x, float z, float roofTopY, float minY, out vector outPos)
+	{
+		outPos = vector.Zero;
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		float terrainY = world.GetSurfaceY(x, z);
+		float startY = roofTopY + 2;
+		if (startY < terrainY + 3)
+			startY = terrainY + 8;
+
+		float endY = minY;
+		if (endY > startY - 2)
+			endY = terrainY - 0.5;
+
+		vector start = Vector(x, startY, z);
+		vector end = Vector(x, endY, z);
+
+		ref TraceParam down = new TraceParam();
+		down.Start = start;
+		down.End = end;
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		float coef = world.TraceMove(down, null);
+		if (coef >= 1.0)
+			return false;
+
+		float span = startY - endY;
+		vector firstHit = start;
+		firstHit[1] = startY - (coef * span);
+
+		if (firstHit[1] < terrainY + 1.8)
+			return false;
+
+		float drop = 0.35;
+		while (drop <= 1.45)
+		{
+			vector start2 = firstHit;
+			start2[1] = firstHit[1] - drop;
+			down.Start = start2;
+			down.End = end;
+			coef = world.TraceMove(down, null);
+			if (coef < 1.0)
+			{
+				float span2 = start2[1] - endY;
+				vector floorPos = start2;
+				floorPos[1] = start2[1] - (coef * span2) + SURFACE_BIAS_M;
+				if (HasStandRoom(floorPos) && !HasOpenSky(floorPos))
+				{
+					outPos = floorPos;
+					return true;
+				}
+			}
+			drop = drop + 0.35;
+		}
+
+		return false;
+	}
+
+	//! Vanilla building garrison: CoverPost / ObservationPost smart actions
+	//! on structures. Used with IA_AiOrder.Hold (Wait waypoint, infinite).
+	static void FindGarrisonPosts(vector center, float radius, notnull array<vector> outPosts)
+	{
+		outPosts.Clear();
+		if (center == vector.Zero)
+			return;
+		if (radius <= 0)
+			return;
+
+		ChimeraWorld chimeraWorld = ChimeraWorld.CastFrom(GetGame().GetWorld());
+		if (!chimeraWorld)
+			return;
+
+		AISmartActionSystem saSystem = AISmartActionSystem.Cast(chimeraWorld.FindSystem(AISmartActionSystem));
+		if (!saSystem)
+			return;
+
+		ref array<string> tags = new array<string>();
+		tags.Insert("CoverPost");
+		tags.Insert("ObservationPost");
+
+		ref array<AISmartActionComponent> found = new array<AISmartActionComponent>();
+		int count = saSystem.FindSmartActions(found, center, radius, tags, EAIFindSmartAction_TagTest.AnySet);
+		if (count <= 0)
+			return;
+
+		int i;
+		int foundCount = found.Count();
+		for (i = 0; i < foundCount; i++)
+		{
+			AISmartActionComponent sa = found[i];
+			if (!sa)
+				continue;
+			if (!sa.IsActionAccessible())
+				continue;
+
+			IEntity owner = sa.GetOwner();
+			if (!owner)
+				continue;
+
+			vector pos = owner.GetOrigin() + sa.GetActionOffset();
+			if (pos == vector.Zero)
+				continue;
+
+			outPosts.Insert(pos);
+		}
 	}
 }

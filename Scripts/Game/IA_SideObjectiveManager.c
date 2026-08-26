@@ -101,6 +101,9 @@ class IA_SideObjectiveManager
 	
     void TryStartNewSideObjective()
     {
+        if (IA_GmDirector.IsAutoSideOff())
+            return;
+
         // If the list of available markers is empty, repopulate it.
         if (m_AvailableMarkers.IsEmpty())
         {
@@ -119,20 +122,45 @@ class IA_SideObjectiveManager
         m_AvailableMarkers.Remove(randomIndex);
 		
         if (!selectedMarker) return;
+
+        StartAt(selectedMarker);
+    }
+
+    bool StartAt(IA_SideObjectiveMarker selectedMarker)
+    {
+        if (!selectedMarker)
+            return false;
+
+        if (!Replication.IsServer())
+            return false;
+
+        if (!m_IsInitialized)
+            m_IsInitialized = true;
+
+        if (m_ActiveObjectives && !m_ActiveObjectives.IsEmpty())
+        {
+            Print("[IA_SideObjectiveManager] StartAt skipped: an objective is already active.", LogLevel.WARNING);
+            return false;
+        }
 		
 		IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
-		if (!initializer) return;
+		if (!initializer)
+			return false;
 		
 		Faction enemyGameFaction = initializer.GetRandomEnemyFaction();
-		if (!enemyGameFaction) return;
+		if (!enemyGameFaction)
+			return false;
 
-		IA_Faction enemyIAFaction = IA_Faction.USSR; // fallback
+		IA_Faction enemyIAFaction = IA_Faction.USSR;
 		string factionKey = enemyGameFaction.GetFactionKey();
-		if (factionKey == "US") enemyIAFaction = IA_Faction.US;
-		else if (factionKey == "USSR") enemyIAFaction = IA_Faction.USSR;
-		else if (factionKey == "FIA") enemyIAFaction = IA_Faction.FIA;
+		if (factionKey == "US")
+			enemyIAFaction = IA_Faction.US;
+		else if (factionKey == "USSR")
+			enemyIAFaction = IA_Faction.USSR;
+		else if (factionKey == "FIA")
+			enemyIAFaction = IA_Faction.FIA;
 		
-        IA_SideObjective newObjective;
+        ref IA_SideObjective newObjective;
 
         switch(selectedMarker.GetObjectiveType())
         {
@@ -141,10 +169,11 @@ class IA_SideObjectiveManager
                 break;
         }
 
-        if (newObjective)
-        {
-            newObjective.Start();
-            m_ActiveObjectives.Insert(newObjective);
-        }
+        if (!newObjective)
+            return false;
+
+        newObjective.Start();
+        m_ActiveObjectives.Insert(newObjective);
+        return true;
     }
 } 

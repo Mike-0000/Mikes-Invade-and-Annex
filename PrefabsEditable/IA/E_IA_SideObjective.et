@@ -1,0 +1,16 @@
+IA_SideObjectiveMarker : "{CC469EDE5BF275E5}Prefabs/IA_AreaMarkers/IA_SideObjectiveMarker.et" {
+ ID "1A6D47B0E6C35A00"
+ coords 0 0 0
+ components {
+  SCR_EditableSystemComponent "1A6D47B0E6C35A01" : "{6FA0A85CFC5420AD}Prefabs/Editor/Components/Systems_SCR_EditableEntityComponent.ct" {
+   m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35A02" {
+    Name "I&A Side Objective"
+    Description "Invade and Annex assassination / side objective marker."
+    Icon "{7C780B2721C26EC0}UI/Textures/Editor/EditableEntities/Objectives/EditableEntity_Objective_Move.edds"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
+   }
+  }
+ }
+}

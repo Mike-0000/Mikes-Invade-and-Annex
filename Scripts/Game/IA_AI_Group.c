@@ -21,6 +21,7 @@ enum IA_GroupTacticalState
     InVehicle,       // Group is currently assigned to a vehicle
 	Escaping,      // Unconditionally moving to an escape point, ignoring combat
     Approaching,   // Counter-attack staging approach: following arc routing to jump-off point before assaulting
+    Holding,       // Vanilla Wait waypoint: stay at a post (building CoverPost / ObservationPost)
 }
 
 enum IA_TypedWpTree
@@ -53,6 +54,10 @@ class IA_RoadSearchState
     Faction m_areaFaction;
     int m_activeGroup;
     bool m_useExactPosition = false;
+    bool m_keepAltitude = false;
+    bool m_holdPost = false;
+    vector m_holdTarget = vector.Zero;
+    float m_holdRadius = 0;
     
     // Search state
     int m_currentDistanceIndex = 0;
@@ -70,7 +75,7 @@ class IA_RoadSearchState
     IA_AreaInstance m_callbackInstance = null;
     string m_callbackMethod = "";
     
-    void IA_RoadSearchState(vector initialPos, IA_Faction faction, int unitCount, Faction areaFaction, int activeGroup, bool useExactPosition = false)
+    void IA_RoadSearchState(vector initialPos, IA_Faction faction, int unitCount, Faction areaFaction, int activeGroup, bool useExactPosition = false, bool keepAltitude = false, bool holdPost = false, vector holdTarget = vector.Zero)
     {
         m_initialPos = initialPos;
         m_faction = faction;
@@ -78,6 +83,9 @@ class IA_RoadSearchState
         m_areaFaction = areaFaction;
         m_activeGroup = activeGroup;
         m_useExactPosition = useExactPosition;
+        m_keepAltitude = keepAltitude;
+        m_holdPost = holdPost;
+        m_holdTarget = holdTarget;
     }
     
     void SetCallback(IA_AreaInstance instance, string methodName)
@@ -122,6 +130,8 @@ class IA_AiGroup
     private vector      m_passengerAssaultTarget = vector.Zero;
     private IA_AiGroup  m_linkedCrewGroup = null;
     private IA_AiGroup  m_linkedPassengerGroup = null;
+    private bool        m_pendingSeatTeleport = false;
+    private bool        m_bSpawnAtExactPos = false;
     
     // Danger state tracking
     private float       m_currentDangerLevel = 0.0;
@@ -218,6 +228,9 @@ class IA_AiGroup
     private vector m_vInboundTarget = vector.Zero;
     private bool m_bAirborneDrop = false;
     private bool m_bKeepAltitude = false;
+    private bool m_isHoldingPost = false;
+    private vector m_holdPost = vector.Zero;
+    private float m_holdRadius = 0;
     private int m_iAirborneInFlight = 0;
     private vector m_vAirDropTarget = vector.Zero;
     private float m_fAirSpawnRadius = 250;
@@ -531,7 +544,7 @@ class IA_AiGroup
     // - Creating multiple groups at startup (prevents frame drops)
     // - Road position is important for AI navigation
     // - You can handle the group creation callback
-    static void StartAsyncMilitaryGroupCreation(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, IA_AreaInstance callbackInstance = null, bool useExactPosition = false)
+    static void StartAsyncMilitaryGroupCreation(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, IA_AreaInstance callbackInstance = null, bool useExactPosition = false, bool keepAltitude = false, bool holdPost = false, vector holdTarget = vector.Zero, float holdRadius = 0)
     {
         if (unitCount <= 0)
             return;
@@ -539,7 +552,8 @@ class IA_AiGroup
         int activeGroup = IA_VehicleManager.GetActiveGroup();
         
         // Create search state
-        IA_RoadSearchState searchState = new IA_RoadSearchState(initialPos, faction, unitCount, AreaFaction, activeGroup, useExactPosition);
+        IA_RoadSearchState searchState = new IA_RoadSearchState(initialPos, faction, unitCount, AreaFaction, activeGroup, useExactPosition, keepAltitude, holdPost, holdTarget);
+        searchState.m_holdRadius = holdRadius;
         if (callbackInstance)
         {
             searchState.SetCallback(callbackInstance, "OnAsyncGroupCreated");
@@ -656,7 +670,16 @@ class IA_AiGroup
             
         // Create the group at the found position
         IA_AiGroup grp = CreateMilitaryGroupAtPosition(searchState.m_foundSpawnPos, searchState.m_faction, 
-            searchState.m_unitCount, searchState.m_areaFaction, false, searchState.m_useExactPosition);
+            searchState.m_unitCount, searchState.m_areaFaction, false, searchState.m_useExactPosition, searchState.m_keepAltitude);
+
+        if (grp && searchState.m_holdPost)
+        {
+            vector holdAt = searchState.m_holdTarget;
+            if (holdAt == vector.Zero)
+                holdAt = searchState.m_foundSpawnPos;
+            grp.SetHoldPost(holdAt, searchState.m_holdRadius);
+            grp.SpawnNextUnit();
+        }
             
         // Call the callback if set
         if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
@@ -845,6 +868,9 @@ class IA_AiGroup
 
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
+        if (m_isHoldingPost && order != IA_AiOrder.Hold)
+            return;
+
         // Store last order data
         m_lastOrderPosition = origin;
         m_lastOrderTime = System.GetUnixTime();
@@ -882,7 +908,15 @@ class IA_AiGroup
 		vector zoneOrigin;
 		float zoneRadius;
         // Restrict infantry waypoints to a single zone, while vehicle waypoints can navigate across the zone group
-        if (!m_isDriving && order != IA_AiOrder.GetInVehicle)
+        bool preserveAltitude = false;
+        if (order == IA_AiOrder.Hold)
+            preserveAltitude = true;
+        else if (m_isHoldingPost)
+            preserveAltitude = true;
+        else if (m_bKeepAltitude)
+            preserveAltitude = true;
+
+        if (!m_isDriving && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.Hold)
         {
             // Get the current group number from VehicleManager's active group
             int currentGroupNumber = IA_VehicleManager.GetActiveGroup();
@@ -906,25 +940,24 @@ class IA_AiGroup
             }
 
         }
-        // Adjust spawn height based on terrain
-        float y = GetGame().GetWorld().GetSurfaceY(origin[0], origin[2]);
-		
-
-		
-		
-		
-		
-        origin[1] = y + 0.5;
-		if(zoneOrigin && zoneRadius)
-		{
-			float yDiff = origin[1] - zoneOrigin[1];
-			if (yDiff < 0) yDiff = -yDiff;
-			if(yDiff > zoneRadius*0.25) // Add logic to check if the origin's Y value is farther away from the Area's Origin Point than the Area's Radius.
-				origin[1] = zoneOrigin[1];
-		}
+        // Terrain mesh is not building floors. Hold posts sit on CoverPost /
+        // ObservationPost height and must keep that Y.
+        if (!preserveAltitude)
+        {
+            float y = GetGame().GetWorld().GetSurfaceY(origin[0], origin[2]);
+            origin[1] = y + 0.5;
+            if (zoneOrigin && zoneRadius)
+            {
+                float yDiff = origin[1] - zoneOrigin[1];
+                if (yDiff < 0)
+                    yDiff = -yDiff;
+                if (yDiff > zoneRadius * 0.25)
+                    origin[1] = zoneOrigin[1];
+            }
+        }
 		
         // --- BEGIN WATER CHECK ---
-        if (WaterCheck(origin))
+        if (!preserveAltitude && WaterCheck(origin))
         {
             Print(string.Format("[IA_AiGroup.AddOrder] Proposed waypoint at %1 for order %2 is in water. Requesting state re-evaluation to find a new target.", 
                 origin.ToString(), typename.EnumToString(IA_AiOrder, order)), LogLevel.WARNING);
@@ -1144,6 +1177,19 @@ class IA_AiGroup
             // --- END MODIFIED ---
         }
 
+        if (order == IA_AiOrder.Hold)
+        {
+            SCR_TimedWaypoint waitWp = SCR_TimedWaypoint.Cast(w);
+            if (waitWp)
+            {
+                waitWp.SetHoldingTime(-1);
+                float holdR = m_holdRadius;
+                if (holdR < 3)
+                    holdR = 5;
+                waitWp.SetCompletionRadius(holdR);
+            }
+        }
+
         ApplyBoardingAllowance(w, order);
 
         // --- BEGIN ADDED: Additional logging before adding waypoint to group ---
@@ -1189,6 +1235,28 @@ class IA_AiGroup
         return !wps.IsEmpty();
     }
 
+    bool HasHoldWaypoint()
+    {
+        if (!m_group)
+            return false;
+
+        array<AIWaypoint> wps = {};
+        m_group.GetWaypoints(wps);
+        int i;
+        int count = wps.Count();
+        for (i = 0; i < count; i++)
+        {
+            AIWaypoint wp = wps[i];
+            if (!wp)
+                continue;
+            if (SCR_BoardingTimedWaypoint.Cast(wp))
+                continue;
+            if (SCR_TimedWaypoint.Cast(wp))
+                return true;
+        }
+        return false;
+    }
+
     bool IsDriving()
     {
         return m_isDriving;
@@ -1196,6 +1264,9 @@ class IA_AiGroup
 
     void RemoveAllOrders(bool resetLastOrderTime = false)
     {
+        if (m_isHoldingPost && HasHoldWaypoint())
+            return;
+
         if (!m_group)
             return;
                
@@ -1303,6 +1374,10 @@ class IA_AiGroup
         {
             initialState = IA_GroupTacticalState.Defending;
         } 
+        else if (initialOrder == IA_AiOrder.Hold)
+        {
+            initialState = IA_GroupTacticalState.Holding;
+        }
         else if (initialOrder == IA_AiOrder.Patrol) 
         {
             initialState = IA_GroupTacticalState.DefendPatrol;
@@ -1356,18 +1431,14 @@ class IA_AiGroup
 
         if (m_isCivilian)
         {
-            // For civilians, try to find a road position
-            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(m_initialPosition, 300, IA_VehicleManager.GetActiveGroup());
-            vector spawnPos;
-            
-            // Use road position if found, otherwise use the initial position
-            if (roadPos != vector.Zero) {
-                spawnPos = roadPos;
-            } else {
-                spawnPos = m_initialPosition;
+            vector spawnPos = m_initialPosition;
+            if (!m_bSpawnAtExactPos)
+            {
+                vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(m_initialPosition, 300, IA_VehicleManager.GetActiveGroup());
+                if (roadPos != vector.Zero)
+                    spawnPos = roadPos;
             }
-            
-            // Create the SCR_AIGroup entity for the civilian
+
             Resource groupPrefabRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
             if (!groupPrefabRes)
             {
@@ -1378,39 +1449,52 @@ class IA_AiGroup
 
             if (!m_group)
             {
-                if (groupEntity) IA_Game.AddEntityToGc(groupEntity); // Clean up group entity if it was spawned
-                return false;
-            }
-            
-            // Restore old spawning logic - spawn civilian directly
-            string resourceName = IA_RandomCivilianResourceName();
-            Resource charRes = Resource.Load(resourceName);
-            if (!charRes)
-            {
-                return false;
-            }
-            
-            if (!m_bKeepAltitude)
-                spawnPos = IA_SpawnPlacement.SnapInfantryPos(spawnPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
-
-            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(spawnPos));
-            if (!charEntity)
-            {
+                if (groupEntity) IA_Game.AddEntityToGc(groupEntity);
                 return false;
             }
 
-            // Add the spawned civilian character to the SCR_AIGroup
-            if (!m_group.AddAIEntityToGroup(charEntity))
+            int civCount = m_initialUnitCount;
+            if (civCount < 1)
+                civCount = 1;
+
+            int spawnedCivs = 0;
+            int civIndex;
+            for (civIndex = 0; civIndex < civCount; civIndex++)
             {
-                IA_Game.AddEntityToGc(charEntity); // Clean up character
-                IA_Game.AddEntityToGc(m_group);    // Clean up the group as well since it's unusable
+                vector unitPos = spawnPos;
+                if (civIndex > 0)
+                    unitPos = spawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+
+                if (!m_bKeepAltitude)
+                    unitPos = IA_SpawnPlacement.SnapInfantryPos(unitPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
+
+                string resourceName = IA_RandomCivilianResourceName();
+                Resource charRes = Resource.Load(resourceName);
+                if (!charRes)
+                    continue;
+
+                IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(unitPos));
+                if (!charEntity)
+                    continue;
+
+                if (!m_group.AddAIEntityToGroup(charEntity))
+                {
+                    IA_Game.AddEntityToGc(charEntity);
+                    continue;
+                }
+
+                SetupDeathListenerForUnit(charEntity);
+                spawnedCivs = spawnedCivs + 1;
+            }
+
+            if (spawnedCivs <= 0)
+            {
+                IA_Game.AddEntityToGc(m_group);
                 m_group = null;
                 return false;
             }
-            // If successfully added, setup death listener for this specific unit
-            SetupDeathListenerForUnit(charEntity);
-            
-            Print(string.Format("[IA_AiGroup.PerformSpawn] Using direct spawning for civilian at %1", spawnPos.ToString()), LogLevel.NORMAL);
+
+            Print(string.Format("[IA_AiGroup.PerformSpawn] Spawned %1 civilians at %2", spawnedCivs, spawnPos.ToString()), LogLevel.NORMAL);
         }
         else // Military group
         {
@@ -1543,7 +1627,7 @@ class IA_AiGroup
 
         // Mortar crews and pit guards must remember incoming fire so the battery
         // can shoot back. Do not run EvaluateDangerState — that changes orders.
-        if (m_isInDefendMode || m_isMortarCrew)
+        if (m_isInDefendMode || m_isMortarCrew || m_isHoldingPost)
             return;
 
         // --- Infantry specific handling (original logic) ---
@@ -2033,6 +2117,13 @@ class IA_AiGroup
         
         if (anyOutside)
         {
+            if (m_pendingSeatTeleport)
+            {
+                if (IsCurrentWaypointGetInNearest())
+                    RemoveAllOrders(false);
+                return;
+            }
+
             // Contact / dump: one crewman on foot (or still getting out) must
             // not replace the drive with GetIn. That waypoint waits for every
             // member, so the seated driver and gunner idle at the hull.
@@ -2144,6 +2235,16 @@ class IA_AiGroup
     void MarkAsVehicleCrew()
     {
         m_isVehicleCrewGroup = true;
+    }
+
+    void SetPendingSeatTeleport(bool pending)
+    {
+        m_pendingSeatTeleport = pending;
+    }
+
+    bool IsPendingSeatTeleport()
+    {
+        return m_pendingSeatTeleport;
     }
 
     bool IsVehicleCrewGroup()
@@ -2452,6 +2553,9 @@ class IA_AiGroup
     void IssuePassengerMountHold()
     {
         if (!m_isVehiclePassengerGroup || m_passengerDumped)
+            return;
+
+        if (m_pendingSeatTeleport)
             return;
 
         m_mountedUntilDump = true;
@@ -2879,6 +2983,16 @@ class IA_AiGroup
             }
             return; // Don't do any further state evaluation in defend mode
         }
+
+        if (m_isHoldingPost && m_holdPost != vector.Zero)
+        {
+            if (!HasHoldWaypoint())
+            {
+                RemoveAllOrders();
+                AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+            }
+            return;
+        }
         
         // If the last order was very recent, let it execute
         int timeSinceLastOrder = TimeSinceLastOrder();
@@ -3224,8 +3338,14 @@ class IA_AiGroup
         if (!vehicle || unitCount <= 0)
             return null;
 
-        vector spawnPos = vehicle.GetOrigin() + vector.Up; // slightly above vehicle
-        IA_AiGroup grp = IA_AiGroup.CreateCivilianGroup(spawnPos);
+        int count = unitCount;
+        if (count < 1)
+            count = 1;
+
+        vector spawnPos = vehicle.GetOrigin() + vector.Up;
+        IA_AiGroup grp = new IA_AiGroup(spawnPos, IA_SquadType.Riflemen, IA_Faction.CIV, count);
+        grp.m_isCivilian = true;
+        grp.m_bSpawnAtExactPos = true;
         return grp;
     }
 
@@ -3257,8 +3377,10 @@ class IA_AiGroup
         
         // GetInNearest only if someone is actually on foot. Stacking it on the
         // InVehicle Move after a teleport-seat makes GetInNearestVehicle.bt
-        // read a Move waypoint and NodeError.
-        if (m_group && IsAnyMemberOnFoot())
+        // read a Move waypoint and NodeError. Skip it while PlaceUnitsInVehicle
+        // still owns the delayed teleport — nearest-vehicle boarding dumps
+        // occupying troops into a stacked civilian car.
+        if (m_group && IsAnyMemberOnFoot() && !m_pendingSeatTeleport)
         {
             AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
         }
@@ -3302,6 +3424,13 @@ class IA_AiGroup
     // Add a public SetTacticalState method to replace the one we accidentally removed
     void SetTacticalState(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null, bool fromAuthority = false)
     {
+        if (m_isHoldingPost)
+        {
+            newState = IA_GroupTacticalState.Holding;
+            if (m_holdPost != vector.Zero)
+                targetPos = m_holdPost;
+        }
+
         // Add logging to show the state change
         if (m_tacticalState != newState)
         {
@@ -3340,11 +3469,15 @@ class IA_AiGroup
         
         // Apply orders based on the state.
         // Approaching is the exception: arc routing waypoints were already queued externally,
-        // so we must NOT wipe them here. All other states get a clean slate.
+        // so we must NOT wipe them here. Hold posts keep their Wait even if a
+        // caller asked for Attacking/Defending.
         if (m_tacticalState != IA_GroupTacticalState.Approaching)
         {
-            CancelPendingTypedClear();
-            RemoveAllOrders();
+            if (!(m_isHoldingPost && HasHoldWaypoint()))
+            {
+                CancelPendingTypedClear();
+                RemoveAllOrders();
+            }
         }
         
         switch (m_tacticalState)
@@ -3380,6 +3513,19 @@ class IA_AiGroup
                 }
                 
                 AddOrder(defendPos, IA_AiOrder.Defend, true);
+                break;
+
+            case IA_GroupTacticalState.Holding:
+                vector holdPos;
+                if (m_holdPost != vector.Zero)
+                    holdPos = m_holdPost;
+                else if (targetPos != vector.Zero)
+                    holdPos = targetPos;
+                else
+                    holdPos = m_lastConfirmedPosition;
+
+                if (!HasHoldWaypoint())
+                    AddOrder(holdPos, IA_AiOrder.Hold, true);
                 break;
                 
             case IA_GroupTacticalState.Flanking:
@@ -3514,6 +3660,8 @@ class IA_AiGroup
                 return WP_PRIORITY_DEFEND;
             case IA_AiOrder.DefendSmall:
                 return WP_PRIORITY_FIGHT;
+            case IA_AiOrder.Hold:
+                return WP_PRIORITY_DEFEND;
             case IA_AiOrder.GetInVehicle:
                 return WP_PRIORITY_GET_IN;
             case IA_AiOrder.GetOutOfVehicle:
@@ -3630,6 +3778,9 @@ class IA_AiGroup
 	
     void SetDefendMode(bool enable, vector defendPoint = vector.Zero)
     {
+        if (m_isHoldingPost)
+            return;
+
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
         
@@ -3661,6 +3812,37 @@ class IA_AiGroup
     bool IsInDefendMode()
     {
         return m_isInDefendMode;
+    }
+
+    void SetHoldPost(vector pos, float radius = 0)
+    {
+        m_isHoldingPost = true;
+        m_holdPost = pos;
+        m_bKeepAltitude = true;
+        m_holdRadius = radius;
+    }
+
+    bool IsHoldingPost()
+    {
+        return m_isHoldingPost;
+    }
+
+    vector GetHoldPost()
+    {
+        return m_holdPost;
+    }
+
+    bool IsPinnedGarrison()
+    {
+        if (m_isHoldingPost)
+            return true;
+        if (m_isInDefendMode)
+            return true;
+        if (m_isMortarCrew)
+            return true;
+        if (IsObjectiveUnit())
+            return true;
+        return false;
     }
 
     void SetDefendWaveGroup(bool isWaveGroup)
@@ -3750,15 +3932,50 @@ class IA_AiGroup
             return;
 
         vector lz = m_vAirDropTarget;
-        if (IA_Game.rng)
-            lz = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
-        BaseWorld world = GetGame().GetWorld();
-        if (world)
-            lz[1] = world.GetSurfaceY(lz[0], lz[2]);
+        bool foundLz = false;
+        int attempt;
+        for (attempt = 0; attempt < IA_SpawnPlacement.DROP_LZ_SAMPLE_TRIES; attempt++)
+        {
+            vector sample = m_vAirDropTarget;
+            if (IA_Game.rng)
+                sample = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
+
+            vector dropLz;
+            if (IA_SpawnPlacement.TryFindDropLz(sample, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
+            {
+                lz = dropLz;
+                foundLz = true;
+                break;
+            }
+        }
+
+        if (!foundLz)
+        {
+            vector dropLz;
+            if (IA_SpawnPlacement.TryFindDropLz(m_vAirDropTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz))
+            {
+                lz = dropLz;
+                foundLz = true;
+            }
+        }
+
+        if (!foundLz)
+        {
+            Print("[IA][Airborne] Drop LZ open-sky miss, falling back to walkable", LogLevel.WARNING);
+            vector walked;
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(m_vAirDropTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, walked))
+                lz = walked;
+            else
+                lz = IA_SpawnPlacement.SnapInfantryPos(m_vAirDropTarget, IA_SpawnPlacement.EMPTY_SEARCH_R);
+        }
 
         if (!m_airDirector.AddJumper(jumper, lz))
         {
-            Print("[IA][Airborne] Director rejected jumper", LogLevel.WARNING);
+            // No autopilot slot means nothing steers or stops this pawn. Left at
+            // drop altitude it free-falls ~380 m and can end up anywhere, so put
+            // it on the LZ instead.
+            Print("[IA][Airborne] Director rejected jumper, placing on LZ", LogLevel.WARNING);
+            jumper.SetOrigin(lz);
             return;
         }
 
@@ -3939,6 +4156,13 @@ class IA_AiGroup
             unitSpawnPos[0] = m_staggeredSpawnPos[0] + offset[0];
             unitSpawnPos[2] = m_staggeredSpawnPos[2] + offset[2];
         }
+        else if (m_isHoldingPost || m_bKeepAltitude)
+        {
+            vector offset = IA_Game.rng.GenerateRandomPointInRadius(0.3, 0.9, vector.Zero);
+            unitSpawnPos[0] = m_staggeredSpawnPos[0] + offset[0];
+            unitSpawnPos[1] = m_staggeredSpawnPos[1];
+            unitSpawnPos[2] = m_staggeredSpawnPos[2] + offset[2];
+        }
         else if (!m_HVTGroup)
         {
             unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
@@ -4097,7 +4321,7 @@ class IA_AiGroup
         }
         else if (m_referencedEntity)
         {
-            if (IsAnyMemberOnFoot())
+            if (!m_pendingSeatTeleport && IsAnyMemberOnFoot())
                 AddOrder(m_referencedEntity.GetOrigin(), IA_AiOrder.GetInVehicle, true);
 
             // Stay InVehicle. DefendPatrol here used to spawn a Defend waypoint whose
@@ -4120,6 +4344,14 @@ class IA_AiGroup
                 Print("[IA_AiGroup.OnStaggeredSpawningComplete] Airborne drop, holding orders until land", LogLevel.NORMAL);
                 if (m_iAirborneInFlight <= 0)
                     ReleaseAirborneToAttack();
+            }
+            else if (m_isHoldingPost)
+            {
+                vector holdAt = m_holdPost;
+                if (holdAt == vector.Zero)
+                    holdAt = m_staggeredSpawnPos;
+                SetTacticalState(IA_GroupTacticalState.Holding, holdAt, null, true);
+                Print(string.Format("[IA_AiGroup] Applied Hold Wait at %1", holdAt.ToString()), LogLevel.NORMAL);
             }
             else if (!IsInDefendMode() && !m_lastAssignedArea)
             {
@@ -4244,6 +4476,9 @@ class IA_AiGroup
     // Add this new method before SetTacticalState method
     void RequestTacticalStateChange(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null)
     {
+        if (m_isHoldingPost)
+            return;
+
         // Don't create redundant requests
         if (m_hasPendingStateRequest && m_requestedState == newState)
             return;

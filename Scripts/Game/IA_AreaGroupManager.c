@@ -42,7 +42,8 @@ class IA_AreaGroupManager
     private const float QRF_CHANCE = 0.2;
     private const int DEFEND_QRF_COOLDOWN = 75; // seconds
     private const float DEFEND_QRF_CHANCE = 0.50;
-    private const float DEFEND_AIRBORNE_CHANCE = 0.35;
+    private const float AIRBORNE_CHANCE = 0.20;
+    private const float DEFEND_AIRBORNE_CHANCE = 0.25;
     private int m_lastQRFTime = 0;
     private bool m_qrfRetryPending = false;
     private IA_QRFType m_qrfRetryType;
@@ -91,6 +92,9 @@ class IA_AreaGroupManager
         int currentTime = System.GetUnixTime();
         if (!forDefend && IA_MissionInitializer.IsQRFDisabled())
             return; // QRF globally disabled (defend holds still get QRF)
+
+        if (!forDefend && IA_GmDirector.IsAutoQrfOff())
+            return;
 
         int checkInterval = QRF_CHECK_INTERVAL;
         int cooldown = QRF_COOLDOWN;
@@ -190,38 +194,26 @@ class IA_AreaGroupManager
         return defend;
     }
 
-    //! Capture QRF: 10 slots (airborne 30, mech 30, motorized 20, infantry 10, armour 10).
-    //! Defend QRF: 35% airborne, remaining 65% keeps those non-airborne relative shares.
+    //! Capture QRF: 20% airborne. Defend QRF: 25% airborne.
+    //! Remaining weight keeps non-airborne relative shares (mech 3, motorized 2, infantry 1, armour 1).
     private IA_QRFType SelectQRFType(bool forDefend)
     {
+        float airborneChance = AIRBORNE_CHANCE;
         if (forDefend)
-        {
-            if (IA_Game.rng.RandFloat01() < DEFEND_AIRBORNE_CHANCE)
-                return IA_QRFType.Airborne;
+            airborneChance = DEFEND_AIRBORNE_CHANCE;
 
-            int idx = Math.RandomInt(0, 7);
-            switch (idx)
-            {
-                case 0: return IA_QRFType.Infantry;
-                case 1: return IA_QRFType.Armoured;
-                case 2:
-                case 3: return IA_QRFType.Motorized;
-            }
-            return IA_QRFType.Mechanized;
-        }
+        if (IA_Game.rng.RandFloat01() < airborneChance)
+            return IA_QRFType.Airborne;
 
-        int slot = Math.RandomInt(0, 10);
-        switch (slot)
+        int idx = Math.RandomInt(0, 7);
+        switch (idx)
         {
             case 0: return IA_QRFType.Infantry;
             case 1: return IA_QRFType.Armoured;
             case 2:
             case 3: return IA_QRFType.Motorized;
-            case 4:
-            case 5:
-            case 6: return IA_QRFType.Mechanized;
         }
-        return IA_QRFType.Airborne;
+        return IA_QRFType.Mechanized;
     }
 
     private string QRFTypeToString(IA_QRFType type)
@@ -288,7 +280,49 @@ class IA_AreaGroupManager
         return spawned;
     }
 
-    //! One mid-hold QRF pulse for Defend missions. Uses defend type weights (35% airborne).
+    bool ForceSpawnQRFAt(IA_QRFType type, vector pos)
+    {
+        if (m_bShutDown)
+            return false;
+        if (!Replication.IsServer())
+            return false;
+        if (!m_areaInstances || m_areaInstances.IsEmpty())
+        {
+            Print("[IA][Admin] Force QRF at point failed: no area instances", LogLevel.WARNING);
+            return false;
+        }
+
+        IA_AreaInstance closestArea = null;
+        vector resolved = ResolveClosestAreaTarget(pos, closestArea);
+        if (!closestArea)
+        {
+            Print("[IA][Admin] Force QRF at point failed: could not resolve area", LogLevel.WARNING);
+            return false;
+        }
+
+        vector targetPos = pos;
+        if (targetPos == vector.Zero)
+            targetPos = resolved;
+
+        bool spawned = SpawnQRFForTarget(type, targetPos, closestArea, null, false, false);
+        if (spawned)
+            m_lastQRFTime = System.GetUnixTime();
+        else
+            Print("[IA][Admin] Force QRF at point failed for " + QRFTypeToString(type), LogLevel.WARNING);
+        return spawned;
+    }
+
+    void AddInstance(IA_AreaInstance inst)
+    {
+        if (!inst)
+            return;
+        if (!m_areaInstances)
+            m_areaInstances = new array<ref IA_AreaInstance>();
+        if (m_areaInstances.Find(inst) == -1)
+            m_areaInstances.Insert(inst);
+    }
+
+    //! One mid-hold QRF pulse for Defend missions. Uses defend type weights (25% airborne).
     bool SpawnDefendVehicleBeat(IA_AreaInstance areaInst, vector defendPoint, Faction enemyFaction)
     {
         if (!Replication.IsServer())
@@ -632,14 +666,19 @@ class IA_AreaGroupManager
         if (lz == vector.Zero)
             lz = areaInst.GetArea().GetOrigin();
 
-        BaseWorld world = GetGame().GetWorld();
-        float terrainY = 0;
-        if (world)
-            terrainY = world.GetSurfaceY(lz[0], lz[2]);
-        lz[1] = terrainY;
+        vector dropLz;
+        if (!IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
+        {
+            if (!IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz))
+            {
+                Print("[QRF] Airborne miss: no open-sky LZ.", LogLevel.WARNING);
+                return false;
+            }
+        }
+        lz = dropLz;
 
         vector release = lz;
-        vector wind = MHJ_FlightAero.WindWorld(terrainY + MHJ_Constants.AI_DROP_AGL, 0);
+        vector wind = MHJ_FlightAero.WindWorld(lz[1] + MHJ_Constants.AI_DROP_AGL, 0);
         wind[1] = 0;
         if (wind.Length() > 0.2)
         {
@@ -647,7 +686,7 @@ class IA_AreaGroupManager
             upwind.Normalize();
             release = release + upwind * 120;
         }
-        release[1] = terrainY + MHJ_Constants.AI_DROP_AGL;
+        release[1] = lz[1] + MHJ_Constants.AI_DROP_AGL;
 
         MHJ_AiDropDirector director = MHJ_AiDropDirector.SpawnStick(lz);
         if (!director)
@@ -935,6 +974,8 @@ class IA_AreaGroupManager
     void ArtilleryStrikeTask()
     {
         if (m_bShutDown)
+            return;
+        if (IA_GmDirector.IsAutoArtyOff())
             return;
 
         int currentTime = System.GetUnixTime();

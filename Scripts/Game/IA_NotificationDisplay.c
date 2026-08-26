@@ -397,7 +397,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 
 		string fullName = IA_SessionRankLadder.GetFullName(rankId);
 		string shortName = IA_SessionRankLadder.GetShortName(rankId);
-		QueueNotificationKind("Promoted to " + fullName + "  //  " + shortName, "green", 7000, IA_NotificationKind.Promotion);
+		QueueNotificationKind("Promoted to " + fullName + " (" + shortName + ")", "green", 7000, IA_NotificationKind.Promotion);
 	}
 
 	//------------------------------------------------------------------------------------------------

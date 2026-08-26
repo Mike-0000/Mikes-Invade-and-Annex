@@ -9,7 +9,8 @@ enum IA_AiOrder
     PriorityMove,
 	VehicleMove,
 	CivilianVehicleMove,
-	DefendSmall
+	DefendSmall,
+	Hold
 
 };
 
@@ -49,6 +50,10 @@ ResourceName IA_AiOrderResource(IA_AiOrder order)
     {
         //Print("[DEBUG] Returning resource for PriorityMove", LogLevel.NORMAL);
         return "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";
+    }
+    else if (order == IA_AiOrder.Hold)
+    {
+        return "{531EC45063C1F57B}Prefabs/AI/Waypoints/AIWaypoint_Wait.et";
     }
     //Print("[DEBUG] Returning default resource for Move", LogLevel.NORMAL);
     return "{FFF9518F73279473}PrefabsEditable/Auto/AI/Waypoints/E_AIWaypoint_Move.et";

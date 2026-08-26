@@ -1,0 +1,25 @@
+HorizontalLayoutWidgetClass {
+ Name "Root"
+ components {
+  IA_GmNameEditorAttributeUIComponent "{1A6D47B0E6C358C2}" {
+   m_sUiComponentName "IA_NameEdit"
+  }
+ }
+ {
+  OverlayWidgetClass "{1A6D47B0E6C358C3}" {
+   Name "TickboxHolder"
+   "Is Visible" 0
+  }
+  OverlayWidgetClass "{1A6D47B0E6C358C5}" {
+   Name "AttributeHolder"
+  }
+  OverlayWidgetClass "{1A6D47B0E6C358C7}" {
+   Name "GamePadLockedSelector"
+   "Is Visible" 0
+  }
+  OverlayWidgetClass "{1A6D47B0E6C358C9}" {
+   Name "SubAttributeIndicator"
+   "Is Visible" 0
+  }
+ }
+}

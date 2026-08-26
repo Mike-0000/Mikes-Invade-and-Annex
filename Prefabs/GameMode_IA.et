@@ -256,6 +256,22 @@ SCR_BaseGameMode : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
    m_fCompartmentRegenerationRateMultiplier 2
    m_fRegenerationScale 1.25
   }
+  SCR_GameOverScreenManagerComponent "{56DEC646298AD219}" {
+   m_GameOverScreenConfig SCR_GameOverScreenConfig "{56DEC6462FFDD82D}" {
+    m_aGameOverScreens {
+     SCR_FactionVictoryGameOverScreenInfo "{568E79DB918A8E56}" {
+      m_OptionalParams SCR_BaseGameOverScreenInfoOptional "{568E79DB9224CAB6}" {
+       m_sDebriefing "All objectives seized. The island is under friendly control."
+      }
+     }
+     SCR_FactionGameOverScreenInfo "{568E79DBAC19013D}" {
+      m_OptionalParams SCR_BaseGameOverScreenInfoOptional "{568E79DBB3E97D11}" {
+       m_sDebriefing "Friendly forces failed to seize the island."
+      }
+     }
+    }
+   }
+  }
   SCR_GroupsManagerComponent "{5706EC99934496F5}" {
    m_aGroupFlags {
    }
@@ -346,7 +362,7 @@ SCR_BaseGameMode : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
   }
  }
  coords 5000 80.875 5000
- m_fAutoReloadTime 10
+ m_fAutoReloadTime 30
  m_aDisabledResourceTypes {
   0
  }

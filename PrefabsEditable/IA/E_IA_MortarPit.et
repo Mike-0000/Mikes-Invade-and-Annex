@@ -1,0 +1,23 @@
+IA_AreaMarker : "Prefabs/IA_AreaMarkers/IA_MortarPit.et" {
+ ID "1A6D47B0E6C35980"
+ coords 0 0 0
+ m_areaGroup -1
+ m_fZoneRadius 40
+ m_areaName ""
+ m_areaType "MortarPit"
+ m_radius 40
+ components {
+  SCR_EditableSystemComponent "1A6D47B0E6C35981" : "{6FA0A85CFC5420AD}Prefabs/Editor/Components/Systems_SCR_EditableEntityComponent.ct" {
+   m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35982" {
+    Name "I&A Mortar Pit"
+    Description "Invade and Annex mortar pit. Place into Staging or Live."
+    Icon "{3E3FB434FBFA4872}UI/Textures/Editor/EditableEntities/Objectives/EditableEntity_Objective_Attack.edds"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
+   }
+  }
+  IA_GmSiteComponent "1A6D47B0E6C35983" {
+  }
+ }
+}

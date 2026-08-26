@@ -1,0 +1,16 @@
+IA_HVTSpawnPositionMarker : "{C0869E1C593E6182}Prefabs/IA_HVTSpawnLocation.et" {
+ ID "1A6D47B0E6C35A10"
+ coords 0 0 0
+ components {
+  SCR_EditableSystemComponent "1A6D47B0E6C35A11" : "{6FA0A85CFC5420AD}Prefabs/Editor/Components/Systems_SCR_EditableEntityComponent.ct" {
+   m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35A12" {
+    Name "I&A HVT Spawn"
+    Description "Invade and Annex HVT spawn position."
+    Icon "{B3FBE7D84E42508A}UI/Textures/Editor/EditableEntities/Systems/EditableEntity_System_Respawn.edds"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
+   }
+  }
+ }
+}

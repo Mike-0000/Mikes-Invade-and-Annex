@@ -522,7 +522,7 @@ class IA_DefendMission
             array<ref IA_AiGroup> militaryGroups = area.GetMilitaryGroups();
             foreach (IA_AiGroup group : militaryGroups)
             {
-                if (group && group.IsSpawned() && group.GetAliveCount() > 0)
+                if (group && group.IsSpawned() && group.GetAliveCount() > 0 && !group.IsHoldingPost())
                 {
                     Print(string.Format("[IA_DefendMission] Setting defend mode for existing group at %1", group.GetOrigin().ToString()), LogLevel.NORMAL);
                     // This will give them SearchAndDestroy orders on the defend point and set them to authority-managed

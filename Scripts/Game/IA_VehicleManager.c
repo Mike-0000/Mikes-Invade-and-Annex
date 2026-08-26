@@ -14,6 +14,7 @@ class IA_VehicleManager: GenericEntity
     static private ref array<IEntity> m_vehicles = {};
     static private IA_VehicleManager m_instance;
     static private const float DEFAULT_INITIAL_ROAD_SEARCH_RADIUS = 30.0;
+    static private const float VEHICLE_SPAWN_MIN_SPACING_M = 22.0;
     
     // Group-specific vehicles
     static private ref array<ref array<IEntity>> m_groupVehicles = {};
@@ -1069,6 +1070,7 @@ class IA_VehicleManager: GenericEntity
             if (!crewGroup)
                 return null;
 
+            crewGroup.SetPendingSeatTeleport(true);
             if (!crewGroup.IsSpawned())
                 crewGroup.Spawn();
 
@@ -1107,6 +1109,7 @@ class IA_VehicleManager: GenericEntity
             return null;
 
         crewGroup.MarkAsVehicleCrew();
+        crewGroup.SetPendingSeatTeleport(true);
         areaInstance.AddMilitaryGroup(crewGroup);
         if (!crewGroup.IsSpawned())
             crewGroup.Spawn();
@@ -1121,6 +1124,7 @@ class IA_VehicleManager: GenericEntity
             if (passengerGroup)
             {
                 passengerGroup.ConfigureAsVehiclePassengers(crewGroup, vehicle, destination);
+                passengerGroup.SetPendingSeatTeleport(true);
                 areaInstance.AddMilitaryGroup(passengerGroup);
                 if (!passengerGroup.IsSpawned())
                     passengerGroup.Spawn();
@@ -1263,9 +1267,7 @@ class IA_VehicleManager: GenericEntity
 
             if (!validPoints.IsEmpty())
             {
-                int randomIndex = Math.RandomInt(0, validPoints.Count() - 1);
-                vector selectedPoint = validPoints[randomIndex];
-                return selectedPoint;
+                return PickRandomSpreadRoadPoint(validPoints, VEHICLE_SPAWN_MIN_SPACING_M);
             }
             if (attempt == maxRetries) break; 
         }
@@ -1324,14 +1326,63 @@ class IA_VehicleManager: GenericEntity
         if (validPoints.IsEmpty())
             return vector.Zero;
 
-        int pickMax = validPoints.Count();
+        return PickRandomSpreadRoadPoint(validPoints, VEHICLE_SPAWN_MIN_SPACING_M);
+    }
+
+    // Math.RandomInt max is exclusive. RandomInt(0, Count()-1) with 2 points
+    // always returns 0, so every vehicle lands on the same road vertex.
+    protected static vector PickRandomSpreadRoadPoint(notnull array<vector> points, float minVehicleSpacing)
+    {
+        int n = points.Count();
+        if (n <= 0)
+            return vector.Zero;
+
+        ref array<vector> spaced = new array<vector>();
+        int i;
+        for (i = 0; i < n; i++)
+        {
+            if (!IsTooCloseToExistingVehicle(points[i], minVehicleSpacing))
+                spaced.Insert(points[i]);
+        }
+
+        if (!spaced.IsEmpty())
+        {
+            int spacedCount = spaced.Count();
+            int spacedIndex = Math.RandomInt(0, spacedCount);
+            if (spacedIndex >= spacedCount)
+                spacedIndex = spacedCount - 1;
+            return spaced[spacedIndex];
+        }
+
+        int pickMax = points.Count();
         if (pickMax <= 0)
             return vector.Zero;
 
         int randomIndex = Math.RandomInt(0, pickMax);
         if (randomIndex >= pickMax)
             randomIndex = pickMax - 1;
-        return validPoints[randomIndex];
+        return points[randomIndex];
+    }
+
+    protected static bool IsTooCloseToExistingVehicle(vector pos, float minDist)
+    {
+        if (minDist <= 0)
+            return false;
+
+        float minSq = minDist * minDist;
+        int i;
+        int n = m_vehicles.Count();
+        for (i = 0; i < n; i++)
+        {
+            IEntity ent = m_vehicles[i];
+            if (!ent)
+                continue;
+
+            if (vector.DistanceSq(pos, ent.GetOrigin()) < minSq)
+                return true;
+        }
+
+        return false;
     }
     
     // Filter function for road entities
@@ -1442,7 +1493,12 @@ class IA_VehicleManager: GenericEntity
 
         array<SCR_ChimeraCharacter> crewCharacters = crewGroup.GetGroupCharacters();
         if (crewCharacters.IsEmpty())
+        {
+            crewGroup.SetPendingSeatTeleport(false);
+            if (passengerGroup)
+                passengerGroup.SetPendingSeatTeleport(false);
             return;
+        }
 
         if (crewGroup.GetFaction() == IA_Faction.CIV || !passengerGroup)
         {
@@ -1450,6 +1506,7 @@ class IA_VehicleManager: GenericEntity
             CollectVehicleCrewSeats(vehicle, usableCompartments, true);
             SeatCharactersInSlots(vehicle, crewCharacters, usableCompartments);
 
+            crewGroup.SetPendingSeatTeleport(false);
             if (crewGroup.GetFaction() == IA_Faction.CIV)
             {
                 crewGroup.ForceDrivingState(true);
@@ -1486,6 +1543,9 @@ class IA_VehicleManager: GenericEntity
         if (!passengerCharacters.IsEmpty())
             SeatCharactersInSlots(vehicle, passengerCharacters, cargo);
 
+        crewGroup.SetPendingSeatTeleport(false);
+        passengerGroup.SetPendingSeatTeleport(false);
+
         // Drop leftover GetInNearest from spawn-complete so the drive Move can
         // become current. Passengers stay seated with no waypoint.
         crewGroup.ClearOrdersIfAllSeated();
@@ -1506,6 +1566,9 @@ class IA_VehicleManager: GenericEntity
         
         // Only process for civilian groups
         if (aiGroup.GetFaction() != IA_Faction.CIV)
+            return;
+
+        if (aiGroup.IsPendingSeatTeleport())
             return;
         
         // Get all characters in the group
@@ -1879,9 +1942,7 @@ class IA_VehicleManager: GenericEntity
 
             if (!validPoints.IsEmpty())
             {
-                int randomIndex = Math.RandomInt(0, validPoints.Count() - 1);
-                vector selectedPoint = validPoints[randomIndex];
-                return selectedPoint;
+                return PickRandomSpreadRoadPoint(validPoints, VEHICLE_SPAWN_MIN_SPACING_M);
             }
             if (attempt == maxRetries) break; 
         }
