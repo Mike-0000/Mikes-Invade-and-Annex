@@ -7,6 +7,7 @@ class IA_GmRadiusEditorAttribute : SCR_BaseValueListEditorAttribute
 	//------------------------------------------------------------------------------------------------
 	void IA_GmRadiusEditorAttribute()
 	{
+		m_aAttributeDynamicDescriptions = new array<ref SCR_BaseAttributeDynamicDescription>();
 		m_Layout = "{680E4985E42137FB}UI/layouts/Editor/Attributes/AttributePrefabs/AttributePrefab_Slider.layout";
 		m_CategoryConfig = "{416C6E9ECC3D231D}Configs/Editor/AttributeCategories/Entity.conf";
 		m_baseValues = new SCR_EditorAttributeBaseValues();

@@ -7,6 +7,7 @@ class IA_GmHotAddEditorAttribute : SCR_BaseEditorAttribute
 	//------------------------------------------------------------------------------------------------
 	void IA_GmHotAddEditorAttribute()
 	{
+		m_aAttributeDynamicDescriptions = new array<ref SCR_BaseAttributeDynamicDescription>();
 		m_Layout = "{D0F3CE0C63A5AEBB}UI/layouts/Editor/Attributes/AttributePrefabs/AttributePrefab_Checkbox.layout";
 		m_CategoryConfig = "{416C6E9ECC3D231D}Configs/Editor/AttributeCategories/Entity.conf";
 		m_UIInfo = new SCR_EditorAttributeUIInfo();
