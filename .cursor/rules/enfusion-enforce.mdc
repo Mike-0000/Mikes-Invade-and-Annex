@@ -207,7 +207,7 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 Enfusion has **no WebView**. Widgets are the compositor (Canvas, text, EditBox). Feature menus belong in the **consuming addon**, subclassing `MUI_MenuBase`. HUD: `MUI_HudHost` + pass-through overlay. Do not use `MenuWithEditorContext` on HUD. Native `MapWidget` stays in a layout; Mike's UI does not host it.
 
 - **`EditBoxWidget.ActivateWriteMode` keeps native widget focus.** A visible EditBox without `IGNORE_CURSOR` sits above the compositor and can eat every later click. `OnWriteModeLeave` from hiding / re-activating the same shared box can Detach a field you just attached. Shared IME bridges must `IGNORE_CURSOR`, switch fields without hiding, ignore stale leave for a frame, and re-`BeginEditing` when the already-focused field is clicked again. Evidence: `EditBoxWidget.c`; `WidgetFlags.IGNORE_CURSOR`; `runtime: HALO planner` second numeric field unclickable until menu reopen.
-- **`SCR_MapMarkersUI.CleanupMarkerEditWidget` always calls `m_CursorModule.HandleDialog(false)`.** Configs that omit `SCR_MapCursorModule` (HALO planner) leave that pointer null, so `CloseMap` NPEs on Jump/Cancel. Null-check before HandleDialog; do not add a cursor module just to satisfy close — it steals click-to-drop. Evidence: `SCR_MapMarkersUI.c:581`; `runtime: MHJ_MapHost.CloseOwnMap` after Jump.
+- **`SCR_MapMarkersUI` assumes `m_CursorModule` is set.** `CleanupMarkerEditWidget` calls `HandleDialog(false)` and `OnInputMapSelect` calls `GetCursorState()` with no null check. Configs that omit `SCR_MapCursorModule` (HALO planner, GM Director via `MHJ_MapHost`) leave that pointer null. `MapSelect` still binds, so every click NPEs. Null-check both; strip MapSelect on cursor-less maps; do not add a cursor module just to satisfy close — it steals click-to-drop. Evidence: `SCR_MapMarkersUI.c:581` / `:1061`; `runtime: MHJ_MapHost.CloseOwnMap` after Jump; `runtime:` GM Director `OnInputMapSelect`.
 - **`m_bShowInWelcomeScreenIfNonPlayable` was replaced by `m_eShowInWelcomeScreenOverride`.** NONE hides non-playable factions; ALWAYSSHOW shows even if not playable (FIA/INDFOR); NEVERSHOW hides. Stale prefab fields are ignored, so the deploy faction list can show every faction. Evidence: `SCR_Faction.c`; `INDFOR.conf`; `SCR_FactionRequestUIComponent.c`.
 
 Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer rule / `F:\Mikes-UI\README.md`.
@@ -221,6 +221,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-25 — `SCR_MapMarkersUI.OnInputMapSelect` NPEs on a null `m_CursorModule` the same way `CleanupMarkerEditWidget` does (`SCR_MapMarkersUI.c:1061`, `runtime:` GM Director / HALO planner clicks).
 - 2026-08-25 — Script methods cannot exceed 16 arguments (`compiler: IA_MissionInitializer.c` `PackAdminConfig`).
 - 2026-08-25 — Unreliable pose RPCs can arrive after a reliable remove and respawn local-only FX if Add is called on a miss (`runtime:` AI drop canopy stuck after land).
 - 2026-08-25 — AI pawn `SetYawPitchRoll` / zero-velocity `SetOrigin` is not a dedicated-client flight pose; local canopy meshes need a heading/path/bank relay (`runtime:` AI drop chute frozen on dedicated).
