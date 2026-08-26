@@ -8,8 +8,12 @@ IA_AreaMarker : "{7ADD348E46715524}Prefabs/IA_AreaMarkers/IA_SmallMilitary.et" {
  m_radius 80
  components {
   SCR_EditableEntityComponent "1A6D47B0E6C35951" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
+   m_EntityType SYSTEM
    m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35952" {
     Name "I&A Small Military"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
    }
   }
   IA_GmSiteComponent "1A6D47B0E6C35953" {

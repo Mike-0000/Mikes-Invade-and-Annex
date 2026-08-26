@@ -8,8 +8,12 @@ IA_AreaMarker : "{4CE72B528FB4853C}Prefabs/RadioTower.et" {
  m_radius 30
  components {
   SCR_EditableEntityComponent "1A6D47B0E6C35971" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
+   m_EntityType SYSTEM
    m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35972" {
     Name "I&A Radio Tower"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
    }
   }
   IA_GmSiteComponent "1A6D47B0E6C35973" {

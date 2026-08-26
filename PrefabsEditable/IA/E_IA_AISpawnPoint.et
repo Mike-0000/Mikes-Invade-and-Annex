@@ -3,8 +3,12 @@ IA_AISpawnPoint : "{1443B907FDA74B9A}Prefabs/IA_AreaMarkers/IA_AI_SpawnPoint.et"
  coords 0 0 0
  components {
   SCR_EditableEntityComponent "1A6D47B0E6C35A21" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
+   m_EntityType SYSTEM
    m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35A22" {
     Name "I&A AI Spawn Point"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
    }
   }
  }

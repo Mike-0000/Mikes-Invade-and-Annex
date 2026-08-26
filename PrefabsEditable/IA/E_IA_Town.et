@@ -8,8 +8,12 @@ IA_AreaMarker : "{808EDC7240341FEE}Prefabs/IA_AreaMarkers/IA_Town.et" {
  m_radius 90
  components {
   SCR_EditableEntityComponent "1A6D47B0E6C35921" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
+   m_EntityType SYSTEM
    m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35922" {
     Name "I&A Town"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
    }
   }
   IA_GmSiteComponent "1A6D47B0E6C35923" {

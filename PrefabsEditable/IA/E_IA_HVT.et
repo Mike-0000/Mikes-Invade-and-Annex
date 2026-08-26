@@ -3,8 +3,12 @@ IA_HVTSpawnPositionMarker : "{C0869E1C593E6182}Prefabs/IA_HVTSpawnLocation.et" {
  coords 0 0 0
  components {
   SCR_EditableEntityComponent "1A6D47B0E6C35A11" : "{7933327C6791C5D0}Prefabs/Editor/Components/Structures_SCR_EditableEntityComponent.ct" {
+   m_EntityType SYSTEM
    m_UIInfo SCR_EditableEntityUIInfo "1A6D47B0E6C35A12" {
     Name "I&A HVT Spawn"
+    m_aAuthoredLabels {
+     ENTITYTYPE_SYSTEM
+    }
    }
   }
  }
