@@ -27,6 +27,9 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	protected int m_iQrf;
 	protected bool m_bHasUserPoint;
 	protected bool m_bClosingMap;
+	protected ref array<ref MapItem> m_SitePips;
+	protected string m_sPipKey;
+	protected float m_fPipAge;
 
 	//------------------------------------------------------------------------------------------------
 	override string GetMUILogTag()
@@ -64,6 +67,13 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (m_Map)
 			m_Map.Tick(m_Picker);
 
+		m_fPipAge = m_fPipAge + tDelta;
+		if (m_fPipAge >= 0.4)
+		{
+			m_fPipAge = 0;
+			RefreshLists();
+		}
+
 		MUI_Runtime runtime = GetRuntime();
 		if (!runtime)
 			return;
@@ -80,6 +90,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (!m_bClosingMap)
 		{
 			m_bClosingMap = true;
+			RecycleSitePips();
 			if (m_Picker)
 				m_Picker.SetMapHost(null);
 			if (m_Map)
@@ -434,11 +445,23 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (m_RadiusField)
 			radius = m_RadiusField.GetValue();
 
+		IA_AreaType areaType = SelectedAreaType();
+		IA_GmBucket bucket = SelectedBucket();
+		float dropX = m_Picker.GetDropX();
+		float dropZ = m_Picker.GetDropZ();
+		if (radius <= 0)
+			radius = IA_GmDirector.DefaultRadiusForType(areaType);
+
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		dir.RememberPlacedSite(areaType, dropX, dropZ, dir.GetGroupIdForBucket(bucket), radius, IA_GmDirector.AreaTypeToString(areaType));
+
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
 		if (pc)
-			pc.IA_AskGmPlaceSite(SelectedAreaType(), m_Picker.GetDropX(), m_Picker.GetDropZ(), SelectedBucket(), "", radius);
+			pc.IA_AskGmPlaceSite(areaType, dropX, dropZ, bucket, "", radius);
 
-		GetGame().GetCallqueue().CallLater(this.RefreshLists, 400, false);
+		RefreshLists();
+		GetGame().GetCallqueue().CallLater(this.RefreshLists, 250, false);
+		GetGame().GetCallqueue().CallLater(this.RefreshLists, 800, false);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -489,12 +512,227 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	protected void RefreshLists()
 	{
 		IA_GmDirector dir = IA_GmDirector.GetInstance();
-		ref array<IA_AreaMarker> live = dir.CollectGroupMarkers(dir.GetLiveGroupId());
-		ref array<IA_AreaMarker> staging = dir.CollectGroupMarkers(dir.GetStagingGroupId());
+		int liveId = dir.GetLiveGroupId();
+		int stagingId = dir.GetStagingGroupId();
+		ref array<IA_AreaMarker> live = dir.CollectGroupMarkers(liveId);
+		ref array<IA_AreaMarker> staging = dir.CollectGroupMarkers(stagingId);
 		if (m_LiveList)
-			m_LiveList.SetText(FormatGroupList(live));
+			m_LiveList.SetText(FormatSiteList(live, dir.CollectKnownSites(liveId)));
 		if (m_StagingList)
-			m_StagingList.SetText(FormatGroupList(staging));
+			m_StagingList.SetText(FormatSiteList(staging, dir.CollectKnownSites(stagingId)));
+		RefreshSitePips();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected string FormatSiteList(array<IA_AreaMarker> markers, array<ref IA_GmSiteRecord> known)
+	{
+		string text = FormatGroupList(markers);
+		if (text != "(empty)")
+			return text;
+
+		if (!known || known.IsEmpty())
+			return "(empty)";
+
+		text = "";
+		int i;
+		int count = known.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_GmSiteRecord rec = known[i];
+			if (!rec)
+				continue;
+			if (!text.IsEmpty())
+				text = text + "\n";
+			if (rec.m_sName.IsEmpty())
+				text = text + IA_GmDirector.AreaTypeToString(rec.m_iType);
+			else
+				text = text + rec.m_sName;
+		}
+		if (text.IsEmpty())
+			return "(empty)";
+		return text;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void RefreshSitePips()
+	{
+		if (!m_Map || !m_Map.IsLive())
+			return;
+
+		SCR_MapEntity mapEnt = SCR_MapEntity.GetMapInstance();
+		if (!mapEnt)
+			return;
+
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		int liveId = dir.GetLiveGroupId();
+		int stagingId = dir.GetStagingGroupId();
+		ref array<ref IA_GmSiteRecord> pins = new array<ref IA_GmSiteRecord>();
+		AppendMarkerPins(pins, dir.CollectGroupMarkers(liveId));
+		AppendMarkerPins(pins, dir.CollectGroupMarkers(stagingId));
+		AppendKnownPins(pins, dir.CollectKnownSites(liveId));
+		AppendKnownPins(pins, dir.CollectKnownSites(stagingId));
+
+		string key = BuildPipKey(pins);
+		if (key == m_sPipKey && m_SitePips && !m_SitePips.IsEmpty())
+			return;
+
+		RecycleSitePips();
+		m_sPipKey = key;
+
+		int i;
+		int count = pins.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_GmSiteRecord rec = pins[i];
+			if (!rec)
+				continue;
+
+			bool isLive = false;
+			if (liveId >= 0 && rec.m_iGroupId == liveId)
+				isLive = true;
+			CreateSitePip(mapEnt, rec, isLive);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void AppendMarkerPins(notnull array<ref IA_GmSiteRecord> pins, array<IA_AreaMarker> markers)
+	{
+		if (!markers)
+			return;
+
+		int i;
+		int count = markers.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_AreaMarker marker = markers[i];
+			if (!marker)
+				continue;
+
+			vector origin = marker.GetOrigin();
+			if (PinAlreadyListed(pins, origin[0], origin[2]))
+				continue;
+
+			ref IA_GmSiteRecord rec = new IA_GmSiteRecord();
+			rec.m_iType = marker.GetAreaType();
+			rec.m_iGroupId = marker.m_areaGroup;
+			rec.m_fX = origin[0];
+			rec.m_fZ = origin[2];
+			rec.m_fRadius = marker.GetRadius();
+			rec.m_sName = marker.GetAreaName();
+			pins.Insert(rec);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void AppendKnownPins(notnull array<ref IA_GmSiteRecord> pins, array<ref IA_GmSiteRecord> known)
+	{
+		if (!known)
+			return;
+
+		int i;
+		int count = known.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_GmSiteRecord rec = known[i];
+			if (!rec)
+				continue;
+			if (PinAlreadyListed(pins, rec.m_fX, rec.m_fZ))
+				continue;
+			pins.Insert(rec);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool PinAlreadyListed(notnull array<ref IA_GmSiteRecord> pins, float x, float z)
+	{
+		int i;
+		int count = pins.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_GmSiteRecord rec = pins[i];
+			if (!rec)
+				continue;
+			float dx = rec.m_fX - x;
+			float dz = rec.m_fZ - z;
+			if ((dx * dx) + (dz * dz) < 64)
+				return true;
+		}
+		return false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected string BuildPipKey(notnull array<ref IA_GmSiteRecord> pins)
+	{
+		string key = "";
+		int i;
+		int count = pins.Count();
+		for (i = 0; i < count; i++)
+		{
+			IA_GmSiteRecord rec = pins[i];
+			if (!rec)
+				continue;
+			key = key + rec.m_iGroupId.ToString() + ":" + rec.m_sName + ":" + rec.m_fX.ToString() + "," + rec.m_fZ.ToString() + ";";
+		}
+		return key;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void CreateSitePip(notnull SCR_MapEntity mapEnt, notnull IA_GmSiteRecord rec, bool isLive)
+	{
+		MapItem pip = mapEnt.CreateCustomMapItem();
+		if (!pip)
+			return;
+
+		if (isLive)
+			pip.SetBaseType(EMapDescriptorType.MDT_BASE);
+		else
+			pip.SetBaseType(EMapDescriptorType.MDT_TASK);
+
+		pip.SetPos(rec.m_fX, rec.m_fZ);
+		if (rec.m_fRadius > 0)
+			pip.SetRange(rec.m_fRadius);
+
+		string label = rec.m_sName;
+		if (label.IsEmpty())
+			label = IA_GmDirector.AreaTypeToString(rec.m_iType);
+		pip.SetDisplayName(label);
+		pip.SetVisible(true);
+
+		MapDescriptorProps props = pip.GetProps();
+		if (props)
+		{
+			if (isLive)
+				props.SetFrontColor(Color.FromSRGBA(89, 235, 224, 255));
+			else
+				props.SetFrontColor(Color.FromSRGBA(237, 158, 41, 255));
+			props.SetOutlineColor(Color.FromSRGBA(0, 0, 0, 255));
+			props.SetIconSize(1, 0.5, 0.5);
+			props.SetTextVisible(true);
+			props.Activate(true);
+			pip.SetProps(props);
+		}
+
+		if (!m_SitePips)
+			m_SitePips = new array<ref MapItem>();
+		m_SitePips.Insert(pip);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void RecycleSitePips()
+	{
+		m_sPipKey = "";
+		if (!m_SitePips)
+			return;
+
+		int i;
+		int count = m_SitePips.Count();
+		for (i = 0; i < count; i++)
+		{
+			MapItem pip = m_SitePips[i];
+			if (pip)
+				pip.Recycle();
+		}
+		m_SitePips.Clear();
 	}
 
 	//------------------------------------------------------------------------------------------------

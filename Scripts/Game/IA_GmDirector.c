@@ -15,6 +15,7 @@ class IA_GmDirector
 
 	protected int m_iLiveGroup;
 	protected int m_iStagingGroup;
+	protected ref array<ref IA_GmSiteRecord> m_KnownSites;
 
 	//------------------------------------------------------------------------------------------------
 	static IA_GmDirector GetInstance()
@@ -29,6 +30,7 @@ class IA_GmDirector
 	{
 		m_iLiveGroup = -1;
 		m_iStagingGroup = GROUP_BASE;
+		m_KnownSites = new array<ref IA_GmSiteRecord>();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -257,6 +259,67 @@ class IA_GmDirector
 		}
 
 		Print(string.Format("[IA_GmDirector] Registered '%1' (%2) group %3", name, AreaTypeToString(marker.GetAreaType()), groupId), LogLevel.NORMAL);
+
+		vector origin = marker.GetOrigin();
+		RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], groupId, marker.GetRadius(), name);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void RememberPlacedSite(int type, float x, float z, int groupId, float radius, string name)
+	{
+		if (!m_KnownSites)
+			m_KnownSites = new array<ref IA_GmSiteRecord>();
+
+		int i;
+		int n = m_KnownSites.Count();
+		for (i = 0; i < n; i++)
+		{
+			IA_GmSiteRecord existing = m_KnownSites[i];
+			if (!existing)
+				continue;
+
+			float dx = existing.m_fX - x;
+			float dz = existing.m_fZ - z;
+			if ((dx * dx) + (dz * dz) >= 64)
+				continue;
+
+			existing.m_iType = type;
+			existing.m_iGroupId = groupId;
+			existing.m_fRadius = radius;
+			if (!name.IsEmpty())
+				existing.m_sName = name;
+			return;
+		}
+
+		ref IA_GmSiteRecord rec = new IA_GmSiteRecord();
+		rec.m_iType = type;
+		rec.m_iGroupId = groupId;
+		rec.m_fX = x;
+		rec.m_fZ = z;
+		rec.m_fRadius = radius;
+		rec.m_sName = name;
+		m_KnownSites.Insert(rec);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	array<ref IA_GmSiteRecord> CollectKnownSites(int groupId)
+	{
+		ref array<ref IA_GmSiteRecord> result = new array<ref IA_GmSiteRecord>();
+		if (!m_KnownSites || groupId < 0)
+			return result;
+
+		int i;
+		int n = m_KnownSites.Count();
+		for (i = 0; i < n; i++)
+		{
+			IA_GmSiteRecord rec = m_KnownSites[i];
+			if (!rec)
+				continue;
+			if (rec.m_iGroupId != groupId)
+				continue;
+			result.Insert(rec);
+		}
+		return result;
 	}
 
 	//------------------------------------------------------------------------------------------------

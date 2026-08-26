@@ -318,9 +318,24 @@ modded class SCR_PlayerController
 
 		vector pos = Vector(x, 0, z);
 		IA_AreaType areaType = type;
-		IA_AreaMarker marker = IA_GmDirector.GetInstance().PlaceSite(areaType, pos, gmBucket, name, radius);
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		int liveBefore = dir.GetLiveGroupId();
+		IA_AreaMarker marker = dir.PlaceSite(areaType, pos, gmBucket, name, radius);
 		if (gmBucket == IA_GmBucket.Live && marker)
-			IA_GmDirector.GetInstance().HotAdd(marker);
+			dir.HotAdd(marker);
+
+		if (!marker)
+			return;
+
+		if (dir.GetLiveGroupId() != liveBefore)
+			Rpc(RpcDo_IA_GmPromoteStaging);
+
+		vector origin = marker.GetOrigin();
+		int groupId = marker.m_areaGroup;
+		float placedRadius = marker.GetRadius();
+		string placedName = marker.GetAreaName();
+		dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], groupId, placedRadius, placedName);
+		Rpc(RpcDo_IA_GmSitePlaced, marker.GetAreaType(), origin[0], origin[2], groupId, placedRadius, placedName);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -337,6 +352,7 @@ modded class SCR_PlayerController
 			return;
 
 		init.ServerActivateStaging();
+		Rpc(RpcDo_IA_GmPromoteStaging);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -431,6 +447,26 @@ modded class SCR_PlayerController
 		}
 
 		mgr.ForceSpawnQRF(type);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	protected void RpcDo_IA_GmSitePlaced(int type, float x, float z, int groupId, float radius, string name)
+	{
+		if (Replication.IsServer())
+			return;
+
+		IA_GmDirector.GetInstance().RememberPlacedSite(type, x, z, groupId, radius, name);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	protected void RpcDo_IA_GmPromoteStaging()
+	{
+		if (Replication.IsServer())
+			return;
+
+		IA_GmDirector.GetInstance().PromoteStagingToLive();
 	}
 
 	protected bool IA_IsAdminCaller()
