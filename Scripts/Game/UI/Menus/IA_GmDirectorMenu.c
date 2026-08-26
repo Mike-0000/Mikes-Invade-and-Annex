@@ -124,7 +124,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		card.SetIntro(0.16, 0.4, 18);
 
 		ref MUI_LiveHeader liveHeader = runtime.CreateLiveHeader("GM DIRECTOR", "liveHeader");
-		liveHeader.SetKicker("INVADE AND ANNEX  //  STAGING DESK");
+		liveHeader.SetKicker("STAGING DESK");
 		liveHeader.SetIntro(0.22, 0.4, 18);
 
 		ref MUI_Label subtitle = runtime.CreateLabel("Click the map, then Place. Drag pans, wheel zooms.", "subtitle");
@@ -176,7 +176,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		AddChip(runtime, typeRow2, m_TypeBtns, "Defend", CHIP_TYPE, 8);
 		AddChip(runtime, typeRow2, m_TypeBtns, "HVT", CHIP_TYPE, 9);
 
-		ref MUI_Label destLbl = runtime.CreateLabel("Into  —  Staging waits for Activate. Live joins the current AO.", "destLbl");
+		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live joins the current AO.", "destLbl");
 		destLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		destLbl.SetMuted(true);
 
@@ -193,7 +193,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_RadiusField.SetHeight(52);
 		m_RadiusField.SetMinHeight(52);
 
-		m_CoordLabel = runtime.CreateLabel("No location yet — click the map", "coords");
+		m_CoordLabel = runtime.CreateLabel("No location yet. Click the map.", "coords");
 		m_CoordLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		m_CoordLabel.SetMuted(true);
 
@@ -351,7 +351,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	protected void UpdatePlaceButtons()
 	{
-		string coordText = "No location yet — click the map";
+		string coordText = "No location yet. Click the map.";
 		if (m_bHasUserPoint && m_Picker)
 			coordText = string.Format("Location  %1  %2", m_Picker.GetDropX(), m_Picker.GetDropZ());
 		if (m_CoordLabel)

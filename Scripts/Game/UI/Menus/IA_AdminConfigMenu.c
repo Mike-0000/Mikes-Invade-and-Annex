@@ -128,7 +128,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_CivVehField.SetStep(0.1);
 		m_CivVehField.SetDecimals(2);
 
-		m_RevoltField = runtime.CreateNumericField("Revolt threshold (0–1)", "revolt");
+		m_RevoltField = runtime.CreateNumericField("Revolt threshold (0-1)", "revolt");
 		m_RevoltField.SetRange(0, 1);
 		m_RevoltField.SetStep(0.01);
 		m_RevoltField.SetDecimals(2);
