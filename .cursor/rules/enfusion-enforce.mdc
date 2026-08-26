@@ -48,6 +48,7 @@ Prefer **`SCR_`** types over thinner native/`GameCode` types — they have the m
 - **`autoptr` is legacy.** Bohemia formatter: remove it on ordinary locals, or replace with `ref` on member arrays. New code uses `ref`.
 - **No `auto`.** Name the type.
 - **Script methods are capped at 16 arguments.** `Maximum arguments count 16 exceeded` fails the Game module. Pack extras into a string or bitmask. RPCs are a tighter cap of **8**. Evidence: `compiler: IA_MissionInitializer.c` `PackAdminConfig`.
+- **`CallLater` does not apply default parameter values.** The queued call must pass every argument the method declares, or it is `Not enough parameters, expected N got M`. Direct calls still use defaults. Evidence: `runtime:` `_SpawnSingleAiGroupAndAddToArea` after three hold-post args were added (`IA_AreaInstance.c` mortar pit gunners/guards).
 - **`Class` is the super-root. `Managed` is GC'd.** Downcast with `T.Cast(obj)`, then null-check. `IsInherited(typename)`.
 - **`null` is not an enum value.** Enums are ints. `ShouldDefer(null, waypoint)` when the first arg is `IA_AiOrder` is `Cannot convert 'Class' to 'int'`. Split the overload or pass a real enum. Evidence: `compiler: IA_AI_Group.c` `ShouldDeferForTypedWaypointTree`.
 - **`pointer` types cannot be class members.** They are plain C++ pointers with no weak refs and no GC (`Types.c`). `Physics` is `NativeComponent : pointer`, so `protected Physics m_Physics` is `Pointer type 'Physics' can only be used with local variables` and can block the Game script module. Fetch a local with `owner.GetPhysics()`; cache `IEntity` if you need the owner. `global_pointer` is the subtype `Types.c` marks "Safe to store outside local scope". Evidence: `compiler: MHJ_CanopyFlight.c`; `Physics.c`, `NativeComponent.c`, `Types.c`.
@@ -226,6 +227,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-08-26 — `CallLater` does not fill default args; every declared parameter must be passed (`runtime:` `_SpawnSingleAiGroupAndAddToArea` expected 7 got 4).
 - 2026-08-26 — `SCR_AIFindAvailableVehicle.HasNoAvailableCompartment` NPEs on GC'd `m_WaypointParameter` after GetInNearest is removed (`SCR_AIFindAvailableVehicle.c:104`, `runtime:` `m_bIsDriverAllowed` NULL).
 - 2026-08-25 — `TextWidget.GetTextSize` / `GetNumLines` keep the previous string's height; unwrapped height already includes `\n`, so multiplying by line count leaves blank rows (`runtime:` GM Director lists).
 - 2026-08-25 — F6 attribute vars are a 12-byte vector; strings must apply client-side and RPC (`SCR_BaseEditorAttributeVar.c`, `SCR_AttributesManagerEditorComponent.c`).

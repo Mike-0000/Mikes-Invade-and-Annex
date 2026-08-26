@@ -3010,12 +3010,12 @@ class IA_AreaInstance
             vector pos = mortar.GetOrigin();
             pos[2] = pos[2] + 1.5;
             pos[1] = GetGame().GetWorld().GetSurfaceY(pos[0], pos[2]);
-            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, pos, 1, m_AreaFaction, true);
+            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, pos, 1, m_AreaFaction, true, false, vector.Zero, 0);
             delay = delay + 250;
         }
 
         int guardCount = IA_AreaMarker.GetMortarPitGuardCount();
-        GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, m_area.GetOrigin(), guardCount, m_AreaFaction, true);
+        GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, m_area.GetOrigin(), guardCount, m_AreaFaction, true, false, vector.Zero, 0);
 
         Print(string.Format("[IA][MortarPit] AI scheduled: %1 gunners on tubes, %2 guards", mortars.Count(), guardCount), LogLevel.NORMAL);
     }
