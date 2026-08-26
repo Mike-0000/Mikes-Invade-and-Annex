@@ -18,6 +18,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	protected ref MUI_NumericField m_RadiusField;
 	protected ref MUI_TextField m_NameField;
 	protected ref MUI_Button m_PlaceBtn;
+	protected ref MUI_Button m_RemoveBtn;
 	protected ref MUI_Button m_QrfBtn;
 	protected ref array<ref MUI_Button> m_TypeBtns;
 	protected ref array<ref MUI_Button> m_BucketBtns;
@@ -139,7 +140,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		liveHeader.SetKicker("STAGING DESK");
 		liveHeader.SetIntro(0.22, 0.4, 18);
 
-		ref MUI_Label subtitle = runtime.CreateLabel("Click the map, then Place. Name is optional.", "subtitle");
+		ref MUI_Label subtitle = runtime.CreateLabel("Click the map, then Place. Click a staging pin to Remove.", "subtitle");
 		subtitle.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		subtitle.SetMuted(true);
 
@@ -221,6 +222,13 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_PlaceBtn.SetEnabled(false);
 		m_PlaceBtn.GetOnClicked().Insert(OnPlaceObjective);
 		placeRow.AddChild(m_PlaceBtn);
+
+		m_RemoveBtn = runtime.CreateButton("Remove staging", "removeStaging");
+		m_RemoveBtn.MakeDanger();
+		StyleDirectorChip(m_RemoveBtn);
+		m_RemoveBtn.SetEnabled(false);
+		m_RemoveBtn.GetOnClicked().Insert(OnRemoveStaging);
+		placeRow.AddChild(m_RemoveBtn);
 
 		ref MUI_Hairline qrfLine = runtime.CreateHairline("qrfLine");
 		ref MUI_Label qrfHdr = runtime.CreateLabel("QRF AT LOCATION", "qrfHdr");
@@ -406,6 +414,21 @@ class IA_GmDirectorMenu : MUI_MenuBase
 			else
 				m_QrfBtn.SetText("Click map first");
 		}
+
+		bool canRemove = false;
+		if (m_bHasUserPoint && m_Picker)
+		{
+			IA_GmDirector dir = IA_GmDirector.GetInstance();
+			canRemove = dir.HasStagingNear(m_Picker.GetDropX(), m_Picker.GetDropZ(), 80);
+		}
+		if (m_RemoveBtn)
+		{
+			m_RemoveBtn.SetEnabled(canRemove);
+			if (canRemove)
+				m_RemoveBtn.SetText("Remove staging");
+			else
+				m_RemoveBtn.SetText("Click a staging pin");
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -494,6 +517,31 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	}
 
 	//------------------------------------------------------------------------------------------------
+	protected void OnRemoveStaging()
+	{
+		if (!m_bHasUserPoint)
+			return;
+		if (!m_Picker || !m_Picker.HasDrop())
+			return;
+
+		float dropX = m_Picker.GetDropX();
+		float dropZ = m_Picker.GetDropZ();
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		if (!dir.HasStagingNear(dropX, dropZ, 80))
+			return;
+
+		dir.ForgetKnownSite(dropX, dropZ);
+
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+			pc.IA_AskGmDeleteStaging(dropX, dropZ);
+
+		RefreshLists();
+		GetGame().GetCallqueue().CallLater(this.RefreshLists, 250, false);
+		GetGame().GetCallqueue().CallLater(this.RefreshLists, 800, false);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected void OnSpawnQrf()
 	{
 		if (!m_bHasUserPoint)
@@ -550,6 +598,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		if (m_StagingList)
 			m_StagingList.SetText(FormatSiteList(staging, dir.CollectKnownSites(stagingId)));
 		RefreshSitePips();
+		UpdatePlaceButtons();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -694,7 +743,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	protected string BuildPipKey(notnull array<ref IA_GmSiteRecord> pins)
 	{
-		string key = "";
+		string key = "v2";
 		int i;
 		int count = pins.Count();
 		for (i = 0; i < count; i++)
@@ -737,7 +786,16 @@ class IA_GmDirectorMenu : MUI_MenuBase
 			else
 				props.SetFrontColor(Color.FromSRGBA(237, 158, 41, 255));
 			props.SetOutlineColor(Color.FromSRGBA(0, 0, 0, 255));
-			props.SetIconSize(1, 0.5, 0.5);
+			if (isLive)
+			{
+				props.SetIconSize(32, 0.85, 1.15);
+				props.SetTextSize(24, 0.65, 0.95);
+			}
+			else
+			{
+				props.SetIconSize(32, 0.75, 1.05);
+				props.SetTextSize(22, 0.6, 0.9);
+			}
 			props.SetTextVisible(true);
 			props.Activate(true);
 			pip.SetProps(props);

@@ -171,6 +171,17 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         Print("[IA_AreaMarker] Reset all markers for new zone group", LogLevel.DEBUG);
     }
 
+    static void UnregisterMarker(IA_AreaMarker marker)
+    {
+        if (!s_areaMarkers || !marker)
+            return;
+
+        int idx = s_areaMarkers.Find(marker);
+        if (idx < 0)
+            return;
+        s_areaMarkers.Remove(idx);
+    }
+
     // New static function to retrieve all markers.
     static array<IA_AreaMarker> GetAllMarkers()
     {

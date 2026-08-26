@@ -331,6 +331,90 @@ class IA_GmDirector
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void ForgetKnownSite(float x, float z)
+	{
+		if (!m_KnownSites)
+			return;
+
+		int i;
+		int n = m_KnownSites.Count();
+		for (i = 0; i < n; i++)
+		{
+			IA_GmSiteRecord rec = m_KnownSites[i];
+			if (!rec)
+				continue;
+			float dx = rec.m_fX - x;
+			float dz = rec.m_fZ - z;
+			if ((dx * dx) + (dz * dz) >= 64)
+				continue;
+			m_KnownSites.Remove(i);
+			return;
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	bool HasStagingNear(float x, float z, float maxDist)
+	{
+		EnsureStarted();
+		int stagingId = GetStagingGroupId();
+		IA_AreaMarker marker = FindMarkerNear(x, z, maxDist);
+		if (marker && marker.m_areaGroup == stagingId)
+			return true;
+
+		if (!m_KnownSites)
+			return false;
+
+		int i;
+		int n = m_KnownSites.Count();
+		for (i = 0; i < n; i++)
+		{
+			IA_GmSiteRecord rec = m_KnownSites[i];
+			if (!rec)
+				continue;
+			if (rec.m_iGroupId != stagingId)
+				continue;
+			float dx = rec.m_fX - x;
+			float dz = rec.m_fZ - z;
+			if ((dx * dx) + (dz * dz) <= maxDist * maxDist)
+				return true;
+		}
+		return false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	bool DeleteStagingAt(float x, float z)
+	{
+		if (!Replication.IsServer())
+			return false;
+
+		EnsureStarted();
+		int stagingId = GetStagingGroupId();
+		IA_AreaMarker marker = FindMarkerNear(x, z, 80);
+		if (marker)
+		{
+			if (marker.m_areaGroup != stagingId)
+			{
+				Print("[IA_GmDirector] Refusing to delete a Live site from Staging remove.", LogLevel.WARNING);
+				return false;
+			}
+
+			vector origin = marker.GetOrigin();
+			ForgetKnownSite(origin[0], origin[2]);
+			IA_AreaMarker.UnregisterMarker(marker);
+			IA_Game.AddEntityToGc(marker);
+			Print(string.Format("[IA_GmDirector] Removed staging site '%1'", marker.GetAreaName()), LogLevel.NORMAL);
+			return true;
+		}
+
+		if (!HasStagingNear(x, z, 80))
+			return false;
+
+		ForgetKnownSite(x, z);
+		Print("[IA_GmDirector] Removed staging pin with no world marker.", LogLevel.NORMAL);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void RenameSite(notnull IA_AreaMarker marker, string name)
 	{
 		if (name.IsEmpty())

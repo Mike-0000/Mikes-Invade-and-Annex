@@ -288,6 +288,18 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void IA_AskGmDeleteStaging(float x, float z)
+	{
+		if (Replication.IsServer())
+		{
+			IA_GmDeleteStagingIfAdmin(x, z);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_GmDeleteStaging, x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
 	protected void RpcAsk_IA_GmPlaceSite(int type, float x, float z, int bucket, string name, float radius)
 	{
@@ -327,6 +339,13 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_GmRenameSite(float x, float z, string name)
 	{
 		IA_GmRenameSiteIfAdmin(x, z, name);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_GmDeleteStaging(float x, float z)
+	{
+		IA_GmDeleteStagingIfAdmin(x, z);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -475,6 +494,19 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	protected void IA_GmDeleteStagingIfAdmin(float x, float z)
+	{
+		if (!IA_IsAdminCaller())
+			return;
+
+		IA_GmDirector dir = IA_GmDirector.GetInstance();
+		if (!dir.DeleteStagingAt(x, z))
+			return;
+
+		Rpc(RpcDo_IA_GmSiteRemoved, x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected void IA_ForceQRFIfAdmin(int type)
 	{
 		if (!IA_IsAdminCaller())
@@ -518,6 +550,16 @@ modded class SCR_PlayerController
 			return;
 
 		IA_GmDirector.GetInstance().SetBuckets(liveGroup, stagingGroup);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
+	protected void RpcDo_IA_GmSiteRemoved(float x, float z)
+	{
+		if (Replication.IsServer())
+			return;
+
+		IA_GmDirector.GetInstance().ForgetKnownSite(x, z);
 	}
 
 	protected bool IA_IsAdminCaller()
