@@ -4,7 +4,8 @@
 
 class IA_BuildingHoldSpot
 {
-	vector m_pos;
+	vector m_holdPos;
+	vector m_spawnPos;
 	float m_radius;
 }
 
@@ -97,9 +98,9 @@ class IA_BuildingHoldFinder
 			ref IA_BuildingHoldSpot spot = MakeSpotForBuilding(building, coverPosts);
 			if (!spot)
 				continue;
-			if (IA_GmHoldPost.HasHoldNear(spot.m_pos, MIN_SEP_M))
+			if (IA_GmHoldPost.HasHoldNear(spot.m_holdPos, MIN_SEP_M))
 				continue;
-			if (IsNearExistingSpot(spot.m_pos, outSpots, MIN_SEP_M))
+			if (IsNearExistingSpot(spot.m_holdPos, outSpots, MIN_SEP_M))
 				continue;
 
 			outSpots.Insert(spot);
@@ -185,15 +186,20 @@ class IA_BuildingHoldFinder
 		vector maxs;
 		building.GetWorldBounds(mins, maxs);
 
-		vector pos;
-		if (!TryCoverPostInBuilding(mins, maxs, coverPosts, pos))
+		vector holdPos;
+		if (!TryCoverPostInBuilding(mins, maxs, coverPosts, holdPos))
 		{
-			if (!TrySampleInterior(mins, maxs, pos))
+			if (!TrySampleInterior(mins, maxs, holdPos))
 				return null;
 		}
 
+		vector spawnPos;
+		if (!TrySampleGroundSpawn(mins, maxs, spawnPos))
+			return null;
+
 		ref IA_BuildingHoldSpot spot = new IA_BuildingHoldSpot();
-		spot.m_pos = pos;
+		spot.m_holdPos = holdPos;
+		spot.m_spawnPos = spawnPos;
 		spot.m_radius = RadiusFromBounds(mins, maxs);
 		return spot;
 	}
@@ -264,6 +270,122 @@ class IA_BuildingHoldFinder
 		return false;
 	}
 
+	protected static bool TrySampleGroundSpawn(vector mins, vector maxs, out vector outPos)
+	{
+		outPos = vector.Zero;
+		float midX = (mins[0] + maxs[0]) * 0.5;
+		float midZ = (mins[2] + maxs[2]) * 0.5;
+		float insetX = (maxs[0] - mins[0]) * 0.32;
+		float insetZ = (maxs[2] - mins[2]) * 0.32;
+		if (insetX < 2.2)
+			insetX = 2.2;
+		if (insetZ < 2.2)
+			insetZ = 2.2;
+
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX, midZ, outPos))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX - insetX, midZ, outPos))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX + insetX, midZ, outPos))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX, midZ - insetZ, outPos))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX, midZ + insetZ, outPos))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX - insetX * 0.5, midZ - insetZ * 0.5, outPos))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX + insetX * 0.5, midZ - insetZ * 0.5, outPos))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX - insetX * 0.5, midZ + insetZ * 0.5, outPos))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(midX + insetX * 0.5, midZ + insetZ * 0.5, outPos))
+			return true;
+		return false;
+	}
+
+	static bool FindGroundSpawnForHold(vector holdPos, out vector outSpawn)
+	{
+		outSpawn = vector.Zero;
+		if (holdPos == vector.Zero)
+			return false;
+
+		BaseWorld world = GetGame().GetWorld();
+		if (world)
+		{
+			ref IA_BuildingQueryCallback query = new IA_BuildingQueryCallback();
+			world.QueryEntitiesBySphere(holdPos, 28, query.OnBuilding, query.FilterBuilding, EQueryEntitiesFlags.STATIC);
+			if (query.m_Buildings && !query.m_Buildings.IsEmpty())
+			{
+				IEntity best = null;
+				float bestArea = 0;
+				IEntity nearest = null;
+				float nearestDist = 999999;
+				int i;
+				int count = query.m_Buildings.Count();
+				for (i = 0; i < count; i++)
+				{
+					IEntity building = query.m_Buildings[i];
+					if (!building)
+						continue;
+
+					vector mins;
+					vector maxs;
+					building.GetWorldBounds(mins, maxs);
+					if (PosInBuildingBounds(holdPos, mins, maxs))
+					{
+						float area = (maxs[0] - mins[0]) * (maxs[2] - mins[2]);
+						if (!best)
+						{
+							best = building;
+							bestArea = area;
+						}
+						else
+						{
+							if (area < bestArea)
+							{
+								best = building;
+								bestArea = area;
+							}
+						}
+					}
+
+					float dist = vector.DistanceSq(building.GetOrigin(), holdPos);
+					if (dist < nearestDist)
+					{
+						nearestDist = dist;
+						nearest = building;
+					}
+				}
+
+				if (!best)
+					best = nearest;
+
+				if (best)
+				{
+					vector mins;
+					vector maxs;
+					best.GetWorldBounds(mins, maxs);
+					if (TrySampleGroundSpawn(mins, maxs, outSpawn))
+						return true;
+				}
+			}
+		}
+
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(holdPos[0], holdPos[2], outSpawn))
+			return true;
+
+		float ring = 1.5;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(holdPos[0] + ring, holdPos[2], outSpawn))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(holdPos[0] - ring, holdPos[2], outSpawn))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(holdPos[0], holdPos[2] + ring, outSpawn))
+			return true;
+		if (IA_SpawnPlacement.TryGroundFloorStandPos(holdPos[0], holdPos[2] - ring, outSpawn))
+			return true;
+		return false;
+	}
+
 	protected static bool PosInBuildingBounds(vector pos, vector mins, vector maxs)
 	{
 		if (pos[0] < mins[0] - 0.4 || pos[0] > maxs[0] + 0.4)
@@ -287,7 +409,7 @@ class IA_BuildingHoldFinder
 			IA_BuildingHoldSpot spot = spots[i];
 			if (!spot)
 				continue;
-			if (vector.DistanceSq(spot.m_pos, pos) <= distSq)
+			if (vector.DistanceSq(spot.m_holdPos, pos) <= distSq)
 				return true;
 		}
 		return false;
@@ -315,8 +437,13 @@ class IA_BuildingHoldFinder
 			if (IsNearExistingSpot(post, outSpots, MIN_SEP_M))
 				continue;
 
+			vector spawnPos;
+			if (!FindGroundSpawnForHold(post, spawnPos))
+				continue;
+
 			ref IA_BuildingHoldSpot spot = new IA_BuildingHoldSpot();
-			spot.m_pos = post;
+			spot.m_holdPos = post;
+			spot.m_spawnPos = spawnPos;
 			spot.m_radius = IA_GmHoldPost.DEFAULT_RADIUS;
 			outSpots.Insert(spot);
 		}

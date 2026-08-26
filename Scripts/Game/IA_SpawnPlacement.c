@@ -19,6 +19,10 @@ class IA_SpawnPlacement
 	static const float SURFACE_BIAS_M = 0.05;
 	static const float MAX_ABOVE_TERRAIN_M = 4.5;
 	static const float OPEN_SKY_M = 12.0;
+	static const float GROUND_FLOOR_PROBE_M = 2.15;
+	static const float GROUND_FLOOR_MAX_ABOVE_M = 1.35;
+	static const float INTERIOR_INBOUND_M = 1.7;
+	static const int INTERIOR_WALL_BLOCKED_MIN = 5;
 	static const float DROP_LZ_RAISE_M = 30.0;
 	static const float DROP_LZ_DOWN_M = 40.0;
 	static const float DROP_LZ_SEARCH_R = 40.0;
@@ -582,6 +586,115 @@ class IA_SpawnPlacement
 			return true;
 		}
 		return false;
+	}
+
+	//! Soldier-sized pocket: inbound traces must reach the point. Starting inside
+	//! a thick wall makes short outbound traces look empty (they never hit).
+	//! Eight directions so a long wall does not look like a corridor (only two
+	//! faces blocked, the along-wall rays never leave the solid).
+	static bool HasInteriorBodyClearance(vector floorPos)
+	{
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		vector chest = floorPos + Vector(0, 1.0, 0);
+		float inbound = INTERIOR_INBOUND_M;
+		float diag = inbound * 0.7071;
+		int blocked = 0;
+
+		ref TraceParam t = new TraceParam();
+		t.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+
+		t.Start = chest + Vector(inbound, 0, 0);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(-inbound, 0, 0);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(0, 0, inbound);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(0, 0, -inbound);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(diag, 0, diag);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(-diag, 0, diag);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(diag, 0, -diag);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		t.Start = chest + Vector(-diag, 0, -diag);
+		t.End = chest;
+		if (world.TraceMove(t, null) < 1.0)
+			blocked = blocked + 1;
+
+		if (blocked >= INTERIOR_WALL_BLOCKED_MIN)
+			return false;
+		return true;
+	}
+
+	//! Ground-floor interior only. Probe starts below typical attic height so the
+	//! first surface is the walkable floor, not a sealed loft.
+	static bool TryGroundFloorStandPos(float x, float z, out vector outPos)
+	{
+		outPos = vector.Zero;
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		float terrainY = world.GetSurfaceY(x, z);
+		float startY = terrainY + GROUND_FLOOR_PROBE_M;
+		float endY = terrainY - 0.4;
+
+		vector start = Vector(x, startY, z);
+		vector end = Vector(x, endY, z);
+
+		ref TraceParam down = new TraceParam();
+		down.Start = start;
+		down.End = end;
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		float coef = world.TraceMove(down, null);
+		if (coef >= 1.0)
+			return false;
+		if (coef < 0.04)
+			return false;
+
+		float span = startY - endY;
+		vector floorPos = start;
+		floorPos[1] = startY - (coef * span) + SURFACE_BIAS_M;
+
+		float aboveTerrain = floorPos[1] - terrainY;
+		if (aboveTerrain < -0.15)
+			return false;
+		if (aboveTerrain > GROUND_FLOOR_MAX_ABOVE_M)
+			return false;
+		if (!HasStandRoom(floorPos))
+			return false;
+		if (HasOpenSky(floorPos))
+			return false;
+		if (!HasInteriorBodyClearance(floorPos))
+			return false;
+
+		outPos = floorPos;
+		return true;
 	}
 
 	//! Floor under a roof. First WORLD|ENTS hit from above is the roof; a second

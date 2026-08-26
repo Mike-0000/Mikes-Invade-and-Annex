@@ -5767,12 +5767,16 @@ class IA_AreaInstance
             if (post.IsClaimed())
                 continue;
 
-            vector pos;
-            float radius;
-            if (!post.TryClaim(pos, radius))
+            vector holdPos = post.GetOrigin();
+            vector spawnPos;
+            if (!IA_BuildingHoldFinder.FindGroundSpawnForHold(holdPos, spawnPos))
                 continue;
 
-            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, pos, units, spawnFaction, true, true, pos, radius);
+            float radius;
+            if (!post.TryClaim(holdPos, radius))
+                continue;
+
+            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, spawnPos, units, spawnFaction, true, true, holdPos, radius);
             delay = delay + Math.RandomInt(400, 1200);
             spawned = spawned + 1;
         }
@@ -5789,19 +5793,20 @@ class IA_AreaInstance
                 IA_BuildingHoldSpot spot = spots[s];
                 if (!spot)
                     continue;
-                if (IA_GmHoldPost.HasHoldNear(spot.m_pos, IA_BuildingHoldFinder.MIN_SEP_M))
+                if (IA_GmHoldPost.HasHoldNear(spot.m_holdPos, IA_BuildingHoldFinder.MIN_SEP_M))
                     continue;
 
-                IA_GmHoldPost autoPost = IA_GmHoldPost.SpawnAt(spot.m_pos, spot.m_radius);
-                vector pos = spot.m_pos;
+                IA_GmHoldPost autoPost = IA_GmHoldPost.SpawnAt(spot.m_holdPos, spot.m_radius);
+                vector holdPos = spot.m_holdPos;
+                vector spawnPos = spot.m_spawnPos;
                 float radius = spot.m_radius;
                 if (autoPost)
                 {
-                    if (!autoPost.TryClaim(pos, radius))
+                    if (!autoPost.TryClaim(holdPos, radius))
                         continue;
                 }
 
-                GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, pos, units, spawnFaction, true, true, pos, radius);
+                GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, spawnPos, units, spawnFaction, true, true, holdPos, radius);
                 delay = delay + Math.RandomInt(400, 1200);
                 spawned = spawned + 1;
             }
