@@ -146,6 +146,8 @@ class IA_AreaInstance
     // --- Defend Mission Mode ---
     private bool m_isInDefendMode = false;
     private vector m_defendTarget = vector.Zero;
+    private bool m_garrisonPostsLoaded = false;
+    private ref array<vector> m_availableGarrisonPosts;
     
     // --- BEGIN ADDED: Radio Tower Defense Mode ---
     private bool m_isRadioTowerDefenseActive = false;
@@ -883,12 +885,18 @@ class IA_AreaInstance
             
             // --- BEGIN MODIFIED: Don't override defend mode groups ---
             // Check if the group is already in defend mode - if so, don't change its state
-            if (group.IsInDefendMode() || group.IsObjectiveUnit() || group.IsMortarCrew() || group.IsAirborneDrop())
+            if (group.IsPinnedGarrison() || group.IsAirborneDrop())
             {
-                Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, objective unit, or mortar crew, preserving existing tactical state"), LogLevel.DEBUG);
-                // Still add to our state tracking for consistency, but don't override
+                Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, objective unit, mortar crew, or holding a post, preserving existing tactical state"), LogLevel.DEBUG);
+                if (group.IsHoldingPost())
+                {
+                    vector holdAt = group.GetHoldPost();
+                    m_assignedGroupStates.Insert(group, IA_GroupTacticalState.Holding);
+                    group.SetTacticalState(IA_GroupTacticalState.Holding, holdAt, null, true);
+                    return;
+                }
                 m_assignedGroupStates.Insert(group, group.GetTacticalState());
-                return; // Don't change the group's tactical state
+                return;
             }
 
             // Vehicle crew / cargo already have hull roles. Do not assign infantry
@@ -1491,7 +1499,7 @@ class IA_AreaInstance
                     continue;
                     
                 // --- BEGIN ADDED: Skip groups in defend mode ---
-                if (g.IsInDefendMode())
+                if (g.IsPinnedGarrison())
                     continue;
                 // --- END ADDED ---
                     
@@ -1521,7 +1529,7 @@ class IA_AreaInstance
                 continue;
                 
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units---
-            if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
+            if (g.IsPinnedGarrison())
                 continue;
             // --- END ADDED ---
 
@@ -1601,9 +1609,8 @@ class IA_AreaInstance
             if (g.ShouldSkipInfantryOrders()) continue;
             
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-            if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
+            if (g.IsPinnedGarrison())
             {
-                //Print(string.Format("[AreaInstance.MilitaryTask] Skipping group in defend mode at %1", g.GetOrigin().ToString()), LogLevel.DEBUG);
                 continue;
             }
             // --- END ADDED ---
@@ -1724,7 +1731,7 @@ class IA_AreaInstance
         foreach (IA_AiGroup g, IA_GroupTacticalState assignedState : currentAssignments)
         {
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-            if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
+            if (g.IsPinnedGarrison())
                 continue;
             // --- END ADDED ---
             
@@ -2176,7 +2183,7 @@ class IA_AreaInstance
              }
              
              // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-             if (g.IsInDefendMode() || g.IsObjectiveUnit() || g.IsMortarCrew())
+             if (g.IsPinnedGarrison())
              {
                  //Print(string.Format("[AreaInstance.MilitaryTask] Enforcement: Skipping group in defend mode at %1", g.GetOrigin().ToString()), LogLevel.DEBUG);
                  continue;
@@ -2893,8 +2900,19 @@ class IA_AreaInstance
             IA_SquadType st = IA_GetRandomSquadType();
             vector pos = vector.Zero;
             bool useExactPos = false;
+            bool holdPost = false;
+            vector holdTarget = vector.Zero;
 
-            if (!spawnPoints.IsEmpty())
+            vector garrisonPost;
+            if (TryTakeGarrisonPost(garrisonPost))
+            {
+                pos = garrisonPost;
+                holdTarget = garrisonPost;
+                useExactPos = true;
+                holdPost = true;
+            }
+
+            if (pos == vector.Zero && !spawnPoints.IsEmpty())
             {
                 int randomIndex = Math.RandomInt(0, spawnPoints.Count());
                 IA_AISpawnPoint chosenPoint = spawnPoints[randomIndex];
@@ -2925,7 +2943,7 @@ class IA_AreaInstance
                 continue;
             }
             
-            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction, useExactPos);
+            GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction, useExactPos, holdPost, holdTarget);
             ////Print(string.Format("[IA_AreaInstance.GenerateRandomAiGroups] Area %1: Scheduled group %2/%3 spawn. Pos: %4, Units: %5. Delay: %6ms",
             //    m_area.GetName(), i + 1, scaledNumberOfGroupsToSpawn, pos.ToString(), scaledUnitCountForThisGroup, accumulatedDelay), LogLevel.DEBUG);
             
@@ -5703,7 +5721,7 @@ class IA_AreaInstance
     // --- END ADDED ---
     
     // --- BEGIN ADDED: Helper to spawn a single AI group with delay and add it ---
-    private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask, bool useExactPosition = false)
+    private void _SpawnSingleAiGroupAndAddToArea(vector spawnPos, int unitCountForGroup, Faction areaFactionForGroupTask, bool useExactPosition = false, bool holdPost = false, vector holdTarget = vector.Zero)
     {
         if (m_bShutDown)
             return;
@@ -5715,6 +5733,30 @@ class IA_AreaInstance
 
         vector safePos;
         bool exact;
+        bool keepAltitude = false;
+        vector holdAt = holdTarget;
+        if (holdPost)
+        {
+            if (holdAt == vector.Zero)
+                holdAt = spawnPos;
+
+            keepAltitude = true;
+            exact = true;
+            safePos = spawnPos;
+
+            ref array<vector> players = new array<vector>();
+            IA_SpawnPlacement.CollectPlayerPositions(players);
+            if (IA_SpawnPlacement.IsNearAnyPlayer(spawnPos, players, IA_SpawnPlacement.PLAYER_MIN_M))
+            {
+                vector inbound = IA_SpawnPlacement.FindInboundInfantrySpawn(m_area.GetOrigin(), -1);
+                if (inbound != vector.Zero)
+                    safePos = inbound;
+            }
+
+            IA_AiGroup.StartAsyncMilitaryGroupCreation(safePos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, exact, keepAltitude, true, holdAt);
+            return;
+        }
+
         if (!IA_SpawnPlacement.ResolveOccupyingSpawn(spawnPos, m_area.GetOrigin(), useExactPosition, safePos, exact))
         {
             Print(string.Format("[IA][AreaInstance] occupying spawn skipped, no inbound point away from players at %1", spawnPos.ToString()), LogLevel.WARNING);
@@ -5722,6 +5764,44 @@ class IA_AreaInstance
         }
 
         IA_AiGroup.StartAsyncMilitaryGroupCreation(safePos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, exact);
+    }
+
+    protected bool TryTakeGarrisonPost(out vector outPos)
+    {
+        outPos = vector.Zero;
+        if (!m_area)
+            return false;
+
+        if (!m_garrisonPostsLoaded)
+        {
+            m_garrisonPostsLoaded = true;
+            if (!m_availableGarrisonPosts)
+                m_availableGarrisonPosts = new array<vector>();
+            IA_SpawnPlacement.FindGarrisonPosts(m_area.GetOrigin(), m_area.GetRadius(), m_availableGarrisonPosts);
+            Print(string.Format("[IA_AreaInstance] Found %1 CoverPost/ObservationPost hold spots in %2", m_availableGarrisonPosts.Count(), m_area.GetName()), LogLevel.NORMAL);
+        }
+
+        if (!m_availableGarrisonPosts)
+            return false;
+        if (m_availableGarrisonPosts.IsEmpty())
+            return false;
+
+        int pick = Math.RandomInt(0, m_availableGarrisonPosts.Count());
+        outPos = m_availableGarrisonPosts[pick];
+        m_availableGarrisonPosts.Remove(pick);
+
+        float minSepSq = 64;
+        int i = m_availableGarrisonPosts.Count() - 1;
+        while (i >= 0)
+        {
+            if (vector.DistanceSq(m_availableGarrisonPosts[i], outPos) <= minSepSq)
+                m_availableGarrisonPosts.Remove(i);
+            i = i - 1;
+        }
+
+        if (outPos == vector.Zero)
+            return false;
+        return true;
     }
     
     // Callback for when async group creation completes

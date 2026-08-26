@@ -583,4 +583,53 @@ class IA_SpawnPlacement
 		}
 		return false;
 	}
+
+	//! Vanilla building garrison: CoverPost / ObservationPost smart actions
+	//! on structures. Used with IA_AiOrder.Hold (Wait waypoint, infinite).
+	static void FindGarrisonPosts(vector center, float radius, notnull array<vector> outPosts)
+	{
+		outPosts.Clear();
+		if (center == vector.Zero)
+			return;
+		if (radius <= 0)
+			return;
+
+		ChimeraWorld chimeraWorld = ChimeraWorld.CastFrom(GetGame().GetWorld());
+		if (!chimeraWorld)
+			return;
+
+		AISmartActionSystem saSystem = AISmartActionSystem.Cast(chimeraWorld.FindSystem(AISmartActionSystem));
+		if (!saSystem)
+			return;
+
+		ref array<string> tags = new array<string>();
+		tags.Insert("CoverPost");
+		tags.Insert("ObservationPost");
+
+		ref array<AISmartActionComponent> found = new array<AISmartActionComponent>();
+		int count = saSystem.FindSmartActions(found, center, radius, tags, EAIFindSmartAction_TagTest.AnySet);
+		if (count <= 0)
+			return;
+
+		int i;
+		int foundCount = found.Count();
+		for (i = 0; i < foundCount; i++)
+		{
+			AISmartActionComponent sa = found[i];
+			if (!sa)
+				continue;
+			if (!sa.IsActionAccessible())
+				continue;
+
+			IEntity owner = sa.GetOwner();
+			if (!owner)
+				continue;
+
+			vector pos = owner.GetOrigin() + sa.GetActionOffset();
+			if (pos == vector.Zero)
+				continue;
+
+			outPosts.Insert(pos);
+		}
+	}
 }
