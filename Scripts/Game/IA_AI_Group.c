@@ -3280,7 +3280,7 @@ class IA_AiGroup
         m_iAirborneInFlight = 0;
         ScriptCallQueue despawnQueue = GetGame().GetCallqueue();
         if (despawnQueue)
-            despawnQueue.Remove(EnsureAirborneJumpersRegistered);
+            despawnQueue.Remove(this.EnsureAirborneJumpersRegistered);
         
         if (m_isDriving || m_referencedEntity)
         {
@@ -3740,7 +3740,7 @@ class IA_AiGroup
         m_iAirborneRegisterRetries = 0;
         ScriptCallQueue queue = GetGame().GetCallqueue();
         if (queue)
-            queue.Remove(EnsureAirborneJumpersRegistered);
+            queue.Remove(this.EnsureAirborneJumpersRegistered);
         ResumeAirborneCombatAI();
         EnableInboundSimulation(m_vAirDropTarget);
         RemoveAllOrders(true);
@@ -3756,6 +3756,8 @@ class IA_AiGroup
     protected vector PickAirborneLz()
     {
         BaseWorld world = GetGame().GetWorld();
+        vector firstDry = vector.Zero;
+        bool haveDry = false;
         int attempt;
         for (attempt = 0; attempt < 12; attempt++)
         {
@@ -3771,10 +3773,20 @@ class IA_AiGroup
 
             vector walked;
             if (IA_SpawnPlacement.TryFindWalkableInfantryPos(candidate, IA_SpawnPlacement.EMPTY_SEARCH_R, walked))
-                return walked;
+            {
+                if (!IA_SpawnPlacement.IsInOcean(walked))
+                    return walked;
+            }
 
-            return candidate;
+            if (!haveDry)
+            {
+                firstDry = candidate;
+                haveDry = true;
+            }
         }
+
+        if (haveDry)
+            return firstDry;
 
         vector fallback = m_vAirDropTarget;
         if (world)
@@ -3784,7 +3796,10 @@ class IA_AiGroup
         {
             vector walkedTarget;
             if (IA_SpawnPlacement.TryFindWalkableInfantryPos(fallback, IA_SpawnPlacement.EMPTY_SEARCH_R, walkedTarget))
-                return walkedTarget;
+            {
+                if (!IA_SpawnPlacement.IsInOcean(walkedTarget))
+                    return walkedTarget;
+            }
             return fallback;
         }
 
@@ -3832,23 +3847,29 @@ class IA_AiGroup
 
         array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
         int count = characters.Count();
+        int unregistered = 0;
         int i;
         for (i = 0; i < count; i++)
         {
             SCR_ChimeraCharacter ch = characters[i];
             if (!ch)
                 continue;
+
+            ChimeraCharacter jumper = ChimeraCharacter.Cast(ch);
+            if (jumper && MHJ_AiDropDirector.IsActiveJumper(jumper))
+                continue;
+
             RegisterAirborneJumper(ch);
+            jumper = ChimeraCharacter.Cast(ch);
+            if (!jumper || !MHJ_AiDropDirector.IsActiveJumper(jumper))
+                unregistered = unregistered + 1;
         }
 
-        if (m_iAirborneInFlight > 0)
+        if (unregistered <= 0 && count > 0)
         {
             m_iAirborneRegisterRetries = 0;
             return;
         }
-
-        if (count <= 0)
-            return;
 
         if (m_iAirborneRegisterRetries < 8)
         {
@@ -3876,6 +3897,10 @@ class IA_AiGroup
             if (!ch)
                 continue;
 
+            ChimeraCharacter jumper = ChimeraCharacter.Cast(ch);
+            if (jumper && MHJ_AiDropDirector.IsActiveJumper(jumper))
+                continue;
+
             vector pos = lz;
             if (IA_Game.rng)
             {
@@ -3883,13 +3908,15 @@ class IA_AiGroup
                 pos[0] = lz[0] + offset[0];
                 pos[2] = lz[2] + offset[2];
             }
-            BaseWorld world = GetGame().GetWorld();
-            if (world)
-                pos[1] = world.GetSurfaceY(pos[0], pos[2]) + 0.1;
+            pos[1] = lz[1] + 0.1;
+            if (IA_SpawnPlacement.IsInOcean(pos))
+                pos = lz;
             ch.SetOrigin(pos);
         }
 
-        m_iAirborneInFlight = 0;
+        if (m_iAirborneInFlight > 0)
+            return;
+
         ReleaseAirborneToAttack();
     }
 
