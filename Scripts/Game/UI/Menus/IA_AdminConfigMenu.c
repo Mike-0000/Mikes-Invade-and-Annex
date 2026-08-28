@@ -1,5 +1,6 @@
 //------------------------------------------------------------------------------------------------
-//! Runtime admin tuning for IA_Config. Uses MUI blank layout (no legacy widget path).
+//! Runtime admin tuning for IA_Config. Live source of truth; the mission .conf is a
+//! workshop baseline only. Uses MUI blank layout (no legacy widget path).
 //------------------------------------------------------------------------------------------------
 class IA_AdminConfigMenu : MUI_MenuBase
 {
@@ -8,6 +9,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Panel m_PageCiv;
 	protected ref MUI_Panel m_PageArty;
 	protected ref MUI_Panel m_PageHq;
+	protected ref MUI_Panel m_PageFactions;
 	protected ref MUI_Panel m_PageQrf;
 	protected ref MUI_Panel m_PageDirector;
 
@@ -31,6 +33,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_NumericField m_civField;
 	protected ref MUI_NumericField m_CivVehField;
 	protected ref MUI_NumericField m_RevoltField;
+	protected ref MUI_NumericField m_RevoltNotifField;
+	protected ref MUI_NumericField m_RevoltReinfField;
 	protected ref MUI_Toggle m_CivSpawnToggle;
 
 	protected ref MUI_NumericField m_artyField;
@@ -44,7 +48,14 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Toggle m_groundToggle;
 	protected ref MUI_Toggle m_RolesToggle;
 	protected ref MUI_NumericField m_HaloMaxField;
-	protected ref MUI_Dropdown m_FactionDrop;
+
+	protected ref MUI_Toggle m_EnemyAutoToggle;
+	protected ref array<ref MUI_Toggle> m_EnemyFactionToggles;
+	protected ref array<string> m_EnemyFactionChoiceKeys;
+	protected ref MUI_Toggle m_VehicleMatchToggle;
+	protected ref array<ref MUI_Toggle> m_VehicleFactionToggles;
+	protected ref array<string> m_VehicleFactionChoiceKeys;
+	protected bool m_bFactionUiLock;
 
 	//------------------------------------------------------------------------------------------------
 	override void OnMenuOpen()
@@ -73,7 +84,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			runtime,
 			"ADMIN CONFIG",
 			"COMMAND UPLINK",
-			"Live mission tuning  •  Changes apply on Save",
+			"Live source of truth  •  Changes apply on Save",
 			880
 		);
 
@@ -83,6 +94,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Tabs.AddTab("Civilians");
 		m_Tabs.AddTab("Artillery");
 		m_Tabs.AddTab("HQ");
+		m_Tabs.AddTab("Factions");
 		m_Tabs.AddTab("QRF");
 		m_Tabs.AddTab("Director");
 		m_Tabs.GetOnChanged().Insert(OnAdminTabChanged);
@@ -96,6 +108,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageCiv = MakePage(runtime, "pageCiv");
 		m_PageArty = MakePage(runtime, "pageArty");
 		m_PageHq = MakePage(runtime, "pageHq");
+		m_PageFactions = MakePage(runtime, "pageFactions");
 		m_PageQrf = MakePage(runtime, "pageQrf");
 		m_PageDirector = MakePage(runtime, "pageDirector");
 
@@ -133,11 +146,25 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_RevoltField.SetStep(0.01);
 		m_RevoltField.SetDecimals(2);
 
+		m_RevoltNotifField = runtime.CreateNumericField("Revolt notification delay (seconds)", "revoltNotif");
+		m_RevoltNotifField.SetRange(0, 600);
+		m_RevoltNotifField.SetStep(1);
+		m_RevoltNotifField.SetDecimals(0);
+		m_RevoltNotifField.SetValue(30);
+
+		m_RevoltReinfField = runtime.CreateNumericField("Revolt reinforcement delay (seconds)", "revoltReinf");
+		m_RevoltReinfField.SetRange(0, 3600);
+		m_RevoltReinfField.SetStep(5);
+		m_RevoltReinfField.SetDecimals(0);
+		m_RevoltReinfField.SetValue(180);
+
 		m_CivSpawnToggle = runtime.CreateToggle("Enable civilian spawning", "civSpawn");
 
 		m_PageCiv.AddChild(m_civField);
 		m_PageCiv.AddChild(m_CivVehField);
 		m_PageCiv.AddChild(m_RevoltField);
+		m_PageCiv.AddChild(m_RevoltNotifField);
+		m_PageCiv.AddChild(m_RevoltReinfField);
 		m_PageCiv.AddChild(m_CivSpawnToggle);
 
 		m_artyField = runtime.CreateNumericField("Artillery cooldown (seconds)", "arty");
@@ -185,23 +212,17 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_HaloMaxField.SetDecimals(0);
 		m_HaloMaxField.SetValue(IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT);
 
-		ref MUI_Label factionLbl = runtime.CreateLabel("Preferred enemy faction (future spawns)", "factionLbl");
-		factionLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		factionLbl.SetMuted(true);
-
-		m_FactionDrop = runtime.CreateDropdown("faction");
-		m_FactionDrop.AddItem("Keep current");
-		m_FactionDrop.AddItem("USSR");
-		m_FactionDrop.AddItem("US");
-		m_FactionDrop.AddItem("FIA");
-		m_FactionDrop.SetIndex(0);
+		ref MUI_Label hqPrefabLbl = runtime.CreateLabel("HQ vehicle prefab lists still come from the mission .conf (Workbench). Everything else is controlled here.", "hqPrefabLbl");
+		hqPrefabLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		hqPrefabLbl.SetMuted(true);
 
 		m_PageHq.AddChild(m_heliToggle);
 		m_PageHq.AddChild(m_groundToggle);
 		m_PageHq.AddChild(m_RolesToggle);
 		m_PageHq.AddChild(m_HaloMaxField);
-		m_PageHq.AddChild(factionLbl);
-		m_PageHq.AddChild(m_FactionDrop);
+		m_PageHq.AddChild(hqPrefabLbl);
+
+		BuildFactionPage(runtime);
 
 		ref MUI_Label qrfLbl = runtime.CreateLabel("Spawn QRF through the normal mission path", "qrfLbl");
 		qrfLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
@@ -257,6 +278,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		scroll.AddChild(m_PageCiv);
 		scroll.AddChild(m_PageArty);
 		scroll.AddChild(m_PageHq);
+		scroll.AddChild(m_PageFactions);
 		scroll.AddChild(m_PageQrf);
 		scroll.AddChild(m_PageDirector);
 
@@ -307,7 +329,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 
 		shell.GetCard().AddChild(m_Tabs);
 		shell.GetCard().AddChild(scroll);
-		shell.AddFooter(runtime, "Save applies now  •  Save for restart also writes the server profile (last-wins on boot)", footerBtns);
+		shell.AddFooter(runtime, "Save applies now  •  Save for restart writes the server profile (applied after the mission .conf)", footerBtns);
 		shell.Mount(runtime);
 
 		ShowAdminPage(0);
@@ -323,6 +345,213 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		page.GetStyle().m_bBlockHit = false;
 		page.SetFillWidth();
 		return page;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void BuildFactionPage(notnull MUI_Runtime runtime)
+	{
+		if (!m_PageFactions)
+			return;
+
+		ref MUI_Label infLbl = runtime.CreateLabel("Infantry enemies for future spawns. Auto-detect uses the usual mod-aware rotation.", "infFacLbl");
+		infLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		infLbl.SetMuted(true);
+		m_PageFactions.AddChild(infLbl);
+
+		m_EnemyAutoToggle = runtime.CreateToggle("Auto-detect infantry factions", "enfAuto");
+		m_EnemyAutoToggle.SetChecked(true);
+		m_EnemyAutoToggle.GetOnChanged().Insert(OnEnemyAutoChanged);
+		m_PageFactions.AddChild(m_EnemyAutoToggle);
+
+		m_EnemyFactionToggles = new array<ref MUI_Toggle>();
+		m_EnemyFactionChoiceKeys = new array<string>();
+		ref array<string> infNames = new array<string>();
+		IA_AdminConfigUtil.CollectFactionChoices(EEntityCatalogType.CHARACTER, 1, m_EnemyFactionChoiceKeys, infNames);
+		AddFactionToggles(runtime, m_PageFactions, "enf_", m_EnemyFactionChoiceKeys, infNames, m_EnemyFactionToggles, false);
+
+		ref MUI_Label vehLbl = runtime.CreateLabel("Vehicle enemies. Match infantry unless you need a different catalog (common with mixed-faction mods).", "vehFacLbl");
+		vehLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		vehLbl.SetMuted(true);
+		m_PageFactions.AddChild(vehLbl);
+
+		m_VehicleMatchToggle = runtime.CreateToggle("Vehicle factions match infantry", "vehMatch");
+		m_VehicleMatchToggle.SetChecked(true);
+		m_VehicleMatchToggle.GetOnChanged().Insert(OnVehicleMatchChanged);
+		m_PageFactions.AddChild(m_VehicleMatchToggle);
+
+		m_VehicleFactionToggles = new array<ref MUI_Toggle>();
+		m_VehicleFactionChoiceKeys = new array<string>();
+		ref array<string> vehNames = new array<string>();
+		IA_AdminConfigUtil.CollectFactionChoices(EEntityCatalogType.VEHICLE, 1, m_VehicleFactionChoiceKeys, vehNames);
+		AddFactionToggles(runtime, m_PageFactions, "veh_", m_VehicleFactionChoiceKeys, vehNames, m_VehicleFactionToggles, true);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void AddFactionToggles(notnull MUI_Runtime runtime, notnull MUI_Panel page, string namePrefix, notnull array<string> keys, notnull array<string> names, notnull array<ref MUI_Toggle> toggles, bool vehicle)
+	{
+		int count = keys.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			string label = names[i];
+			if (label.IsEmpty())
+				label = keys[i];
+			ref MUI_Toggle toggle = runtime.CreateToggle(label, namePrefix + keys[i]);
+			if (vehicle)
+				toggle.GetOnChanged().Insert(OnVehicleFactionToggleChanged);
+			else
+				toggle.GetOnChanged().Insert(OnEnemyFactionToggleChanged);
+			toggles.Insert(toggle);
+			page.AddChild(toggle);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnEnemyAutoChanged()
+	{
+		if (m_bFactionUiLock)
+			return;
+		if (!m_EnemyAutoToggle)
+			return;
+		if (!m_EnemyAutoToggle.IsChecked())
+			return;
+
+		m_bFactionUiLock = true;
+		UncheckAll(m_EnemyFactionToggles);
+		m_bFactionUiLock = false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnEnemyFactionToggleChanged()
+	{
+		if (m_bFactionUiLock)
+			return;
+		if (!m_EnemyAutoToggle)
+			return;
+
+		m_bFactionUiLock = true;
+		if (AnyChecked(m_EnemyFactionToggles))
+			m_EnemyAutoToggle.SetChecked(false);
+		else
+			m_EnemyAutoToggle.SetChecked(true);
+		m_bFactionUiLock = false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnVehicleMatchChanged()
+	{
+		if (m_bFactionUiLock)
+			return;
+		if (!m_VehicleMatchToggle)
+			return;
+		if (!m_VehicleMatchToggle.IsChecked())
+			return;
+
+		m_bFactionUiLock = true;
+		UncheckAll(m_VehicleFactionToggles);
+		m_bFactionUiLock = false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnVehicleFactionToggleChanged()
+	{
+		if (m_bFactionUiLock)
+			return;
+		if (!m_VehicleMatchToggle)
+			return;
+
+		m_bFactionUiLock = true;
+		if (AnyChecked(m_VehicleFactionToggles))
+			m_VehicleMatchToggle.SetChecked(false);
+		else
+			m_VehicleMatchToggle.SetChecked(true);
+		m_bFactionUiLock = false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void UncheckAll(array<ref MUI_Toggle> toggles)
+	{
+		if (!toggles)
+			return;
+		int count = toggles.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			MUI_Toggle toggle = toggles[i];
+			if (toggle)
+				toggle.SetChecked(false);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool AnyChecked(array<ref MUI_Toggle> toggles)
+	{
+		if (!toggles)
+			return false;
+		int count = toggles.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			MUI_Toggle toggle = toggles[i];
+			if (toggle && toggle.IsChecked())
+				return true;
+		}
+		return false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected string CollectCheckedKeys(array<ref MUI_Toggle> toggles, array<string> keys)
+	{
+		if (!toggles || !keys)
+			return IA_AdminConfigUtil.FACTION_AUTO;
+
+		ref array<string> selected = new array<string>();
+		int count = toggles.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			MUI_Toggle toggle = toggles[i];
+			if (!toggle)
+				continue;
+			if (!toggle.IsChecked())
+				continue;
+			if (i >= keys.Count())
+				continue;
+			selected.Insert(keys[i]);
+		}
+		return IA_AdminConfigUtil.JoinKeys(selected);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyKeysToToggles(array<string> selected, array<ref MUI_Toggle> toggles, array<string> keys, MUI_Toggle autoToggle)
+	{
+		bool configured = false;
+		if (selected && selected.Count() > 0)
+			configured = true;
+
+		if (toggles && keys)
+		{
+			int count = toggles.Count();
+			int i;
+			for (i = 0; i < count; i++)
+			{
+				MUI_Toggle toggle = toggles[i];
+				if (!toggle)
+					continue;
+				bool on = false;
+				if (configured && i < keys.Count())
+					on = IA_AdminConfigUtil.ArrayContains(selected, keys[i]);
+				toggle.SetChecked(on);
+			}
+		}
+
+		if (autoToggle)
+		{
+			if (configured)
+				autoToggle.SetChecked(false);
+			else
+				autoToggle.SetChecked(true);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -344,10 +573,12 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_PageArty.SetVisible(index == 2);
 		if (m_PageHq)
 			m_PageHq.SetVisible(index == 3);
+		if (m_PageFactions)
+			m_PageFactions.SetVisible(index == 4);
 		if (m_PageQrf)
-			m_PageQrf.SetVisible(index == 4);
+			m_PageQrf.SetVisible(index == 5);
 		if (m_PageDirector)
-			m_PageDirector.SetVisible(index == 5);
+			m_PageDirector.SetVisible(index == 6);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -381,6 +612,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_CivVehField.SetValue(cfg.m_fCivilianVehicleCountMultiplier);
 		if (m_RevoltField)
 			m_RevoltField.SetValue(cfg.m_fCivilianRevoltThreshold);
+		if (m_RevoltNotifField)
+			m_RevoltNotifField.SetValue(cfg.m_iCivilianRevoltNotificationDelay / 1000.0);
+		if (m_RevoltReinfField)
+			m_RevoltReinfField.SetValue(cfg.m_iCivilianRevoltReinforcementDelay / 1000.0);
 		if (m_CivSpawnToggle)
 			m_CivSpawnToggle.SetChecked(cfg.m_bEnableCivilianSpawning);
 		if (m_artyField)
@@ -415,18 +650,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		if (m_GmAutoSupportToggle)
 			m_GmAutoSupportToggle.SetChecked(cfg.m_bGmAutoPlaceSupport);
 
-		if (m_FactionDrop && cfg.m_sDesiredEnemyFactionKeys && cfg.m_sDesiredEnemyFactionKeys.Count() > 0)
-		{
-			string key = cfg.m_sDesiredEnemyFactionKeys[0];
-			if (key == "USSR")
-				m_FactionDrop.SetIndex(1);
-			else if (key == "US")
-				m_FactionDrop.SetIndex(2);
-			else if (key == "FIA")
-				m_FactionDrop.SetIndex(3);
-			else
-				m_FactionDrop.SetIndex(0);
-		}
+		m_bFactionUiLock = true;
+		ApplyKeysToToggles(cfg.m_sDesiredEnemyFactionKeys, m_EnemyFactionToggles, m_EnemyFactionChoiceKeys, m_EnemyAutoToggle);
+		ApplyKeysToToggles(cfg.m_sDesiredEnemyVehicleFactionKeys, m_VehicleFactionToggles, m_VehicleFactionChoiceKeys, m_VehicleMatchToggle);
+		m_bFactionUiLock = false;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -441,7 +668,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	{
 		SubmitAdminConfig(true);
 		SCR_HintManagerComponent.ShowCustomHint(
-			"Overrides written to the server profile. They load after the mission config on the next restart.",
+			"Overrides written to the server profile. They load after the mission .conf on the next restart.",
 			"ADMIN CONFIG",
 			6
 		);
@@ -453,7 +680,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	{
 		IA_MissionInitializer.ClearPersistedAdminConfig();
 		SCR_HintManagerComponent.ShowCustomHint(
-			"Saved overrides cleared. Next restart uses the mission config.",
+			"Saved overrides cleared. Next restart uses the mission .conf.",
 			"ADMIN CONFIG",
 			6
 		);
@@ -486,6 +713,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		bool enforceRoles = false;
 		int haloMaxPlayers = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
 		string factionKey = "";
+		string infantryKeysPacked = IA_AdminConfigUtil.FACTION_AUTO;
+		string vehicleKeysPacked = IA_AdminConfigUtil.FACTION_AUTO;
+		int revoltNotifMs = 30000;
+		int revoltReinfMs = 180000;
 		bool gmMode = false;
 		bool gmAutoActivate = false;
 		bool gmAutoQrf = true;
@@ -523,8 +754,20 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			enforceRoles = m_RolesToggle.IsChecked();
 		if (m_HaloMaxField)
 			haloMaxPlayers = m_HaloMaxField.GetText().ToInt();
-		if (m_FactionDrop && m_FactionDrop.GetIndex() > 0)
-			factionKey = m_FactionDrop.GetText();
+		if (m_RevoltNotifField)
+			revoltNotifMs = Math.Round(m_RevoltNotifField.GetValue() * 1000.0);
+		if (m_RevoltReinfField)
+			revoltReinfMs = Math.Round(m_RevoltReinfField.GetValue() * 1000.0);
+
+		infantryKeysPacked = CollectCheckedKeys(m_EnemyFactionToggles, m_EnemyFactionChoiceKeys);
+		if (m_EnemyAutoToggle && m_EnemyAutoToggle.IsChecked())
+			infantryKeysPacked = IA_AdminConfigUtil.FACTION_AUTO;
+		factionKey = IA_AdminConfigUtil.FirstKey(infantryKeysPacked);
+
+		vehicleKeysPacked = CollectCheckedKeys(m_VehicleFactionToggles, m_VehicleFactionChoiceKeys);
+		if (m_VehicleMatchToggle && m_VehicleMatchToggle.IsChecked())
+			vehicleKeysPacked = IA_AdminConfigUtil.FACTION_AUTO;
+
 		if (m_GmModeToggle)
 			gmMode = m_GmModeToggle.IsChecked();
 		if (m_GmAutoActivateToggle)
@@ -565,6 +808,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			gmAutoSupport
 		);
 		packed = packed + "|" + gmMask.ToString();
+		packed = packed + "|" + IA_MissionInitializer.PackAdminConfigExtras(revoltNotifMs, revoltReinfMs, infantryKeysPacked, vehicleKeysPacked);
 		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
 	}
 

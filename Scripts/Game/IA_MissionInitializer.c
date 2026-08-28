@@ -17,7 +17,7 @@ class IA_MissionInitializer : GenericEntity
 	[Attribute(defvalue: "1000", desc: "Delay in milliseconds between spawning each area instance")]
     int m_spawnDelayMs;
 
-	[Attribute(defvalue: "", desc: "IA Config file to override faction and vehicle settings", params: "conf")]
+	[Attribute(defvalue: "", desc: "Optional workshop baseline (.conf). In-game Admin Config is the live source of truth; $profile overrides load after this file.", params: "conf")]
 	ResourceName m_configResource;
 
 	private ref IA_Config m_config;
@@ -86,6 +86,15 @@ class IA_MissionInitializer : GenericEntity
 
 	[RplProp()]
 	string m_sDesiredEnemyFactionKey_Rpl = "";
+
+	[RplProp()]
+	string m_sDesiredEnemyVehicleFactionKeys_Rpl = "";
+
+	[RplProp()]
+	int m_iCivilianRevoltNotificationDelay_Rpl = 30000;
+
+	[RplProp()]
+	int m_iCivilianRevoltReinforcementDelay_Rpl = 180000;
 
 	[RplProp()]
 	int m_iHaloJumpMaxPlayers_Rpl = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
@@ -1561,6 +1570,13 @@ class IA_MissionInitializer : GenericEntity
 		return packed;
 	}
 
+	//------------------------------------------------------------------------------------------------
+	//! Extra tokens after the 16-arg pack + GM mask. Empty faction tokens mean "leave unchanged".
+	static string PackAdminConfigExtras(int revoltNotifMs, int revoltReinfMs, string infantryKeys, string vehicleKeys)
+	{
+		return revoltNotifMs.ToString() + "|" + revoltReinfMs.ToString() + "|" + infantryKeys + "|" + vehicleKeys;
+	}
+
 	static int PackGmAdminMask(
 		bool gmMode,
 		bool gmAutoActivate,
@@ -1784,9 +1800,35 @@ class IA_MissionInitializer : GenericEntity
 			gmAutoSupport = (gmMask & GM_MASK_AUTO_SUPPORT) != 0;
 		}
 
+		int revoltNotifMs = 30000;
+		int revoltReinfMs = 180000;
+		if (m_config)
+		{
+			revoltNotifMs = m_config.m_iCivilianRevoltNotificationDelay;
+			revoltReinfMs = m_config.m_iCivilianRevoltReinforcementDelay;
+		}
+		if (tokens.Count() > 18)
+			revoltNotifMs = tokens[18].ToInt();
+		if (tokens.Count() > 19)
+			revoltReinfMs = tokens[19].ToInt();
+		if (revoltNotifMs < 0)
+			revoltNotifMs = 0;
+		if (revoltReinfMs < 0)
+			revoltReinfMs = 0;
+
+		string infantryKeysPacked = "";
+		if (tokens.Count() > 20)
+			infantryKeysPacked = tokens[20];
+		else if (enemyFactionKey != "")
+			infantryKeysPacked = enemyFactionKey;
+
+		string vehicleKeysPacked = "";
+		if (tokens.Count() > 21)
+			vehicleKeysPacked = tokens[21];
+
 		Print(string.Format(
 			"[IA_MissionInitializer] RPC_UpdateConfig: Civ=%1 AI=%2 Heli=%3 Gnd=%4 Arty=%5 Chance=%6 Faction=%7 HALO=%8",
-			civCount, aiScale, disableHeli, disableGround, artyCooldown, artyChance, enemyFactionKey, haloMaxPlayers
+			civCount, aiScale, disableHeli, disableGround, artyCooldown, artyChance, infantryKeysPacked, haloMaxPlayers
 		), LogLevel.NORMAL);
 
 		if (!m_config)
@@ -1815,41 +1857,16 @@ class IA_MissionInitializer : GenericEntity
 			m_config.m_bGmAutoArty = gmAutoArty;
 			m_config.m_bGmAutoSideMissions = gmAutoSide;
 			m_config.m_bGmAutoPlaceSupport = gmAutoSupport;
+			m_config.m_iCivilianRevoltNotificationDelay = revoltNotifMs;
+			m_config.m_iCivilianRevoltReinforcementDelay = revoltReinfMs;
 
-			if (enemyFactionKey != "")
-			{
-				if (!m_config.m_sDesiredEnemyFactionKeys)
-					m_config.m_sDesiredEnemyFactionKeys = new array<string>();
-				m_config.m_sDesiredEnemyFactionKeys.Clear();
-				m_config.m_sDesiredEnemyFactionKeys.Insert(enemyFactionKey);
-			}
+			if (!infantryKeysPacked.IsEmpty())
+				IA_AdminConfigUtil.ApplyPackedKeys(infantryKeysPacked, m_config, false);
+			if (!vehicleKeysPacked.IsEmpty())
+				IA_AdminConfigUtil.ApplyPackedKeys(vehicleKeysPacked, m_config, true);
 		}
 
-		m_fCivilianCountMultiplier_Rpl = civCount;
-		m_fAIScaleMultiplier_Rpl = aiScale;
-		m_bDisableHQHelipads_Rpl = disableHeli;
-		m_bDisableHQGroundVehicles_Rpl = disableGround;
-		m_iArtilleryCooldown_Rpl = artyCooldown;
-		m_fStaticAIScaleOverride_Rpl = staticAiScale;
-		m_fMilitaryVehicleCountMultiplier_Rpl = milVehMult;
-		m_fCivilianVehicleCountMultiplier_Rpl = civVehMult;
-		m_fCivilianRevoltThreshold_Rpl = revoltThresh;
-		m_bEnableCivilianSpawning_Rpl = enableCiv;
-		m_bEnforceRoleRestrictionsReplicated = enforceRoles;
-		m_fArtilleryStrikeChance_Rpl = artyChance;
-		m_iArtilleryMinDelay_Rpl = artyMinDelay;
-		m_iArtilleryMaxDelay_Rpl = artyMaxDelay;
-		if (enemyFactionKey != "")
-			m_sDesiredEnemyFactionKey_Rpl = enemyFactionKey;
-		m_iHaloJumpMaxPlayers_Rpl = haloMaxPlayers;
-		m_bGameMasterMode_Rpl = gmMode;
-		m_bGmAutoActivateStaging_Rpl = gmAutoActivate;
-		m_bGmAutoQrf_Rpl = gmAutoQrf;
-		m_bGmAutoArty_Rpl = gmAutoArty;
-		m_bGmAutoSideMissions_Rpl = gmAutoSide;
-		m_bGmAutoPlaceSupport_Rpl = gmAutoSupport;
-
-		Replication.BumpMe();
+		PushConfigToReplication();
 	}
 
 	protected void PushConfigToReplication()
@@ -1877,10 +1894,24 @@ class IA_MissionInitializer : GenericEntity
 			m_bGmAutoArty_Rpl = m_config.m_bGmAutoArty;
 			m_bGmAutoSideMissions_Rpl = m_config.m_bGmAutoSideMissions;
 			m_bGmAutoPlaceSupport_Rpl = m_config.m_bGmAutoPlaceSupport;
+			m_iCivilianRevoltNotificationDelay_Rpl = m_config.m_iCivilianRevoltNotificationDelay;
+			m_iCivilianRevoltReinforcementDelay_Rpl = m_config.m_iCivilianRevoltReinforcementDelay;
 
 			m_sDesiredEnemyFactionKey_Rpl = "";
 			if (m_config.m_sDesiredEnemyFactionKeys && m_config.m_sDesiredEnemyFactionKeys.Count() > 0)
-				m_sDesiredEnemyFactionKey_Rpl = m_config.m_sDesiredEnemyFactionKeys[0];
+			{
+				string infantryPacked = IA_AdminConfigUtil.JoinKeys(m_config.m_sDesiredEnemyFactionKeys);
+				if (!IA_AdminConfigUtil.IsAuto(infantryPacked))
+					m_sDesiredEnemyFactionKey_Rpl = infantryPacked;
+			}
+
+			m_sDesiredEnemyVehicleFactionKeys_Rpl = "";
+			if (m_config.m_sDesiredEnemyVehicleFactionKeys && m_config.m_sDesiredEnemyVehicleFactionKeys.Count() > 0)
+			{
+				string vehiclePacked = IA_AdminConfigUtil.JoinKeys(m_config.m_sDesiredEnemyVehicleFactionKeys);
+				if (!IA_AdminConfigUtil.IsAuto(vehiclePacked))
+					m_sDesiredEnemyVehicleFactionKeys_Rpl = vehiclePacked;
+			}
 		}
 
 		Replication.BumpMe();
@@ -2526,12 +2557,21 @@ class IA_MissionInitializer : GenericEntity
 				clientConfig.m_bGmAutoArty = s_instance.m_bGmAutoArty_Rpl;
 				clientConfig.m_bGmAutoSideMissions = s_instance.m_bGmAutoSideMissions_Rpl;
 				clientConfig.m_bGmAutoPlaceSupport = s_instance.m_bGmAutoPlaceSupport_Rpl;
+				clientConfig.m_iCivilianRevoltNotificationDelay = s_instance.m_iCivilianRevoltNotificationDelay_Rpl;
+				clientConfig.m_iCivilianRevoltReinforcementDelay = s_instance.m_iCivilianRevoltReinforcementDelay_Rpl;
 
 				if (s_instance.m_sDesiredEnemyFactionKey_Rpl != "")
 				{
 					ref array<string> keys = new array<string>();
-					keys.Insert(s_instance.m_sDesiredEnemyFactionKey_Rpl);
+					IA_AdminConfigUtil.SplitKeys(s_instance.m_sDesiredEnemyFactionKey_Rpl, keys);
 					clientConfig.m_sDesiredEnemyFactionKeys = keys;
+				}
+
+				if (s_instance.m_sDesiredEnemyVehicleFactionKeys_Rpl != "")
+				{
+					ref array<string> vehicleKeys = new array<string>();
+					IA_AdminConfigUtil.SplitKeys(s_instance.m_sDesiredEnemyVehicleFactionKeys_Rpl, vehicleKeys);
+					clientConfig.m_sDesiredEnemyVehicleFactionKeys = vehicleKeys;
 				}
 
 				return clientConfig;
