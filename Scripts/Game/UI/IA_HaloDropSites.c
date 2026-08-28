@@ -2,7 +2,7 @@
 //! I&A named HALO drops: current objective group, plus map location names
 //! (church, village, landmark, …) inside a radius around each AO.
 //!
-//! Consumer: MHJ_DropSiteCatalog.Collect via IA_HaloDropCatalog. Do not call from HUD.
+//! Consumer: MHJ_DropSiteCatalog.Collect via IA_HaloDropCatalog.EnsureRegistered. Do not call from HUD.
 //------------------------------------------------------------------------------------------------
 class IA_HaloDropSites
 {
