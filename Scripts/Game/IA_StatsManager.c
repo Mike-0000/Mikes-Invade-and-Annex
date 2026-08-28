@@ -3,11 +3,15 @@ class IA_StatsManager
 {
     private static ref IA_StatsManager s_Instance;
     private ref array<ref IA_StatEvent> m_aEventQue;
+    private ref array<ref IA_StatEvent> m_aInFlightQue;
+    private bool m_bSubmitInFlight;
     private const int BATCH_SEND_INTERVAL = 60; // seconds
 
     private void IA_StatsManager()
     {
         m_aEventQue = new array<ref IA_StatEvent>();
+        m_aInFlightQue = new array<ref IA_StatEvent>();
+        m_bSubmitInFlight = false;
         GetGame().GetCallqueue().CallLater(SendBatch, BATCH_SEND_INTERVAL * 1000, true);
         Print("IA_StatsManager initialized, will send batches every " + BATCH_SEND_INTERVAL + " seconds.", LogLevel.NORMAL);
     }
@@ -86,6 +90,8 @@ class IA_StatsManager
 
     void SendBatch()
     {
+        if (m_bSubmitInFlight)
+            return;
         if (m_aEventQue.IsEmpty())
             return;
             
@@ -102,13 +108,44 @@ class IA_StatsManager
         payload = payload + "]";
         
         Print("IA_StatsManager: Constructed payload: " + payload, LogLevel.DEBUG);
-        
-        IA_ApiHandler.GetInstance().SubmitStats(payload);
+
+        // Hold events in-flight until the API reports success. Missing GUID,
+        // missing RestApi, or HTTP failure must not permanently drop kills.
+        if (!IA_ApiHandler.GetInstance().SubmitStats(payload))
+        {
+            Print("IA_StatsManager: Keeping batch of " + eventCount + " events; submit was not accepted.", LogLevel.WARNING);
+            return;
+        }
+
+        m_aInFlightQue.Clear();
+        int moveIdx;
+        for (moveIdx = 0; moveIdx < eventCount; moveIdx++)
+        {
+            m_aInFlightQue.Insert(m_aEventQue[moveIdx]);
+        }
+        m_aEventQue.Clear();
+        m_bSubmitInFlight = true;
         
         Print("IA_StatsManager: Sending batch of " + eventCount + " events.", LogLevel.NORMAL);
+    }
 
-        // Clear the queue after sending
-        m_aEventQue.Clear();
+    void OnSubmitAccepted()
+    {
+        m_bSubmitInFlight = false;
+        m_aInFlightQue.Clear();
+    }
+
+    void OnSubmitRejected()
+    {
+        m_bSubmitInFlight = false;
+        int i;
+        int n = m_aInFlightQue.Count();
+        for (i = 0; i < n; i++)
+        {
+            m_aEventQue.Insert(m_aInFlightQue[i]);
+        }
+        m_aInFlightQue.Clear();
+        Print(string.Format("IA_StatsManager: Re-queued %1 events after submit failure.", n), LogLevel.WARNING);
     }
 
     protected void AwardSessionKill(string playerId, string playerName)
@@ -155,4 +192,4 @@ class IA_StatsManager
         if (session)
             session.AwardCapture(playerId, playerName, score);
     }
-} 
+}

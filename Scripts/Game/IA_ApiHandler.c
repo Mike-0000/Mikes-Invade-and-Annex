@@ -187,11 +187,13 @@ class IA_ApiHandler
     void OnSubmitStatsSuccess(RestCallback cb)
     {
         Print("IA API: Statistics submitted successfully.", LogLevel.NORMAL);
+        IA_StatsManager.GetInstance().OnSubmitAccepted();
         GetGame().GetCallqueue().CallLater(FetchAllLeaderboards, 5000, false);
     }
 
     void OnSubmitStatsError(RestCallback cb)
     {
+        IA_StatsManager.GetInstance().OnSubmitRejected();
         if (cb.GetRestResult() == ERestResult.EREST_ERROR_TIMEOUT)
             Print("IA API: Statistics submission request timed out.", LogLevel.ERROR);
         else
@@ -228,15 +230,27 @@ class IA_ApiHandler
             Print("IA API: All leaderboards request FAILED with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
     }
 
-    void SubmitStats(string jsonData)
+    bool SubmitStats(string jsonData)
     {
         if (!m_Config || m_Config.m_sServerGuid == "")
         {
             Print("IA API: Cannot submit stats, server GUID is missing.", LogLevel.ERROR);
-            return;
+            return false;
+        }
+
+        if (!GetGame().GetRestApi())
+        {
+            Print("IA API: Cannot submit stats, RestApi is missing.", LogLevel.ERROR);
+            return false;
         }
 
         RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
+        if (!ctx)
+        {
+            Print("IA API: Cannot submit stats, RestContext is missing.", LogLevel.ERROR);
+            return false;
+        }
+
         ctx.SetHeaders("Content-Type,application/json");
 
         string serverName = IA_ApiConfigManager.GetServerNameFromFile();
@@ -248,6 +262,7 @@ class IA_ApiHandler
         m_submitStatsCallback.SetOnError(OnSubmitStatsError);
         ctx.POST(m_submitStatsCallback, "/submitStats", requestData.ToJson());
         Print("IA API: Submitting statistics for server: " + serverName + " with payload: " + requestData.ToJson(), LogLevel.NORMAL);
+        return true;
     }
 
     void FetchAllLeaderboards()
