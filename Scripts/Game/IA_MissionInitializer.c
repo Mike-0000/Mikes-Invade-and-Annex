@@ -303,6 +303,7 @@ class IA_MissionInitializer : GenericEntity
 		if (!nextAreaFaction)
 		{
 			Print("[IA_MissionInitializer] ProceedToNextZone deferred: no valid enemy faction. Retrying in 15s.", LogLevel.ERROR);
+			GetGame().GetCallqueue().Remove(ProceedToNextZone);
 			GetGame().GetCallqueue().CallLater(ProceedToNextZone, 15000, false);
 			return;
 		}
