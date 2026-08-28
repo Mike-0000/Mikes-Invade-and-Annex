@@ -1,15 +1,30 @@
 //------------------------------------------------------------------------------------------------
 //! I&A fills the HALO planner drop-site list. Vanilla HALO Collect stays empty
-//! when this addon is not loaded.
+//! until a consumer Inserts on GetOnCollect.
 //!
-//! Consumer: loaded with I&A. Do not instantiate.
+//! Consumer: loaded with I&A. Call EnsureRegistered before the planner opens.
+//! Do not instantiate from UI code.
 //------------------------------------------------------------------------------------------------
-modded class MHJ_DropSiteCatalog
+class IA_HaloDropCatalog
 {
+	protected static ref IA_HaloDropCatalog s_Instance;
+
 	//------------------------------------------------------------------------------------------------
-	static override void Collect(notnull array<ref MHJ_DropSite> outSites)
+	static void EnsureRegistered()
 	{
+		if (s_Instance)
+			return;
+
+		s_Instance = new IA_HaloDropCatalog();
+		MHJ_DropSiteCatalog.GetOnCollect().Insert(s_Instance.OnCollect);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void OnCollect(array<ref MHJ_DropSite> outSites)
+	{
+		if (!outSites)
+			return;
+
 		IA_HaloDropSites.Fill(outSites);
-		super.Collect(outSites);
 	}
 }

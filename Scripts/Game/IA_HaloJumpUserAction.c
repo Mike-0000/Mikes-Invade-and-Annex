@@ -25,6 +25,7 @@ class IA_HaloJumpUserAction : MHJ_HaloJumpUserAction
 		if (!CanBePerformedScript(pUserEntity))
 			return;
 
+		IA_HaloDropCatalog.EnsureRegistered();
 		super.PerformAction(pOwnerEntity, pUserEntity);
 	}
 

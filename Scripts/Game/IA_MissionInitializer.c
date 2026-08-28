@@ -1199,8 +1199,9 @@ class IA_MissionInitializer : GenericEntity
 
     override void EOnInit(IEntity owner)
     {
-        super.EOnInit(owner);
+		super.EOnInit(owner);
 		s_instance = this;
+		IA_HaloDropCatalog.EnsureRegistered();
 		RestrictPlayableFactions();
 		GetGame().GetCallqueue().CallLater(RestrictPlayableFactions, 0, false);
 		GetGame().GetCallqueue().CallLater(InitDelayed, 5000, false, owner);
