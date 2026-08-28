@@ -1,5 +1,6 @@
 //------------------------------------------------------------------------------------------------
-//! Last-wins admin snapshot written to the server profile. Loaded after IA_Config.conf.
+//! Last-wins admin snapshot written to the server profile. Loaded after the mission
+//! IA_Config .conf so the in-game Admin Config menu is the live source of truth.
 //! Path: $profile:MikesInvadeAndAnnex/admin_overrides.json
 //------------------------------------------------------------------------------------------------
 class IA_AdminOverrides
@@ -22,7 +23,15 @@ class IA_AdminOverrides
 	int m_iArtilleryMinDelay = 45;
 	int m_iArtilleryMaxDelay = 70;
 	string m_sEnemyFactionKey;
+	string m_sEnemyFactionKeysPacked;
+	string m_sEnemyVehicleFactionKeysPacked;
+	int m_iCivilianRevoltNotificationDelay = 30000;
+	int m_iCivilianRevoltReinforcementDelay = 180000;
 	int m_iHaloJumpMaxPlayers = IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT;
+	bool m_bHasFactionOverride;
+	bool m_bHasVehicleFactionOverride;
+	bool m_bHasRevoltNotifOverride;
+	bool m_bHasRevoltReinfOverride;
 	bool m_bGameMasterMode;
 	bool m_bGmAutoActivateStaging;
 	bool m_bGmAutoQrf = true;
@@ -124,9 +133,15 @@ class IA_AdminOverrides
 		m_bGmAutoArty = config.m_bGmAutoArty;
 		m_bGmAutoSideMissions = config.m_bGmAutoSideMissions;
 		m_bGmAutoPlaceSupport = config.m_bGmAutoPlaceSupport;
-		m_sEnemyFactionKey = "";
-		if (config.m_sDesiredEnemyFactionKeys && config.m_sDesiredEnemyFactionKeys.Count() > 0)
-			m_sEnemyFactionKey = config.m_sDesiredEnemyFactionKeys[0];
+		m_sEnemyFactionKeysPacked = IA_AdminConfigUtil.JoinKeys(config.m_sDesiredEnemyFactionKeys);
+		m_sEnemyVehicleFactionKeysPacked = IA_AdminConfigUtil.JoinKeys(config.m_sDesiredEnemyVehicleFactionKeys);
+		m_sEnemyFactionKey = IA_AdminConfigUtil.FirstKey(m_sEnemyFactionKeysPacked);
+		m_iCivilianRevoltNotificationDelay = config.m_iCivilianRevoltNotificationDelay;
+		m_iCivilianRevoltReinforcementDelay = config.m_iCivilianRevoltReinforcementDelay;
+		m_bHasFactionOverride = true;
+		m_bHasVehicleFactionOverride = true;
+		m_bHasRevoltNotifOverride = true;
+		m_bHasRevoltReinfOverride = true;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -161,13 +176,21 @@ class IA_AdminOverrides
 		config.m_bGmAutoSideMissions = m_bGmAutoSideMissions;
 		config.m_bGmAutoPlaceSupport = m_bGmAutoPlaceSupport;
 
-		if (m_sEnemyFactionKey != "")
+		if (m_bHasRevoltNotifOverride)
+			config.m_iCivilianRevoltNotificationDelay = m_iCivilianRevoltNotificationDelay;
+		if (m_bHasRevoltReinfOverride)
+			config.m_iCivilianRevoltReinforcementDelay = m_iCivilianRevoltReinforcementDelay;
+
+		if (m_bHasFactionOverride)
 		{
-			if (!config.m_sDesiredEnemyFactionKeys)
-				config.m_sDesiredEnemyFactionKeys = new array<string>();
-			config.m_sDesiredEnemyFactionKeys.Clear();
-			config.m_sDesiredEnemyFactionKeys.Insert(m_sEnemyFactionKey);
+			string packed = m_sEnemyFactionKeysPacked;
+			if (packed.IsEmpty())
+				packed = m_sEnemyFactionKey;
+			IA_AdminConfigUtil.ApplyPackedKeys(packed, config, false);
 		}
+
+		if (m_bHasVehicleFactionOverride)
+			IA_AdminConfigUtil.ApplyPackedKeys(m_sEnemyVehicleFactionKeysPacked, config, true);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -205,7 +228,7 @@ class IA_AdminOverrides
 			rolesI = 1;
 
 		string json = "{";
-		json = json + "\"v\":1";
+		json = json + ",\"v\":2";
 		json = json + ",\"civCount\":" + m_fCivilianCountMultiplier.ToString();
 		json = json + ",\"aiScale\":" + m_fAIScaleMultiplier.ToString();
 		json = json + ",\"disableHeli\":" + heliI.ToString();
@@ -245,7 +268,11 @@ class IA_AdminOverrides
 		json = json + ",\"gmAutoArty\":" + gmArtyI.ToString();
 		json = json + ",\"gmAutoSide\":" + gmSideI.ToString();
 		json = json + ",\"gmAutoSupport\":" + gmSupI.ToString();
+		json = json + ",\"revoltNotif\":" + m_iCivilianRevoltNotificationDelay.ToString();
+		json = json + ",\"revoltReinf\":" + m_iCivilianRevoltReinforcementDelay.ToString();
 		json = json + ",\"faction\":\"" + m_sEnemyFactionKey + "\"";
+		json = json + ",\"factionKeys\":\"" + m_sEnemyFactionKeysPacked + "\"";
+		json = json + ",\"vehicleFactionKeys\":\"" + m_sEnemyVehicleFactionKeysPacked + "\"";
 		json = json + "}";
 		return json;
 	}
@@ -295,8 +322,32 @@ class IA_AdminOverrides
 			m_bGmAutoSideMissions = ExtractValue(json, "gmAutoSide").ToInt() != 0;
 		if (HasKey(json, "gmAutoSupport"))
 			m_bGmAutoPlaceSupport = ExtractValue(json, "gmAutoSupport").ToInt() != 0;
+		if (HasKey(json, "factionKeys"))
+		{
+			m_sEnemyFactionKeysPacked = ExtractValue(json, "factionKeys");
+			m_bHasFactionOverride = true;
+		}
 		if (HasKey(json, "faction"))
+		{
 			m_sEnemyFactionKey = ExtractValue(json, "faction");
+			if (!m_bHasFactionOverride)
+				m_bHasFactionOverride = true;
+		}
+		if (HasKey(json, "vehicleFactionKeys"))
+		{
+			m_sEnemyVehicleFactionKeysPacked = ExtractValue(json, "vehicleFactionKeys");
+			m_bHasVehicleFactionOverride = true;
+		}
+		if (HasKey(json, "revoltNotif"))
+		{
+			m_iCivilianRevoltNotificationDelay = ExtractValue(json, "revoltNotif").ToInt();
+			m_bHasRevoltNotifOverride = true;
+		}
+		if (HasKey(json, "revoltReinf"))
+		{
+			m_iCivilianRevoltReinforcementDelay = ExtractValue(json, "revoltReinf").ToInt();
+			m_bHasRevoltReinfOverride = true;
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------

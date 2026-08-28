@@ -1,40 +1,43 @@
+//------------------------------------------------------------------------------------------------
+//! Workshop / world baseline. The in-game Admin Config menu is the live source of
+//! truth (Save, and Save for restart → $profile). This .conf still loads first so
+//! existing missions keep working; leave fields empty unless you need a map default.
+//! HQ vehicle prefab lists stay here — they need Workbench resource pickers.
+//------------------------------------------------------------------------------------------------
 [BaseContainerProps(configRoot: true)]
 class IA_Config{
 
-	// If any of these are set, it will override the defaults. If they are left empty, the program will revert back to default.
-	// You only need to set the ones you want to override.
-	
-	[Attribute(uiwidget: UIWidgets.Auto, category: "Enemy Factions", desc: "randomly rotated")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "Enemy Factions", desc: "Infantry factions, randomly rotated. Empty = auto-detect. Prefer the in-game Admin Config menu.")]
 	ref array<string> m_sDesiredEnemyFactionKeys;
 	
-	[Attribute(uiwidget: UIWidgets.Auto, category: "Enemy Factions", desc: "Enemy Factions for vehicles - Leave empty if you want vehicle faction to be the same as Enemy infantry faction")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "Enemy Factions", desc: "Vehicle factions. Empty = same as infantry. Prefer the in-game Admin Config menu.")]
 	ref array<string> m_sDesiredEnemyVehicleFactionKeys;
 		
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific helicopters that will be used - at random - for generic helicopter spawns", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. Generic helicopters for HQ pads (Admin Config cannot pick .et files).", params: "et")]
 	ref array<ResourceName> m_aGenericHeliOverridePrefabs;
 	
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific Attack Helicopters that will be used - at random - for attack helicopter spawns", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. Attack helicopters for HQ pads.", params: "et")]
 	ref array<ResourceName> m_aAttackHeliOverridePrefabs;
 
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific Transport Helicopters that will be used - at random - for transport helicopter spawns", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. Transport helicopters for HQ pads.", params: "et")]
 	ref array<ResourceName> m_aTransportHeliOverridePrefabs;
 	
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific VEHICLE_CAR's to spawn - ex. Humvee", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. Cars for HQ pads (e.g. Humvee).", params: "et")]
 	ref array<ResourceName> m_aVehicleCarOverridePrefabs;
 	
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific Armored vehicle's to spawn", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. Armored vehicles for HQ pads.", params: "et")]
 	ref array<ResourceName> m_aVehicleArmorOverridePrefabs;
 	
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific APC's to spawn", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. APCs for HQ pads.", params: "et")]
 	ref array<ResourceName> m_aAPC_OverridePrefabs;
 	
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific Truck's to spawn", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. Trucks for HQ pads.", params: "et")]
 	ref array<ResourceName> m_aTruckOverridePrefabs;
  
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific Medical Vehicle's to spawn", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. Medical vehicles for HQ pads.", params: "et")]
 	ref array<ResourceName> m_aMedicalVehicleOverridePrefabs;
 	
-	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Specific Medical Car's to spawn", params: "et")]
+	[Attribute(uiwidget: UIWidgets.Auto, category: "HQ Vehicles", desc: "Workshop-only. Medical cars for HQ pads.", params: "et")]
 	ref array<ResourceName> m_aMedicalCarOverridePrefabs;
 
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "HQ Vehicles", desc: "Disable all Helicopter spawning at HQ (Transport, Generic, Attack)")]
@@ -73,10 +76,10 @@ class IA_Config{
 	float m_fCivilianRevoltThreshold;
 
 	[Attribute(defvalue: "30000", UIWidgets.EditBox, category: "Civilian & Resistance", desc: "Delay (in ms) before showing the revolt notification")]
-	int m_iCivilianRevoltNotificationDelay;
+	int m_iCivilianRevoltNotificationDelay = 30000;
 
 	[Attribute(defvalue: "180000", UIWidgets.EditBox, category: "Civilian & Resistance", desc: "Delay (in ms) before spawning revolt reinforcements")]
-	int m_iCivilianRevoltReinforcementDelay;
+	int m_iCivilianRevoltReinforcementDelay = 180000;
 
 	[Attribute(defvalue: "0.18", UIWidgets.Slider, category: "Artillery", desc: "Chance (0-1) for an artillery strike to occur during a check interval", params: "0 1 0.01")]
 	float m_fArtilleryStrikeChance;
