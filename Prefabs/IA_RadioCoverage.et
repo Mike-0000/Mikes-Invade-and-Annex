@@ -6,10 +6,8 @@ GenericEntity {
    "Turned on" 1
    Transceivers {
     RelayTransceiver "{6562F697056BB5C7}" {
-     "Transmitting Range" 100000
-    }
-    RadioTransceiver "{6562F6971774BF2E}" {
-     "Transmitting Range" 100000
+     "Transmitting Range" 65535
+     "Frequency resolution" 1
     }
    }
   }
