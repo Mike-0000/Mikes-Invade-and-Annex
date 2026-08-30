@@ -3389,12 +3389,34 @@ class IA_AiGroup
         // by the updated SetTacticalState logic for IA_GroupTacticalState.InVehicle.
     }
 
+    // Drop queued staggered-spawn / tick callbacks. ForceFinish now despawns
+    // groups that may still have SpawnNextUnit (100 ms) or SetupDeathListener
+    // (1 s retry) pending. Those methods dereference m_group.
+    protected void CancelPendingGroupCallbacks()
+    {
+        ScriptCallQueue queue = GetGame().GetCallqueue();
+        if (queue)
+        {
+            queue.Remove(this.SpawnNextUnit);
+            queue.Remove(this.RetryAddSpawnedUnit);
+            queue.Remove(this.SpawnNextHostileCivilianUnit);
+            queue.Remove(this.FinalizeStaggeredSpawn);
+            queue.Remove(this.CheckDangerEvents);
+            queue.Remove(this.SetupDeathListener);
+            queue.Remove(this.EvaluateGroupState);
+            queue.Remove(this.BeginPassengerGetOutAfterGetInClear);
+            queue.Remove(this.FinishPassengerDumpAssault);
+            queue.Remove(this.FlushPendingAfterTypedClear);
+        }
+
+        m_pendingUnitsToSpawn = 0;
+        m_typedClearScheduled = false;
+        m_isStateEvaluationScheduled = false;
+    }
+
     void Despawn()
     {
-        if (!IsSpawned())
-        {
-            return;
-        }
+        CancelPendingGroupCallbacks();
         UnpinInboundSimulation();
         m_isSpawned = false;
         
@@ -3402,8 +3424,6 @@ class IA_AiGroup
         {
             ClearVehicleReference();
         }
-        
-        m_isStateEvaluationScheduled = false;
 
         if (m_group)
         {
@@ -3415,10 +3435,10 @@ class IA_AiGroup
                     agent.DeactivateAI();
             }
             m_group.DeactivateAI();
+            RemoveAllOrders();
+            IA_Game.AddEntityToGc(m_group);
+            m_group = null;
         }
-        RemoveAllOrders();
-        IA_Game.AddEntityToGc(m_group);
-        m_group = null;
     }
 
     // Add a public SetTacticalState method to replace the one we accidentally removed
@@ -4124,6 +4144,12 @@ class IA_AiGroup
     // Method to spawn the next unit in the staggered spawning process
     void SpawnNextUnit()
     {
+        if (!m_group)
+        {
+            m_pendingUnitsToSpawn = 0;
+            return;
+        }
+
         if (m_pendingUnitsToSpawn <= 0)
         {
             // All units spawned, finalize the group
@@ -4384,6 +4410,12 @@ class IA_AiGroup
     // Method to spawn the next hostile civilian unit in the staggered spawning process
     void SpawnNextHostileCivilianUnit()
     {
+        if (!m_group)
+        {
+            m_pendingUnitsToSpawn = 0;
+            return;
+        }
+
         if (m_pendingUnitsToSpawn <= 0)
         {
             // All units spawned, finalize the group
