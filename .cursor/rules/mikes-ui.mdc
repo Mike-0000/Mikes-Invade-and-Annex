@@ -14,6 +14,7 @@ Enforce: no ternary. Every `new` in a `ref`. Colors `Color.FromSRGBA`. Paint `Dr
 - `IA_AdminConfigMenu` / `IA_StatisticsMenu` — `MUI_MenuBase`. Override `BuildUI`. Mount failure → `OnMUIMountFailed` → legacy layout.
 - `IA_NotificationDisplay` — `MUI_HudHost` + `MakePassThroughOverlay`. Tick from `DisplayUpdate`. No `MenuWithEditorContext`.
 - `IA_LeaderboardRow` — composite in I&A (Row + Labels). Pattern for I&A-only widgets: `Create(runtime)`, `protected ref` columns, `GetRow()` for `AddChild`.
+- Hint overlays — `CreateHintLayer`, last child of the overlay, `AddHint` per control. Help calls `Toggle()`. Copy stays in I&A.
 - Pause menu stays vanilla.
 
 Do **not** resurrect `IA_MikesMenuHost`. Do **not** add I&A screens inside Mikes-UI.

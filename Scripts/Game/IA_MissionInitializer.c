@@ -139,6 +139,9 @@ class IA_MissionInitializer : GenericEntity
 	[RplProp()]
 	int m_iDefendHudState_Rpl = 0;
 
+	[RplProp()]
+	int m_iDefendHudPhase_Rpl = 0;
+
 
 	// Static reference for global access
 	static IA_MissionInitializer s_instance;
@@ -1258,6 +1261,12 @@ class IA_MissionInitializer : GenericEntity
         vector origin = marker.GetOrigin();
         dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], liveGroup, marker.GetRadius(), name);
 
+        if (marker.GetAreaType() == IA_AreaType.DefendObjective)
+        {
+            Print(string.Format("[IA_MissionInitializer] Attached DefendObjective '%1' to Live group %2", name, liveGroup), LogLevel.NORMAL);
+            return;
+        }
+
         IA_Game game = IA_Game.Instantiate();
         if (game && !name.IsEmpty())
         {
@@ -1714,6 +1723,13 @@ class IA_MissionInitializer : GenericEntity
 		RPC_ForceCompleteZone();
 	}
 
+	void ServerForceCompleteZoneAndDefend()
+	{
+		if (!Replication.IsServer())
+			return;
+		RPC_ForceCompleteZoneAndDefend();
+	}
+
 	void ServerPersistAdminConfig(string packed)
 	{
 		if (!Replication.IsServer())
@@ -1864,6 +1880,9 @@ class IA_MissionInitializer : GenericEntity
 				IA_AdminConfigUtil.ApplyPackedKeys(infantryKeysPacked, m_config, false);
 			if (!vehicleKeysPacked.IsEmpty())
 				IA_AdminConfigUtil.ApplyPackedKeys(vehicleKeysPacked, m_config, true);
+
+			if (tokens.Count() > 22)
+				IA_Config.UnpackDefenseExtras(m_config, tokens[22]);
 		}
 
 		PushConfigToReplication();
@@ -1934,6 +1953,23 @@ class IA_MissionInitializer : GenericEntity
 		if (Replication.IsServer())
 			init.RPC_ForceCompleteZone();
 	}
+
+	static void ForceCompleteZoneAndDefend()
+	{
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+		{
+			pc.IA_AskForceCompleteZoneAndDefend();
+			return;
+		}
+
+		IA_MissionInitializer init = GetInstance();
+		if (!init)
+			return;
+
+		if (Replication.IsServer())
+			init.RPC_ForceCompleteZoneAndDefend();
+	}
 	
 	protected void RPC_ForceCompleteZone()
 	{
@@ -1960,6 +1996,33 @@ class IA_MissionInitializer : GenericEntity
 			groupID = m_currentIndex; // Fallback
 
 		SuccessZoneComplete(groupID, 2000); // 2 second delay for forced completion
+	}
+
+	protected void RPC_ForceCompleteZoneAndDefend()
+	{
+		Print("[IA_MissionInitializer] RPC_ForceCompleteZoneAndDefend received.", LogLevel.WARNING);
+
+		int groupID = GetActiveGroup();
+		if (groupID < 0)
+		{
+			if (groupsArray && groupsArray.IsIndexValid(m_currentIndex))
+				groupID = groupsArray[m_currentIndex];
+			else
+				groupID = m_currentIndex;
+		}
+
+		if (CheckAndStartDefendMission(groupID, true))
+		{
+			ForceFinishCurrentAreaInstancesExceptDefend();
+			GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
+			GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
+			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+			Print("[IA_MissionInitializer] Forced zone complete started a defense for group " + groupID, LogLevel.NORMAL);
+			return;
+		}
+
+		Print("[IA_MissionInitializer] No DefendObjective on this AO — completing without a defense.", LogLevel.WARNING);
+		RPC_ForceCompleteZone();
 	}
 	// --- END ADDED ---
 
@@ -2040,9 +2103,10 @@ class IA_MissionInitializer : GenericEntity
 
 	//------------------------------------------------------------------------------------------------
 	//! Fills parallel arrays with every live capture HUD slot (Capturing / Paused /
-	//! Contested / Complete). Occupied 0% zones are included. Hidden slots are omitted.
-	//! origins/radii are the server capture sphere so clients can occupancy-test
-	//! runtime zones (mortar pits) that never replicate as AreaMarker entities.
+	//! Contested / Complete / Blocked). Occupied 0% zones are included. Hidden slots
+	//! are omitted. origins/radii are the server capture sphere so clients can
+	//! occupancy-test runtime zones (mortar pits) that never replicate as AreaMarker
+	//! entities.
 	void GetCaptureHudSlots(notnull array<string> areas, notnull array<int> states, notnull array<float> progress, notnull array<vector> origins, notnull array<float> radii)
 	{
 		UnpackCaptureHudPacked(m_sCaptureHudPacked_Rpl, areas, states, progress, origins, radii);
@@ -2391,6 +2455,8 @@ class IA_MissionInitializer : GenericEntity
 		{
 			if (states[i] == IA_CaptureHudState.Paused)
 				return i;
+			if (states[i] == IA_CaptureHudState.Blocked)
+				return i;
 		}
 		for (i = 0; i < count; i++)
 		{
@@ -2427,9 +2493,14 @@ class IA_MissionInitializer : GenericEntity
 		return m_iDefendHudState_Rpl;
 	}
 
+	int GetDefendHudPhase()
+	{
+		return m_iDefendHudPhase_Rpl;
+	}
+
 	//------------------------------------------------------------------------------------------------
 	//! Server-only. Drives the persistent defend HUD on every client via RplProp.
-	static void PublishDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure)
+	static void PublishDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure, int phase)
 	{
 		if (!Replication.IsServer())
 			return;
@@ -2438,11 +2509,11 @@ class IA_MissionInitializer : GenericEntity
 		if (!inst)
 			return;
 
-		inst.ApplyDefendHud(areaName, state, timeLeft, remainingSec, pressure);
+		inst.ApplyDefendHud(areaName, state, timeLeft, remainingSec, pressure, phase);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void ApplyDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure)
+	protected void ApplyDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure, int phase)
 	{
 		if (timeLeft < 0)
 			timeLeft = 0;
@@ -2464,24 +2535,25 @@ class IA_MissionInitializer : GenericEntity
 
 		if (state == IA_DefendHudState.Complete)
 		{
-			CommitDefendHud(areaName, state, 0, 0, pressure);
+			CommitDefendHud(areaName, state, 0, 0, pressure, IA_DefendHudPhase.Secure);
 			GetGame().GetCallqueue().Remove(this.TryHideCompletedDefendHud);
 			GetGame().GetCallqueue().CallLater(this.TryHideCompletedDefendHud, 2600, false, areaName);
 			return;
 		}
 
-		CommitDefendHud(areaName, state, timeLeft, remainingSec, pressure);
+		CommitDefendHud(areaName, state, timeLeft, remainingSec, pressure, phase);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void CommitDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure)
+	protected void CommitDefendHud(string areaName, IA_DefendHudState state, float timeLeft, int remainingSec, float pressure, int phase)
 	{
 		bool areaChanged = m_sDefendHudArea_Rpl != areaName;
 		bool stateChanged = m_iDefendHudState_Rpl != state;
 		bool timeChanged = Math.AbsFloat(m_fDefendHudTimeLeft_Rpl - timeLeft) >= 0.01;
 		bool secChanged = m_iDefendHudRemainingSec_Rpl != remainingSec;
 		bool pressureChanged = Math.AbsFloat(m_fDefendHudPressure_Rpl - pressure) >= 0.02;
-		if (!areaChanged && !stateChanged && !timeChanged && !secChanged && !pressureChanged)
+		bool phaseChanged = m_iDefendHudPhase_Rpl != phase;
+		if (!areaChanged && !stateChanged && !timeChanged && !secChanged && !pressureChanged && !phaseChanged)
 			return;
 
 		if (state == IA_DefendHudState.Active)
@@ -2492,6 +2564,7 @@ class IA_MissionInitializer : GenericEntity
 		m_fDefendHudTimeLeft_Rpl = timeLeft;
 		m_iDefendHudRemainingSec_Rpl = remainingSec;
 		m_fDefendHudPressure_Rpl = pressure;
+		m_iDefendHudPhase_Rpl = phase;
 		Replication.BumpMe();
 	}
 
@@ -2506,6 +2579,7 @@ class IA_MissionInitializer : GenericEntity
 		m_iDefendHudRemainingSec_Rpl = 0;
 		m_fDefendHudPressure_Rpl = 0;
 		m_iDefendHudState_Rpl = IA_DefendHudState.Hidden;
+		m_iDefendHudPhase_Rpl = 0;
 		Replication.BumpMe();
 	}
 
@@ -2630,7 +2704,21 @@ class IA_MissionInitializer : GenericEntity
 	// --- END ADDED ---
 	
 	// --- BEGIN ADDED: Defend Mission Methods ---
-	private bool CheckAndStartDefendMission(int completedGroup)
+	bool HasDefendObjectiveForGroup(int groupId)
+	{
+		array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
+		if (!allMarkers)
+			return false;
+
+		foreach (IA_AreaMarker marker : allMarkers)
+		{
+			if (marker && marker.m_areaGroup == groupId && marker.GetAreaType() == IA_AreaType.DefendObjective)
+				return true;
+		}
+		return false;
+	}
+
+	private bool CheckAndStartDefendMission(int completedGroup, bool force = false)
 	{
 		// Check if a defend mission is already active
 		IA_Game gameInstance = IA_Game.Instantiate();
@@ -2662,8 +2750,8 @@ class IA_MissionInitializer : GenericEntity
 			return false;
 		}
 		
-		// Random chance (80%) to trigger defend mission
-		if (Math.RandomFloat01() > 0.8)
+		// Random chance (80%) to trigger defend mission. Admin / GM force skips the roll.
+		if (!force && Math.RandomFloat01() > 0.8)
 		{
 			Print("[IA_MissionInitializer] Defend objectives found but random chance failed for group " + completedGroup, LogLevel.DEBUG);
 			return false;
@@ -2688,14 +2776,10 @@ class IA_MissionInitializer : GenericEntity
 		IA_DefendMission defendMission = IA_DefendMission.Create(defendPoint, completedGroup, selectedMarker.GetAreaName());
 		if (defendMission)
 		{
-			defendMission.StartDefendMission();
-			
-			// Set the defend mission in IA_Game (reuse the gameInstance from above)
 			if (gameInstance)
-			{
 				gameInstance.SetActiveDefendMission(defendMission);
-			}
-
+			defendMission.StartDefendMission();
+			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
 			return true;
 		}
 		

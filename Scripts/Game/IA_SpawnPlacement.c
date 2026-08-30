@@ -806,4 +806,82 @@ class IA_SpawnPlacement
 			outPosts.Insert(pos);
 		}
 	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Walkable site in an annulus, kept off players. Used by Enhanced defense events.
+	static vector FindEventSite(vector center, float minR, float maxR)
+	{
+		if (center == vector.Zero)
+			return vector.Zero;
+		if (minR < 80)
+			minR = 80;
+		if (maxR < minR + 20)
+			maxR = minR + 80;
+
+		ref array<vector> players = new array<vector>();
+		CollectPlayerPositions(players);
+
+		int attempt;
+		for (attempt = 0; attempt < 16; attempt++)
+		{
+			float angle = IA_Game.rng.RandFloat01() * Math.PI2;
+			float dist = IA_Game.rng.RandFloatXY(minR, maxR);
+			vector probe;
+			probe[0] = center[0] + Math.Cos(angle) * dist;
+			probe[2] = center[2] + Math.Sin(angle) * dist;
+			probe[1] = center[1];
+
+			vector hit;
+			if (!TryWalkableAt(probe, hit))
+				continue;
+			if (IsNearAnyPlayer(hit, players, 200))
+				continue;
+			return hit;
+		}
+
+		return vector.Zero;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Air Assault LZ: hot drop near the AO when requested and safe, otherwise 150-300 m perimeter.
+	static bool TryFindDefendDropLz(vector center, bool preferHotDrop, out vector outLz)
+	{
+		outLz = vector.Zero;
+		if (center == vector.Zero)
+			return false;
+
+		ref array<vector> players = new array<vector>();
+		CollectPlayerPositions(players);
+
+		if (preferHotDrop)
+		{
+			vector hot;
+			if (TryFindDropLz(center, 120, hot) && !IsNearAnyPlayer(hot, players, 80))
+			{
+				outLz = hot;
+				return true;
+			}
+		}
+
+		int attempt;
+		for (attempt = 0; attempt < 12; attempt++)
+		{
+			float angle = IA_Game.rng.RandFloat01() * Math.PI2;
+			float dist = IA_Game.rng.RandFloatXY(150, 300);
+			vector probe;
+			probe[0] = center[0] + Math.Cos(angle) * dist;
+			probe[2] = center[2] + Math.Sin(angle) * dist;
+			probe[1] = center[1];
+
+			vector lz;
+			if (!TryFindDropLz(probe, DROP_LZ_SEARCH_WIDE_R, lz))
+				continue;
+			if (IsNearAnyPlayer(lz, players, 80))
+				continue;
+			outLz = lz;
+			return true;
+		}
+
+		return TryFindDropLz(center, DROP_LZ_SEARCH_WIDE_R, outLz);
+	}
 }

@@ -197,7 +197,7 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		m_NameField.SetHeight(52);
 		m_NameField.SetMinHeight(52);
 
-		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live adds to the current AO. Building hold spawns a Hold fireteam in that building now if a live AO covers it, or when staging is activated.", "destLbl");
+		ref MUI_Label destLbl = runtime.CreateLabel("Staging waits for Activate. Live adds to the current AO. Defend places a hold site for this AO and starts after Complete + Defend (or a natural capture). Building hold spawns a Hold fireteam now if a live AO covers it.", "destLbl");
 		destLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		destLbl.SetMuted(true);
 
@@ -281,10 +281,15 @@ class IA_GmDirectorMenu : MUI_MenuBase
 		ref MUI_Button sideBtn = runtime.CreateButton("Start assassination", "side");
 		StyleDirectorChip(sideBtn);
 		sideBtn.GetOnClicked().Insert(OnStartSide);
+		ref MUI_Button completeDefendBtn = runtime.CreateButton("Complete + Defend", "completeDef");
+		completeDefendBtn.MakeDanger();
+		StyleDirectorChip(completeDefendBtn);
+		completeDefendBtn.GetOnClicked().Insert(OnCompleteLiveAndDefend);
 		ref MUI_Button closeBtn = runtime.CreateButton("Close", "close");
 		StyleDirectorChip(closeBtn);
 		closeBtn.GetOnClicked().Insert(OnMUIBack);
 		actions2.AddChild(sideBtn);
+		actions2.AddChild(completeDefendBtn);
 		actions2.AddChild(closeBtn);
 
 		RefreshChipLooks();
@@ -582,6 +587,13 @@ class IA_GmDirectorMenu : MUI_MenuBase
 	protected void OnCompleteLive()
 	{
 		IA_MissionInitializer.ForceCompleteZone();
+		GetGame().GetCallqueue().CallLater(this.RefreshLists, 400, false);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnCompleteLiveAndDefend()
+	{
+		IA_MissionInitializer.ForceCompleteZoneAndDefend();
 		GetGame().GetCallqueue().CallLater(this.RefreshLists, 400, false);
 	}
 

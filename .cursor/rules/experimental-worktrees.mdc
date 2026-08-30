@@ -16,7 +16,7 @@ UI, HALO, and I&A each have a production folder on `main` and a `*-Exp` worktree
 - Commit in the Exp worktree (`experimental`) at the end of any turn that edited files. Do not `git checkout experimental` in a production folder.
 - Do not edit any `addon.gproj`. Production and experimental Workshop GUIDs stay on their branches.
 - Map HUD, GameSources, and other workspace roots stay as they are. Do not make Exp copies of them.
-- If an Exp folder is missing, stop. Do not fall back to production.
+- If an Exp folder is missing on this machine, edit the production clone the user has open (`C:\Github\Mikes-*` or the workspace root). Do not invent another path. Never write to `F:\Mikes-*` production folders when an Exp worktree exists.
 
 ## Promote
 

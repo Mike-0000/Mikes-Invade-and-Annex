@@ -5,13 +5,24 @@
 //! GetDrawOpacity().
 //!
 //! Chrome matches IA_CaptureHud (bottom-docked 288×48 bezel). Shows remaining
-//! M:SS and a pressure rail instead of capture percent.
+//! M:SS and a pressure rail instead of capture percent. Status tab tracks the
+//! hold: HOLD flush left, ASSAULT centered, SECURE flush right.
 //------------------------------------------------------------------------------------------------
 enum IA_DefendHudState
 {
 	Hidden,
 	Active,
 	Complete
+}
+
+enum IA_DefendHudPhase
+{
+	None,
+	Prepare,
+	Probe,
+	Assault,
+	Crisis,
+	Secure
 }
 
 enum IA_DefendHudAnim
@@ -26,7 +37,6 @@ enum IA_DefendHudAnim
 class IA_DefendHud : MUI_Surface
 {
 	protected static const float HUD_W = 288;
-	protected static const float GLOW_H = 48;
 	protected static const float TAB_H = 18;
 	protected static const float BODY_H = 48;
 	protected static const float HUD_H = 66;
@@ -53,6 +63,7 @@ class IA_DefendHud : MUI_Surface
 
 	protected IA_DefendHudAnim m_eAnim;
 	protected IA_DefendHudState m_eShownState;
+	protected IA_DefendHudPhase m_eShownPhase;
 
 	protected string m_sShownArea;
 
@@ -63,6 +74,7 @@ class IA_DefendHud : MUI_Surface
 	protected float m_fAnimT;
 	protected float m_fCompleteHold;
 	protected float m_fSpin;
+	protected float m_fTabAlign;
 	protected bool m_bArmed;
 
 	protected ref Color m_HudBg;
@@ -71,9 +83,6 @@ class IA_DefendHud : MUI_Surface
 	protected ref Color m_HudTab;
 	protected ref Color m_HudWhite;
 	protected ref Color m_HudRail;
-	protected ref Color m_VignetteTop;
-	protected ref Color m_VignetteBot;
-	protected ref Color m_Shadow;
 	protected ref array<float> m_aBodyPoly;
 
 	//------------------------------------------------------------------------------------------------
@@ -93,18 +102,17 @@ class IA_DefendHud : MUI_Surface
 		m_fBlurIntensity = 0.90;
 		m_eAnim = IA_DefendHudAnim.Idle;
 		m_eShownState = IA_DefendHudState.Hidden;
+		m_eShownPhase = IA_DefendHudPhase.None;
 		m_sShownArea = "";
 		m_fIntroDuration = 0;
 		m_fIntro = 1;
+		m_fTabAlign = 0;
 		m_HudBg = Color.FromSRGBA(13, 20, 18, 230);
 		m_HudAmber = Color.FromSRGBA(240, 180, 70, 255);
 		m_HudGreen = Color.FromSRGBA(94, 251, 131, 255);
 		m_HudTab = Color.FromSRGBA(56, 40, 18, 204);
 		m_HudWhite = Color.FromSRGBA(255, 255, 255, 255);
 		m_HudRail = Color.FromSRGBA(40, 32, 18, 180);
-		m_VignetteTop = Color.FromSRGBA(0, 0, 0, 0);
-		m_VignetteBot = Color.FromSRGBA(0, 0, 0, 153);
-		m_Shadow = Color.FromSRGBA(0, 0, 0, 204);
 		m_aBodyPoly = new array<float>();
 	}
 
@@ -142,10 +150,12 @@ class IA_DefendHud : MUI_Surface
 	{
 		m_eAnim = IA_DefendHudAnim.Idle;
 		m_eShownState = IA_DefendHudState.Hidden;
+		m_eShownPhase = IA_DefendHudPhase.None;
 		m_bArmed = false;
 		m_sShownArea = "";
 		m_fIntro = 1;
 		m_fSlideY = 0;
+		m_fTabAlign = 0;
 		SetVisible(false);
 	}
 
@@ -158,6 +168,7 @@ class IA_DefendHud : MUI_Surface
 		TickRemain(dt);
 		TickPressure(dt);
 		TickSpin(dt);
+		TickTabAlign(dt);
 
 		if (m_eAnim != IA_DefendHudAnim.Idle)
 			InvalidatePaint();
@@ -168,12 +179,14 @@ class IA_DefendHud : MUI_Surface
 	{
 		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
 		IA_DefendHudState nextState = IA_DefendHudState.Hidden;
+		IA_DefendHudPhase nextPhase = IA_DefendHudPhase.None;
 		string nextArea = "";
 		int nextRemain = 0;
 		float nextPressure = 0;
 		if (init)
 		{
 			nextState = DecodeState(init.GetDefendHudState());
+			nextPhase = DecodePhase(init.GetDefendHudPhase());
 			nextArea = init.GetDefendHudArea();
 			nextRemain = init.GetDefendHudRemainingSec();
 			nextPressure = init.GetDefendHudPressure();
@@ -198,9 +211,13 @@ class IA_DefendHud : MUI_Surface
 
 		bool areaChanged = m_sShownArea != nextArea;
 		if (areaChanged || !m_bArmed)
-			Arm(nextArea, nextState, nextRemain, nextPressure);
-		else if (m_eShownState != nextState)
-			m_eShownState = nextState;
+			Arm(nextArea, nextState, nextRemain, nextPressure, nextPhase);
+		else
+		{
+			if (m_eShownState != nextState)
+				m_eShownState = nextState;
+			m_eShownPhase = nextPhase;
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -214,7 +231,23 @@ class IA_DefendHud : MUI_Surface
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void Arm(string areaName, IA_DefendHudState state, int remainingSec, float pressure)
+	protected IA_DefendHudPhase DecodePhase(int raw)
+	{
+		if (raw == IA_DefendHudPhase.Prepare)
+			return IA_DefendHudPhase.Prepare;
+		if (raw == IA_DefendHudPhase.Probe)
+			return IA_DefendHudPhase.Probe;
+		if (raw == IA_DefendHudPhase.Assault)
+			return IA_DefendHudPhase.Assault;
+		if (raw == IA_DefendHudPhase.Crisis)
+			return IA_DefendHudPhase.Crisis;
+		if (raw == IA_DefendHudPhase.Secure)
+			return IA_DefendHudPhase.Secure;
+		return IA_DefendHudPhase.None;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void Arm(string areaName, IA_DefendHudState state, int remainingSec, float pressure, IA_DefendHudPhase phase)
 	{
 		bool snapDisplay = !m_bArmed;
 		if (m_sShownArea != areaName)
@@ -222,12 +255,14 @@ class IA_DefendHud : MUI_Surface
 
 		m_sShownArea = areaName;
 		m_eShownState = state;
+		m_eShownPhase = phase;
 		m_iServerRemainSec = remainingSec;
 		m_fServerPressure = pressure;
 		if (snapDisplay)
 		{
 			m_fLocalRemainSec = remainingSec;
 			m_fPressureDisplay = pressure;
+			m_fTabAlign = ResolveTabAlign();
 		}
 		m_bArmed = true;
 		m_fCompleteHold = 0;
@@ -302,6 +337,7 @@ class IA_DefendHud : MUI_Surface
 		m_bArmed = false;
 		m_sShownArea = "";
 		m_eShownState = IA_DefendHudState.Hidden;
+		m_eShownPhase = IA_DefendHudPhase.None;
 		m_fIntro = 1;
 		m_fSlideY = 0;
 		SetVisible(false);
@@ -329,9 +365,7 @@ class IA_DefendHud : MUI_Surface
 		float delta = m_fLocalRemainSec - serverRemain;
 		if (delta < 0)
 			delta = -delta;
-		if (delta > 2.5)
-			m_fLocalRemainSec = serverRemain;
-		else if (m_fLocalRemainSec < serverRemain - 0.35)
+		if (delta > 3.5)
 			m_fLocalRemainSec = serverRemain;
 	}
 
@@ -365,6 +399,41 @@ class IA_DefendHud : MUI_Surface
 		m_fSpin = m_fSpin + dt * degPerSec;
 		if (m_fSpin >= 360)
 			m_fSpin = m_fSpin - 360;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected float ResolveTabAlign()
+	{
+		if (m_eShownState == IA_DefendHudState.Complete)
+			return 1;
+		if (m_eShownPhase == IA_DefendHudPhase.Secure)
+			return 1;
+		if (m_eShownPhase == IA_DefendHudPhase.Crisis)
+			return 1;
+		if (m_eShownPhase == IA_DefendHudPhase.Assault)
+			return 0.5;
+		if (m_eShownPhase == IA_DefendHudPhase.Prepare)
+			return 0;
+		if (m_eShownPhase == IA_DefendHudPhase.Probe)
+			return 0;
+		if (m_fPressureDisplay >= 0.75)
+			return 0.5;
+		return 0;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void TickTabAlign(float dt)
+	{
+		if (m_eAnim == IA_DefendHudAnim.Idle)
+			return;
+		if (m_eAnim == IA_DefendHudAnim.Outro)
+			return;
+
+		m_fTabAlign = MUI_Ease.Approach(m_fTabAlign, ResolveTabAlign(), dt, 10);
+		if (m_fTabAlign < 0)
+			m_fTabAlign = 0;
+		if (m_fTabAlign > 1)
+			m_fTabAlign = 1;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -422,7 +491,6 @@ class IA_DefendHud : MUI_Surface
 		float bodyY = y + TAB_H;
 
 		SyncHostWidgets();
-		DrawVignette(surface, x, tabY - GLOW_H, w, op);
 		DrawBody(surface, x, bodyY, w, op, tone);
 		DrawTab(surface, x, tabY, w, op, tone);
 		DrawContent(surface, x, bodyY, w, op, tone);
@@ -451,6 +519,16 @@ class IA_DefendHud : MUI_Surface
 	{
 		if (m_eShownState == IA_DefendHudState.Complete)
 			return "SECURE";
+		if (m_eShownPhase == IA_DefendHudPhase.Prepare)
+			return "PREPARE";
+		if (m_eShownPhase == IA_DefendHudPhase.Probe)
+			return "PROBE";
+		if (m_eShownPhase == IA_DefendHudPhase.Assault)
+			return "ASSAULT";
+		if (m_eShownPhase == IA_DefendHudPhase.Crisis)
+			return "CRISIS";
+		if (m_eShownPhase == IA_DefendHudPhase.Secure)
+			return "SECURE";
 		if (m_fPressureDisplay >= 0.75)
 			return "ASSAULT";
 		return "HOLD";
@@ -470,13 +548,6 @@ class IA_DefendHud : MUI_Surface
 		else
 			secStr = seconds.ToString();
 		return minutes.ToString() + ":" + secStr;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void DrawVignette(MUI_RenderSurface surface, float x, float y, float w, float op)
-	{
-		surface.FillGradientV(x, y, w, GLOW_H, MUI_ColorUtil.Fade(m_VignetteTop, op), MUI_ColorUtil.Fade(m_VignetteBot, op), 10);
-		surface.FillRect(x - 8, y + GLOW_H - 18, w + 16, 28, MUI_ColorUtil.Fade(m_Shadow, op * 0.35), 16);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -529,7 +600,9 @@ class IA_DefendHud : MUI_Surface
 		float tabW = textW + TAB_PAD_X * 2;
 		if (tabW < 48)
 			tabW = 48;
-		float tx = x + (w - tabW) * 0.5;
+		if (tabW > w)
+			tabW = w;
+		float tx = x + (w - tabW) * m_fTabAlign;
 		float ty = y;
 
 		surface.FillRect(tx, ty, tabW, TAB_H + 1, MUI_ColorUtil.Fade(m_HudTab, op), 0);

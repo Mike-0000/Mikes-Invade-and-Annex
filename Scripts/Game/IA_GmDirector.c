@@ -186,6 +186,15 @@ class IA_GmDirector
 		EnsureStarted();
 		if (bucket == IA_GmBucket.Live)
 		{
+			IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+			int activeGroup = -1;
+			if (init)
+				activeGroup = init.GetActiveGroup();
+			if (activeGroup >= 0)
+			{
+				m_iLiveGroup = activeGroup;
+				return activeGroup;
+			}
 			if (m_iLiveGroup < 0 && Replication.IsServer())
 				BeginLiveGroup();
 			if (m_iLiveGroup >= 0)

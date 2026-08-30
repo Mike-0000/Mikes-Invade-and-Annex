@@ -32,6 +32,7 @@ class IA_ReinforcementSpawnRequest
     bool m_forDefendMission;
     int m_sectorIndex;
     int m_unitCountOverride;
+    bool m_bTightStagger;
 }
 
 class IA_AreaInstance
@@ -85,8 +86,9 @@ class IA_AreaInstance
     
     // --- BEGIN ADDED: Reinforcement Wave Variables ---
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
-    private int m_reinforcementGroupsSpawned = 0;     // Groups spawned in this attack cycle
+    private int m_reinforcementGroupsSpawned = 0;     // Groups reserved/spawned in this attack cycle
     private int m_reinforcementWaveDelayTimer = 0;    // Ticks until next wave
+    private int m_pendingWaveUnits = 0;              // Defend-style units scheduled but not yet spawned
     private const int INITIAL_REINFORCEMENT_DELAY_TICKS = Math.RandomInt(3,6);
     // --- END ADDED ---
 
@@ -258,6 +260,63 @@ class IA_AreaInstance
                 }
             }
         }
+
+        ApplyScaledReinforcementQuota();
+    }
+
+    //! Occupying groups already multiply by scale. Quota / garrison counts must too,
+    //! otherwise a low AI Scale Multiplier shrinks squads but still streams a full
+    //! set of extra groups. Never raise the authored count (high-pop already uses
+    //! larger squads and a 2-group wave).
+    protected int ScaleGroupCountDown(int baseCount)
+    {
+        if (baseCount <= 0)
+            return 0;
+        if (m_aiScaleFactor >= 1.0)
+            return baseCount;
+        int n = Math.Round(baseCount * m_aiScaleFactor);
+        if (n < 1)
+            n = 1;
+        return n;
+    }
+
+    protected void ApplyScaledReinforcementQuota()
+    {
+        if (!m_area)
+            return;
+        m_totalReinforcementQuota = ScaleGroupCountDown(m_area.GetReinforcementGroupQuota());
+    }
+
+    protected int CountAliveMilitaryUnits()
+    {
+        int total = 0;
+        if (!m_military)
+            return 0;
+        foreach (IA_AiGroup group : m_military)
+        {
+            if (group)
+                total = total + group.GetAliveCount();
+        }
+        return total;
+    }
+
+    protected void RefundReinforcementReservation(IA_ReinforcementSpawnRequest request)
+    {
+        if (!request)
+            return;
+        if (request.m_forDefendMission)
+        {
+            int n = request.m_unitCountOverride;
+            if (n < 1)
+                return;
+            if (m_pendingWaveUnits >= n)
+                m_pendingWaveUnits = m_pendingWaveUnits - n;
+            else
+                m_pendingWaveUnits = 0;
+            return;
+        }
+        if (m_reinforcementGroupsSpawned > 0)
+            m_reinforcementGroupsSpawned = m_reinforcementGroupsSpawned - 1;
     }
 
 	
@@ -835,6 +894,14 @@ class IA_AreaInstance
                 areaName = m_area.GetName();
             Print(string.Format("[IA][Area] ForceFinish shutting down %1 so leftover AI cannot keep spawning.", areaName), LogLevel.WARNING);
 
+            IA_Game gameInst = IA_Game.Instantiate();
+            if (gameInst)
+            {
+                IA_DefendMission defend = gameInst.GetActiveDefendMission();
+                if (defend && defend.IsHostingArea(this))
+                    defend.OnHostAreaForceFinish();
+            }
+
             m_bShutDown = true;
             m_canSpawn = false;
             m_mortarCrewSetupDone = true;
@@ -998,12 +1065,17 @@ class IA_AreaInstance
         m_attackingFactions.Clear();
         m_strength = 0;
 
-        // --- BEGIN ADDED: Reset reinforcements on faction change ---
-        ResetReinforcementState();
-        // Also reset vehicle reinforcements (optional, but likely desired)
-        // m_vehicleReinforcements = IA_ReinforcementState.NotDone; // Consider if needed
-        // m_vehicleReinforcementTimer = 0;
-        // --- END ADDED ---
+        // Capture (or other faction flip) must stop inbound waves. Resetting to
+        // NotDone used to allow a second full quota, and leftover CallLater still
+        // delivered USSR groups into an already-taken zone.
+        CancelPendingSpawns();
+        m_pendingWaveUnits = 0;
+        m_reinforcements = IA_ReinforcementState.Done;
+        m_vehicleReinforcements = IA_ReinforcementState.Done;
+        if (m_isRadioTowerDefenseActive)
+            SetRadioTowerDefenseActive(false);
+        if (m_isSideObjectiveDefenseActive)
+            SetSideObjectiveDefenseActive(false, null);
 
         IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
         if (rep)
@@ -1064,15 +1136,16 @@ class IA_AreaInstance
             return;
         if (m_isSideObjectiveDefenseActive)
             return;
-        // Stop immediately if area is no longer under attack
-        if (!IsUnderAttack())
-        {
-            if (m_reinforcements != IA_ReinforcementState.NotDone) // Only reset if it wasn't already NotDone
-            {
-               ResetReinforcementState();
-            }
+        if (m_isRadioTowerDefenseActive)
             return;
-        }
+        if (m_area && m_area.GetAreaType() == IA_AreaType.RadioTower)
+            return;
+        if (m_faction == IA_Faction.US)
+            return;
+        // Pause if contact dropped, but keep quota progress. Resetting spawned
+        // count here let the next contact roll a second full allotment.
+        if (!IsUnderAttack())
+            return;
 
         // If already done, do nothing
         if (m_reinforcements == IA_ReinforcementState.Done)
@@ -4793,7 +4866,7 @@ class IA_AreaInstance
     }
 
     // --- BEGIN ADDED: Spawn Reinforcement Wave Logic ---
-    bool SpawnReinforcementWave(int groupsToSpawn, Faction AreaFaction, bool forDefendMission = false)
+    bool SpawnReinforcementWave(int groupsToSpawn, Faction AreaFaction, bool forDefendMission = false, bool tightStagger = false)
     {
         if (m_bShutDown)
             return false;
@@ -4846,19 +4919,33 @@ class IA_AreaInstance
         Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
             m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
 
+        // Reserve against the cap now. Quota used to increment only when the
+        // delayed enactor succeeded, so overlapping waves could overshoot.
+        if (!forDefendMission)
+            m_reinforcementGroupsSpawned = m_reinforcementGroupsSpawned + actualSpawnCount;
+
         for (int i = 0; i < actualSpawnCount; i++)
         {
-			int sectorIndex = (m_reinforcementGroupsSpawned + i) % 4;
+			int sectorIndex = i % 4;
+			if (!forDefendMission)
+				sectorIndex = (m_reinforcementGroupsSpawned - actualSpawnCount + i) % 4;
 			int unitCountOverride = -1;
 			if (forDefendMission && defendFireteamSizes)
+			{
 				unitCountOverride = defendFireteamSizes[i];
+				if (unitCountOverride > 0)
+					m_pendingWaveUnits = m_pendingWaveUnits + unitCountOverride;
+			}
 
 			ref IA_ReinforcementSpawnRequest request = new IA_ReinforcementSpawnRequest();
 			request.m_areaFaction = AreaFaction;
 			request.m_forDefendMission = forDefendMission;
 			request.m_sectorIndex = sectorIndex;
 			request.m_unitCountOverride = unitCountOverride;
+			request.m_bTightStagger = tightStagger;
 			int spawnDelayMs = 2000 + (i * Math.RandomInt(12000, 20000));
+			if (tightStagger)
+				spawnDelayMs = 400 + (i * Math.RandomInt(2500, 4500));
 			GetGame().GetCallqueue().CallLater(this.SpawnReinforcementEnactorFromRequest, spawnDelayMs, false, request);
         }
         
@@ -4868,12 +4955,19 @@ class IA_AreaInstance
 
 	void SpawnReinforcementEnactorFromRequest(IA_ReinforcementSpawnRequest request)
 	{
-		if (m_bShutDown)
-			return;
 		if (!request)
 			return;
+		if (m_bShutDown)
+		{
+			RefundReinforcementReservation(request);
+			return;
+		}
 
-		SpawnReinforcementEnactor(request.m_areaFaction, request.m_forDefendMission, request.m_sectorIndex, request.m_unitCountOverride);
+		bool spawned = SpawnReinforcementEnactor(request.m_areaFaction, request.m_forDefendMission, request.m_sectorIndex, request.m_unitCountOverride);
+		if (!spawned)
+			RefundReinforcementReservation(request);
+		else if (request.m_forDefendMission)
+			RefundReinforcementReservation(request);
 	}
 
 	bool SpawnReinforcementEnactor(Faction AreaFaction, bool forDefendMission = false, int sectorIndex = 0, int unitCountOverride = -1){
@@ -5063,7 +5157,6 @@ class IA_AreaInstance
                     Print(string.Format("[SpawnReinforcementWave] Staging at %1 (~300m from OBJ), arc: %2° (%3 routing pts).",
                         stagingPos.ToString(), Math.Round(totalAngle * 180.0 / Math.PI), numArcPoints), LogLevel.DEBUG);
                 }
-                m_reinforcementGroupsSpawned++;
                 spawnedAny = true;
                 
                 Print(string.Format("[AreaInstance.SpawnReinforcementWave] Spawned reinforcement group (%1 units, faction: %2) at %3. Total spawned: %4/%5.",
@@ -5737,6 +5830,11 @@ class IA_AreaInstance
         return m_area;
     }
 
+    IA_Faction GetOwningFaction()
+    {
+        return m_faction;
+    }
+
     protected int BuildingGarrisonUnitCount()
     {
         int n = IA_SquadCount(IA_SquadType.Firesquad, m_faction);
@@ -5799,7 +5897,7 @@ class IA_AreaInstance
         if (!spawnFaction)
             spawnFaction = m_AreaFaction;
 
-        int want = IA_BuildingHoldFinder.CountForAreaType(m_area.GetAreaType());
+        int want = ScaleGroupCountDown(IA_BuildingHoldFinder.CountForAreaType(m_area.GetAreaType()));
         int spawned = 0;
         int delay = 0;
         int units = BuildingGarrisonUnitCount();
@@ -6123,6 +6221,12 @@ class IA_AreaInstance
         // This task only applies to Radio Tower areas.
         if (!m_area || m_area.GetAreaType() != IA_AreaType.RadioTower || m_radioTowerDestroyed)
             return;
+        if (m_faction == IA_Faction.US)
+        {
+            if (m_isRadioTowerDefenseActive)
+                SetRadioTowerDefenseActive(false);
+            return;
+        }
         bool shouldBeActive = ShouldRadioTowerDefenseBeActive();
         Print("Passed Area Check for " + m_area.GetName(), LogLevel.DEBUG); 
         // Activate or deactivate radio tower defense based on combat state.
@@ -6144,12 +6248,7 @@ class IA_AreaInstance
         int currentTime = System.GetTickCount();
         if (currentTime - m_radioTowerLastWaveSpawnTime >= RADIO_TOWER_WAVE_INTERVAL)
         {
-            int currentAICount = 0;
-            foreach (IA_AiGroup group : m_military)
-            {
-                if (group && group.IsDefendWaveGroup())
-                    currentAICount += group.GetAliveCount();
-            }
+            int currentAICount = CountAliveMilitaryUnits() + m_pendingWaveUnits;
 
             Print(string.Format("[IA_AreaInstance] Radio Tower Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_radioTowerTargetAICount), LogLevel.DEBUG);
 
@@ -6173,12 +6272,7 @@ class IA_AreaInstance
         float scaleFactor = IA_Game.GetAIScaleFactor();
         int unitBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
 
-        int currentWaveAI = 0;
-        foreach (IA_AiGroup group : m_military)
-        {
-            if (group && group.IsDefendWaveGroup())
-                currentWaveAI += group.GetAliveCount();
-        }
+        int currentWaveAI = CountAliveMilitaryUnits() + m_pendingWaveUnits;
         int room = m_radioTowerTargetAICount - currentWaveAI;
         if (room < unitBudget)
             unitBudget = room;
@@ -6327,12 +6421,7 @@ class IA_AreaInstance
 		float scaleFactor = IA_Game.GetAIScaleFactor();
 		int unitBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
 
-		int currentAICount = 0;
-		foreach (IA_AiGroup group : m_military)
-		{
-			if (group)
-				currentAICount += group.GetAliveCount();
-		}
+		int currentAICount = CountAliveMilitaryUnits() + m_pendingWaveUnits;
 		int room = m_sideObjectiveTargetAICount - currentAICount;
 		if (room < unitBudget)
 			unitBudget = room;
@@ -6356,11 +6445,7 @@ class IA_AreaInstance
 		int currentTime = System.GetTickCount();
 		if (currentTime - m_sideObjectiveLastWaveSpawnTime >= SIDE_OBJECTIVE_WAVE_INTERVAL)
 		{
-			int currentAICount = 0;
-			foreach (IA_AiGroup group : m_military)
-			{
-				if (group) currentAICount += group.GetAliveCount();
-			}
+			int currentAICount = CountAliveMilitaryUnits() + m_pendingWaveUnits;
 	
 			Print(string.Format("[IA_AreaInstance] Side Objective Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_sideObjectiveTargetAICount), LogLevel.DEBUG);
 	

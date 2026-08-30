@@ -84,13 +84,13 @@ class IA_Config{
 	[Attribute(defvalue: "0.18", UIWidgets.Slider, category: "Artillery", desc: "Chance (0-1) for an artillery strike to occur during a check interval", params: "0 1 0.01")]
 	float m_fArtilleryStrikeChance;
 
-	[Attribute(defvalue: "300", UIWidgets.EditBox, category: "Artillery", desc: "Cooldown (in seconds) between artillery strikes")]
+	[Attribute(defvalue: "300", UIWidgets.EditBox, category: "Artillery", desc: "Seconds to wait after a strike before another can start")]
 	int m_iArtilleryCooldown;
 
-	[Attribute(defvalue: "45", UIWidgets.EditBox, category: "Artillery", desc: "Minimum delay (in seconds) from smoke to impact")]
+	[Attribute(defvalue: "45", UIWidgets.EditBox, category: "Artillery", desc: "Minimum seconds from warning smoke to mortar impact")]
 	int m_iArtilleryMinDelay;
 
-	[Attribute(defvalue: "70", UIWidgets.EditBox, category: "Artillery", desc: "Maximum delay (in seconds) from smoke to impact")]
+	[Attribute(defvalue: "70", UIWidgets.EditBox, category: "Artillery", desc: "Maximum seconds from warning smoke to mortar impact")]
 	int m_iArtilleryMaxDelay;
 
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Game Master", desc: "Game Master mode: do not auto-start or auto-advance AOs. The GM places and activates sites.")]
@@ -111,7 +111,256 @@ class IA_Config{
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Game Master", desc: "On Activate, auto-place a mortar pit and radio towers like classic I&A.")]
 	bool m_bGmAutoPlaceSupport;
 
- 
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Defense", desc: "Use the original 12-16 minute timer-only hold for the next defense.")]
+	bool m_bUseLegacyDefense;
+
+	[Attribute(defvalue: "18", UIWidgets.EditBox, category: "Defense", desc: "Enhanced defense duration minimum (minutes).")]
+	int m_iDefendDurationMinMin = 18;
+
+	[Attribute(defvalue: "22", UIWidgets.EditBox, category: "Defense", desc: "Enhanced defense duration maximum (minutes).")]
+	int m_iDefendDurationMaxMin = 22;
+
+	[Attribute(defvalue: "120", UIWidgets.EditBox, category: "Defense", desc: "PREPARE phase minimum (seconds).")]
+	int m_iDefendPrepareMinSec = 120;
+
+	[Attribute(defvalue: "180", UIWidgets.EditBox, category: "Defense", desc: "PREPARE phase maximum (seconds).")]
+	int m_iDefendPrepareMaxSec = 180;
+
+	[Attribute(defvalue: "2", UIWidgets.EditBox, category: "Defense", desc: "Guaranteed mini-objectives per Enhanced hold (0-3).")]
+	int m_iDefendGuaranteedEvents = 2;
+
+	[Attribute(defvalue: "0.25", UIWidgets.Slider, category: "Defense", desc: "Third-event chance at 1-8 connected players.", params: "0 1 0.01")]
+	float m_fDefendThirdChanceLow = 0.25;
+
+	[Attribute(defvalue: "0.50", UIWidgets.Slider, category: "Defense", desc: "Third-event chance at 9-16 connected players.", params: "0 1 0.01")]
+	float m_fDefendThirdChanceMid = 0.50;
+
+	[Attribute(defvalue: "0.75", UIWidgets.Slider, category: "Defense", desc: "Third-event chance at 17+ connected players.", params: "0 1 0.01")]
+	float m_fDefendThirdChanceHigh = 0.75;
+
+	[Attribute(defvalue: "120", UIWidgets.EditBox, category: "Defense", desc: "HIGH PRIORITY success time reduction minimum (seconds).")]
+	int m_iDefendPrioritySuccessMinSec = 120;
+
+	[Attribute(defvalue: "240", UIWidgets.EditBox, category: "Defense", desc: "HIGH PRIORITY success time reduction maximum (seconds).")]
+	int m_iDefendPrioritySuccessMaxSec = 240;
+
+	[Attribute(defvalue: "180", UIWidgets.EditBox, category: "Defense", desc: "HIGH PRIORITY timeout penalty minimum (seconds).")]
+	int m_iDefendPriorityFailMinSec = 180;
+
+	[Attribute(defvalue: "300", UIWidgets.EditBox, category: "Defense", desc: "HIGH PRIORITY timeout penalty maximum (seconds).")]
+	int m_iDefendPriorityFailMaxSec = 300;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow Siege doctrine.")]
+	bool m_bDefendDoctrineSiege = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow Breakthrough doctrine.")]
+	bool m_bDefendDoctrineBreakthrough = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow Air Assault doctrine.")]
+	bool m_bDefendDoctrineAirAssault = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow Command Offensive doctrine.")]
+	bool m_bDefendDoctrineCommand = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow Commander FOB event.")]
+	bool m_bDefendEventCommander = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow elite patrol event.")]
+	bool m_bDefendEventElite = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow scout-to-spotting-team event.")]
+	bool m_bDefendEventScoutMortar = true;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow reinforcement convoy event.")]
+	bool m_bDefendEventConvoy = true;
+
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Defense", desc: "Unused. Signal-relay events stay disabled until inbound HUD cues exist.")]
+	bool m_bDefendEventRelay = false;
+
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Defense", desc: "Allow sniper pair event.")]
+	bool m_bDefendEventSniper = true;
+
+	[Attribute(defvalue: "0.20", UIWidgets.Slider, category: "Defense", desc: "Air Assault hot-drop chance (0-1). Remainder uses a 150-300 m perimeter LZ.", params: "0 1 0.01")]
+	float m_fDefendHotDropChance = 0.20;
+
+	static const int DEFEND_DOC_SIEGE = 1;
+	static const int DEFEND_DOC_BREAKTHROUGH = 2;
+	static const int DEFEND_DOC_AIR = 4;
+	static const int DEFEND_DOC_COMMAND = 8;
+	static const int DEFEND_EVT_COMMANDER = 1;
+	static const int DEFEND_EVT_ELITE = 2;
+	static const int DEFEND_EVT_SCOUT = 4;
+	static const int DEFEND_EVT_CONVOY = 8;
+	static const int DEFEND_EVT_RELAY = 16;
+	static const int DEFEND_EVT_SNIPER = 32;
+
+	//------------------------------------------------------------------------------------------------
+	bool UseLegacyDefense()
+	{
+		return m_bUseLegacyDefense;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	int GetDefenseDoctrineMask()
+	{
+		int mask = 0;
+		if (m_bDefendDoctrineSiege)
+			mask = mask | DEFEND_DOC_SIEGE;
+		if (m_bDefendDoctrineBreakthrough)
+			mask = mask | DEFEND_DOC_BREAKTHROUGH;
+		if (m_bDefendDoctrineAirAssault)
+			mask = mask | DEFEND_DOC_AIR;
+		if (m_bDefendDoctrineCommand)
+			mask = mask | DEFEND_DOC_COMMAND;
+		return mask;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetDefenseDoctrineMask(int mask)
+	{
+		m_bDefendDoctrineSiege = (mask & DEFEND_DOC_SIEGE) != 0;
+		m_bDefendDoctrineBreakthrough = (mask & DEFEND_DOC_BREAKTHROUGH) != 0;
+		m_bDefendDoctrineAirAssault = (mask & DEFEND_DOC_AIR) != 0;
+		m_bDefendDoctrineCommand = (mask & DEFEND_DOC_COMMAND) != 0;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	int GetDefenseEventMask()
+	{
+		int mask = 0;
+		if (m_bDefendEventCommander)
+			mask = mask | DEFEND_EVT_COMMANDER;
+		if (m_bDefendEventElite)
+			mask = mask | DEFEND_EVT_ELITE;
+		if (m_bDefendEventScoutMortar)
+			mask = mask | DEFEND_EVT_SCOUT;
+		if (m_bDefendEventConvoy)
+			mask = mask | DEFEND_EVT_CONVOY;
+		if (m_bDefendEventRelay)
+			mask = mask | DEFEND_EVT_RELAY;
+		if (m_bDefendEventSniper)
+			mask = mask | DEFEND_EVT_SNIPER;
+		return mask;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void SetDefenseEventMask(int mask)
+	{
+		m_bDefendEventCommander = (mask & DEFEND_EVT_COMMANDER) != 0;
+		m_bDefendEventElite = (mask & DEFEND_EVT_ELITE) != 0;
+		m_bDefendEventScoutMortar = (mask & DEFEND_EVT_SCOUT) != 0;
+		m_bDefendEventConvoy = (mask & DEFEND_EVT_CONVOY) != 0;
+		m_bDefendEventRelay = (mask & DEFEND_EVT_RELAY) != 0;
+		m_bDefendEventSniper = (mask & DEFEND_EVT_SNIPER) != 0;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void ClampDefenseSettings()
+	{
+		if (m_iDefendDurationMinMin < 8)
+			m_iDefendDurationMinMin = 8;
+		if (m_iDefendDurationMaxMin < m_iDefendDurationMinMin)
+			m_iDefendDurationMaxMin = m_iDefendDurationMinMin;
+		if (m_iDefendDurationMaxMin > 40)
+			m_iDefendDurationMaxMin = 40;
+
+		if (m_iDefendPrepareMinSec < 15)
+			m_iDefendPrepareMinSec = 15;
+		if (m_iDefendPrepareMaxSec < m_iDefendPrepareMinSec)
+			m_iDefendPrepareMaxSec = m_iDefendPrepareMinSec;
+		if (m_iDefendPrepareMaxSec > 300)
+			m_iDefendPrepareMaxSec = 300;
+
+		if (m_iDefendGuaranteedEvents < 0)
+			m_iDefendGuaranteedEvents = 0;
+		if (m_iDefendGuaranteedEvents > 3)
+			m_iDefendGuaranteedEvents = 3;
+
+		if (m_fDefendThirdChanceLow < 0)
+			m_fDefendThirdChanceLow = 0;
+		if (m_fDefendThirdChanceLow > 1)
+			m_fDefendThirdChanceLow = 1;
+		if (m_fDefendThirdChanceMid < 0)
+			m_fDefendThirdChanceMid = 0;
+		if (m_fDefendThirdChanceMid > 1)
+			m_fDefendThirdChanceMid = 1;
+		if (m_fDefendThirdChanceHigh < 0)
+			m_fDefendThirdChanceHigh = 0;
+		if (m_fDefendThirdChanceHigh > 1)
+			m_fDefendThirdChanceHigh = 1;
+
+		if (m_iDefendPrioritySuccessMinSec < 30)
+			m_iDefendPrioritySuccessMinSec = 30;
+		if (m_iDefendPrioritySuccessMaxSec < m_iDefendPrioritySuccessMinSec)
+			m_iDefendPrioritySuccessMaxSec = m_iDefendPrioritySuccessMinSec;
+		if (m_iDefendPriorityFailMinSec < 30)
+			m_iDefendPriorityFailMinSec = 30;
+		if (m_iDefendPriorityFailMaxSec < m_iDefendPriorityFailMinSec)
+			m_iDefendPriorityFailMaxSec = m_iDefendPriorityFailMinSec;
+
+		if (m_fDefendHotDropChance < 0)
+			m_fDefendHotDropChance = 0;
+		if (m_fDefendHotDropChance > 1)
+			m_fDefendHotDropChance = 1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string PackDefenseExtras(notnull IA_Config cfg)
+	{
+		cfg.ClampDefenseSettings();
+		int legacyI = 0;
+		if (cfg.m_bUseLegacyDefense)
+			legacyI = 1;
+
+		string packed = legacyI.ToString();
+		packed = packed + "," + cfg.m_iDefendDurationMinMin.ToString();
+		packed = packed + "," + cfg.m_iDefendDurationMaxMin.ToString();
+		packed = packed + "," + cfg.m_iDefendPrepareMinSec.ToString();
+		packed = packed + "," + cfg.m_iDefendPrepareMaxSec.ToString();
+		packed = packed + "," + cfg.m_iDefendGuaranteedEvents.ToString();
+		packed = packed + "," + cfg.m_fDefendThirdChanceLow.ToString();
+		packed = packed + "," + cfg.m_fDefendThirdChanceMid.ToString();
+		packed = packed + "," + cfg.m_fDefendThirdChanceHigh.ToString();
+		packed = packed + "," + cfg.m_iDefendPrioritySuccessMinSec.ToString();
+		packed = packed + "," + cfg.m_iDefendPrioritySuccessMaxSec.ToString();
+		packed = packed + "," + cfg.m_iDefendPriorityFailMinSec.ToString();
+		packed = packed + "," + cfg.m_iDefendPriorityFailMaxSec.ToString();
+		packed = packed + "," + cfg.GetDefenseDoctrineMask().ToString();
+		packed = packed + "," + cfg.GetDefenseEventMask().ToString();
+		packed = packed + "," + cfg.m_fDefendHotDropChance.ToString();
+		return packed;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static void UnpackDefenseExtras(notnull IA_Config cfg, string packed)
+	{
+		if (packed.IsEmpty())
+			return;
+
+		ref array<string> parts = new array<string>();
+		packed.Split(",", parts, false);
+		if (parts.Count() < 16)
+			return;
+
+		cfg.m_bUseLegacyDefense = parts[0].ToInt() != 0;
+		cfg.m_iDefendDurationMinMin = parts[1].ToInt();
+		cfg.m_iDefendDurationMaxMin = parts[2].ToInt();
+		cfg.m_iDefendPrepareMinSec = parts[3].ToInt();
+		cfg.m_iDefendPrepareMaxSec = parts[4].ToInt();
+		cfg.m_iDefendGuaranteedEvents = parts[5].ToInt();
+		cfg.m_fDefendThirdChanceLow = parts[6].ToFloat();
+		cfg.m_fDefendThirdChanceMid = parts[7].ToFloat();
+		cfg.m_fDefendThirdChanceHigh = parts[8].ToFloat();
+		cfg.m_iDefendPrioritySuccessMinSec = parts[9].ToInt();
+		cfg.m_iDefendPrioritySuccessMaxSec = parts[10].ToInt();
+		cfg.m_iDefendPriorityFailMinSec = parts[11].ToInt();
+		cfg.m_iDefendPriorityFailMaxSec = parts[12].ToInt();
+		cfg.SetDefenseDoctrineMask(parts[13].ToInt());
+		cfg.SetDefenseEventMask(parts[14].ToInt());
+		cfg.m_fDefendHotDropChance = parts[15].ToFloat();
+		cfg.ClampDefenseSettings();
+	}
+
  // No Getter methods. We reference the variables directly. 
  // Config access is handled through IA_MissionInitializer.GetGlobalConfig()
 }

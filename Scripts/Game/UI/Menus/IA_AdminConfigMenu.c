@@ -12,6 +12,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Panel m_PageFactions;
 	protected ref MUI_Panel m_PageQrf;
 	protected ref MUI_Panel m_PageDirector;
+	protected ref MUI_Panel m_PageDefense;
 
 	protected ref MUI_Toggle m_GmModeToggle;
 	protected ref MUI_Toggle m_GmAutoActivateToggle;
@@ -19,6 +20,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Toggle m_GmAutoArtyToggle;
 	protected ref MUI_Toggle m_GmAutoSideToggle;
 	protected ref MUI_Toggle m_GmAutoSupportToggle;
+
+	protected ref MUI_HintLayer m_Hints;
 
 	protected ref MUI_Button m_QrfInfantryBtn;
 	protected ref MUI_Button m_QrfMotorizedBtn;
@@ -57,6 +60,31 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref array<string> m_VehicleFactionChoiceKeys;
 	protected bool m_bFactionUiLock;
 
+	protected ref MUI_Toggle m_DefendLegacyToggle;
+	protected ref MUI_NumericField m_DefendDurMinField;
+	protected ref MUI_NumericField m_DefendDurMaxField;
+	protected ref MUI_NumericField m_DefendPrepMinField;
+	protected ref MUI_NumericField m_DefendPrepMaxField;
+	protected ref MUI_NumericField m_DefendEventsField;
+	protected ref MUI_NumericField m_DefendThirdLowField;
+	protected ref MUI_NumericField m_DefendThirdMidField;
+	protected ref MUI_NumericField m_DefendThirdHighField;
+	protected ref MUI_NumericField m_DefendPriSuccMinField;
+	protected ref MUI_NumericField m_DefendPriSuccMaxField;
+	protected ref MUI_NumericField m_DefendPriFailMinField;
+	protected ref MUI_NumericField m_DefendPriFailMaxField;
+	protected ref MUI_Toggle m_DefendDocSiegeToggle;
+	protected ref MUI_Toggle m_DefendDocBreakToggle;
+	protected ref MUI_Toggle m_DefendDocAirToggle;
+	protected ref MUI_Toggle m_DefendDocCmdToggle;
+	protected ref MUI_Toggle m_DefendEvtCmdToggle;
+	protected ref MUI_Toggle m_DefendEvtEliteToggle;
+	protected ref MUI_Toggle m_DefendEvtScoutToggle;
+	protected ref MUI_Toggle m_DefendEvtConvoyToggle;
+	protected ref MUI_Toggle m_DefendEvtSniperToggle;
+	protected ref MUI_Slider m_DefendHotDropSlider;
+	protected ref MUI_Label m_DefendHotDropLabel;
+
 	//------------------------------------------------------------------------------------------------
 	override void OnMenuOpen()
 	{
@@ -88,6 +116,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			880
 		);
 
+		m_Hints = runtime.CreateHintLayer("hints");
+
 		m_Tabs = runtime.CreateTabs("tabs");
 		m_Tabs.SetIntro(0.28, 0.4, 16);
 		m_Tabs.AddTab("Scaling");
@@ -97,6 +127,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Tabs.AddTab("Factions");
 		m_Tabs.AddTab("QRF");
 		m_Tabs.AddTab("Director");
+		m_Tabs.AddTab("Defense");
 		m_Tabs.GetOnChanged().Insert(OnAdminTabChanged);
 
 		ref MUI_ScrollView scroll = runtime.CreateScrollView("scroll");
@@ -111,6 +142,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageFactions = MakePage(runtime, "pageFactions");
 		m_PageQrf = MakePage(runtime, "pageQrf");
 		m_PageDirector = MakePage(runtime, "pageDirector");
+		m_PageDefense = MakePage(runtime, "pageDefense");
 
 		m_AIField = runtime.CreateNumericField("AI scale multiplier", "ai");
 		m_AIField.SetRange(0.1, 10);
@@ -130,6 +162,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageScaling.AddChild(m_AIField);
 		m_PageScaling.AddChild(m_StaticAIField);
 		m_PageScaling.AddChild(m_MilVehField);
+		m_Hints.AddHint(m_Tabs, "Settings pages", "Choose a tab to view a different group of settings. Help updates to explain the open tab.");
+		m_Hints.AddHint(m_AIField, "Enemy strength", "Changes how many enemy soldiers appear as the player count rises. 1 is normal, 0.5 is about half, and 2 is about double.");
+		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "Set this above 0 to ignore the player count and keep enemy numbers at a fixed level. Leave it at 0 for normal player scaling.");
+		m_Hints.AddHint(m_MilVehField, "Enemy vehicle count", "Changes how many enemy military vehicles appear. 1 is normal, 0.5 is about half, and 2 is about double.");
 
 		m_civField = runtime.CreateNumericField("Civilian count multiplier", "civ");
 		m_civField.SetRange(0, 100);
@@ -166,21 +202,31 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageCiv.AddChild(m_RevoltNotifField);
 		m_PageCiv.AddChild(m_RevoltReinfField);
 		m_PageCiv.AddChild(m_CivSpawnToggle);
+		m_Hints.AddHint(m_civField, "Civilian population", "Changes how many civilians appear. 1 is normal, 0.5 is about half, and 2 is about double.");
+		m_Hints.AddHint(m_CivVehField, "Civilian traffic", "Changes how many civilian vehicles appear. 1 is normal, 0.5 is about half, and 2 is about double.");
+		m_Hints.AddHint(m_RevoltField, "When a revolt begins", "Sets how many civilians players can kill before a revolt starts. For example, 0.11 means 11 percent.");
+		m_Hints.AddHint(m_RevoltNotifField, "Revolt warning delay", "How many seconds pass before players are warned that a revolt has started.");
+		m_Hints.AddHint(m_RevoltReinfField, "Revolt reinforcement delay", "How many seconds pass before extra resistance fighters arrive to support the revolt.");
+		m_Hints.AddHint(m_CivSpawnToggle, "Civilian spawning", "Controls whether civilians appear in areas captured by players.");
 
-		m_artyField = runtime.CreateNumericField("Artillery cooldown (seconds)", "arty");
+		m_artyField = runtime.CreateNumericField("Time between strikes (seconds)", "arty");
 		m_artyField.SetRange(0, 3600);
 		m_artyField.SetStep(10);
 		m_artyField.SetDecimals(0);
 
-		m_ArtyMinField = runtime.CreateNumericField("Strike min delay (seconds)", "artyMin");
+		m_ArtyMinField = runtime.CreateNumericField("Smoke to impact min (seconds)", "artyMin");
 		m_ArtyMinField.SetRange(0, 600);
 		m_ArtyMinField.SetStep(1);
 		m_ArtyMinField.SetDecimals(0);
 
-		m_ArtyMaxField = runtime.CreateNumericField("Strike max delay (seconds)", "artyMax");
+		m_ArtyMaxField = runtime.CreateNumericField("Smoke to impact max (seconds)", "artyMax");
 		m_ArtyMaxField.SetRange(0, 600);
 		m_ArtyMaxField.SetStep(1);
 		m_ArtyMaxField.SetDecimals(0);
+
+		ref MUI_Label artyDelayLbl = runtime.CreateLabel("After warning smoke, each strike waits a random time in this range before rounds land. Separate from the time between strikes.", "artyDelayLbl");
+		artyDelayLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		artyDelayLbl.SetMuted(true);
 
 		m_ArtyChanceLabel = runtime.CreateLabel("Strike chance  18%", "artyChanceLbl");
 		m_ArtyChanceLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
@@ -198,9 +244,14 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageArty.AddChild(m_artyField);
 		m_PageArty.AddChild(m_ArtyMinField);
 		m_PageArty.AddChild(m_ArtyMaxField);
+		m_PageArty.AddChild(artyDelayLbl);
 		m_PageArty.AddChild(m_ArtyChanceLabel);
 		m_PageArty.AddChild(m_ArtyChanceSlider);
 		m_PageArty.AddChild(m_ArtyChanceProgress);
+		m_Hints.AddHint(m_artyField, "Time between strikes", "The minimum number of seconds after one artillery strike before another can begin.");
+		m_Hints.AddHint(m_ArtyMinField, "Shortest warning time", "The shortest possible delay between the red warning smoke and the incoming rounds.");
+		m_Hints.AddHint(m_ArtyMaxField, "Longest warning time", "The longest possible delay between the red warning smoke and the incoming rounds.");
+		m_Hints.AddHint(m_ArtyChanceSlider, "Chance of a strike", "Controls how often enemy artillery attacks while players are fighting at an objective. A higher value means more frequent strikes.");
 
 		m_heliToggle = runtime.CreateToggle("Disable HQ helipads", "heli");
 		m_groundToggle = runtime.CreateToggle("Disable HQ ground vehicles", "ground");
@@ -221,6 +272,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageHq.AddChild(m_RolesToggle);
 		m_PageHq.AddChild(m_HaloMaxField);
 		m_PageHq.AddChild(hqPrefabLbl);
+		m_Hints.AddHint(m_heliToggle, "Disable HQ helicopters", "Turn this on to stop helicopters from appearing at the player HQ.");
+		m_Hints.AddHint(m_groundToggle, "Disable HQ ground vehicles", "Turn this on to stop ground vehicles from appearing at the player HQ.");
+		m_Hints.AddHint(m_RolesToggle, "Require pilot roles", "Turn this on to prevent players without a pilot role from flying restricted aircraft.");
+		m_Hints.AddHint(m_HaloMaxField, "HALO player limit", "HALO jumps are available only while the connected player count is below this number. Set it to 0 to disable HALO jumps.");
 
 		BuildFactionPage(runtime);
 
@@ -254,8 +309,18 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageQrf.AddChild(qrfLbl);
 		m_PageQrf.AddChild(qrfRow1);
 		m_PageQrf.AddChild(qrfRow2);
+		m_Hints.AddHint(qrfLbl, "Enemy reinforcements", "Send an enemy Quick Reaction Force toward the current objective. Choose the type of force with the buttons below.");
+		m_Hints.AddHint(m_QrfInfantryBtn, "Infantry QRF", "Sends enemy soldiers on foot toward the objective.");
+		m_Hints.AddHint(m_QrfMotorizedBtn, "Motorized QRF", "Sends enemy soldiers in trucks and light vehicles.");
+		m_Hints.AddHint(m_QrfMechanizedBtn, "Mechanized QRF", "Sends enemy infantry supported by APCs or IFVs.");
+		m_Hints.AddHint(m_QrfArmouredBtn, "Armoured QRF", "Sends tanks supported by infantry.");
+		m_Hints.AddHint(m_QrfAirborneBtn, "Airborne QRF", "Drops enemy paratroopers near the objective after a short warning.");
 
-		m_GmModeToggle = runtime.CreateToggle("Game Master mode", "gmMode");
+		ref MUI_Label gmModeLbl = runtime.CreateLabel("Place and activate sites from the Director map instead.", "gmModeLbl");
+		gmModeLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		gmModeLbl.SetMuted(true);
+
+		m_GmModeToggle = runtime.CreateToggle("Don't auto-start map AOs", "gmMode");
 		m_GmAutoActivateToggle = runtime.CreateToggle("After Live: start Staging, or the next map AO", "gmAutoAct");
 		m_GmAutoQrfToggle = runtime.CreateToggle("Auto QRF on Live AOs", "gmAutoQrf");
 		m_GmAutoArtyToggle = runtime.CreateToggle("Auto artillery on Live AOs", "gmAutoArty");
@@ -266,6 +331,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		openDirBtn.MakeAccent();
 		openDirBtn.GetOnClicked().Insert(OnOpenDirector);
 
+		m_PageDirector.AddChild(gmModeLbl);
 		m_PageDirector.AddChild(m_GmModeToggle);
 		m_PageDirector.AddChild(m_GmAutoActivateToggle);
 		m_PageDirector.AddChild(m_GmAutoQrfToggle);
@@ -273,6 +339,15 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageDirector.AddChild(m_GmAutoSideToggle);
 		m_PageDirector.AddChild(m_GmAutoSupportToggle);
 		m_PageDirector.AddChild(openDirBtn);
+		m_Hints.AddHint(m_GmModeToggle, "Manual objectives", "Stops I&A from choosing and starting objectives automatically. A Game Master can place and start them from the Director map.");
+		m_Hints.AddHint(m_GmAutoActivateToggle, "Continue after an objective", "Automatically starts a staged objective, or the next unused map objective, when the current one is completed.");
+		m_Hints.AddHint(m_GmAutoQrfToggle, "Automatic reinforcements", "Allows I&A to send enemy Quick Reaction Forces while players attack an objective. Turn it off if the Game Master will send them manually.");
+		m_Hints.AddHint(m_GmAutoArtyToggle, "Automatic artillery", "Allows I&A to launch enemy artillery strikes while players attack an objective. Turn it off if the Game Master will control artillery.");
+		m_Hints.AddHint(m_GmAutoSideToggle, "Automatic side missions", "Allows I&A to start side missions on its own. Turn it off if the Game Master will start them.");
+		m_Hints.AddHint(m_GmAutoSupportToggle, "Automatic support sites", "Automatically adds enemy mortar pits and radio towers when an objective begins.");
+		m_Hints.AddHint(openDirBtn, "Open the Director map", "Closes this menu and opens the map used to place, stage, and control objectives.");
+
+		BuildDefensePage(runtime);
 
 		scroll.AddChild(m_PageScaling);
 		scroll.AddChild(m_PageCiv);
@@ -281,6 +356,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		scroll.AddChild(m_PageFactions);
 		scroll.AddChild(m_PageQrf);
 		scroll.AddChild(m_PageDirector);
+		scroll.AddChild(m_PageDefense);
 
 		ref MUI_Panel footerBtns = runtime.CreatePanel("footerBtns");
 		footerBtns.GetStyle().m_Fill = Color.FromInt(0);
@@ -306,6 +382,9 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		persistRow.AddChild(saveBtn);
 		persistRow.AddChild(persistBtn);
 		persistRow.AddChild(clearBtn);
+		m_Hints.AddHint(saveBtn, "Save", "Applies these settings to the current mission. They will not be remembered after a server restart unless you also use Save for restart.");
+		m_Hints.AddHint(persistBtn, "Save for restart", "Applies these settings now and remembers them for future server restarts.");
+		m_Hints.AddHint(clearBtn, "Clear saved settings", "Forgets the settings saved for future restarts. The server will return to the mission's normal settings after the next restart.");
 
 		ref MUI_Row actionRow = runtime.CreateRow("actionRow");
 		actionRow.SetGap(12);
@@ -317,22 +396,221 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		completeBtn.MakeDanger();
 		completeBtn.GetOnClicked().Insert(OnMikesComplete);
 
+		ref MUI_Button completeDefendBtn = runtime.CreateButton("Complete + Defend", "completeDef");
+		completeDefendBtn.MakeDanger();
+		completeDefendBtn.GetOnClicked().Insert(OnMikesCompleteAndDefend);
+
+		ref MUI_Button helpBtn = runtime.CreateButton("Help", "help");
+		helpBtn.GetOnClicked().Insert(OnAdminHelp);
+
 		ref MUI_Button closeBtn = runtime.CreateButton("Close", "close");
 		closeBtn.GetOnClicked().Insert(OnMUIBack);
 
+		actionRow.AddChild(helpBtn);
 		actionRow.AddChild(promoteBtn);
 		actionRow.AddChild(completeBtn);
 		actionRow.AddChild(closeBtn);
+		m_Hints.AddHint(promoteBtn, "Become Game Master", "Gives you Game Master access so you can use the Director map and other Game Master tools.");
+		m_Hints.AddHint(completeBtn, "Complete the current objective", "Immediately marks the current objective as captured and moves the mission forward. Skips a defense even if one was placed.");
+
+		ref MUI_Row actionRow2 = runtime.CreateRow("actionRow2");
+		actionRow2.SetGap(12);
+		actionRow2.AddChild(completeDefendBtn);
+		m_Hints.AddHint(completeDefendBtn, "Complete and start defense", "Finishes every current objective and starts a defense if a Defend marker was placed for this AO. If none was placed, it completes the zone normally.");
 
 		footerBtns.AddChild(persistRow);
 		footerBtns.AddChild(actionRow);
+		footerBtns.AddChild(actionRow2);
 
 		shell.GetCard().AddChild(m_Tabs);
 		shell.GetCard().AddChild(scroll);
 		shell.AddFooter(runtime, "Save applies now  •  Save for restart writes the server profile (applied after the mission .conf)", footerBtns);
 		shell.Mount(runtime);
+		shell.GetOverlay().AddChild(m_Hints);
 
 		ShowAdminPage(0);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnAdminHelp()
+	{
+		if (m_Hints)
+			m_Hints.Toggle();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void BuildDefensePage(notnull MUI_Runtime runtime)
+	{
+		if (!m_PageDefense)
+			return;
+
+		ref MUI_Label intro = runtime.CreateLabel("Applies to the next defense after an AO group completes. Enhanced is the default.", "defIntro");
+		intro.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		intro.SetMuted(true);
+		m_PageDefense.AddChild(intro);
+
+		m_DefendLegacyToggle = runtime.CreateToggle("Use legacy defense (12-16 min, no events)", "defLegacy");
+		m_PageDefense.AddChild(m_DefendLegacyToggle);
+		m_Hints.AddHint(m_DefendLegacyToggle, "Legacy defense", "Turn this on to keep the original timer-only hold for the next defense. Leave it off for named doctrines and mini-objectives.");
+
+		m_DefendDurMinField = runtime.CreateNumericField("Enhanced duration min (minutes)", "defDurMin");
+		m_DefendDurMinField.SetRange(8, 40);
+		m_DefendDurMinField.SetStep(1);
+		m_DefendDurMinField.SetDecimals(0);
+		m_DefendDurMinField.SetValue(18);
+
+		m_DefendDurMaxField = runtime.CreateNumericField("Enhanced duration max (minutes)", "defDurMax");
+		m_DefendDurMaxField.SetRange(8, 40);
+		m_DefendDurMaxField.SetStep(1);
+		m_DefendDurMaxField.SetDecimals(0);
+		m_DefendDurMaxField.SetValue(22);
+
+		m_DefendPrepMinField = runtime.CreateNumericField("PREPARE min (seconds)", "defPrepMin");
+		m_DefendPrepMinField.SetRange(15, 300);
+		m_DefendPrepMinField.SetStep(5);
+		m_DefendPrepMinField.SetDecimals(0);
+		m_DefendPrepMinField.SetValue(120);
+
+		m_DefendPrepMaxField = runtime.CreateNumericField("PREPARE max (seconds)", "defPrepMax");
+		m_DefendPrepMaxField.SetRange(15, 300);
+		m_DefendPrepMaxField.SetStep(5);
+		m_DefendPrepMaxField.SetDecimals(0);
+		m_DefendPrepMaxField.SetValue(180);
+
+		m_DefendEventsField = runtime.CreateNumericField("Guaranteed mini-objectives", "defEvents");
+		m_DefendEventsField.SetRange(0, 3);
+		m_DefendEventsField.SetStep(1);
+		m_DefendEventsField.SetDecimals(0);
+		m_DefendEventsField.SetValue(2);
+
+		m_PageDefense.AddChild(m_DefendDurMinField);
+		m_PageDefense.AddChild(m_DefendDurMaxField);
+		m_PageDefense.AddChild(m_DefendPrepMinField);
+		m_PageDefense.AddChild(m_DefendPrepMaxField);
+		m_PageDefense.AddChild(m_DefendEventsField);
+		m_Hints.AddHint(m_DefendDurMinField, "Shortest Enhanced hold", "Minimum minutes for an Enhanced defense clock after PREPARE.");
+		m_Hints.AddHint(m_DefendDurMaxField, "Longest Enhanced hold", "Maximum minutes for an Enhanced defense clock after PREPARE.");
+		m_Hints.AddHint(m_DefendPrepMinField, "Shortest PREPARE", "Minimum seconds before the main clock starts if players have not made contact.");
+		m_Hints.AddHint(m_DefendPrepMaxField, "Longest PREPARE", "Maximum seconds the PREPARE phase can last before the clock starts automatically.");
+		m_Hints.AddHint(m_DefendEventsField, "Guaranteed events", "How many optional mini-objectives always appear (max 3). A third event can still roll from the player-count chances below. Hunts never start in CRISIS.");
+
+		m_DefendThirdLowField = runtime.CreateNumericField("Third-event chance (1-8 players)", "defThirdLow");
+		m_DefendThirdLowField.SetRange(0, 1);
+		m_DefendThirdLowField.SetStep(0.05);
+		m_DefendThirdLowField.SetDecimals(2);
+		m_DefendThirdLowField.SetValue(0.25);
+
+		m_DefendThirdMidField = runtime.CreateNumericField("Third-event chance (9-16 players)", "defThirdMid");
+		m_DefendThirdMidField.SetRange(0, 1);
+		m_DefendThirdMidField.SetStep(0.05);
+		m_DefendThirdMidField.SetDecimals(2);
+		m_DefendThirdMidField.SetValue(0.50);
+
+		m_DefendThirdHighField = runtime.CreateNumericField("Third-event chance (17+ players)", "defThirdHigh");
+		m_DefendThirdHighField.SetRange(0, 1);
+		m_DefendThirdHighField.SetStep(0.05);
+		m_DefendThirdHighField.SetDecimals(2);
+		m_DefendThirdHighField.SetValue(0.75);
+
+		m_PageDefense.AddChild(m_DefendThirdLowField);
+		m_PageDefense.AddChild(m_DefendThirdMidField);
+		m_PageDefense.AddChild(m_DefendThirdHighField);
+		m_Hints.AddHint(m_DefendThirdLowField, "Third event at low pop", "Chance of a third mini-objective when 1 to 8 players are connected.");
+		m_Hints.AddHint(m_DefendThirdMidField, "Third event at mid pop", "Chance of a third mini-objective when 9 to 16 players are connected.");
+		m_Hints.AddHint(m_DefendThirdHighField, "Third event at high pop", "Chance of a third mini-objective when 17 or more players are connected.");
+
+		m_DefendPriSuccMinField = runtime.CreateNumericField("Priority success reduction min (sec)", "defPriSMin");
+		m_DefendPriSuccMinField.SetRange(30, 600);
+		m_DefendPriSuccMinField.SetStep(10);
+		m_DefendPriSuccMinField.SetDecimals(0);
+		m_DefendPriSuccMinField.SetValue(120);
+
+		m_DefendPriSuccMaxField = runtime.CreateNumericField("Priority success reduction max (sec)", "defPriSMax");
+		m_DefendPriSuccMaxField.SetRange(30, 600);
+		m_DefendPriSuccMaxField.SetStep(10);
+		m_DefendPriSuccMaxField.SetDecimals(0);
+		m_DefendPriSuccMaxField.SetValue(240);
+
+		m_DefendPriFailMinField = runtime.CreateNumericField("Priority timeout penalty min (sec)", "defPriFMin");
+		m_DefendPriFailMinField.SetRange(30, 600);
+		m_DefendPriFailMinField.SetStep(10);
+		m_DefendPriFailMinField.SetDecimals(0);
+		m_DefendPriFailMinField.SetValue(180);
+
+		m_DefendPriFailMaxField = runtime.CreateNumericField("Priority timeout penalty max (sec)", "defPriFMax");
+		m_DefendPriFailMaxField.SetRange(30, 600);
+		m_DefendPriFailMaxField.SetStep(10);
+		m_DefendPriFailMaxField.SetDecimals(0);
+		m_DefendPriFailMaxField.SetValue(300);
+
+		m_PageDefense.AddChild(m_DefendPriSuccMinField);
+		m_PageDefense.AddChild(m_DefendPriSuccMaxField);
+		m_PageDefense.AddChild(m_DefendPriFailMinField);
+		m_PageDefense.AddChild(m_DefendPriFailMaxField);
+		m_Hints.AddHint(m_DefendPriSuccMinField, "Priority success floor", "Shortest time removed from the hold clock when the HIGH PRIORITY event succeeds. Remaining time will not be cut below 6 minutes.");
+		m_Hints.AddHint(m_DefendPriSuccMaxField, "Priority success ceiling", "Longest time removed from the hold clock when the HIGH PRIORITY event succeeds.");
+		m_Hints.AddHint(m_DefendPriFailMinField, "Priority timeout floor", "Shortest extra time added when the HIGH PRIORITY deadline expires.");
+		m_Hints.AddHint(m_DefendPriFailMaxField, "Priority timeout ceiling", "Longest extra time added when the HIGH PRIORITY deadline expires.");
+
+		m_DefendDocSiegeToggle = runtime.CreateToggle("Siege doctrine", "defDocSiege");
+		m_DefendDocBreakToggle = runtime.CreateToggle("Breakthrough doctrine", "defDocBreak");
+		m_DefendDocAirToggle = runtime.CreateToggle("Air Assault doctrine", "defDocAir");
+		m_DefendDocCmdToggle = runtime.CreateToggle("Command Offensive doctrine", "defDocCmd");
+		m_DefendDocSiegeToggle.SetChecked(true);
+		m_DefendDocBreakToggle.SetChecked(true);
+		m_DefendDocAirToggle.SetChecked(true);
+		m_DefendDocCmdToggle.SetChecked(true);
+		m_PageDefense.AddChild(m_DefendDocSiegeToggle);
+		m_PageDefense.AddChild(m_DefendDocBreakToggle);
+		m_PageDefense.AddChild(m_DefendDocAirToggle);
+		m_PageDefense.AddChild(m_DefendDocCmdToggle);
+		m_Hints.AddHint(m_DefendDocSiegeToggle, "Siege", "Allows scout-to-spotting-team and deliberate infantry pushes. Disable the others to force this doctrine.");
+		m_Hints.AddHint(m_DefendDocBreakToggle, "Breakthrough", "Allows motorized and mechanized dismounts. Needs a nearby road or it rerolls.");
+		m_Hints.AddHint(m_DefendDocAirToggle, "Air Assault", "Allows HALO insertions with the ground attack. Needs an open LZ or it rerolls.");
+		m_Hints.AddHint(m_DefendDocCmdToggle, "Command Offensive", "Allows mixed attacks directed from a commander FOB.");
+
+		m_DefendEvtCmdToggle = runtime.CreateToggle("Commander FOB event", "defEvtCmd");
+		m_DefendEvtEliteToggle = runtime.CreateToggle("Elite patrol event", "defEvtElite");
+		m_DefendEvtScoutToggle = runtime.CreateToggle("Scout / spotting event", "defEvtScout");
+		m_DefendEvtConvoyToggle = runtime.CreateToggle("Reinforcement convoy event", "defEvtConvoy");
+		m_DefendEvtSniperToggle = runtime.CreateToggle("Sniper pair event", "defEvtSniper");
+		m_DefendEvtCmdToggle.SetChecked(true);
+		m_DefendEvtEliteToggle.SetChecked(true);
+		m_DefendEvtScoutToggle.SetChecked(true);
+		m_DefendEvtConvoyToggle.SetChecked(true);
+		m_DefendEvtSniperToggle.SetChecked(true);
+		m_PageDefense.AddChild(m_DefendEvtCmdToggle);
+		m_PageDefense.AddChild(m_DefendEvtEliteToggle);
+		m_PageDefense.AddChild(m_DefendEvtScoutToggle);
+		m_PageDefense.AddChild(m_DefendEvtConvoyToggle);
+		m_PageDefense.AddChild(m_DefendEvtSniperToggle);
+		m_Hints.AddHint(m_DefendEvtCmdToggle, "Commander FOB", "Optional officer hunt. Success cancels the next major assault and one later event.");
+		m_Hints.AddHint(m_DefendEvtEliteToggle, "Elite patrol", "Hunt a special-forces squad before it homes on gunfire.");
+		m_Hints.AddHint(m_DefendEvtScoutToggle, "Scout then spotting team", "Destroy the scout before recon finishes or extra infantry squads are called onto the hold.");
+		m_Hints.AddHint(m_DefendEvtConvoyToggle, "Convoy", "Destroy marked transports before they dismount extra troops at the line.");
+		m_Hints.AddHint(m_DefendEvtSniperToggle, "Sniper pair", "Hunt the pair after they fire to remove precision overwatch.");
+
+		m_DefendHotDropLabel = runtime.CreateLabel("Air Assault hot-drop chance  20%", "defHotLbl");
+		m_DefendHotDropLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		m_DefendHotDropLabel.SetMuted(true);
+		m_DefendHotDropSlider = runtime.CreateSlider("defHotDrop");
+		m_DefendHotDropSlider.SetRange(0, 1);
+		m_DefendHotDropSlider.SetStep(0.01);
+		m_DefendHotDropSlider.SetValue(0.20);
+		m_DefendHotDropSlider.GetOnChanged().Insert(OnDefendHotDropChanged);
+		m_PageDefense.AddChild(m_DefendHotDropLabel);
+		m_PageDefense.AddChild(m_DefendHotDropSlider);
+		m_Hints.AddHint(m_DefendHotDropSlider, "Hot-drop chance", "Chance an Air Assault drop lands inside or near the AO instead of a 150 to 300 meter perimeter LZ. Never on a player.");
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnDefendHotDropChanged()
+	{
+		if (!m_DefendHotDropSlider)
+			return;
+		float v = m_DefendHotDropSlider.GetValue();
+		if (m_DefendHotDropLabel)
+			m_DefendHotDropLabel.SetText(string.Format("Air Assault hot-drop chance  %1%%", Math.Round(v * 100.0)));
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -357,11 +635,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		infLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		infLbl.SetMuted(true);
 		m_PageFactions.AddChild(infLbl);
+		m_Hints.AddHint(infLbl, "Enemy infantry factions", "Choose which factions future enemy foot soldiers will come from.");
 
 		m_EnemyAutoToggle = runtime.CreateToggle("Auto-detect infantry factions", "enfAuto");
 		m_EnemyAutoToggle.SetChecked(true);
 		m_EnemyAutoToggle.GetOnChanged().Insert(OnEnemyAutoChanged);
 		m_PageFactions.AddChild(m_EnemyAutoToggle);
+		m_Hints.AddHint(m_EnemyAutoToggle, "Choose infantry automatically", "Turn this on to let I&A choose suitable enemy infantry factions. Turn it off to use your selections below.");
 
 		m_EnemyFactionToggles = new array<ref MUI_Toggle>();
 		m_EnemyFactionChoiceKeys = new array<string>();
@@ -373,11 +653,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		vehLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		vehLbl.SetMuted(true);
 		m_PageFactions.AddChild(vehLbl);
+		m_Hints.AddHint(vehLbl, "Enemy vehicle factions", "Choose which factions future enemy military vehicles will come from.");
 
 		m_VehicleMatchToggle = runtime.CreateToggle("Vehicle factions match infantry", "vehMatch");
 		m_VehicleMatchToggle.SetChecked(true);
 		m_VehicleMatchToggle.GetOnChanged().Insert(OnVehicleMatchChanged);
 		m_PageFactions.AddChild(m_VehicleMatchToggle);
+		m_Hints.AddHint(m_VehicleMatchToggle, "Match infantry factions", "Turn this on to use the same enemy factions for vehicles and infantry. Turn it off to choose vehicle factions separately.");
 
 		m_VehicleFactionToggles = new array<ref MUI_Toggle>();
 		m_VehicleFactionChoiceKeys = new array<string>();
@@ -579,6 +861,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_PageQrf.SetVisible(index == 5);
 		if (m_PageDirector)
 			m_PageDirector.SetVisible(index == 6);
+		if (m_PageDefense)
+			m_PageDefense.SetVisible(index == 7);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -649,6 +933,56 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_GmAutoSideToggle.SetChecked(cfg.m_bGmAutoSideMissions);
 		if (m_GmAutoSupportToggle)
 			m_GmAutoSupportToggle.SetChecked(cfg.m_bGmAutoPlaceSupport);
+
+		if (m_DefendLegacyToggle)
+			m_DefendLegacyToggle.SetChecked(cfg.m_bUseLegacyDefense);
+		if (m_DefendDurMinField)
+			m_DefendDurMinField.SetValue(cfg.m_iDefendDurationMinMin);
+		if (m_DefendDurMaxField)
+			m_DefendDurMaxField.SetValue(cfg.m_iDefendDurationMaxMin);
+		if (m_DefendPrepMinField)
+			m_DefendPrepMinField.SetValue(cfg.m_iDefendPrepareMinSec);
+		if (m_DefendPrepMaxField)
+			m_DefendPrepMaxField.SetValue(cfg.m_iDefendPrepareMaxSec);
+		if (m_DefendEventsField)
+			m_DefendEventsField.SetValue(cfg.m_iDefendGuaranteedEvents);
+		if (m_DefendThirdLowField)
+			m_DefendThirdLowField.SetValue(cfg.m_fDefendThirdChanceLow);
+		if (m_DefendThirdMidField)
+			m_DefendThirdMidField.SetValue(cfg.m_fDefendThirdChanceMid);
+		if (m_DefendThirdHighField)
+			m_DefendThirdHighField.SetValue(cfg.m_fDefendThirdChanceHigh);
+		if (m_DefendPriSuccMinField)
+			m_DefendPriSuccMinField.SetValue(cfg.m_iDefendPrioritySuccessMinSec);
+		if (m_DefendPriSuccMaxField)
+			m_DefendPriSuccMaxField.SetValue(cfg.m_iDefendPrioritySuccessMaxSec);
+		if (m_DefendPriFailMinField)
+			m_DefendPriFailMinField.SetValue(cfg.m_iDefendPriorityFailMinSec);
+		if (m_DefendPriFailMaxField)
+			m_DefendPriFailMaxField.SetValue(cfg.m_iDefendPriorityFailMaxSec);
+		if (m_DefendDocSiegeToggle)
+			m_DefendDocSiegeToggle.SetChecked(cfg.m_bDefendDoctrineSiege);
+		if (m_DefendDocBreakToggle)
+			m_DefendDocBreakToggle.SetChecked(cfg.m_bDefendDoctrineBreakthrough);
+		if (m_DefendDocAirToggle)
+			m_DefendDocAirToggle.SetChecked(cfg.m_bDefendDoctrineAirAssault);
+		if (m_DefendDocCmdToggle)
+			m_DefendDocCmdToggle.SetChecked(cfg.m_bDefendDoctrineCommand);
+		if (m_DefendEvtCmdToggle)
+			m_DefendEvtCmdToggle.SetChecked(cfg.m_bDefendEventCommander);
+		if (m_DefendEvtEliteToggle)
+			m_DefendEvtEliteToggle.SetChecked(cfg.m_bDefendEventElite);
+		if (m_DefendEvtScoutToggle)
+			m_DefendEvtScoutToggle.SetChecked(cfg.m_bDefendEventScoutMortar);
+		if (m_DefendEvtConvoyToggle)
+			m_DefendEvtConvoyToggle.SetChecked(cfg.m_bDefendEventConvoy);
+		if (m_DefendEvtSniperToggle)
+			m_DefendEvtSniperToggle.SetChecked(cfg.m_bDefendEventSniper);
+		if (m_DefendHotDropSlider)
+		{
+			m_DefendHotDropSlider.SetValue(cfg.m_fDefendHotDropChance);
+			OnDefendHotDropChanged();
+		}
 
 		m_bFactionUiLock = true;
 		ApplyKeysToToggles(cfg.m_sDesiredEnemyFactionKeys, m_EnemyFactionToggles, m_EnemyFactionChoiceKeys, m_EnemyAutoToggle);
@@ -809,6 +1143,57 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		);
 		packed = packed + "|" + gmMask.ToString();
 		packed = packed + "|" + IA_MissionInitializer.PackAdminConfigExtras(revoltNotifMs, revoltReinfMs, infantryKeysPacked, vehicleKeysPacked);
+
+		ref IA_Config defendPack = new IA_Config();
+		if (m_DefendLegacyToggle)
+			defendPack.m_bUseLegacyDefense = m_DefendLegacyToggle.IsChecked();
+		if (m_DefendDurMinField)
+			defendPack.m_iDefendDurationMinMin = Math.Round(m_DefendDurMinField.GetValue());
+		if (m_DefendDurMaxField)
+			defendPack.m_iDefendDurationMaxMin = Math.Round(m_DefendDurMaxField.GetValue());
+		if (m_DefendPrepMinField)
+			defendPack.m_iDefendPrepareMinSec = Math.Round(m_DefendPrepMinField.GetValue());
+		if (m_DefendPrepMaxField)
+			defendPack.m_iDefendPrepareMaxSec = Math.Round(m_DefendPrepMaxField.GetValue());
+		if (m_DefendEventsField)
+			defendPack.m_iDefendGuaranteedEvents = Math.Round(m_DefendEventsField.GetValue());
+		if (m_DefendThirdLowField)
+			defendPack.m_fDefendThirdChanceLow = m_DefendThirdLowField.GetValue();
+		if (m_DefendThirdMidField)
+			defendPack.m_fDefendThirdChanceMid = m_DefendThirdMidField.GetValue();
+		if (m_DefendThirdHighField)
+			defendPack.m_fDefendThirdChanceHigh = m_DefendThirdHighField.GetValue();
+		if (m_DefendPriSuccMinField)
+			defendPack.m_iDefendPrioritySuccessMinSec = Math.Round(m_DefendPriSuccMinField.GetValue());
+		if (m_DefendPriSuccMaxField)
+			defendPack.m_iDefendPrioritySuccessMaxSec = Math.Round(m_DefendPriSuccMaxField.GetValue());
+		if (m_DefendPriFailMinField)
+			defendPack.m_iDefendPriorityFailMinSec = Math.Round(m_DefendPriFailMinField.GetValue());
+		if (m_DefendPriFailMaxField)
+			defendPack.m_iDefendPriorityFailMaxSec = Math.Round(m_DefendPriFailMaxField.GetValue());
+		if (m_DefendDocSiegeToggle)
+			defendPack.m_bDefendDoctrineSiege = m_DefendDocSiegeToggle.IsChecked();
+		if (m_DefendDocBreakToggle)
+			defendPack.m_bDefendDoctrineBreakthrough = m_DefendDocBreakToggle.IsChecked();
+		if (m_DefendDocAirToggle)
+			defendPack.m_bDefendDoctrineAirAssault = m_DefendDocAirToggle.IsChecked();
+		if (m_DefendDocCmdToggle)
+			defendPack.m_bDefendDoctrineCommand = m_DefendDocCmdToggle.IsChecked();
+		if (m_DefendEvtCmdToggle)
+			defendPack.m_bDefendEventCommander = m_DefendEvtCmdToggle.IsChecked();
+		if (m_DefendEvtEliteToggle)
+			defendPack.m_bDefendEventElite = m_DefendEvtEliteToggle.IsChecked();
+		if (m_DefendEvtScoutToggle)
+			defendPack.m_bDefendEventScoutMortar = m_DefendEvtScoutToggle.IsChecked();
+		if (m_DefendEvtConvoyToggle)
+			defendPack.m_bDefendEventConvoy = m_DefendEvtConvoyToggle.IsChecked();
+		defendPack.m_bDefendEventRelay = false;
+		if (m_DefendEvtSniperToggle)
+			defendPack.m_bDefendEventSniper = m_DefendEvtSniperToggle.IsChecked();
+		if (m_DefendHotDropSlider)
+			defendPack.m_fDefendHotDropChance = m_DefendHotDropSlider.GetValue();
+		packed = packed + "|" + IA_Config.PackDefenseExtras(defendPack);
+
 		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
 	}
 
@@ -870,6 +1255,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected void OnMikesComplete()
 	{
 		IA_MissionInitializer.ForceCompleteZone();
+		GetGame().GetMenuManager().CloseMenu(this);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnMikesCompleteAndDefend()
+	{
+		IA_MissionInitializer.ForceCompleteZoneAndDefend();
 		GetGame().GetMenuManager().CloseMenu(this);
 	}
 }

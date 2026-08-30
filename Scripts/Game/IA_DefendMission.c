@@ -24,6 +24,8 @@ class IA_DefendMission
     private bool m_vehicleBeatSpawned = false;
     private int m_lastVehicleBeatAttempt = 0;
     private ref IA_AreaGroupManager m_ownedQrfManager; // kept alive for truck arrival CallLaters if needed
+    private ref IA_EnhancedDefendDirector m_Enhanced;
+    private bool m_bEnhancedClockOn;
 
     private float m_fStartMult = 0.75;
     private float m_fPeakMult = 1.75;
@@ -51,13 +53,23 @@ class IA_DefendMission
     
     static IA_DefendMission Create(vector defendPoint, int groupID, string markerName = "")
     {
-        return new IA_DefendMission(defendPoint, groupID, markerName);
+        IA_DefendMission mission = new IA_DefendMission(defendPoint, groupID, markerName);
+        IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+        if (cfg && !cfg.UseLegacyDefense())
+            mission.m_Enhanced = IA_EnhancedDefendDirector.Create(mission);
+        return mission;
     }
     
     void StartDefendMission()
     {
         if (m_isActive)
             return;
+
+        if (m_Enhanced)
+        {
+            m_Enhanced.Start();
+            return;
+        }
             
         m_isActive = true;
         m_startTime = System.GetTickCount();
@@ -86,6 +98,12 @@ class IA_DefendMission
     {
         if (!m_isActive)
             return;
+
+        if (m_Enhanced)
+        {
+            m_Enhanced.Update();
+            return;
+        }
             
         int currentTime = System.GetTickCount();
         
@@ -131,6 +149,16 @@ class IA_DefendMission
     {
         return m_isActive;
     }
+
+    bool IsEnhanced()
+    {
+        return m_Enhanced != null;
+    }
+
+    int GetDurationMs()
+    {
+        return m_duration;
+    }
     
     bool IsComplete()
     {
@@ -147,6 +175,8 @@ class IA_DefendMission
             return;
             
         Print("[IA_DefendMission] Ending defend mission", LogLevel.NORMAL);
+        if (m_Enhanced)
+            m_Enhanced.CleanupEvents();
         m_isActive = false;
         
         // Complete the defend task (that path already sends TaskCompleted).
@@ -386,7 +416,7 @@ class IA_DefendMission
             remainingSec = 0;
         }
 
-        IA_MissionInitializer.PublishDefendHud(areaName, state, timeLeft, remainingSec, pressure);
+        IA_MissionInitializer.PublishDefendHud(areaName, state, timeLeft, remainingSec, pressure, IA_DefendHudPhase.None);
     }
     
     private void CollectAffectedAreas()
@@ -713,5 +743,271 @@ class IA_DefendMission
     int GetGroupID()
     {
         return m_groupID;
+    }
+
+    string GetMarkerName()
+    {
+        if (m_defendMarkerName.IsEmpty())
+            return "Position";
+        return m_defendMarkerName;
+    }
+
+    void OnHostAreaForceFinish()
+    {
+        if (m_isActive)
+            EndDefendMission();
+    }
+
+    void BeginEnhancedHold()
+    {
+        if (m_isActive)
+            return;
+        m_isActive = true;
+        m_startTime = System.GetTickCount();
+        m_bEnhancedClockOn = false;
+        CollectAffectedAreas();
+        CreateDefendTask();
+        SetAllAIToDefendMode();
+    }
+
+    void StartEnhancedClock()
+    {
+        m_startTime = System.GetTickCount();
+        m_bEnhancedClockOn = true;
+        m_lastWaveSpawnTime = m_startTime;
+    }
+
+    void SetDurationMs(int durationMs)
+    {
+        if (durationMs < 60000)
+            durationMs = 60000;
+        m_duration = durationMs;
+        m_durationMinutes = Math.Round(m_duration / 60000.0);
+        if (m_durationMinutes < 1)
+            m_durationMinutes = 1;
+    }
+
+    int GetRemainingMs()
+    {
+        int remainingMs = m_duration - GetElapsedMs();
+        if (remainingMs < 0)
+            return 0;
+        return remainingMs;
+    }
+
+    float GetElapsedClock01()
+    {
+        if (m_duration <= 0)
+            return 1;
+        float u = GetElapsedMs() / m_duration;
+        if (u < 0)
+            return 0;
+        if (u > 1)
+            return 1;
+        return u;
+    }
+
+    void AdjustRemainingMs(int deltaMs, int minRemainingMs)
+    {
+        int current = GetRemainingMs();
+        int left = current + deltaMs;
+        if (deltaMs < 0)
+        {
+            if (minRemainingMs < 60000)
+                minRemainingMs = 60000;
+            if (current <= minRemainingMs)
+                left = current;
+            else if (left < minRemainingMs)
+                left = minRemainingMs;
+        }
+        else if (left < 60000)
+        {
+            left = 60000;
+        }
+
+        m_duration = GetElapsedMs() + left;
+        m_durationMinutes = Math.Round(m_duration / 60000.0);
+        if (m_durationMinutes < 1)
+            m_durationMinutes = 1;
+    }
+
+    bool HasPlayerContact()
+    {
+        IA_AreaInstance host = GetHostArea();
+        if (!host)
+            return false;
+
+        ref array<vector> players = new array<vector>();
+        IA_SpawnPlacement.CollectPlayerPositions(players);
+
+        array<ref IA_AiGroup> groups = host.GetMilitaryGroups();
+        if (!groups)
+            return false;
+
+        int nowUnix = System.GetUnixTime();
+        int count = groups.Count();
+        int i;
+        for (i = 0; i < count; i++)
+        {
+            IA_AiGroup group = groups[i];
+            if (!group || !group.IsSpawned())
+                continue;
+            if (!group.IsDefendWaveGroup())
+                continue;
+
+            int danger = group.GetLastDangerEventTime();
+            if (danger > 0 && (nowUnix - danger) < 15)
+                return true;
+            if (IA_SpawnPlacement.IsNearAnyPlayer(group.GetOrigin(), players, 90))
+                return true;
+        }
+        return false;
+    }
+
+    void NotifyPlayers(string messageType, string title)
+    {
+        IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
+        if (initializer)
+            initializer.TriggerGlobalNotification(messageType, title);
+    }
+
+    void SpawnDirectorWave(int unitBudget, bool tightStagger)
+    {
+        if (m_affectedAreas.IsEmpty())
+            return;
+        IA_AreaInstance targetArea = m_affectedAreas[0];
+        if (!targetArea || !targetArea.m_area || targetArea.IsShutDown())
+            return;
+
+        EnsureDefendFaction();
+        if (!m_defendFaction)
+            return;
+        if (unitBudget < 2)
+            unitBudget = 8;
+        targetArea.SpawnReinforcementWave(unitBudget, m_defendFaction, true, tightStagger);
+    }
+
+    bool SpawnDoctrineBeat(IA_QRFType type)
+    {
+        IA_AreaInstance host = GetHostArea();
+        if (!host)
+            return false;
+        EnsureDefendFaction();
+        IA_AreaGroupManager mgr = GetOrCreateQrfManager(host);
+        if (!mgr)
+            return false;
+        return mgr.SpawnDefendDoctrineBeat(type, host, m_defendPoint, m_defendFaction);
+    }
+
+    bool SpawnAirborneBeat(bool preferHotDrop)
+    {
+        IA_AreaInstance host = GetHostArea();
+        if (!host)
+            return false;
+        EnsureDefendFaction();
+        IA_AreaGroupManager mgr = GetOrCreateQrfManager(host);
+        if (!mgr)
+            return false;
+        return mgr.SpawnDefendAirborneDrop(host, m_defendPoint, m_defendFaction, preferHotDrop);
+    }
+
+    IA_AiGroup SpawnEventConvoyVehicle(vector pos)
+    {
+        IA_AreaInstance host = GetHostArea();
+        if (!host)
+            return null;
+        EnsureDefendFaction();
+        if (!m_defendFaction)
+            return null;
+
+        IA_AreaGroupManager mgr = GetOrCreateQrfManager(host);
+        if (!mgr)
+            return null;
+        return mgr.SpawnDefendConvoyTruck(host, pos, m_defendPoint, m_defendFaction);
+    }
+
+    IA_AiGroup SpawnEventGroup(vector pos, int count, bool elite, bool hvt, bool hold)
+    {
+        IA_AreaInstance host = GetHostArea();
+        if (!host)
+            return null;
+        EnsureDefendFaction();
+        if (!m_defendFaction)
+            return null;
+        if (count < 1)
+            count = 1;
+
+        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, IA_Faction.USSR, count, m_defendFaction, hvt, true);
+        if (!grp)
+            return null;
+
+        if (elite)
+            grp.SetEliteProfile(true);
+        grp.SetAssignedArea(host.GetArea());
+        grp.Spawn();
+        if (hold)
+            grp.SetDefendMode(true, pos);
+        host.AddMilitaryGroup(grp);
+        if (elite)
+            GetGame().GetCallqueue().CallLater(grp.ApplyEliteCombatProfile, 2000, false);
+        return grp;
+    }
+
+    int CountWaveAI()
+    {
+        return GetCurrentAICount();
+    }
+
+    int GetPhaseTargetAI(float pressure01)
+    {
+        if (m_baseTargetAICount <= 0)
+            m_baseTargetAICount = CalculateTargetAICount();
+        if (pressure01 < 0)
+            pressure01 = 0;
+        if (pressure01 > 1)
+            pressure01 = 1;
+        float mult = 0.70 + (pressure01 * 0.90);
+        int cap = Math.Round(m_baseTargetAICount * mult);
+        if (cap < 4)
+            cap = 4;
+        return cap;
+    }
+
+    void PublishEnhancedHud(IA_DefendHudState state, int phase, float timeLeft, int remainingSec, float pressure)
+    {
+        string areaName = GetMarkerName();
+        if (state == IA_DefendHudState.Complete)
+        {
+            timeLeft = 0;
+            remainingSec = 0;
+        }
+        IA_MissionInitializer.PublishDefendHud(areaName, state, timeLeft, remainingSec, pressure, phase);
+    }
+
+    protected void EnsureDefendFaction()
+    {
+        if (m_defendFaction)
+            return;
+        IA_MissionInitializer initializer = IA_MissionInitializer.GetInstance();
+        if (initializer)
+            m_defendFaction = initializer.GetRandomEnemyFaction();
+    }
+
+    protected IA_AreaGroupManager GetOrCreateQrfManager(IA_AreaInstance targetArea)
+    {
+        IA_AreaGroupManager qrfManager = null;
+        IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+        if (init)
+            qrfManager = init.GetCurrentAreaGroupManager();
+        if (qrfManager)
+            return qrfManager;
+
+        if (!m_ownedQrfManager && targetArea)
+        {
+            ref array<ref IA_AreaInstance> areas = new array<ref IA_AreaInstance>();
+            areas.Insert(targetArea);
+            m_ownedQrfManager = new IA_AreaGroupManager(areas);
+        }
+        return m_ownedQrfManager;
     }
 }

@@ -249,6 +249,7 @@ class IA_AiGroup
 	// Assassination obj
 	
 	bool m_HVTGroup = false;
+	private bool m_bEliteProfile = false;
 	
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount, bool HVTGroup = false)
     {
@@ -367,6 +368,17 @@ class IA_AiGroup
 		
 			return "{5117311FB822FD1F}Prefabs/Characters/Factions/OPFOR/USSR_Army/Character_USSR_Officer.et";
 		
+		}
+
+		if (m_bEliteProfile)
+		{
+			int elitePick = Math.RandomInt(0, 3);
+			if (elitePick == 0)
+				includedLabels = {EEditableEntityLabel.ROLE_SHARPSHOOTER};
+			else if (elitePick == 1)
+				includedLabels = {EEditableEntityLabel.ROLE_LEADER};
+			else
+				includedLabels = {EEditableEntityLabel.ROLE_SCOUT};
 		}
 
 		SCR_Faction scrFaction = SCR_Faction.Cast(DesiredFaction);
@@ -1840,6 +1852,8 @@ class IA_AiGroup
 			SCR_AICombatComponent combatComponent = SCR_AICombatComponent.Cast(agent.FindComponent(SCR_AICombatComponent));
 			if (combatComponent)
 				combatComponent.SetAISkill(aiSkill);
+			if (m_bEliteProfile)
+				ApplyEliteCombatToAgent(agent);
 			
             // ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath); //This line is now removed
             
@@ -3853,6 +3867,50 @@ class IA_AiGroup
     bool IsDefendWaveGroup()
     {
         return m_isDefendWaveGroup;
+    }
+
+    void SetEliteProfile(bool elite)
+    {
+        m_bEliteProfile = elite;
+    }
+
+    bool IsEliteProfile()
+    {
+        return m_bEliteProfile;
+    }
+
+    //! Combat component lives on the controlled character, not the AIAgent.
+    void ApplyEliteCombatProfile()
+    {
+        if (!m_bEliteProfile)
+            return;
+        if (!m_group)
+            return;
+
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            ApplyEliteCombatToAgent(agent);
+        }
+    }
+
+    protected void ApplyEliteCombatToAgent(AIAgent agent)
+    {
+        if (!agent)
+            return;
+
+        IEntity controlled = agent.GetControlledEntity();
+        if (!controlled)
+            return;
+
+        SCR_AICombatComponent combat = SCR_AICombatComponent.Cast(controlled.FindComponent(SCR_AICombatComponent));
+        if (!combat)
+            return;
+
+        combat.SetAISkill(EAISkill.EXPERT);
+        combat.SetPerceptionFactor(1.5);
+        combat.SetFireRateCoef(1.25);
     }
 
     bool IsAirborneDrop()

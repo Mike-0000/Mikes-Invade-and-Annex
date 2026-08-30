@@ -38,6 +38,23 @@ class IA_AdminOverrides
 	bool m_bGmAutoArty = true;
 	bool m_bGmAutoSideMissions;
 	bool m_bGmAutoPlaceSupport;
+	bool m_bHasDefenseOverride;
+	bool m_bUseLegacyDefense;
+	int m_iDefendDurationMinMin = 18;
+	int m_iDefendDurationMaxMin = 22;
+	int m_iDefendPrepareMinSec = 60;
+	int m_iDefendPrepareMaxSec = 90;
+	int m_iDefendGuaranteedEvents = 2;
+	float m_fDefendThirdChanceLow = 0.25;
+	float m_fDefendThirdChanceMid = 0.50;
+	float m_fDefendThirdChanceHigh = 0.75;
+	int m_iDefendPrioritySuccessMinSec = 120;
+	int m_iDefendPrioritySuccessMaxSec = 240;
+	int m_iDefendPriorityFailMinSec = 180;
+	int m_iDefendPriorityFailMaxSec = 300;
+	int m_iDefendDoctrineMask = 15;
+	int m_iDefendEventMask = 63;
+	float m_fDefendHotDropChance = 0.20;
 
 	//------------------------------------------------------------------------------------------------
 	static string GetPath()
@@ -142,6 +159,23 @@ class IA_AdminOverrides
 		m_bHasVehicleFactionOverride = true;
 		m_bHasRevoltNotifOverride = true;
 		m_bHasRevoltReinfOverride = true;
+		m_bHasDefenseOverride = true;
+		m_bUseLegacyDefense = config.m_bUseLegacyDefense;
+		m_iDefendDurationMinMin = config.m_iDefendDurationMinMin;
+		m_iDefendDurationMaxMin = config.m_iDefendDurationMaxMin;
+		m_iDefendPrepareMinSec = config.m_iDefendPrepareMinSec;
+		m_iDefendPrepareMaxSec = config.m_iDefendPrepareMaxSec;
+		m_iDefendGuaranteedEvents = config.m_iDefendGuaranteedEvents;
+		m_fDefendThirdChanceLow = config.m_fDefendThirdChanceLow;
+		m_fDefendThirdChanceMid = config.m_fDefendThirdChanceMid;
+		m_fDefendThirdChanceHigh = config.m_fDefendThirdChanceHigh;
+		m_iDefendPrioritySuccessMinSec = config.m_iDefendPrioritySuccessMinSec;
+		m_iDefendPrioritySuccessMaxSec = config.m_iDefendPrioritySuccessMaxSec;
+		m_iDefendPriorityFailMinSec = config.m_iDefendPriorityFailMinSec;
+		m_iDefendPriorityFailMaxSec = config.m_iDefendPriorityFailMaxSec;
+		m_iDefendDoctrineMask = config.GetDefenseDoctrineMask();
+		m_iDefendEventMask = config.GetDefenseEventMask();
+		m_fDefendHotDropChance = config.m_fDefendHotDropChance;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -191,6 +225,27 @@ class IA_AdminOverrides
 
 		if (m_bHasVehicleFactionOverride)
 			IA_AdminConfigUtil.ApplyPackedKeys(m_sEnemyVehicleFactionKeysPacked, config, true);
+
+		if (m_bHasDefenseOverride)
+		{
+			config.m_bUseLegacyDefense = m_bUseLegacyDefense;
+			config.m_iDefendDurationMinMin = m_iDefendDurationMinMin;
+			config.m_iDefendDurationMaxMin = m_iDefendDurationMaxMin;
+			config.m_iDefendPrepareMinSec = m_iDefendPrepareMinSec;
+			config.m_iDefendPrepareMaxSec = m_iDefendPrepareMaxSec;
+			config.m_iDefendGuaranteedEvents = m_iDefendGuaranteedEvents;
+			config.m_fDefendThirdChanceLow = m_fDefendThirdChanceLow;
+			config.m_fDefendThirdChanceMid = m_fDefendThirdChanceMid;
+			config.m_fDefendThirdChanceHigh = m_fDefendThirdChanceHigh;
+			config.m_iDefendPrioritySuccessMinSec = m_iDefendPrioritySuccessMinSec;
+			config.m_iDefendPrioritySuccessMaxSec = m_iDefendPrioritySuccessMaxSec;
+			config.m_iDefendPriorityFailMinSec = m_iDefendPriorityFailMinSec;
+			config.m_iDefendPriorityFailMaxSec = m_iDefendPriorityFailMaxSec;
+			config.SetDefenseDoctrineMask(m_iDefendDoctrineMask);
+			config.SetDefenseEventMask(m_iDefendEventMask);
+			config.m_fDefendHotDropChance = m_fDefendHotDropChance;
+			config.ClampDefenseSettings();
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -273,6 +328,25 @@ class IA_AdminOverrides
 		json = json + ",\"faction\":\"" + m_sEnemyFactionKey + "\"";
 		json = json + ",\"factionKeys\":\"" + m_sEnemyFactionKeysPacked + "\"";
 		json = json + ",\"vehicleFactionKeys\":\"" + m_sEnemyVehicleFactionKeysPacked + "\"";
+		int legacyI = 0;
+		if (m_bUseLegacyDefense)
+			legacyI = 1;
+		json = json + ",\"defendLegacy\":" + legacyI.ToString();
+		json = json + ",\"defendDurMin\":" + m_iDefendDurationMinMin.ToString();
+		json = json + ",\"defendDurMax\":" + m_iDefendDurationMaxMin.ToString();
+		json = json + ",\"defendPrepMin\":" + m_iDefendPrepareMinSec.ToString();
+		json = json + ",\"defendPrepMax\":" + m_iDefendPrepareMaxSec.ToString();
+		json = json + ",\"defendEvents\":" + m_iDefendGuaranteedEvents.ToString();
+		json = json + ",\"defendThirdLow\":" + m_fDefendThirdChanceLow.ToString();
+		json = json + ",\"defendThirdMid\":" + m_fDefendThirdChanceMid.ToString();
+		json = json + ",\"defendThirdHigh\":" + m_fDefendThirdChanceHigh.ToString();
+		json = json + ",\"defendPriSuccMin\":" + m_iDefendPrioritySuccessMinSec.ToString();
+		json = json + ",\"defendPriSuccMax\":" + m_iDefendPrioritySuccessMaxSec.ToString();
+		json = json + ",\"defendPriFailMin\":" + m_iDefendPriorityFailMinSec.ToString();
+		json = json + ",\"defendPriFailMax\":" + m_iDefendPriorityFailMaxSec.ToString();
+		json = json + ",\"defendDocMask\":" + m_iDefendDoctrineMask.ToString();
+		json = json + ",\"defendEvtMask\":" + m_iDefendEventMask.ToString();
+		json = json + ",\"defendHotDrop\":" + m_fDefendHotDropChance.ToString();
 		json = json + "}";
 		return json;
 	}
@@ -347,6 +421,41 @@ class IA_AdminOverrides
 		{
 			m_iCivilianRevoltReinforcementDelay = ExtractValue(json, "revoltReinf").ToInt();
 			m_bHasRevoltReinfOverride = true;
+		}
+		if (HasKey(json, "defendLegacy"))
+		{
+			m_bHasDefenseOverride = true;
+			m_bUseLegacyDefense = ExtractValue(json, "defendLegacy").ToInt() != 0;
+			if (HasKey(json, "defendDurMin"))
+				m_iDefendDurationMinMin = ExtractValue(json, "defendDurMin").ToInt();
+			if (HasKey(json, "defendDurMax"))
+				m_iDefendDurationMaxMin = ExtractValue(json, "defendDurMax").ToInt();
+			if (HasKey(json, "defendPrepMin"))
+				m_iDefendPrepareMinSec = ExtractValue(json, "defendPrepMin").ToInt();
+			if (HasKey(json, "defendPrepMax"))
+				m_iDefendPrepareMaxSec = ExtractValue(json, "defendPrepMax").ToInt();
+			if (HasKey(json, "defendEvents"))
+				m_iDefendGuaranteedEvents = ExtractValue(json, "defendEvents").ToInt();
+			if (HasKey(json, "defendThirdLow"))
+				m_fDefendThirdChanceLow = ExtractValue(json, "defendThirdLow").ToFloat();
+			if (HasKey(json, "defendThirdMid"))
+				m_fDefendThirdChanceMid = ExtractValue(json, "defendThirdMid").ToFloat();
+			if (HasKey(json, "defendThirdHigh"))
+				m_fDefendThirdChanceHigh = ExtractValue(json, "defendThirdHigh").ToFloat();
+			if (HasKey(json, "defendPriSuccMin"))
+				m_iDefendPrioritySuccessMinSec = ExtractValue(json, "defendPriSuccMin").ToInt();
+			if (HasKey(json, "defendPriSuccMax"))
+				m_iDefendPrioritySuccessMaxSec = ExtractValue(json, "defendPriSuccMax").ToInt();
+			if (HasKey(json, "defendPriFailMin"))
+				m_iDefendPriorityFailMinSec = ExtractValue(json, "defendPriFailMin").ToInt();
+			if (HasKey(json, "defendPriFailMax"))
+				m_iDefendPriorityFailMaxSec = ExtractValue(json, "defendPriFailMax").ToInt();
+			if (HasKey(json, "defendDocMask"))
+				m_iDefendDoctrineMask = ExtractValue(json, "defendDocMask").ToInt();
+			if (HasKey(json, "defendEvtMask"))
+				m_iDefendEventMask = ExtractValue(json, "defendEvtMask").ToInt();
+			if (HasKey(json, "defendHotDrop"))
+				m_fDefendHotDropChance = ExtractValue(json, "defendHotDrop").ToFloat();
 		}
 	}
 

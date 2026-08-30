@@ -3,6 +3,9 @@
 //! Composite (not a MUI widget). Parent AddChild(GetRoot()). Keep as protected ref.
 //! Full opacity for 30s after spawn and 15s after a local kill, then fades to
 //! 70% transparency (0.3 opacity) across the whole chip.
+//! Local kills also show a green +N beside K. Further kills within 3s stack
+//! the same pip (+2, +3, ...); the window refreshes on each kill, then the pip
+//! fades out in 0.45s.
 //------------------------------------------------------------------------------------------------
 class IA_RankHudPanel
 {
@@ -12,6 +15,8 @@ class IA_RankHudPanel
 	protected static const float SPAWN_HOLD_SEC = 30.0;
 	protected static const float KILL_HOLD_SEC = 15.0;
 	protected static const float FADE_SPEED = 7.0;
+	protected static const float STREAK_WINDOW_SEC = 3.0;
+	protected static const float STREAK_FADE_SEC = 0.45;
 
 	protected ref MUI_Surface m_Root;
 	protected ref MUI_Label m_Place;
@@ -19,6 +24,7 @@ class IA_RankHudPanel
 	protected ref MUI_Label m_Next;
 	protected ref MUI_Progress m_Bar;
 	protected ref MUI_Label m_Kills;
+	protected ref MUI_Label m_KillDelta;
 	protected ref MUI_Label m_Deaths;
 	protected ref MUI_Label m_Xp;
 	protected bool m_bBound;
@@ -26,6 +32,9 @@ class IA_RankHudPanel
 	protected bool m_bHasKillSample;
 	protected int m_iLastRankId;
 	protected int m_iLastKills;
+	protected int m_iStreakCount;
+	protected float m_fStreakHold;
+	protected float m_fDeltaOp;
 	protected float m_fHoldLeft;
 	protected float m_fShownOp;
 	protected ref ScriptInvoker m_OnPromoted;
@@ -95,13 +104,29 @@ class IA_RankHudPanel
 		statsRow.SetGap(10);
 		statsRow.GetStyle().m_bBlockHit = false;
 
+		ref MUI_Row killCell = runtime.CreateRow("sessionKillCell");
+		killCell.SetGap(4);
+		killCell.GetStyle().m_bBlockHit = false;
+		killCell.SetHugWidth();
+
 		m_Kills = MakeStat(runtime, "K  0", "sessionK", 52);
+		m_KillDelta = runtime.CreateLabel("", "sessionKDelta");
+		m_KillDelta.SetFontSize(theme.FONT_SMALL);
+		m_KillDelta.SetBold(true);
+		m_KillDelta.SetColor(theme.Live);
+		m_KillDelta.SetHugWidth();
+		m_KillDelta.SetVisible(false);
+		m_KillDelta.SetOpacity(0);
+
+		killCell.AddChild(m_Kills);
+		killCell.AddChild(m_KillDelta);
+
 		m_Deaths = MakeStat(runtime, "D  0", "sessionD", 52);
 		m_Xp = MakeStat(runtime, "XP  0/150", "sessionXpLbl", 0);
 		m_Xp.SetFillWidth();
 		m_Xp.SetGrow(1);
 
-		statsRow.AddChild(m_Kills);
+		statsRow.AddChild(killCell);
 		statsRow.AddChild(m_Deaths);
 		statsRow.AddChild(m_Xp);
 
@@ -148,6 +173,74 @@ class IA_RankHudPanel
 	}
 
 	//------------------------------------------------------------------------------------------------
+	protected void AddKillStreak(int gained)
+	{
+		if (gained < 1)
+			return;
+
+		if (m_fStreakHold > 0)
+			m_iStreakCount = m_iStreakCount + gained;
+		else
+			m_iStreakCount = gained;
+
+		m_fStreakHold = STREAK_WINDOW_SEC;
+		m_fDeltaOp = FULL_OPACITY;
+		ShowKillDelta();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ShowKillDelta()
+	{
+		if (!m_KillDelta)
+			return;
+
+		m_KillDelta.SetText("+" + m_iStreakCount.ToString());
+		m_KillDelta.SetVisible(true);
+		m_KillDelta.SetOpacity(FULL_OPACITY);
+		m_KillDelta.SetIntro(0, 0.2, -10);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void HideKillDelta()
+	{
+		m_iStreakCount = 0;
+		m_fStreakHold = 0;
+		m_fDeltaOp = 0;
+		if (!m_KillDelta)
+			return;
+
+		m_KillDelta.SetVisible(false);
+		m_KillDelta.SetOpacity(0);
+		m_KillDelta.SetText("");
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void TickKillDelta(float dt)
+	{
+		if (m_iStreakCount < 1)
+			return;
+
+		if (m_fStreakHold > 0)
+		{
+			m_fStreakHold = m_fStreakHold - dt;
+			if (m_fStreakHold < 0)
+				m_fStreakHold = 0;
+			return;
+		}
+
+		float fadeStep = dt / STREAK_FADE_SEC;
+		m_fDeltaOp = m_fDeltaOp - fadeStep;
+		if (m_fDeltaOp <= 0)
+		{
+			HideKillDelta();
+			return;
+		}
+
+		if (m_KillDelta)
+			m_KillDelta.SetOpacity(m_fDeltaOp);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void Tick(float dt)
 	{
 		if (dt < 0)
@@ -166,6 +259,7 @@ class IA_RankHudPanel
 
 		m_fShownOp = MUI_Ease.Approach(m_fShownOp, target, dt, FADE_SPEED);
 		ApplyShownOpacity();
+		TickKillDelta(dt);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -212,6 +306,7 @@ class IA_RankHudPanel
 		if (manager)
 			manager.GetOnUpdated().Remove(this.OnSessionUpdated);
 
+		HideKillDelta();
 		m_bBound = false;
 	}
 
@@ -267,7 +362,14 @@ class IA_RankHudPanel
 			m_Xp.SetText("XP  " + IA_SessionRankLadder.GetXpPair(xp));
 
 		if (m_bHasKillSample && kills > m_iLastKills)
+		{
 			PulseKill();
+			AddKillStreak(kills - m_iLastKills);
+		}
+		else if (m_bHasKillSample && kills < m_iLastKills)
+		{
+			HideKillDelta();
+		}
 		m_iLastKills = kills;
 		m_bHasKillSample = true;
 
