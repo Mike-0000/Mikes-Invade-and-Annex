@@ -268,24 +268,29 @@ class IA_MissionInitializer : GenericEntity
 		array<Faction> factionGet = {};
         factionManager.GetFactionsList(factionGet);
 		foreach (Faction currentFaction : factionGet){
-			SCR_EntityCatalog entityCatalog;
 			SCR_Faction scrFaction = SCR_Faction.Cast(currentFaction);
-			entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
 			if (!scrFaction)
 	            continue;
+			SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.CHARACTER, true);
 			if (!entityCatalog)
 				continue;
 			array<EEditableEntityLabel> excludedLabels = {};
 			array<EEditableEntityLabel> includedLabels = {};
 			array<SCR_EntityCatalogEntry> characterEntries = {};
 			entityCatalog.GetFullFilteredEntityList(characterEntries, includedLabels, excludedLabels);
-				
+
+			if (!USFaction)
+				continue;
 			if(USFaction.IsFactionEnemy(currentFaction) && currentFaction != factionManager.GetFactionByKey("FIA") && characterEntries.Count() >= 4)
 				actualFactions.Insert(currentFaction); // Build List of Enemy Factions
 		}
 		if(actualFactions.Count() > 1 && configFactions.IsEmpty()){ // If modded content and no config overrides
 			if(Math.RandomInt(1,20) > 1) // 95% chance to use a modded faction
-				actualFactions.Remove(actualFactions.Find(factionManager.GetFactionByKey("USSR")));
+			{
+				int ussrIdx = actualFactions.Find(factionManager.GetFactionByKey("USSR"));
+				if (ussrIdx != -1)
+					actualFactions.Remove(ussrIdx);
+			}
 		}
 		int factionCount = actualFactions.Count();
 		if (factionCount <= 0)
@@ -302,6 +307,15 @@ class IA_MissionInitializer : GenericEntity
 	        ////Print("[ERROR] IA_MissionInitializer.ProceedToNextZone: groupsArray is null or empty!", LogLevel.ERROR);
 	        return;
 	    }
+
+		Faction nextAreaFaction = GetRandomEnemyFaction();
+		if (!nextAreaFaction)
+		{
+			Print("[IA_MissionInitializer] ProceedToNextZone deferred: no valid enemy faction. Retrying in 15s.", LogLevel.ERROR);
+			GetGame().GetCallqueue().Remove(ProceedToNextZone);
+			GetGame().GetCallqueue().CallLater(ProceedToNextZone, 15000, false);
+			return;
+		}
 
         // --- BEGIN ADDED: Clear existing areas from IA_Game ---    
         IA_Game gameInstance = IA_Game.Instantiate();
@@ -357,7 +371,6 @@ class IA_MissionInitializer : GenericEntity
 		m_initialCiviliansCounted = false;
 		m_civilianRevoltActive = false;
 
-	    Faction nextAreaFaction = GetRandomEnemyFaction();
 		Print("Next Faction is = " +nextAreaFaction.GetFactionName(), LogLevel.NORMAL);
 	    int currentGroup = groupsArray[m_currentIndex];
 	    ////Print("[DEBUG_ZONE_GROUP] Proceeding to zone group " + currentGroup + " (index " + m_currentIndex + " of " + groupsArray.Count() + ")", LogLevel.WARNING);
@@ -736,6 +749,7 @@ class IA_MissionInitializer : GenericEntity
 		////Print("Running CheckCurrentZoneComplete 3",LogLevel.NORMAL);
 		// Now check each marker in the current group
 		int actualCompletedZones = 0;
+		int actualCompletedIncludingOptional = 0;
 		IA_Game matchGame = IA_Game.Instantiate();
 		
 		foreach(IA_AreaMarker marker : markers) {
@@ -770,6 +784,7 @@ class IA_MissionInitializer : GenericEntity
 			
 			if(factionScore >= 1000) { // Score of 1000 = 120 seconds completed
 				//Print("[DEBUG_ZONE_GROUP] Zone " + marker.GetAreaName() + " (idx " + currentZoneIndex + ") in group " + currentGroup + " IS complete (Score: " + factionScore + ").", LogLevel.WARNING);
+				actualCompletedIncludingOptional++;
 				if (marker.GetAreaType() != IA_AreaType.MortarPit)
 					actualCompletedZones++;
 					
@@ -814,8 +829,22 @@ class IA_MissionInitializer : GenericEntity
 		}
 		
 		//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " progress: " + actualCompletedZones + "/" + amountOfZones + " zones completed.", LogLevel.WARNING);
+
+		// Mortar pits are optional when a required site exists, but an AO that is
+		// only mortars must not treat 0 >= 0 as complete on the first 5s tick —
+		// that ForceFinishes the Live group and can schedule FinishGame.
+		bool groupComplete = false;
+		if (amountOfRequiredZones > 0)
+		{
+			if (actualCompletedZones >= amountOfRequiredZones)
+				groupComplete = true;
+		}
+		else if (actualCompletedIncludingOptional >= amountOfZones)
+		{
+			groupComplete = true;
+		}
 		
-		if(actualCompletedZones >= amountOfRequiredZones){ // Optional mortar pits do not gate AO progression
+		if(groupComplete){
 			//Print("[INFO] All " + amountOfZones + " zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
 
 			// --- BEGIN ADDED: Check for defend mission before proceeding ---
@@ -1293,7 +1322,13 @@ class IA_MissionInitializer : GenericEntity
                 sessionRanks.BeginAoXpWindow();
         }
 
-        SpawnAreaFromMarker(marker, GetRandomEnemyFaction(), liveGroup);
+        Faction liveFaction = GetRandomEnemyFaction();
+        if (!liveFaction)
+        {
+            Print(string.Format("[IA_MissionInitializer] Live append of '%1' deferred: no valid enemy faction.", name), LogLevel.ERROR);
+            return;
+        }
+        SpawnAreaFromMarker(marker, liveFaction, liveGroup);
 
         if (!m_currentAreaGroupManager && m_currentAreaInstances)
             m_currentAreaGroupManager = new IA_AreaGroupManager(m_currentAreaInstances);
