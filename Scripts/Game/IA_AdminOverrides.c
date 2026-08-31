@@ -55,6 +55,13 @@ class IA_AdminOverrides
 	int m_iDefendDoctrineMask = 15;
 	int m_iDefendEventMask = 63;
 	float m_fDefendHotDropChance = 0.20;
+	bool m_bHasAiCombatOverride;
+	int m_iAiSkillNormal = 80;
+	int m_iAiSkillElite = 100;
+	float m_fAiFireRateNormal = 1.0;
+	float m_fAiFireRateElite = 1.25;
+	float m_fAiPerceptionNormal = 1.0;
+	float m_fAiPerceptionElite = 1.5;
 
 	//------------------------------------------------------------------------------------------------
 	static string GetPath()
@@ -176,6 +183,14 @@ class IA_AdminOverrides
 		m_iDefendDoctrineMask = config.GetDefenseDoctrineMask();
 		m_iDefendEventMask = config.GetDefenseEventMask();
 		m_fDefendHotDropChance = config.m_fDefendHotDropChance;
+		m_bHasAiCombatOverride = true;
+		config.ClampAiCombatSettings();
+		m_iAiSkillNormal = config.m_eAiSkillNormal;
+		m_iAiSkillElite = config.m_eAiSkillElite;
+		m_fAiFireRateNormal = config.m_fAiFireRateNormal;
+		m_fAiFireRateElite = config.m_fAiFireRateElite;
+		m_fAiPerceptionNormal = config.m_fAiPerceptionNormal;
+		m_fAiPerceptionElite = config.m_fAiPerceptionElite;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -245,6 +260,17 @@ class IA_AdminOverrides
 			config.SetDefenseEventMask(m_iDefendEventMask);
 			config.m_fDefendHotDropChance = m_fDefendHotDropChance;
 			config.ClampDefenseSettings();
+		}
+
+		if (m_bHasAiCombatOverride)
+		{
+			config.m_eAiSkillNormal = m_iAiSkillNormal;
+			config.m_eAiSkillElite = m_iAiSkillElite;
+			config.m_fAiFireRateNormal = m_fAiFireRateNormal;
+			config.m_fAiFireRateElite = m_fAiFireRateElite;
+			config.m_fAiPerceptionNormal = m_fAiPerceptionNormal;
+			config.m_fAiPerceptionElite = m_fAiPerceptionElite;
+			config.ClampAiCombatSettings();
 		}
 	}
 
@@ -347,6 +373,12 @@ class IA_AdminOverrides
 		json = json + ",\"defendDocMask\":" + m_iDefendDoctrineMask.ToString();
 		json = json + ",\"defendEvtMask\":" + m_iDefendEventMask.ToString();
 		json = json + ",\"defendHotDrop\":" + m_fDefendHotDropChance.ToString();
+		json = json + ",\"aiSkillN\":" + m_iAiSkillNormal.ToString();
+		json = json + ",\"aiSkillE\":" + m_iAiSkillElite.ToString();
+		json = json + ",\"aiFireN\":" + m_fAiFireRateNormal.ToString();
+		json = json + ",\"aiFireE\":" + m_fAiFireRateElite.ToString();
+		json = json + ",\"aiPercN\":" + m_fAiPerceptionNormal.ToString();
+		json = json + ",\"aiPercE\":" + m_fAiPerceptionElite.ToString();
 		json = json + "}";
 		return json;
 	}
@@ -456,6 +488,21 @@ class IA_AdminOverrides
 				m_iDefendEventMask = ExtractValue(json, "defendEvtMask").ToInt();
 			if (HasKey(json, "defendHotDrop"))
 				m_fDefendHotDropChance = ExtractValue(json, "defendHotDrop").ToFloat();
+		}
+		if (HasKey(json, "aiSkillN"))
+		{
+			m_bHasAiCombatOverride = true;
+			m_iAiSkillNormal = ExtractValue(json, "aiSkillN").ToInt();
+			if (HasKey(json, "aiSkillE"))
+				m_iAiSkillElite = ExtractValue(json, "aiSkillE").ToInt();
+			if (HasKey(json, "aiFireN"))
+				m_fAiFireRateNormal = ExtractValue(json, "aiFireN").ToFloat();
+			if (HasKey(json, "aiFireE"))
+				m_fAiFireRateElite = ExtractValue(json, "aiFireE").ToFloat();
+			if (HasKey(json, "aiPercN"))
+				m_fAiPerceptionNormal = ExtractValue(json, "aiPercN").ToFloat();
+			if (HasKey(json, "aiPercE"))
+				m_fAiPerceptionElite = ExtractValue(json, "aiPercE").ToFloat();
 		}
 	}
 

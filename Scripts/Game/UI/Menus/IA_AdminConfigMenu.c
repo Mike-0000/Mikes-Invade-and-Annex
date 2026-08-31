@@ -32,6 +32,12 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_NumericField m_AIField;
 	protected ref MUI_NumericField m_StaticAIField;
 	protected ref MUI_NumericField m_MilVehField;
+	protected ref MUI_Dropdown m_NormalSkillDrop;
+	protected ref MUI_Dropdown m_EliteSkillDrop;
+	protected ref MUI_NumericField m_NormalFireField;
+	protected ref MUI_NumericField m_EliteFireField;
+	protected ref MUI_NumericField m_NormalPercField;
+	protected ref MUI_NumericField m_ElitePercField;
 
 	protected ref MUI_NumericField m_civField;
 	protected ref MUI_NumericField m_CivVehField;
@@ -166,6 +172,63 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(m_AIField, "Enemy strength", "Changes how many enemy soldiers appear as the player count rises. 1 is normal, 0.5 is about half, and 2 is about double.");
 		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "Set this above 0 to ignore the player count and keep enemy numbers at a fixed level. Leave it at 0 for normal player scaling.");
 		m_Hints.AddHint(m_MilVehField, "Enemy vehicle count", "Changes how many enemy military vehicles appear. 1 is normal, 0.5 is about half, and 2 is about double.");
+
+		ref MUI_Label combatLbl = runtime.CreateLabel("AI combat  •  Skill is aim accuracy only. Fire rate and spotting are separate.", "combatLbl");
+		combatLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		combatLbl.SetMuted(true);
+		m_PageScaling.AddChild(combatLbl);
+
+		m_NormalSkillDrop = runtime.CreateDropdown("normalSkill");
+		FillSkillDropdown(m_NormalSkillDrop);
+		m_NormalSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(EAISkill.EXPERT));
+
+		m_EliteSkillDrop = runtime.CreateDropdown("eliteSkill");
+		FillSkillDropdown(m_EliteSkillDrop);
+		m_EliteSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(EAISkill.CYLON));
+
+		m_NormalFireField = runtime.CreateNumericField("Normal fire rate (1 = vanilla)", "nFire");
+		m_NormalFireField.SetRange(0.05, 2);
+		m_NormalFireField.SetStep(0.05);
+		m_NormalFireField.SetDecimals(2);
+		m_NormalFireField.SetValue(1);
+
+		m_EliteFireField = runtime.CreateNumericField("Elite fire rate", "eFire");
+		m_EliteFireField.SetRange(0.05, 2);
+		m_EliteFireField.SetStep(0.05);
+		m_EliteFireField.SetDecimals(2);
+		m_EliteFireField.SetValue(1.25);
+
+		m_NormalPercField = runtime.CreateNumericField("Normal spotting (1 = vanilla)", "nPerc");
+		m_NormalPercField.SetRange(0.1, 4);
+		m_NormalPercField.SetStep(0.1);
+		m_NormalPercField.SetDecimals(2);
+		m_NormalPercField.SetValue(1);
+
+		m_ElitePercField = runtime.CreateNumericField("Elite spotting", "ePerc");
+		m_ElitePercField.SetRange(0.1, 4);
+		m_ElitePercField.SetStep(0.1);
+		m_ElitePercField.SetDecimals(2);
+		m_ElitePercField.SetValue(1.5);
+
+		ref MUI_Label nSkillLbl = runtime.CreateLabel("Normal troop skill", "nSkillLbl");
+		nSkillLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		ref MUI_Label eSkillLbl = runtime.CreateLabel("Elite troop skill", "eSkillLbl");
+		eSkillLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+
+		m_PageScaling.AddChild(nSkillLbl);
+		m_PageScaling.AddChild(m_NormalSkillDrop);
+		m_PageScaling.AddChild(eSkillLbl);
+		m_PageScaling.AddChild(m_EliteSkillDrop);
+		m_PageScaling.AddChild(m_NormalFireField);
+		m_PageScaling.AddChild(m_EliteFireField);
+		m_PageScaling.AddChild(m_NormalPercField);
+		m_PageScaling.AddChild(m_ElitePercField);
+		m_Hints.AddHint(m_NormalSkillDrop, "Normal aim skill", "Aim accuracy for regular infantry, including commander FOB guards that are not marked elite. Expert is the I&A default. Does not change reaction time.");
+		m_Hints.AddHint(m_EliteSkillDrop, "Elite aim skill", "Aim accuracy for elite patrols and the elite fireteam at a commander FOB. Cylon (Cyclone) is perfect aim. Does not change reaction time.");
+		m_Hints.AddHint(m_NormalFireField, "Normal fire rate", "How quickly regular infantry shoot. 1 is vanilla. Values above 1 shoot faster. Vanilla clamps 0.05 to 2.");
+		m_Hints.AddHint(m_EliteFireField, "Elite fire rate", "How quickly elite infantry shoot. Default 1.25.");
+		m_Hints.AddHint(m_NormalPercField, "Normal spotting", "How quickly regular infantry visually detect targets. 1 is vanilla.");
+		m_Hints.AddHint(m_ElitePercField, "Elite spotting", "How quickly elite infantry visually detect targets. Default 1.5.");
 
 		m_civField = runtime.CreateNumericField("Civilian count multiplier", "civ");
 		m_civField.SetRange(0, 100);
@@ -984,6 +1047,19 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			OnDefendHotDropChanged();
 		}
 
+		if (m_NormalSkillDrop)
+			m_NormalSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(cfg.GetAiSkillNormal()));
+		if (m_EliteSkillDrop)
+			m_EliteSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(cfg.GetAiSkillElite()));
+		if (m_NormalFireField)
+			m_NormalFireField.SetValue(cfg.m_fAiFireRateNormal);
+		if (m_EliteFireField)
+			m_EliteFireField.SetValue(cfg.m_fAiFireRateElite);
+		if (m_NormalPercField)
+			m_NormalPercField.SetValue(cfg.m_fAiPerceptionNormal);
+		if (m_ElitePercField)
+			m_ElitePercField.SetValue(cfg.m_fAiPerceptionElite);
+
 		m_bFactionUiLock = true;
 		ApplyKeysToToggles(cfg.m_sDesiredEnemyFactionKeys, m_EnemyFactionToggles, m_EnemyFactionChoiceKeys, m_EnemyAutoToggle);
 		ApplyKeysToToggles(cfg.m_sDesiredEnemyVehicleFactionKeys, m_VehicleFactionToggles, m_VehicleFactionChoiceKeys, m_VehicleMatchToggle);
@@ -1194,7 +1270,34 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			defendPack.m_fDefendHotDropChance = m_DefendHotDropSlider.GetValue();
 		packed = packed + "|" + IA_Config.PackDefenseExtras(defendPack);
 
+		ref IA_Config combatPack = new IA_Config();
+		if (m_NormalSkillDrop)
+			combatPack.m_eAiSkillNormal = IA_Config.MenuIndexToSkill(m_NormalSkillDrop.GetIndex());
+		if (m_EliteSkillDrop)
+			combatPack.m_eAiSkillElite = IA_Config.MenuIndexToSkill(m_EliteSkillDrop.GetIndex());
+		if (m_NormalFireField)
+			combatPack.m_fAiFireRateNormal = m_NormalFireField.GetValue();
+		if (m_EliteFireField)
+			combatPack.m_fAiFireRateElite = m_EliteFireField.GetValue();
+		if (m_NormalPercField)
+			combatPack.m_fAiPerceptionNormal = m_NormalPercField.GetValue();
+		if (m_ElitePercField)
+			combatPack.m_fAiPerceptionElite = m_ElitePercField.GetValue();
+		packed = packed + "|" + IA_Config.PackAiCombatExtras(combatPack);
+
 		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void FillSkillDropdown(MUI_Dropdown drop)
+	{
+		if (!drop)
+			return;
+		drop.AddItem("Rookie");
+		drop.AddItem("Regular");
+		drop.AddItem("Veteran");
+		drop.AddItem("Expert");
+		drop.AddItem("Cylon");
 	}
 
 	//------------------------------------------------------------------------------------------------

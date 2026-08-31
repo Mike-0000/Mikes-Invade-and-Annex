@@ -1554,6 +1554,8 @@ class IA_AiGroup
         // General SetupDeathListener call - for military this also schedules CheckDangerEvents.
         // For civilians, their specific unit listener is already set.
         SetupDeathListener(); 
+        if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
+            GetGame().GetCallqueue().CallLater(ApplyCombatProfile, 2000, false);
         ScheduleNextStateEvaluation();
 
         // The recurring CheckDangerEvents is mainly for military AI reactions.
@@ -1814,8 +1816,7 @@ class IA_AiGroup
              return;
          }
          ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
-         
-
+         ApplyCombatToEntity(unitEntity);
     }
 
     private void SetupDeathListener()
@@ -1857,12 +1858,7 @@ class IA_AiGroup
             {
                 continue;
             }
-            EAISkill aiSkill = EAISkill.EXPERT;
-			SCR_AICombatComponent combatComponent = SCR_AICombatComponent.Cast(agent.FindComponent(SCR_AICombatComponent));
-			if (combatComponent)
-				combatComponent.SetAISkill(aiSkill);
-			if (m_bEliteProfile)
-				ApplyEliteCombatToAgent(agent);
+            ApplyCombatToAgent(agent);
 			
             // ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath); //This line is now removed
             
@@ -4037,9 +4033,11 @@ class IA_AiGroup
     }
 
     //! Combat component lives on the controlled character, not the AIAgent.
-    void ApplyEliteCombatProfile()
+    void ApplyCombatProfile()
     {
-        if (!m_bEliteProfile)
+        if (m_isCivilian)
+            return;
+        if (m_faction == IA_Faction.CIV)
             return;
         if (!m_group)
             return;
@@ -4048,26 +4046,71 @@ class IA_AiGroup
         m_group.GetAgents(agents);
         foreach (AIAgent agent : agents)
         {
-            ApplyEliteCombatToAgent(agent);
+            ApplyCombatToAgent(agent);
         }
     }
 
-    protected void ApplyEliteCombatToAgent(AIAgent agent)
+    void ApplyEliteCombatProfile()
+    {
+        ApplyCombatProfile();
+    }
+
+    protected void ApplyCombatToAgent(AIAgent agent)
     {
         if (!agent)
             return;
 
-        IEntity controlled = agent.GetControlledEntity();
+        ApplyCombatToEntity(agent.GetControlledEntity());
+    }
+
+    protected void ApplyEliteCombatToAgent(AIAgent agent)
+    {
+        ApplyCombatToAgent(agent);
+    }
+
+    protected void ApplyCombatToEntity(IEntity controlled)
+    {
         if (!controlled)
+            return;
+        if (m_isCivilian)
+            return;
+        if (m_faction == IA_Faction.CIV)
             return;
 
         SCR_AICombatComponent combat = SCR_AICombatComponent.Cast(controlled.FindComponent(SCR_AICombatComponent));
         if (!combat)
             return;
 
-        combat.SetAISkill(EAISkill.CYLON);
-        combat.SetPerceptionFactor(1.5);
-        combat.SetFireRateCoef(1.25);
+        EAISkill skill = EAISkill.EXPERT;
+        float fireRate = 1.0;
+        float perception = 1.0;
+        if (m_bEliteProfile)
+        {
+            skill = EAISkill.CYLON;
+            fireRate = 1.25;
+            perception = 1.5;
+        }
+
+        IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+        if (cfg)
+        {
+            if (m_bEliteProfile)
+            {
+                skill = cfg.GetAiSkillElite();
+                fireRate = cfg.m_fAiFireRateElite;
+                perception = cfg.m_fAiPerceptionElite;
+            }
+            else
+            {
+                skill = cfg.GetAiSkillNormal();
+                fireRate = cfg.m_fAiFireRateNormal;
+                perception = cfg.m_fAiPerceptionNormal;
+            }
+        }
+
+        combat.SetAISkill(skill);
+        combat.SetFireRateCoef(fireRate, true);
+        combat.SetPerceptionFactor(perception);
     }
 
     bool IsAirborneDrop()

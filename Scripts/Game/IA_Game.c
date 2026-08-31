@@ -518,6 +518,34 @@ class IA_Game
         return m_areas;
     }
 
+    void ReapplyAiCombatProfiles()
+    {
+        ReapplyAiCombatOnAreas(m_areas);
+        ReapplyAiCombatOnAreas(m_transientAreaInstances);
+    }
+
+    protected void ReapplyAiCombatOnAreas(array<IA_AreaInstance> areas)
+    {
+        if (!areas)
+            return;
+
+        foreach (IA_AreaInstance area : areas)
+        {
+            if (!area)
+                continue;
+
+            array<ref IA_AiGroup> groups = area.GetMilitaryGroups();
+            if (!groups)
+                continue;
+
+            foreach (IA_AiGroup grp : groups)
+            {
+                if (grp)
+                    grp.ApplyCombatProfile();
+            }
+        }
+    }
+
     static IA_AreaInstance GetAreaForPosition(vector pos)
     {
         IA_Game game = IA_Game.Instantiate();

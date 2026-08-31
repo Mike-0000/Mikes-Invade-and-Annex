@@ -116,6 +116,9 @@ class IA_MissionInitializer : GenericEntity
 
 	[RplProp()]
 	bool m_bGmAutoPlaceSupport_Rpl = false;
+
+	[RplProp()]
+	string m_sAiCombatPacked_Rpl = "";
 	// --- END ADDED ---
 
 	protected static const int CAPTURE_HUD_MAX = 6;
@@ -1108,45 +1111,6 @@ class IA_MissionInitializer : GenericEntity
 		}
 	}
 
-	//! Admin Complete + Defend finishes optional mortar pits. Natural defense
-	//! still leaves them capturable so players can silence tubes during the hold.
-	private void CompleteMortarPitsForGroup(int groupId)
-	{
-		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
-		if (markers)
-		{
-			foreach (IA_AreaMarker marker : markers)
-			{
-				if (!marker)
-					continue;
-				if (marker.m_areaGroup != groupId)
-					continue;
-				if (marker.GetAreaType() != IA_AreaType.MortarPit)
-					continue;
-
-				marker.RetireCapture();
-
-				IA_AreaInstance fromMarker = FindAreaInstanceByName(marker.GetAreaName());
-				if (fromMarker && !fromMarker.IsShutDown())
-					fromMarker.ForceFinish();
-			}
-		}
-
-		if (!m_currentAreaInstances)
-			return;
-
-		foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
-		{
-			if (!instance || instance.IsShutDown())
-				continue;
-			IA_Area area = instance.GetArea();
-			if (!area || area.GetAreaType() != IA_AreaType.MortarPit)
-				continue;
-
-			instance.ForceFinish();
-		}
-	}
-
 	private IA_AreaInstance FindAreaInstanceByName(string areaName)
 	{
 		if (areaName.IsEmpty())
@@ -1999,9 +1963,24 @@ class IA_MissionInitializer : GenericEntity
 
 			if (tokens.Count() > 22)
 				IA_Config.UnpackDefenseExtras(m_config, tokens[22]);
+			if (tokens.Count() > 23)
+				IA_Config.UnpackAiCombatExtras(m_config, tokens[23]);
 		}
 
 		PushConfigToReplication();
+		ReapplyAiCombatProfiles();
+	}
+
+	protected void ReapplyAiCombatProfiles()
+	{
+		if (!Replication.IsServer())
+			return;
+
+		IA_Game game = IA_Game.Instantiate();
+		if (!game)
+			return;
+
+		game.ReapplyAiCombatProfiles();
 	}
 
 	protected void PushConfigToReplication()
@@ -2031,6 +2010,7 @@ class IA_MissionInitializer : GenericEntity
 			m_bGmAutoPlaceSupport_Rpl = m_config.m_bGmAutoPlaceSupport;
 			m_iCivilianRevoltNotificationDelay_Rpl = m_config.m_iCivilianRevoltNotificationDelay;
 			m_iCivilianRevoltReinforcementDelay_Rpl = m_config.m_iCivilianRevoltReinforcementDelay;
+			m_sAiCombatPacked_Rpl = IA_Config.PackAiCombatExtras(m_config);
 
 			m_sDesiredEnemyFactionKey_Rpl = "";
 			if (m_config.m_sDesiredEnemyFactionKeys && m_config.m_sDesiredEnemyFactionKeys.Count() > 0)
@@ -2129,7 +2109,6 @@ class IA_MissionInitializer : GenericEntity
 
 		if (CheckAndStartDefendMission(groupID, true))
 		{
-			CompleteMortarPitsForGroup(groupID);
 			ForceFinishCurrentAreaInstancesExceptDefend();
 			GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
 			GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
@@ -2764,6 +2743,8 @@ class IA_MissionInitializer : GenericEntity
 					IA_AdminConfigUtil.SplitKeys(s_instance.m_sDesiredEnemyVehicleFactionKeys_Rpl, vehicleKeys);
 					clientConfig.m_sDesiredEnemyVehicleFactionKeys = vehicleKeys;
 				}
+
+				IA_Config.UnpackAiCombatExtras(clientConfig, s_instance.m_sAiCombatPacked_Rpl);
 
 				return clientConfig;
 			}

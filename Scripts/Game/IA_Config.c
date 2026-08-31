@@ -183,6 +183,24 @@ class IA_Config{
 	[Attribute(defvalue: "0.20", UIWidgets.Slider, category: "Defense", desc: "Air Assault hot-drop chance (0-1). Remainder uses a 150-300 m perimeter LZ.", params: "0 1 0.01")]
 	float m_fDefendHotDropChance = 0.20;
 
+	[Attribute(defvalue: EAISkill.EXPERT.ToString(), UIWidgets.ComboBox, "Aim skill for normal infantry. Vanilla EAISkill only changes aim-error sigma.", "", ParamEnumArray.FromEnum(EAISkill), category: "AI Combat")]
+	EAISkill m_eAiSkillNormal = EAISkill.EXPERT;
+
+	[Attribute(defvalue: EAISkill.CYLON.ToString(), UIWidgets.ComboBox, "Aim skill for elite groups (Cylon = zero aim error).", "", ParamEnumArray.FromEnum(EAISkill), category: "AI Combat")]
+	EAISkill m_eAiSkillElite = EAISkill.CYLON;
+
+	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Combat", desc: "Fire-rate coefficient for normal infantry. 1 is vanilla. Above 1 shoots faster (vanilla clamps 0.05-2).")]
+	float m_fAiFireRateNormal = 1.0;
+
+	[Attribute(defvalue: "1.25", UIWidgets.EditBox, category: "AI Combat", desc: "Fire-rate coefficient for elite groups.")]
+	float m_fAiFireRateElite = 1.25;
+
+	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Combat", desc: "Visual spotting multiplier for normal infantry. 1 is vanilla.")]
+	float m_fAiPerceptionNormal = 1.0;
+
+	[Attribute(defvalue: "1.5", UIWidgets.EditBox, category: "AI Combat", desc: "Visual spotting multiplier for elite groups.")]
+	float m_fAiPerceptionElite = 1.5;
+
 	static const int DEFEND_DOC_SIEGE = 1;
 	static const int DEFEND_DOC_BREAKTHROUGH = 2;
 	static const int DEFEND_DOC_AIR = 4;
@@ -302,6 +320,128 @@ class IA_Config{
 			m_fDefendHotDropChance = 0;
 		if (m_fDefendHotDropChance > 1)
 			m_fDefendHotDropChance = 1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static EAISkill SnapAiSkill(EAISkill skill, EAISkill fallback)
+	{
+		if (skill == EAISkill.NOOB)
+			return skill;
+		if (skill == EAISkill.ROOKIE)
+			return skill;
+		if (skill == EAISkill.REGULAR)
+			return skill;
+		if (skill == EAISkill.VETERAN)
+			return skill;
+		if (skill == EAISkill.EXPERT)
+			return skill;
+		if (skill == EAISkill.CYLON)
+			return skill;
+		return fallback;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void ClampAiCombatSettings()
+	{
+		m_eAiSkillNormal = SnapAiSkill(m_eAiSkillNormal, EAISkill.EXPERT);
+		m_eAiSkillElite = SnapAiSkill(m_eAiSkillElite, EAISkill.CYLON);
+
+		if (m_fAiFireRateNormal < 0.05)
+			m_fAiFireRateNormal = 0.05;
+		if (m_fAiFireRateNormal > 2)
+			m_fAiFireRateNormal = 2;
+		if (m_fAiFireRateElite < 0.05)
+			m_fAiFireRateElite = 0.05;
+		if (m_fAiFireRateElite > 2)
+			m_fAiFireRateElite = 2;
+
+		if (m_fAiPerceptionNormal < 0.1)
+			m_fAiPerceptionNormal = 0.1;
+		if (m_fAiPerceptionNormal > 4)
+			m_fAiPerceptionNormal = 4;
+		if (m_fAiPerceptionElite < 0.1)
+			m_fAiPerceptionElite = 0.1;
+		if (m_fAiPerceptionElite > 4)
+			m_fAiPerceptionElite = 4;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	EAISkill GetAiSkillNormal()
+	{
+		ClampAiCombatSettings();
+		return m_eAiSkillNormal;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	EAISkill GetAiSkillElite()
+	{
+		ClampAiCombatSettings();
+		return m_eAiSkillElite;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static int SkillToMenuIndex(EAISkill skill)
+	{
+		if (skill == EAISkill.CYLON)
+			return 4;
+		if (skill == EAISkill.EXPERT)
+			return 3;
+		if (skill == EAISkill.VETERAN)
+			return 2;
+		if (skill == EAISkill.REGULAR)
+			return 1;
+		return 0;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static EAISkill MenuIndexToSkill(int index)
+	{
+		if (index == 4)
+			return EAISkill.CYLON;
+		if (index == 3)
+			return EAISkill.EXPERT;
+		if (index == 2)
+			return EAISkill.VETERAN;
+		if (index == 1)
+			return EAISkill.REGULAR;
+		return EAISkill.ROOKIE;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string PackAiCombatExtras(notnull IA_Config cfg)
+	{
+		cfg.ClampAiCombatSettings();
+		int skillN = cfg.m_eAiSkillNormal;
+		int skillE = cfg.m_eAiSkillElite;
+		string packed = skillN.ToString();
+		packed = packed + "," + skillE.ToString();
+		packed = packed + "," + cfg.m_fAiFireRateNormal.ToString();
+		packed = packed + "," + cfg.m_fAiFireRateElite.ToString();
+		packed = packed + "," + cfg.m_fAiPerceptionNormal.ToString();
+		packed = packed + "," + cfg.m_fAiPerceptionElite.ToString();
+		return packed;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static void UnpackAiCombatExtras(notnull IA_Config cfg, string packed)
+	{
+		if (packed.IsEmpty())
+			return;
+
+		ref array<string> parts = new array<string>();
+		packed.Split(",", parts, false);
+		if (parts.Count() < 6)
+			return;
+
+		int skillN = parts[0].ToInt();
+		int skillE = parts[1].ToInt();
+		cfg.m_eAiSkillNormal = skillN;
+		cfg.m_eAiSkillElite = skillE;
+		cfg.m_fAiFireRateNormal = parts[2].ToFloat();
+		cfg.m_fAiFireRateElite = parts[3].ToFloat();
+		cfg.m_fAiPerceptionNormal = parts[4].ToFloat();
+		cfg.m_fAiPerceptionElite = parts[5].ToFloat();
+		cfg.ClampAiCombatSettings();
 	}
 
 	//------------------------------------------------------------------------------------------------
