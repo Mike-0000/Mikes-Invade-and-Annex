@@ -52,7 +52,7 @@ class IA_AISpawnPoint : ScriptedGameTriggerEntity
         if (radius >= 1)
             pos = IA_Game.rng.GenerateRandomPointInRadius(1, radius, origin);
 
-        return IA_SpawnPlacement.SnapInfantryPos(pos, IA_SpawnPlacement.EMPTY_SEARCH_R);
+        return pos;
     }
 
     static array<IA_AISpawnPoint> GetAllSpawnPoints()

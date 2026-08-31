@@ -51,13 +51,11 @@ class IA_ObjectiveElitePatrol
 			return false;
 
 		vector center = area.GetOrigin();
-		m_vSite = IA_SpawnPlacement.FindEventSite(center, 350, 600);
+		m_vSite = IA_SpawnPlacement.FindOccupyingInfantryOrigin(center, -1);
 		if (m_vSite == vector.Zero)
-			m_vSite = IA_SpawnPlacement.FindInboundInfantrySpawn(center, -1);
-		if (m_vSite == vector.Zero)
-			m_vSite = center + Vector(400, 0, 0);
+			return false;
 
-		IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(m_vSite, host.GetOwningFaction(), UNIT_COUNT, host.GetAreaFaction(), false, true, false, true);
+		IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(m_vSite, host.GetOwningFaction(), UNIT_COUNT, host.GetAreaFaction(), false, false, false, true);
 		if (!grp)
 			return false;
 
