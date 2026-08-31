@@ -3,9 +3,10 @@
 //! Composite (not a MUI widget). Parent AddChild(GetRoot()). Keep as protected ref.
 //! Full opacity for 30s after spawn and 15s after a local kill, then fades to
 //! 70% transparency (0.3 opacity) across the whole chip.
-//! Local kills also show a green +N beside K. Further kills within 3s stack
-//! the same pip (+2, +3, ...); the window refreshes on each kill, then the pip
-//! fades out in 0.45s.
+//! Local kills also show a green +N beside K. The pip lives in a reserved
+//! slot so D/XP never shift when it appears. Further kills within 3s stack
+//! the same pip (+2, +3, ...); the window refreshes on each kill, then the
+//! pip fades out in 0.45s.
 //------------------------------------------------------------------------------------------------
 class IA_RankHudPanel
 {
@@ -17,6 +18,7 @@ class IA_RankHudPanel
 	protected static const float FADE_SPEED = 7.0;
 	protected static const float STREAK_WINDOW_SEC = 3.0;
 	protected static const float STREAK_FADE_SEC = 0.45;
+	protected static const float KILL_DELTA_W = 28;
 
 	protected ref MUI_Surface m_Root;
 	protected ref MUI_Label m_Place;
@@ -105,17 +107,19 @@ class IA_RankHudPanel
 		statsRow.GetStyle().m_bBlockHit = false;
 
 		ref MUI_Row killCell = runtime.CreateRow("sessionKillCell");
-		killCell.SetGap(4);
+		killCell.SetGap(2);
 		killCell.GetStyle().m_bBlockHit = false;
 		killCell.SetHugWidth();
 
-		m_Kills = MakeStat(runtime, "K  0", "sessionK", 52);
+		m_Kills = MakeStat(runtime, "K  0", "sessionK", 0);
+		m_Kills.SetHugWidth();
 		m_KillDelta = runtime.CreateLabel("", "sessionKDelta");
 		m_KillDelta.SetFontSize(theme.FONT_SMALL);
 		m_KillDelta.SetBold(true);
 		m_KillDelta.SetColor(theme.Live);
-		m_KillDelta.SetHugWidth();
-		m_KillDelta.SetVisible(false);
+		m_KillDelta.SetWidth(KILL_DELTA_W);
+		// Stay in-flow at opacity 0. SetVisible(false) drops the slot and
+		// shoves D/XP sideways when the pip comes back.
 		m_KillDelta.SetOpacity(0);
 
 		killCell.AddChild(m_Kills);
@@ -195,7 +199,6 @@ class IA_RankHudPanel
 			return;
 
 		m_KillDelta.SetText("+" + m_iStreakCount.ToString());
-		m_KillDelta.SetVisible(true);
 		m_KillDelta.SetOpacity(FULL_OPACITY);
 		m_KillDelta.SetIntro(0, 0.2, -10);
 	}
@@ -209,7 +212,6 @@ class IA_RankHudPanel
 		if (!m_KillDelta)
 			return;
 
-		m_KillDelta.SetVisible(false);
 		m_KillDelta.SetOpacity(0);
 		m_KillDelta.SetText("");
 	}
