@@ -4081,12 +4081,12 @@ class IA_AiGroup
         if (!combat)
             return;
 
-        EAISkill skill = EAISkill.EXPERT;
+        EAISkill skill = EAISkill.VETERAN;
         float fireRate = 1.0;
         float perception = 1.0;
         if (m_bEliteProfile)
         {
-            skill = EAISkill.CYLON;
+            skill = EAISkill.EXPERT;
             fireRate = 1.25;
             perception = 1.5;
         }

@@ -180,11 +180,11 @@ class IA_AdminConfigMenu : MUI_MenuBase
 
 		m_NormalSkillDrop = runtime.CreateDropdown("normalSkill");
 		FillSkillDropdown(m_NormalSkillDrop);
-		m_NormalSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(EAISkill.EXPERT));
+		m_NormalSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(EAISkill.VETERAN));
 
 		m_EliteSkillDrop = runtime.CreateDropdown("eliteSkill");
 		FillSkillDropdown(m_EliteSkillDrop);
-		m_EliteSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(EAISkill.CYLON));
+		m_EliteSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(EAISkill.EXPERT));
 
 		m_NormalFireField = runtime.CreateNumericField("Normal fire rate (1 = vanilla)", "nFire");
 		m_NormalFireField.SetRange(0.05, 2);
@@ -223,8 +223,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageScaling.AddChild(m_EliteFireField);
 		m_PageScaling.AddChild(m_NormalPercField);
 		m_PageScaling.AddChild(m_ElitePercField);
-		m_Hints.AddHint(m_NormalSkillDrop, "Normal aim skill", "Aim accuracy for regular infantry, including commander FOB guards that are not marked elite. Expert is the I&A default. Does not change reaction time.");
-		m_Hints.AddHint(m_EliteSkillDrop, "Elite aim skill", "Aim accuracy for elite patrols and the elite fireteam at a commander FOB. Cylon (Cyclone) is perfect aim. Does not change reaction time.");
+		m_Hints.AddHint(m_NormalSkillDrop, "Normal aim skill", "Aim accuracy for regular infantry, including commander FOB guards that are not marked elite. Veteran is the I&A default. Does not change reaction time.");
+		m_Hints.AddHint(m_EliteSkillDrop, "Elite aim skill", "Aim accuracy for elite patrols and the elite fireteam at a commander FOB. Expert is the I&A default. Cylon (Cyclone) is perfect aim. Does not change reaction time.");
 		m_Hints.AddHint(m_NormalFireField, "Normal fire rate", "How quickly regular infantry shoot. 1 is vanilla. Values above 1 shoot faster. Vanilla clamps 0.05 to 2.");
 		m_Hints.AddHint(m_EliteFireField, "Elite fire rate", "How quickly elite infantry shoot. Default 1.25.");
 		m_Hints.AddHint(m_NormalPercField, "Normal spotting", "How quickly regular infantry visually detect targets. 1 is vanilla.");

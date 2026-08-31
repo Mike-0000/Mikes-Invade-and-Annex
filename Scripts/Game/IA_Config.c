@@ -183,11 +183,11 @@ class IA_Config{
 	[Attribute(defvalue: "0.20", UIWidgets.Slider, category: "Defense", desc: "Air Assault hot-drop chance (0-1). Remainder uses a 150-300 m perimeter LZ.", params: "0 1 0.01")]
 	float m_fDefendHotDropChance = 0.20;
 
-	[Attribute(defvalue: EAISkill.EXPERT.ToString(), UIWidgets.ComboBox, "Aim skill for normal infantry. Vanilla EAISkill only changes aim-error sigma.", "", ParamEnumArray.FromEnum(EAISkill), category: "AI Combat")]
-	EAISkill m_eAiSkillNormal = EAISkill.EXPERT;
+	[Attribute(defvalue: EAISkill.VETERAN.ToString(), UIWidgets.ComboBox, "Aim skill for normal infantry. Vanilla EAISkill only changes aim-error sigma.", "", ParamEnumArray.FromEnum(EAISkill), category: "AI Combat")]
+	EAISkill m_eAiSkillNormal = EAISkill.VETERAN;
 
-	[Attribute(defvalue: EAISkill.CYLON.ToString(), UIWidgets.ComboBox, "Aim skill for elite groups (Cylon = zero aim error).", "", ParamEnumArray.FromEnum(EAISkill), category: "AI Combat")]
-	EAISkill m_eAiSkillElite = EAISkill.CYLON;
+	[Attribute(defvalue: EAISkill.EXPERT.ToString(), UIWidgets.ComboBox, "Aim skill for elite groups.", "", ParamEnumArray.FromEnum(EAISkill), category: "AI Combat")]
+	EAISkill m_eAiSkillElite = EAISkill.EXPERT;
 
 	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Combat", desc: "Fire-rate coefficient for normal infantry. 1 is vanilla. Above 1 shoots faster (vanilla clamps 0.05-2).")]
 	float m_fAiFireRateNormal = 1.0;
@@ -343,8 +343,8 @@ class IA_Config{
 	//------------------------------------------------------------------------------------------------
 	void ClampAiCombatSettings()
 	{
-		m_eAiSkillNormal = SnapAiSkill(m_eAiSkillNormal, EAISkill.EXPERT);
-		m_eAiSkillElite = SnapAiSkill(m_eAiSkillElite, EAISkill.CYLON);
+		m_eAiSkillNormal = SnapAiSkill(m_eAiSkillNormal, EAISkill.VETERAN);
+		m_eAiSkillElite = SnapAiSkill(m_eAiSkillElite, EAISkill.EXPERT);
 
 		if (m_fAiFireRateNormal < 0.05)
 			m_fAiFireRateNormal = 0.05;

@@ -56,8 +56,8 @@ class IA_AdminOverrides
 	int m_iDefendEventMask = 63;
 	float m_fDefendHotDropChance = 0.20;
 	bool m_bHasAiCombatOverride;
-	int m_iAiSkillNormal = 80;
-	int m_iAiSkillElite = 100;
+	int m_iAiSkillNormal = 70;
+	int m_iAiSkillElite = 80;
 	float m_fAiFireRateNormal = 1.0;
 	float m_fAiFireRateElite = 1.25;
 	float m_fAiPerceptionNormal = 1.0;
