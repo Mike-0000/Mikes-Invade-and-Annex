@@ -3930,7 +3930,7 @@ class IA_AiGroup
         if (!combat)
             return;
 
-        combat.SetAISkill(EAISkill.EXPERT);
+        combat.SetAISkill(EAISkill.CYLON);
         combat.SetPerceptionFactor(1.5);
         combat.SetFireRateCoef(1.25);
     }
