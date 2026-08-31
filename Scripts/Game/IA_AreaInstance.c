@@ -84,6 +84,7 @@ class IA_AreaInstance
     private bool m_bShutDown = false;
     private bool m_bDeferredCleanupPending = false;
     private const int DEFERRED_CLEANUP_RETRY_MS = 8000;
+    private ref IA_ObjectiveElitePatrol m_objectiveElitePatrol;
     
     // --- BEGIN ADDED: Reinforcement Wave Variables ---
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
@@ -238,6 +239,15 @@ class IA_AreaInstance
                             if (m_military.Count() <= 1)
                                 break;
                             int index = m_military.Count() - 1;
+                            while (index >= 1)
+                            {
+                                IA_AiGroup skipGrp = m_military[index];
+                                if (!skipGrp || !skipGrp.IsEliteProfile())
+                                    break;
+                                index = index - 1;
+                            }
+                            if (index < 1)
+                                break;
                             IA_AiGroup group = m_military[index];
                             if (group)
                             {
@@ -365,6 +375,8 @@ class IA_AreaInstance
 
 	    if (area.GetAreaType() == IA_AreaType.MortarPit)
 	        GetGame().GetCallqueue().CallLater(inst.SetupMortarPitCrew, 12000, false);
+
+	    inst.TryStartObjectiveElitePatrol();
 	
 	    // Initialize central reaction manager
 	    inst.m_centralReactionManager = new IA_AIReactionManager();
@@ -694,6 +706,7 @@ class IA_AreaInstance
         UpdateTask();
         RadioTowerDefenseTask();
         SideObjectiveDefenseTask();
+        TickObjectiveElitePatrol();
     }
 
     void Cleanup()
@@ -913,6 +926,7 @@ class IA_AreaInstance
         queue.Remove(_SpawnSingleAiGroupAndAddToArea);
         queue.Remove(_SpawnAndArmHostileCivilianGroup_Internal);
         queue.Remove(SpawnCivilianRevoltReinforcements);
+        queue.Remove(SpawnObjectiveElitePatrol);
     }
 
     void ForceFinish()
@@ -942,6 +956,7 @@ class IA_AreaInstance
             m_attackingFactions.Clear();
             CancelPendingSpawns();
             DismissOpenTasks();
+            CleanupObjectiveElitePatrol();
 
             SetDefendMode(false);
             SetRadioTowerDefenseActive(false);
@@ -969,7 +984,7 @@ class IA_AreaInstance
             
             // --- BEGIN MODIFIED: Don't override defend mode groups ---
             // Check if the group is already in defend mode - if so, don't change its state
-            if (group.IsPinnedGarrison() || group.IsAirborneDrop() || group.IsDefendHunter())
+            if (group.ShouldKeepOwnOrders() || group.IsAirborneDrop())
             {
                 Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, objective unit, mortar crew, or holding a post, preserving existing tactical state"), LogLevel.DEBUG);
                 if (group.IsHoldingPost())
@@ -1589,7 +1604,7 @@ class IA_AreaInstance
                     continue;
                     
                 // --- BEGIN ADDED: Skip groups in defend mode ---
-                if (g.IsPinnedGarrison() || g.IsDefendHunter())
+                if (g.ShouldKeepOwnOrders())
                     continue;
                 // --- END ADDED ---
                     
@@ -1619,7 +1634,7 @@ class IA_AreaInstance
                 continue;
                 
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units---
-            if (g.IsPinnedGarrison() || g.IsDefendHunter())
+            if (g.ShouldKeepOwnOrders())
                 continue;
             // --- END ADDED ---
 
@@ -1699,7 +1714,7 @@ class IA_AreaInstance
             if (g.ShouldSkipInfantryOrders()) continue;
             
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-            if (g.IsPinnedGarrison() || g.IsDefendHunter())
+            if (g.ShouldKeepOwnOrders())
             {
                 continue;
             }
@@ -1821,7 +1836,7 @@ class IA_AreaInstance
         foreach (IA_AiGroup g, IA_GroupTacticalState assignedState : currentAssignments)
         {
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-            if (g.IsPinnedGarrison() || g.IsDefendHunter())
+            if (g.ShouldKeepOwnOrders())
                 continue;
             // --- END ADDED ---
             
@@ -2787,7 +2802,7 @@ class IA_AreaInstance
                 
                 // Find healthy defenders to convert to attackers
                 foreach (IA_AiGroup g : m_military) {
-                    if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison() || g.IsDefendHunter())
+                    if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.ShouldKeepOwnOrders())
                         continue;
                         
                     IA_GroupTacticalState groupState;
@@ -2829,7 +2844,7 @@ class IA_AreaInstance
 
         foreach (IA_AiGroup g : m_military)
         {
-            if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison() || g.IsDefendHunter()) continue;
+            if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.ShouldKeepOwnOrders()) continue;
             
             // Get the current state and check for attacking/flanking groups.
             // Approaching groups are fully protected from contact-timeout conversion —
@@ -2901,7 +2916,7 @@ class IA_AreaInstance
                 
                 foreach (IA_AiGroup g : m_military)
                 {
-                    if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison() || g.IsDefendHunter()) continue;
+                    if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.ShouldKeepOwnOrders()) continue;
                     
                     IA_GroupTacticalState currentGrpState = g.GetTacticalState();
                     
@@ -4862,7 +4877,7 @@ class IA_AreaInstance
 
             foreach (IA_AiGroup g : m_military)
             {
-                if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison() || g.IsDefendHunter() || convertCount >= neededAttackers)
+                if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.ShouldKeepOwnOrders() || convertCount >= neededAttackers)
                     continue;
                     
                 IA_GroupTacticalState state;
@@ -5968,6 +5983,52 @@ class IA_AreaInstance
     IA_Faction GetOwningFaction()
     {
         return m_faction;
+    }
+
+    Faction GetAreaFaction()
+    {
+        return m_AreaFaction;
+    }
+
+    protected void TryStartObjectiveElitePatrol()
+    {
+        if (m_bShutDown)
+            return;
+        if (m_objectiveElitePatrol)
+            return;
+        if (!m_area)
+            return;
+        if (!IA_ObjectiveElitePatrol.CanHost(m_area.GetAreaType()))
+            return;
+
+        GetGame().GetCallqueue().CallLater(SpawnObjectiveElitePatrol, 2500, false);
+    }
+
+    protected void SpawnObjectiveElitePatrol()
+    {
+        if (m_bShutDown)
+            return;
+        if (m_objectiveElitePatrol)
+            return;
+        if (!m_canSpawn)
+            return;
+
+        m_objectiveElitePatrol = IA_ObjectiveElitePatrol.Create(this);
+    }
+
+    protected void TickObjectiveElitePatrol()
+    {
+        if (!m_objectiveElitePatrol)
+            return;
+        m_objectiveElitePatrol.Update();
+    }
+
+    protected void CleanupObjectiveElitePatrol()
+    {
+        if (!m_objectiveElitePatrol)
+            return;
+        m_objectiveElitePatrol.Cleanup();
+        m_objectiveElitePatrol = null;
     }
 
     protected int BuildingGarrisonUnitCount()

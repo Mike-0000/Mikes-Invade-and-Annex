@@ -938,12 +938,10 @@ class IA_DefendMission
         if (count < 1)
             count = 1;
 
-        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, IA_Faction.USSR, count, m_defendFaction, hvt, true);
+        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, IA_Faction.USSR, count, m_defendFaction, hvt, true, false, elite);
         if (!grp)
             return null;
 
-        if (elite)
-            grp.SetEliteProfile(true);
         grp.SetAssignedArea(host.GetArea());
         grp.Spawn();
         if (hold)

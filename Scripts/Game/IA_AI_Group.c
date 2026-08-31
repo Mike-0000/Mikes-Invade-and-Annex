@@ -543,14 +543,14 @@ class IA_AiGroup
     // - You need the group immediately (e.g., for vehicle spawning, reinforcements)
     // - You already have a good spawn position
     // - Performance is not a concern (small number of groups)
-    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false)
+    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false, bool eliteProfile = false)
     {
         if (unitCount <= 0)
             return null;
 
         // For backward compatibility, create the group immediately at the initial position
         // The async road search should be initiated separately by callers that want it
-        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup, useExactPosition, keepAltitude);
+        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup, useExactPosition, keepAltitude, eliteProfile);
     }
     
     // Start an async road search and group creation
@@ -709,7 +709,7 @@ class IA_AiGroup
 	
     
     // Create a military group at a specific position (no road search)
-    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false)
+    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false, bool eliteProfile = false)
     {
         if (unitCount <= 0)
             return null;
@@ -739,6 +739,8 @@ class IA_AiGroup
 
         IA_AiGroup grp = new IA_AiGroup(finalSpawnPos, IA_SquadType.Riflemen, faction, unitCount, HVTGroup);
         grp.m_isCivilian = false;
+        if (eliteProfile)
+            grp.SetEliteProfile(true);
 
         Resource groupRes;
         switch(faction){
@@ -2281,6 +2283,20 @@ class IA_AiGroup
         if (m_isVehiclePassengerGroup && !m_passengerDumped)
             return true;
 
+        if (m_bEliteProfile)
+            return true;
+
+        return false;
+    }
+
+    bool ShouldKeepOwnOrders()
+    {
+        if (IsPinnedGarrison())
+            return true;
+        if (IsDefendHunter())
+            return true;
+        if (m_bEliteProfile)
+            return true;
         return false;
     }
 
