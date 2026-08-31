@@ -1,9 +1,9 @@
 GameProject {
- ID "MikesInvadeandAnnex"
- GUID "6556458885927F2F"
- TITLE "Mikes Invade and Annex"
+ ID "MikesInvadeandAnnexExp"
+ GUID "1D9B47A0E6C358F2"
+ TITLE "Mikes Invade and Annex (Experimental)"
  Dependencies {
-  "58D0FB3206B6F859" "B3F91C6A4E275D08" "C4E8A27B1F906D53"
+  "58D0FB3206B6F859" "7A4E19C2D8B063F5" "3F8C0B6E5A172D94"
  }
  Configurations {
   GameProjectConfig PC {
