@@ -342,6 +342,8 @@ class IA_RankHudPanel
 
 		if (m_Place)
 		{
+			// Ranking prefix, not a string-table id. MUI_TextUtil stamps
+			// NO_LOCALIZATION so "#1" is not looked up every HUD paint.
 			if (place > 0)
 				m_Place.SetText("#" + place.ToString());
 			else
