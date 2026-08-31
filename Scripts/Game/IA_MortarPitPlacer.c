@@ -17,6 +17,7 @@ class IA_MortarPitPlacer
 	protected static const int SAMPLES_PER_SITE = 24;
 	protected static const float NEAR_BIAS_SOFTEN_M = 60.0;
 	protected static const float FALLBACK_DIST_SLOPE_PER_M = 0.0002;
+	protected static const float SPAWN_CHANCE = 0.65;
 
 	//----------------------------------------------------------------------------------------------
 	static void EnsureForGroup(int groupNumber)
@@ -27,6 +28,12 @@ class IA_MortarPitPlacer
 		if (IA_AreaMarker.HasMortarPitMarkerForGroup(groupNumber))
 		{
 			Print(string.Format("[IA_MortarPitPlacer] Group %1 already has a MortarPit marker.", groupNumber), LogLevel.NORMAL);
+			return;
+		}
+
+		if (Math.RandomFloat01() >= SPAWN_CHANCE)
+		{
+			Print(string.Format("[IA][MortarPit] Group %1 skipped (no pit this AO, %2 chance).", groupNumber, SPAWN_CHANCE), LogLevel.NORMAL);
 			return;
 		}
 
