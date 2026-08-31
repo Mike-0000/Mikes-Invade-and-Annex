@@ -38,7 +38,7 @@ class IA_ReinforcementSpawnRequest
 
 class IA_AreaInstance
 {
-    IA_Area m_area;
+    ref IA_Area m_area;
     IA_Faction m_faction;
     int m_strength;
     private ref array<ref IA_AiGroup> m_military  = {};
@@ -5446,19 +5446,26 @@ class IA_AreaInstance
         return m_areaGroup;
     }
     // --- END ADDED ---
+
+    protected string GetAreaNameSafe()
+    {
+        if (!m_area)
+            return "unknown";
+        return m_area.GetName();
+    }
     
     // --- BEGIN ADDED: Defend Mode Support ---
     void SetDefendMode(bool enable, vector defendPoint = vector.Zero)
     {
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
-        
+
+        string areaName = GetAreaNameSafe();
         if (enable && defendPoint != vector.Zero)
         {
-            Print(string.Format("[IA_AreaInstance] Setting defend mode ON for area %1, target: %2", 
-                m_area.GetName(), defendPoint.ToString()), LogLevel.DEBUG);
-            
-            // Set all existing military groups to defend mode
+            Print(string.Format("[IA_AreaInstance] Setting defend mode ON for area %1, target: %2",
+                areaName, defendPoint.ToString()), LogLevel.DEBUG);
+
             foreach (IA_AiGroup group : m_military)
             {
                 if (group && group.IsSpawned() && !group.IsHoldingPost())
@@ -5469,10 +5476,9 @@ class IA_AreaInstance
         }
         else
         {
-            Print(string.Format("[IA_AreaInstance] Setting defend mode OFF for area %1", 
-                m_area.GetName()), LogLevel.DEBUG);
-                
-            // Return all military groups to normal mode
+            Print(string.Format("[IA_AreaInstance] Setting defend mode OFF for area %1",
+                areaName), LogLevel.DEBUG);
+
             foreach (IA_AiGroup group : m_military)
             {
                 if (group && group.IsSpawned() && !group.IsHoldingPost())
@@ -5481,7 +5487,7 @@ class IA_AreaInstance
                 }
             }
         }
-        }
+    }
     
     array<ref IA_AiGroup> GetMilitaryGroups()
     {
@@ -6317,7 +6323,7 @@ class IA_AreaInstance
         m_isRadioTowerDefenseActive = active;
         if (active)
         {
-            Print(string.Format("[IA_AreaInstance] Radio Tower Defense ACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+            Print(string.Format("[IA_AreaInstance] Radio Tower Defense ACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
             
             // Notify players that reinforcements have started and give instructions
             TriggerGlobalNotification("RadioTowerDefenseStarted", m_area.GetName());
@@ -6340,7 +6346,7 @@ class IA_AreaInstance
         }
         else
         {
-            Print(string.Format("[IA_AreaInstance] Radio Tower Defense DEACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+            Print(string.Format("[IA_AreaInstance] Radio Tower Defense DEACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
             m_radioTowerDefenseFaction = null;
         }
     }
@@ -6512,7 +6518,7 @@ class IA_AreaInstance
 	
 		if (active)
 		{
-			Print(string.Format("[IA_AreaInstance] Side Objective Defense ACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+			Print(string.Format("[IA_AreaInstance] Side Objective Defense ACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
 	
 			float scaleFactor = IA_Game.GetAIScaleFactor();
 			m_sideObjectiveTargetAICount = Math.Round(5 * ((scaleFactor*1.5) * (scaleFactor*1.5)));
@@ -6532,7 +6538,7 @@ class IA_AreaInstance
 		}
 		else
 		{
-			Print(string.Format("[IA_AreaInstance] Side Objective Defense DEACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+			Print(string.Format("[IA_AreaInstance] Side Objective Defense DEACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
 			// Return AI to normal behavior
 			SetDefendMode(false);
 			m_sideObjectiveDefenseFaction = null;

@@ -1120,8 +1120,13 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             return;
 
         ResourceName towerPrefab = m_prefabToSpawn;
-        if (towerPrefab == "")
+        if (towerPrefab.IsEmpty())
             towerPrefab = ResolveDefaultRadioTowerPrefab();
+        if (towerPrefab.IsEmpty())
+        {
+            Print("[ERROR] Radio Tower composition prefab is empty.", LogLevel.ERROR);
+            return;
+        }
 
         Resource res = Resource.Load(towerPrefab);
         if (!res)
@@ -1229,8 +1234,13 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         }
 
         ResourceName pitPrefab = m_prefabToSpawn;
-        if (pitPrefab == "")
+        if (pitPrefab.IsEmpty())
             pitPrefab = ResolveDefaultMortarPitPrefab();
+        if (pitPrefab.IsEmpty())
+        {
+            Print("[ERROR] Mortar Pit prefab is empty.", LogLevel.ERROR);
+            return;
+        }
 
         Resource res = Resource.Load(pitPrefab);
         if (!res)

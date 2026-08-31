@@ -490,6 +490,10 @@ class IA_MissionInitializer : GenericEntity
 	
 	void InitializeNow()
 {
+    IA_Game leftoverGame = IA_Game.Instantiate();
+    if (leftoverGame)
+        leftoverGame.ClearAllAreas();
+
     IA_Game.ClearAllAreaDefinitions();
 
     groupsArray = new array<int>;
