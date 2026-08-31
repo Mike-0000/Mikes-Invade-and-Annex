@@ -432,7 +432,7 @@ class IA_DefendEvent
 	protected vector PickSite(vector center)
 	{
 		if (m_eType == IA_DefendEventType.CommanderFob)
-			return IA_SpawnPlacement.FindEventSite(center, 450, 700);
+			return IA_SpawnPlacement.FindFlatEventSite(center, 450, 700);
 		if (m_eType == IA_DefendEventType.ScoutMortar)
 			return IA_SpawnPlacement.FindEventSite(center, 280, 420);
 		if (m_eType == IA_DefendEventType.Sniper)
