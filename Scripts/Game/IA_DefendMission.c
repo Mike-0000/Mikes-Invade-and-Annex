@@ -111,7 +111,7 @@ class IA_DefendMission
         if (currentTime - m_startTime >= m_duration)
         {
             Print(string.Format("[IA_DefendMission] %1 minute duration complete - ending mission", m_durationMinutes), LogLevel.NORMAL);
-            EndDefendMission();
+            EndDefendMission(true);
             return;
         }
 
@@ -169,7 +169,7 @@ class IA_DefendMission
         return (currentTime - m_startTime >= m_duration);
     }
     
-    void EndDefendMission()
+    void EndDefendMission(bool proceedToNextZone)
     {
         if (!m_isActive)
             return;
@@ -207,14 +207,15 @@ class IA_DefendMission
         m_affectedAreas.Clear();
         m_ownedQrfManager = null;
         
-        // Notify IA_Game and mission initializer that defend mission is complete
         IA_Game gameInstance = IA_Game.Instantiate();
         if (gameInstance)
         {
-            gameInstance.SetActiveDefendMission(null); // Clear the active defend mission
-            
-            // Notify mission initializer to proceed to next zone
-            if (initializer)
+            gameInstance.SetActiveDefendMission(null);
+
+            // ForceFinish of the host already sits inside SuccessZoneComplete /
+            // RPC_ForceCompleteZone. Advancing here as well double-increments
+            // m_currentIndex and schedules two ProceedToNextZone calls.
+            if (proceedToNextZone && initializer)
             {
                 initializer.OnDefendMissionComplete();
             }
@@ -756,7 +757,7 @@ class IA_DefendMission
     void OnHostAreaForceFinish()
     {
         if (m_isActive)
-            EndDefendMission();
+            EndDefendMission(false);
     }
 
     void BeginEnhancedHold()

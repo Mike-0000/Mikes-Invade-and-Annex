@@ -114,7 +114,7 @@ class IA_EnhancedDefendDirector
 		{
 			m_ePhase = IA_DefendPhase.Secure;
 			Publish();
-			m_Mission.EndDefendMission();
+			m_Mission.EndDefendMission(true);
 			return;
 		}
 
