@@ -116,6 +116,9 @@ class IA_MissionInitializer : GenericEntity
 
 	[RplProp()]
 	bool m_bGmAutoPlaceSupport_Rpl = false;
+
+	[RplProp()]
+	string m_sDefenseExtras_Rpl = "";
 	// --- END ADDED ---
 
 	protected static const int CAPTURE_HUD_MAX = 6;
@@ -2004,6 +2007,8 @@ class IA_MissionInitializer : GenericEntity
 				if (!IA_AdminConfigUtil.IsAuto(vehiclePacked))
 					m_sDesiredEnemyVehicleFactionKeys_Rpl = vehiclePacked;
 			}
+
+			m_sDefenseExtras_Rpl = IA_Config.PackDefenseExtras(m_config);
 		}
 
 		Replication.BumpMe();
@@ -2720,6 +2725,9 @@ class IA_MissionInitializer : GenericEntity
 					IA_AdminConfigUtil.SplitKeys(s_instance.m_sDesiredEnemyVehicleFactionKeys_Rpl, vehicleKeys);
 					clientConfig.m_sDesiredEnemyVehicleFactionKeys = vehicleKeys;
 				}
+
+				if (s_instance.m_sDefenseExtras_Rpl != "")
+					IA_Config.UnpackDefenseExtras(clientConfig, s_instance.m_sDefenseExtras_Rpl);
 
 				return clientConfig;
 			}
