@@ -16,9 +16,14 @@ class IA_AreaGroupManager
     // --- Artillery Strike System ---
     private int m_lastArtilleryStrikeCheckTime = 0;
     private int m_lastArtilleryStrikeEndTime = 0;
+    private vector m_artilleryStrikeCenter = vector.Zero;
+    private int m_artilleryStrikeSmokeTime = 0;
+    private int m_artilleryStrikeImpactDelay = 0;
+    private bool m_artillerySmokeSpawned = false;
     private const int ARTILLERY_CHECK_INTERVAL = 60; // seconds
     private const int ARTILLERY_COOLDOWN = 300; // 5+ minutes
     private const float ARTILLERY_STRIKE_CHANCE = 0.18; // chance per check
+    private const ResourceName RED_SMOKE_EFFECT_PREFAB = "{002FEEDB0213777D}Prefabs/EffectsModuleEntities/EffectModule_Particle_Smoke_Red.et";
     private const int ARTILLERY_MIN_SHOTS = 6;
     private const int ARTILLERY_MAX_SHOTS = 12;
     private const int ARTILLERY_PIT_DEFENSE_COOLDOWN = 15;
@@ -33,17 +38,17 @@ class IA_AreaGroupManager
     // --- QRF (Quick Reaction Force) System ---
 
     // Check cadence
-    private const int QRF_CHECK_INTERVAL = 30; // seconds
-    private const int DEFEND_QRF_CHECK_INTERVAL = 20; // seconds
+    private const int QRF_CHECK_INTERVAL = 40; // seconds
+    private const int DEFEND_QRF_CHECK_INTERVAL = 30; // seconds
     private int m_lastQRFCheckTime = 0;
 
     // Single cooldown and chance for the whole QRF system
-    private const int QRF_COOLDOWN = 120; // seconds
-    private const float QRF_CHANCE = 0.2;
-    private const int DEFEND_QRF_COOLDOWN = 75; // seconds
-    private const float DEFEND_QRF_CHANCE = 0.50;
-    private const float AIRBORNE_CHANCE = 0.20;
-    private const float DEFEND_AIRBORNE_CHANCE = 0.25;
+    private const int QRF_COOLDOWN = 220; // seconds
+    private const float QRF_CHANCE = 0.13;
+    private const int DEFEND_QRF_COOLDOWN = 150; // seconds
+    private const float DEFEND_QRF_CHANCE = 0.45;
+    private const float AIRBORNE_CHANCE = 0.12;
+    private const float DEFEND_AIRBORNE_CHANCE = 0.15;
     private int m_lastQRFTime = 0;
     private bool m_qrfRetryPending = false;
     private IA_QRFType m_qrfRetryType;
@@ -52,13 +57,15 @@ class IA_AreaGroupManager
     private Faction m_qrfRetryFaction;
     private bool m_qrfRetryDefend = false;
 
-    private const int AIRBORNE_QRF_DELAY_MIN_MS = 40000;
-    private const int AIRBORNE_QRF_DELAY_MAX_MS = 60000;
+    private const int AIRBORNE_QRF_DELAY_MIN_MS = 20000;
+    private const int AIRBORNE_QRF_DELAY_MAX_MS = 40000;
     private bool m_bAirbornePending = false;
     private vector m_airborneTarget = vector.Zero;
     private IA_AreaInstance m_airborneArea;
     private Faction m_airborneFaction;
     private bool m_airborneDefend = false;
+    private bool m_airborneHotDrop = false;
+    private ref array<vector> m_recentDropLzs = new array<vector>();
 
     // Entry point called periodically (from MissionInitializer) to evaluate spawning of QRFs for the whole area group
     void Shutdown()
@@ -66,6 +73,8 @@ class IA_AreaGroupManager
         m_bShutDown = true;
         m_qrfRetryPending = false;
         m_bAirbornePending = false;
+        if (m_recentDropLzs)
+            m_recentDropLzs.Clear();
         ScriptCallQueue queue = GetGame().GetCallqueue();
         if (queue)
         {
@@ -85,13 +94,16 @@ class IA_AreaGroupManager
             return; // QRF is server-authoritative only
 
         IA_DefendMission defend = GetActiveDefendMission();
+        if (defend && defend.IsEnhanced())
+            return;
+
         bool forDefend = false;
         if (defend)
             forDefend = true;
 
         int currentTime = System.GetUnixTime();
         if (!forDefend && IA_MissionInitializer.IsQRFDisabled())
-            return; // QRF globally disabled (defend holds still get QRF)
+            return; // QRF globally disabled (legacy defend holds still get QRF)
 
         if (!forDefend && IA_GmDirector.IsAutoQrfOff())
             return;
@@ -350,6 +362,82 @@ class IA_AreaGroupManager
         return SpawnQRFForTarget(type, defendPoint, areaInst, enemyFaction, true, false);
     }
 
+    //! Enhanced Defense: fire a specific QRF type through the existing defend path.
+    bool SpawnDefendDoctrineBeat(IA_QRFType type, IA_AreaInstance areaInst, vector defendPoint, Faction enemyFaction)
+    {
+        if (!Replication.IsServer())
+            return false;
+        if (!areaInst)
+            return false;
+        if (!enemyFaction)
+            return false;
+        return SpawnQRFForTarget(type, defendPoint, areaInst, enemyFaction, true, false);
+    }
+
+    //! One truck + crew/cargo at a chosen road site, driving to the defend point.
+    IA_AiGroup SpawnDefendConvoyTruck(IA_AreaInstance areaInst, vector spawnPos, vector defendPoint, Faction enemyFaction)
+    {
+        if (!Replication.IsServer())
+            return null;
+        if (!areaInst || areaInst.IsShutDown())
+            return null;
+        if (!enemyFaction)
+            return null;
+
+        vector site = spawnPos;
+        if (site == vector.Zero)
+            site = IA_SpawnPlacement.FindInboundVehicleSpawn(defendPoint, IA_VehicleManager.GetActiveGroup(), -1);
+        if (site == vector.Zero)
+            return null;
+
+        Vehicle truck = null;
+        int attempt;
+        for (attempt = 0; attempt < 6; attempt++)
+        {
+            Vehicle candidate = IA_VehicleManager.SpawnRandomVehicle(IA_Faction.USSR, false, true, site, enemyFaction);
+            if (!candidate)
+                continue;
+            if (DoesVehicleMatchQRFType(candidate, false, true, false))
+            {
+                truck = candidate;
+                break;
+            }
+            IA_VehicleManager.DespawnVehicle(candidate);
+        }
+
+        if (!truck)
+            truck = IA_VehicleManager.SpawnRandomVehicle(IA_Faction.USSR, false, true, site, enemyFaction);
+        if (!truck)
+            return null;
+
+        vector driveTarget = IA_VehicleManager.FindRoadInAnnulus(defendPoint, 80, 150, IA_VehicleManager.GetActiveGroup());
+        if (driveTarget == vector.Zero)
+            driveTarget = defendPoint;
+
+        IA_AiGroup crew = IA_VehicleManager.PlaceUnitsInVehicle(truck, IA_Faction.USSR, driveTarget, areaInst, enemyFaction);
+        if (!crew)
+            return null;
+
+        crew.EnableInboundSimulation(defendPoint);
+        crew.SetAssignedArea(areaInst.GetArea());
+        crew.EnableDefendModeTracking(true, defendPoint);
+        GetGame().GetCallqueue().CallLater(this.QRF_PollTruckArrival, 3000, false, truck, crew, areaInst, defendPoint, driveTarget);
+        return crew;
+    }
+
+    //! Enhanced Defense: schedule an airborne drop, optionally preferring a hot LZ.
+    bool SpawnDefendAirborneDrop(IA_AreaInstance areaInst, vector defendPoint, Faction enemyFaction, bool preferHotDrop)
+    {
+        if (!Replication.IsServer())
+            return false;
+        if (!areaInst)
+            return false;
+        if (!enemyFaction)
+            return false;
+        m_airborneHotDrop = preferHotDrop;
+        return ScheduleAirborneQRF(areaInst, enemyFaction, defendPoint, true);
+    }
+
     // Determine the target position for QRF using the same logic and constraints as the artillery system
     private bool ComputeGroupThreatTarget(out vector outTarget)
     {
@@ -447,6 +535,11 @@ class IA_AreaGroupManager
             return false;
         if (!targetAreaInst)
             return false;
+        if (targetAreaInst.GetOwningFaction() == IA_Faction.US)
+        {
+            Print("[QRF] Spawn skipped: target area already captured.", LogLevel.NORMAL);
+            return false;
+        }
 
         if (!enemyGameFaction)
         {
@@ -475,7 +568,9 @@ class IA_AreaGroupManager
             case IA_QRFType.Infantry:
             {
                 bool s1 = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(infAnchor, 0), forDefendMission);
-                bool s2 = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(infAnchor, 1), forDefendMission);
+                bool s2 = false;
+                if (IA_Game.GetAIScaleFactor() >= 1.0)
+                    s2 = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(infAnchor, 1), forDefendMission);
                 success = (s1 || s2);
                 break;
             }
@@ -571,10 +666,20 @@ class IA_AreaGroupManager
         if (!grp)
             return false;
 
-        grp.SetAssignedArea(areaInst.GetArea());
-        if (forDefendMission)
-            grp.SetDefendMode(true, targetPos);
-        grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+            grp.SetAssignedArea(areaInst.GetArea());
+            grp.Spawn();
+            if (forDefendMission)
+            {
+                grp.SetDefendWaveGroup(true);
+                grp.SetDefendMode(true, targetPos);
+            }
+            bool hunter = false;
+            if (forDefendMission && IA_Game.rng.RandFloat01() < 0.30)
+            {
+                hunter = true;
+                grp.SetDefendHunter(true);
+            }
+            grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
         // If no waypoint exists yet, add one explicitly
         if (!grp.HasActiveWaypoint())
         {
@@ -595,10 +700,9 @@ class IA_AreaGroupManager
             }
         }
         areaInst.AddMilitaryGroup(grp);
-        grp.Spawn();
         grp.EnableInboundSimulation(targetPos);
-        // Lock S&D order to this threat for the lifetime of this reinforcement
-        IA_LockGroupToSearchAndDestroy(areaInst, grp, targetPos);
+        if (!hunter)
+            IA_LockGroupToSearchAndDestroy(areaInst, grp, targetPos);
         return true;
     }
 
@@ -662,23 +766,26 @@ class IA_AreaGroupManager
 
         int jumperCount = IA_Game.GetAirborneQRFJumperCount();
 
-        vector lz = targetPos;
-        if (lz == vector.Zero)
-            lz = areaInst.GetArea().GetOrigin();
+        vector attackTarget = targetPos;
+        if (attackTarget == vector.Zero)
+            attackTarget = areaInst.GetArea().GetOrigin();
 
         vector dropLz;
-        if (!IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
+        bool foundLz = false;
+        if (forDefendMission)
+            foundLz = IA_SpawnPlacement.TryFindDefendDropLz(attackTarget, m_airborneHotDrop, dropLz, m_recentDropLzs);
+        if (!foundLz)
+            foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz);
+        if (!foundLz)
+            foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz);
+        if (!foundLz)
         {
-            if (!IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz))
-            {
-                Print("[QRF] Airborne miss: no open-sky LZ.", LogLevel.WARNING);
-                return false;
-            }
+            Print("[QRF] Airborne miss: no open-sky LZ.", LogLevel.WARNING);
+            return false;
         }
-        lz = dropLz;
 
-        vector release = lz;
-        vector wind = MHJ_FlightAero.WindWorld(lz[1] + MHJ_Constants.AI_DROP_AGL, 0);
+        vector release = dropLz;
+        vector wind = MHJ_FlightAero.WindWorld(dropLz[1] + MHJ_Constants.AI_DROP_AGL, 0);
         wind[1] = 0;
         if (wind.Length() > 0.2)
         {
@@ -686,18 +793,39 @@ class IA_AreaGroupManager
             upwind.Normalize();
             release = release + upwind * 120;
         }
-        release[1] = lz[1] + MHJ_Constants.AI_DROP_AGL;
+        release[1] = dropLz[1] + MHJ_Constants.AI_DROP_AGL;
 
-        MHJ_AiDropDirector director = MHJ_AiDropDirector.SpawnStick(lz);
+        MHJ_AiDropDirector director = MHJ_AiDropDirector.SpawnStick(dropLz);
         if (!director)
         {
             Print("[QRF] Airborne miss: drop stick refused or missing.", LogLevel.WARNING);
             return false;
         }
 
+        RememberDropLz(dropLz);
+        Print(string.Format("[QRF] Airborne LZ %1 attack %2 dist=%3 hot=%4",
+            dropLz.ToString(), attackTarget.ToString(), vector.Distance(dropLz, attackTarget), m_airborneHotDrop), LogLevel.NORMAL);
+
         int remaining = jumperCount;
         int teamIndex = 0;
         bool spawnedAny = false;
+        int teamCount = 0;
+        int countRemain = jumperCount;
+        while (countRemain > 0)
+        {
+            int previewSize = 5;
+            if (countRemain <= 6)
+                previewSize = countRemain;
+            if (previewSize < 1)
+                break;
+            teamCount = teamCount + 1;
+            countRemain = countRemain - previewSize;
+        }
+
+        ref array<int> hunterSlots = new array<int>();
+        if (forDefendMission)
+            areaInst.PickDefendHunterSlots(teamCount, hunterSlots);
+
         while (remaining > 0)
         {
             int teamSize = 5;
@@ -715,8 +843,13 @@ class IA_AreaGroupManager
 
             grp.SetAssignedArea(areaInst.GetArea());
             if (forDefendMission)
-                grp.SetDefendMode(true, lz);
-            grp.BeginAirborneDrop(director, lz, areaInst, 250, 50, 120);
+                grp.SetDefendMode(true, attackTarget);
+            if (forDefendMission && hunterSlots.Find(teamIndex) != -1)
+            {
+                grp.SetDefendHunter(true);
+                grp.SetDefendWaveGroup(true);
+            }
+            grp.BeginAirborneDrop(director, dropLz, attackTarget, areaInst, 250, 8, 28);
             areaInst.AddMilitaryGroup(grp);
 
             int delayMs = teamIndex * 150;
@@ -733,6 +866,19 @@ class IA_AreaGroupManager
         if (!spawnedAny)
             Print("[QRF] Airborne miss: no fireteams created.", LogLevel.WARNING);
         return spawnedAny;
+    }
+
+    private void RememberDropLz(vector lz)
+    {
+        if (lz == vector.Zero)
+            return;
+        if (!m_recentDropLzs)
+            m_recentDropLzs = new array<vector>();
+        m_recentDropLzs.Insert(lz);
+        while (m_recentDropLzs.Count() > 6)
+        {
+            m_recentDropLzs.Remove(0);
+        }
     }
 
     private bool SpawnVehicleQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool preferAPC, bool allowTrucks, bool armourOnly, vector preferredSpawn, bool forDefendMission = false)
@@ -976,39 +1122,77 @@ class IA_AreaGroupManager
         if (m_bShutDown)
             return;
         if (IA_GmDirector.IsAutoArtyOff())
+        {
+            ClearPendingArtilleryStrike();
             return;
+        }
 
         int currentTime = System.GetUnixTime();
         float strikeChance = ARTILLERY_STRIKE_CHANCE;
         int cooldown = ARTILLERY_COOLDOWN;
+        int minDelay = 45;
+        int maxDelay = 70;
 
         IA_Config config = IA_MissionInitializer.GetGlobalConfig();
         if (config)
         {
             strikeChance = config.m_fArtilleryStrikeChance;
             cooldown = config.m_iArtilleryCooldown;
+            minDelay = config.m_iArtilleryMinDelay;
+            maxDelay = config.m_iArtilleryMaxDelay;
         }
 
         IA_AreaInstance mortarPit = FindMortarPitInstance();
-        if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
+        if (mortarPit && mortarPit.CanIssueMortarFireMission())
         {
-            Print("[ArtilleryStrike] Check failed: No usable mortar pit crew in this AO group.", LogLevel.NORMAL);
+            vector defensePos;
+            if (mortarPit.GetMortarPitDefenseTarget(defensePos))
+            {
+                if (currentTime - m_lastPitDefenseFireTime >= ARTILLERY_PIT_DEFENSE_COOLDOWN)
+                {
+                    int defenseShots = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
+                    if (mortarPit.IssueMortarFireMission(defensePos, defenseShots))
+                    {
+                        m_lastPitDefenseFireTime = currentTime;
+                        Print(string.Format("[ArtilleryStrike] Pit defense fire: %1 rounds at %2", defenseShots, defensePos), LogLevel.NORMAL);
+                    }
+                }
+                return;
+            }
+        }
+
+        if (m_artillerySmokeSpawned)
+        {
+            int remaining = m_artilleryStrikeImpactDelay - (currentTime - m_artilleryStrikeSmokeTime);
+            if (remaining > 0)
+            {
+                Print(string.Format("[ArtilleryStrike] Waiting for smoke-to-impact delay. %1s remaining.", remaining), LogLevel.NORMAL);
+                return;
+            }
+
+            if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
+            {
+                Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
+                ClearPendingArtilleryStrike();
+                m_lastArtilleryStrikeEndTime = currentTime;
+                return;
+            }
+
+            int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
+            bool fired = mortarPit.IssueMortarFireMission(m_artilleryStrikeCenter, shotCount);
+            if (!fired)
+                Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
+            else
+                Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, m_artilleryStrikeCenter, cooldown), LogLevel.NORMAL);
+
+            ClearPendingArtilleryStrike();
+            m_lastArtilleryStrikeEndTime = currentTime;
             return;
         }
 
-        // Pit taking fire beats AO harassment. This is incoming shots, not capture majority.
-        vector defensePos;
-        if (mortarPit.GetMortarPitDefenseTarget(defensePos))
+        if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
         {
-            if (currentTime - m_lastPitDefenseFireTime >= ARTILLERY_PIT_DEFENSE_COOLDOWN)
-            {
-                int defenseShots = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
-                if (mortarPit.IssueMortarFireMission(defensePos, defenseShots))
-                {
-                    m_lastPitDefenseFireTime = currentTime;
-                    Print(string.Format("[ArtilleryStrike] Pit defense fire: %1 rounds at %2", defenseShots, defensePos), LogLevel.NORMAL);
-                }
-            }
+            Print("[ArtilleryStrike] Check failed: No usable mortar pit crew in this AO group.", LogLevel.NORMAL);
             return;
         }
 
@@ -1057,16 +1241,48 @@ class IA_AreaGroupManager
             return;
         }
 
-        int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
-        bool fired = mortarPit.IssueMortarFireMission(targetPos, shotCount);
-        if (!fired)
+        SpawnArtilleryWarningSmoke(targetPos);
+        m_artilleryStrikeCenter = targetPos;
+        m_artillerySmokeSpawned = true;
+        m_artilleryStrikeSmokeTime = currentTime;
+        m_artilleryStrikeImpactDelay = PickArtilleryImpactDelay(minDelay, maxDelay);
+        Print(string.Format("[ArtilleryStrike] Warning smoke spawned at %1. Impact in %2 seconds.", targetPos, m_artilleryStrikeImpactDelay), LogLevel.NORMAL);
+    }
+
+    protected void ClearPendingArtilleryStrike()
+    {
+        m_artillerySmokeSpawned = false;
+        m_artilleryStrikeCenter = vector.Zero;
+        m_artilleryStrikeSmokeTime = 0;
+        m_artilleryStrikeImpactDelay = 0;
+    }
+
+    protected int PickArtilleryImpactDelay(int minDelay, int maxDelay)
+    {
+        if (minDelay < 0)
+            minDelay = 0;
+        if (maxDelay < minDelay)
+            maxDelay = minDelay;
+        return Math.RandomInt(minDelay, maxDelay + 1);
+    }
+
+    protected void SpawnArtilleryWarningSmoke(vector center)
+    {
+        Print(string.Format("[ArtilleryStrike] Spawning 6 warning smoke markers around %1.", center), LogLevel.NORMAL);
+        ref Resource smokeRes = Resource.Load(RED_SMOKE_EFFECT_PREFAB);
+        if (!smokeRes)
         {
-            Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
+            Print(string.Format("[ArtilleryStrike] FAILED to load smoke prefab: %1", RED_SMOKE_EFFECT_PREFAB), LogLevel.ERROR);
             return;
         }
 
-        m_lastArtilleryStrikeEndTime = currentTime;
-        Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, targetPos, cooldown), LogLevel.NORMAL);
+        int i;
+        for (i = 0; i < 6; i++)
+        {
+            vector smokePos = IA_Game.rng.GenerateRandomPointInRadius(1, 100, center);
+            smokePos[1] = GetGame().GetWorld().GetSurfaceY(smokePos[0], smokePos[2]);
+            GetGame().SpawnEntityPrefab(smokeRes, null, IA_CreateSimpleSpawnParams(smokePos));
+        }
     }
 
     protected IA_AreaInstance FindMortarPitInstance()

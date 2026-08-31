@@ -3,7 +3,8 @@
 //! → overlay.AddChild. Keep as protected ref. Children are IA_CaptureHud tiles
 //! plus one IA_DefendHud; they Hug their chrome and pack left-to-right. Align
 //! 0.25 sits the group halfway between the left edge and screen center.
-//! Capture tiles only appear for zones the local player is standing in.
+//! Capture tiles appear for every packed slot whose capture radius contains
+//! the local player, including 0% blocked zones.
 //! Runtime mortar pits are occupancy-tested from packed origin/radius because
 //! those markers are not present on clients.
 //------------------------------------------------------------------------------------------------
@@ -161,15 +162,13 @@ class IA_ObjectiveHudStrip : MUI_Row
 		if (slot >= m_aAreas.Count())
 			return false;
 
-		if (m_aInside.Find(m_aAreas[slot]) >= 0)
-			return true;
+		if (slot < m_aOrigins.Count() && slot < m_aRadii.Count())
+		{
+			if (m_aRadii[slot] > 0)
+				return IA_AreaMarker.IsLocalPlayerInsideWorldSphere(m_aOrigins[slot], m_aRadii[slot]);
+		}
 
-		if (slot >= m_aOrigins.Count())
-			return false;
-		if (slot >= m_aRadii.Count())
-			return false;
-
-		return IA_AreaMarker.IsLocalPlayerInsideWorldSphere(m_aOrigins[slot], m_aRadii[slot]);
+		return m_aInside.Find(m_aAreas[slot]) >= 0;
 	}
 
 	//------------------------------------------------------------------------------------------------

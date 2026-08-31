@@ -7,7 +7,8 @@
 //! strip), 18px status tab on the top-left, spinning ring, area name, percent.
 //! Flush to the bottom edge. Colors are the mock tokens (#0d1412 / #5efb83 /
 //! #163824), not the uplink theme. Tie uses the amber warning tone; deficit
-//! uses Danger. Capture and loss both run 30% faster than the 120s baseline.
+//! uses Danger. At 0% with no capture majority the ring stops and the tab
+//! reads BLOCKED. Capture and loss both run 30% faster than the 120s baseline.
 //------------------------------------------------------------------------------------------------
 enum IA_CaptureHudState
 {
@@ -15,7 +16,8 @@ enum IA_CaptureHudState
 	Capturing,
 	Paused,
 	Contested,
-	Complete
+	Complete,
+	Blocked
 }
 
 enum IA_CaptureHudAnim
@@ -38,7 +40,6 @@ class IA_CaptureHud : MUI_Surface
 	protected static const float PAD_X = 14;
 	protected static const float SPIN_R = 11;
 	protected static const float SPIN_W = 3;
-	protected static const float SPIN_DOT = 3.6;
 	protected static const float GAP_ICON = 10;
 	protected static const float GAP_PCT = 6;
 	protected static const float DIV_W = 2;
@@ -201,7 +202,7 @@ class IA_CaptureHud : MUI_Surface
 		}
 
 		bool areaChanged = m_sShownArea != areaName;
-		if (areaChanged || !m_bArmed)
+		if (areaChanged || !m_bArmed || m_eAnim == IA_CaptureHudAnim.Outro)
 			Arm(areaName, state, progress);
 		else if (m_eShownState != state)
 			m_eShownState = state;
@@ -218,6 +219,8 @@ class IA_CaptureHud : MUI_Surface
 			return IA_CaptureHudState.Contested;
 		if (raw == IA_CaptureHudState.Complete)
 			return IA_CaptureHudState.Complete;
+		if (raw == IA_CaptureHudState.Blocked)
+			return IA_CaptureHudState.Blocked;
 		return IA_CaptureHudState.Hidden;
 	}
 
@@ -347,6 +350,8 @@ class IA_CaptureHud : MUI_Surface
 
 		if (m_eShownState == IA_CaptureHudState.Complete)
 			m_fPredicted = 1;
+		else if (m_eShownState == IA_CaptureHudState.Blocked)
+			m_fPredicted = 0;
 
 		m_fDisplay = MUI_Ease.Approach(m_fDisplay, m_fPredicted, dt, 9);
 	}
@@ -438,6 +443,8 @@ class IA_CaptureHud : MUI_Surface
 	{
 		if (m_eShownState == IA_CaptureHudState.Contested)
 			return theme.Danger;
+		if (m_eShownState == IA_CaptureHudState.Blocked)
+			return theme.Danger;
 		if (m_eShownState == IA_CaptureHudState.Paused)
 			return m_HudAmber;
 		return m_HudGreen;
@@ -447,6 +454,8 @@ class IA_CaptureHud : MUI_Surface
 	protected Color ResolveTabFill()
 	{
 		if (m_eShownState == IA_CaptureHudState.Contested)
+			return m_HudTabLose;
+		if (m_eShownState == IA_CaptureHudState.Blocked)
 			return m_HudTabLose;
 		if (m_eShownState == IA_CaptureHudState.Paused)
 			return m_HudTabHold;
@@ -460,6 +469,8 @@ class IA_CaptureHud : MUI_Surface
 			return "SECURING";
 		if (m_eShownState == IA_CaptureHudState.Contested)
 			return "LOSING";
+		if (m_eShownState == IA_CaptureHudState.Blocked)
+			return "BLOCKED";
 		if (m_eShownState == IA_CaptureHudState.Paused)
 			return "HOLD";
 		if (m_eShownState == IA_CaptureHudState.Complete)
@@ -480,6 +491,8 @@ class IA_CaptureHud : MUI_Surface
 
 		float glow = 0.5 + 0.5 * MUI_Ease.Pulse(GetTime(), 0.5);
 		if (m_eShownState == IA_CaptureHudState.Paused)
+			glow = 0.55;
+		else if (m_eShownState == IA_CaptureHudState.Blocked)
 			glow = 0.55;
 		else if (m_eShownState == IA_CaptureHudState.Complete)
 			glow = 1;
@@ -565,24 +578,36 @@ class IA_CaptureHud : MUI_Surface
 		Color track = ResolveTabFill();
 		if (m_eShownState == IA_CaptureHudState.Contested)
 			track = MUI_ColorUtil.Fade(tone, op * 0.45);
-		surface.StrokeCircle(cx, cy, SPIN_R, MUI_ColorUtil.Fade(track, op), SPIN_W);
+		else if (m_eShownState == IA_CaptureHudState.Blocked)
+			track = MUI_ColorUtil.Fade(tone, op * 0.45);
+		DrawRing(surface, cx, cy, MUI_ColorUtil.Fade(track, op));
 
 		if (m_eShownState == IA_CaptureHudState.Complete)
 		{
-			surface.StrokeCircle(cx, cy, SPIN_R, MUI_ColorUtil.Fade(tone, op), SPIN_W);
-		}
-		else
-		{
-			float start = -90 + m_fSpin;
-			surface.DrawArc(cx, cy, SPIN_R, start, 90, MUI_ColorUtil.Fade(tone, op), SPIN_W);
+			DrawRing(surface, cx, cy, MUI_ColorUtil.Fade(tone, op));
+			return;
 		}
 
-		float pulse = 0.55 + 0.45 * MUI_Ease.Pulse(GetTime(), 0.5);
-		if (m_eShownState == IA_CaptureHudState.Paused)
-			pulse = 0.7;
-		else if (m_eShownState == IA_CaptureHudState.Complete)
-			pulse = 1;
-		surface.FillCircle(cx, cy, SPIN_DOT, MUI_ColorUtil.Fade(tone, op * pulse));
+		if (m_eShownState == IA_CaptureHudState.Blocked)
+		{
+			float arm = SPIN_R * 0.55;
+			Color cross = MUI_ColorUtil.Fade(tone, op);
+			surface.DrawLine(cx - arm, cy - arm, cx + arm, cy + arm, cross, SPIN_W);
+			surface.DrawLine(cx - arm, cy + arm, cx + arm, cy - arm, cross, SPIN_W);
+			return;
+		}
+
+		float start = -90 + m_fSpin;
+		surface.DrawArc(cx, cy, SPIN_R, start, 90, MUI_ColorUtil.Fade(tone, op), SPIN_W);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Two open 180° arcs instead of StrokeCircle. A closed 360° polyline plus
+	//! enclose leaves a spoke at 0° through the ring interior.
+	protected void DrawRing(MUI_RenderSurface surface, float cx, float cy, Color color)
+	{
+		surface.DrawArc(cx, cy, SPIN_R, 0, 180, color, SPIN_W);
+		surface.DrawArc(cx, cy, SPIN_R, 180, 180, color, SPIN_W);
 	}
 
 	//------------------------------------------------------------------------------------------------

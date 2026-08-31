@@ -11,17 +11,15 @@ IA_VehicleManager : "{07F25000A2274994}Components/VehicleManager.et" {
 IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.et" {
  coords 4829.486 28.5 11737.061
 }
-SCR_BaseTaskManager : "{87208DAD6F3C0DE2}Prefabs/MP/Managers/Tasks/TaskManager_Editor.et" {
- coords 1406.474 38 2902.029
- {
-  SCR_BaseTaskSupportEntity {
-   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
-  }
-  SCR_EditorTaskSupportEntity {
-   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
-  }
-  SCR_TriggerTaskSupportEntity {
-   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
-  }
+SCR_SpawnPoint : "{5A2220DD0C16958B}Prefabs/MP/Spawning/SpawnPoint_US.et" {
+ coords 2717.677 24.592 5484.009
+ angles 0 91.248 0
+ m_Info SCR_UIInfo "{56B4CC4ECACA2C37}" {
+  Name "HQ"
  }
+}
+IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {
+ coords 4828.903 28.5 11735.593
+ m_numberOfGroups 1
+ m_spawnDelayMs 7000
 }

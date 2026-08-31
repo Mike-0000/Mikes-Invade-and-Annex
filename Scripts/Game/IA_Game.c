@@ -49,8 +49,8 @@ class IA_Game
     private const float MIN_SCALE_FACTOR = 0.8;      // Minimum scaling for solo players
     private const float BASELINE_SCALE_FACTOR = 1.07; // Baseline scaling (at BASELINE_PLAYER_COUNT)
     private const float MAX_SCALE_FACTOR = 1.8;      // Maximum scaling cap for high player counts
-    private const int AIRBORNE_QRF_JUMPERS_MIN = 14;
-    private const int AIRBORNE_QRF_JUMPERS_MAX = 40;
+    private const int AIRBORNE_QRF_JUMPERS_MIN = 16;
+    private const int AIRBORNE_QRF_JUMPERS_MAX = 48;
 
     // Static method to set the current area instance
     static void SetCurrentAreaInstance(IA_AreaInstance instance)
@@ -516,6 +516,34 @@ class IA_Game
     array<IA_AreaInstance> GetAreaInstances()
     {
         return m_areas;
+    }
+
+    void ReapplyAiCombatProfiles()
+    {
+        ReapplyAiCombatOnAreas(m_areas);
+        ReapplyAiCombatOnAreas(m_transientAreaInstances);
+    }
+
+    protected void ReapplyAiCombatOnAreas(array<IA_AreaInstance> areas)
+    {
+        if (!areas)
+            return;
+
+        foreach (IA_AreaInstance area : areas)
+        {
+            if (!area)
+                continue;
+
+            array<ref IA_AiGroup> groups = area.GetMilitaryGroups();
+            if (!groups)
+                continue;
+
+            foreach (IA_AiGroup grp : groups)
+            {
+                if (grp)
+                    grp.ApplyCombatProfile();
+            }
+        }
     }
 
     static IA_AreaInstance GetAreaForPosition(vector pos)

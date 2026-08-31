@@ -90,6 +90,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     protected bool m_isCaptured = false; // Track if zone has been captured
     protected float m_fHudPublishAcc = 0;
     protected const float HUD_PUBLISH_INTERVAL = 0.75;
+    protected IA_CaptureHudState m_eLastPublishedHud;
     
     // Static reference to the mission initializer
     static IA_MissionInitializer s_missionInitializer = null;
@@ -271,7 +272,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		if (count <= 0)
 			return 0;
 
-		float radiusSq = m_radius * m_radius;
+		vector origin = m_origin;
+		if (origin == vector.Zero)
+			origin = GetOrigin();
+
 		int inside = 0;
 		int i;
 		for (i = 0; i < count; i++)
@@ -279,7 +283,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 			IEntity pawn = pm.GetPlayerControlledEntity(ids[i]);
 			if (!pawn)
 				continue;
-			if (vector.DistanceSq(pawn.GetOrigin(), m_origin) <= radiusSq)
+
+			vector pos;
+			if (!TryGetPawnWorldPos(pawn, pos))
+				continue;
+			if (IsWorldPosInsideCaptureRadius(pos, origin, m_radius))
 				inside = inside + 1;
 		}
 		return inside;
@@ -290,6 +298,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	{
 		if (usCount > ussrCount)
 			return IA_CaptureHudState.Capturing;
+		if (m_captureProgress <= 0)
+			return IA_CaptureHudState.Blocked;
 		if (ussrCount > usCount)
 			return IA_CaptureHudState.Contested;
 		return IA_CaptureHudState.Paused;
@@ -344,14 +354,24 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    {
 	        if (GetAreaType() == IA_AreaType.MortarPit)
 	        {
-	            SpawnMortarPitComposition();
-	            if (m_spawnedEntity)
+	            if (m_isCaptured)
+	            {
 	                m_prefabSpawned = true;
+	            }
+	            else
+	            {
+	                SpawnMortarPitComposition();
+	                if (m_spawnedEntity)
+	                    m_prefabSpawned = true;
+	            }
 	        }
 	    }
-	    
-	    // Special handling for Radio Tower and DefendObjective
+
 	    IA_AreaType areaType = GetAreaType();
+	    if (areaType == IA_AreaType.DefendObjective)
+	        return;
+
+	    // Special handling for Radio Tower and DefendObjective
 	    if (areaType == IA_AreaType.RadioTower)
 	    {
 	        // For Radio Tower, we only care if the prefab is destroyed
@@ -382,19 +402,14 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        }
 	        return; // Skip standard scoring for Radio Tower
 	    }
-	    
-	    // Skip capture logic for DefendObjective areas
-	    if (areaType == IA_AreaType.DefendObjective)
-	    {
-	        return; // DefendObjective areas are not capturable
-	    }
-	    
-	    // Skip capture logic if already captured
+
+	    // Complete + Defend (and natural defend) leave this group active, so
+	    // leftover towns would keep ticking capture after their tasks are gone.
 	    if (m_isCaptured)
-	    {
-	        return; // Zone already captured, no need to process
-	    }
-		
+	        return;
+	    if (ShouldCloseCaptureForDefendOrShutdown(areaType))
+	        return;
+
 		int playersInZone = CountPlayersInRadius();
 		bool occupancyChanged = false;
 		if (playersInZone > 0 && m_iPlayerCountInZone <= 0)
@@ -419,7 +434,6 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    int usCount = m_iUSCountInZone;
 	    int ussrCount = m_iUSSRCountInZone;
 	    bool wasCapturing = m_isCapturing;
-	    IA_CaptureHudState hudState = ResolveLiveHudState(usCount, ussrCount);
 	    
 	    if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
 	    {
@@ -521,12 +535,18 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    USFactionScore = scaledScore;
 	    m_FactionScores.Set("US", scaledScore);
 
+	    IA_CaptureHudState hudState = ResolveLiveHudState(usCount, ussrCount);
+
 	    bool showHud = false;
 	    if (m_iPlayerCountInZone > 0)
 	    	showHud = true;
 	    else if (m_isCapturing)
 	    	showHud = true;
 	    else if (m_captureProgress > 0)
+	    	showHud = true;
+	    else if (usCount > 0)
+	    	showHud = true;
+	    else if (ussrCount > 0)
 	    	showHud = true;
 
 	    m_fHudPublishAcc = m_fHudPublishAcc + timeSlice;
@@ -536,9 +556,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        m_fHudPublishAcc = 0;
 	        publishNow = true;
 	    }
-	    if (hudState != IA_CaptureHudState.Capturing && wasCapturing)
-	    	publishNow = true;
-	    if (hudState == IA_CaptureHudState.Capturing && !wasCapturing)
+	    if (hudState != m_eLastPublishedHud)
 	    	publishNow = true;
 	    if (occupancyChanged)
 	    	publishNow = true;
@@ -594,11 +612,34 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        if (GetAreaType() == IA_AreaType.MortarPit)
 	        {
 	            IA_Game game = IA_Game.Instantiate();
+	            IA_AreaInstance areaInstance = null;
 	            if (game)
+	                areaInstance = game.GetAreaInstance(m_areaName);
+	            if (!areaInstance && game)
 	            {
-	                IA_AreaInstance areaInstance = game.GetAreaInstance(m_areaName);
-	                if (areaInstance && areaInstance.GetCurrentTaskEntity())
-	                    areaInstance.GetCurrentTaskEntity().SetTaskState(SCR_ETaskState.COMPLETED);
+	                array<IA_AreaInstance> instances = game.GetAreaInstances();
+	                if (instances)
+	                {
+	                    foreach (IA_AreaInstance candidate : instances)
+	                    {
+	                        if (!candidate || !candidate.IsMortarPitArea())
+	                            continue;
+	                        if (candidate.GetAreaGroup() != m_areaGroup)
+	                            continue;
+	                        areaInstance = candidate;
+	                        break;
+	                    }
+	                }
+	            }
+	            if (areaInstance)
+	            {
+	                if (areaInstance.GetCurrentTaskEntity())
+	                {
+	                    SCR_ETaskState pitTaskState = areaInstance.GetCurrentTaskEntity().GetTaskState();
+	                    if (pitTaskState != SCR_ETaskState.COMPLETED)
+	                        areaInstance.GetCurrentTaskEntity().SetTaskState(SCR_ETaskState.COMPLETED);
+	                }
+	                areaInstance.CompleteCurrentTask();
 	            }
 	        }
 	        
@@ -1109,8 +1150,13 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             return;
 
         ResourceName towerPrefab = m_prefabToSpawn;
-        if (towerPrefab == "")
+        if (towerPrefab.IsEmpty())
             towerPrefab = ResolveDefaultRadioTowerPrefab();
+        if (towerPrefab.IsEmpty())
+        {
+            Print("[ERROR] Radio Tower composition prefab is empty.", LogLevel.ERROR);
+            return;
+        }
 
         Resource res = Resource.Load(towerPrefab);
         if (!res)
@@ -1218,8 +1264,13 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         }
 
         ResourceName pitPrefab = m_prefabToSpawn;
-        if (pitPrefab == "")
+        if (pitPrefab.IsEmpty())
             pitPrefab = ResolveDefaultMortarPitPrefab();
+        if (pitPrefab.IsEmpty())
+        {
+            Print("[ERROR] Mortar Pit prefab is empty.", LogLevel.ERROR);
+            return;
+        }
 
         Resource res = Resource.Load(pitPrefab);
         if (!res)
@@ -1624,16 +1675,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     }
 
 	//------------------------------------------------------------------------------------------------
-	//! World pose of the locally controlled pawn. Seated characters need
-	//! GetWorldTransform; GetOrigin() is parent-relative inside a vehicle.
-	static bool TryGetLocalPlayerWorldPos(out vector pos)
+	//! World pose of a pawn. Seated characters need GetWorldTransform;
+	//! GetOrigin() is parent-relative inside a vehicle.
+	static bool TryGetPawnWorldPos(IEntity pawn, out vector pos)
 	{
 		pos = vector.Zero;
-		PlayerController pc = GetGame().GetPlayerController();
-		if (!pc)
-			return false;
-
-		IEntity pawn = pc.GetControlledEntity();
 		if (!pawn)
 			return false;
 
@@ -1644,21 +1690,42 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Occupancy test used by the capture HUD when the zone marker is not
-	//! present on this machine (runtime mortar pits have no registered prefab
-	//! GUID, so clients never receive the replica).
-	static bool IsLocalPlayerInsideWorldSphere(vector origin, float radius)
+	//! Horizontal capture radius. HUD occupancy matches the map circle, not a
+	//! 3D sphere, so rooftops and vehicles inside the radius still count.
+	static bool IsWorldPosInsideCaptureRadius(vector pos, vector origin, float radius)
 	{
 		if (radius <= 0)
-			return false;
-
-		vector pos;
-		if (!TryGetLocalPlayerWorldPos(pos))
 			return false;
 
 		float dx = pos[0] - origin[0];
 		float dz = pos[2] - origin[2];
 		return (dx * dx + dz * dz) <= radius * radius;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! World pose of the locally controlled pawn. Seated characters need
+	//! GetWorldTransform; GetOrigin() is parent-relative inside a vehicle.
+	static bool TryGetLocalPlayerWorldPos(out vector pos)
+	{
+		pos = vector.Zero;
+		PlayerController pc = GetGame().GetPlayerController();
+		if (!pc)
+			return false;
+
+		return TryGetPawnWorldPos(pc.GetControlledEntity(), pos);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Occupancy test used by the capture HUD when the zone marker is not
+	//! present on this machine (runtime mortar pits have no registered prefab
+	//! GUID, so clients never receive the replica).
+	static bool IsLocalPlayerInsideWorldSphere(vector origin, float radius)
+	{
+		vector pos;
+		if (!TryGetLocalPlayerWorldPos(pos))
+			return false;
+
+		return IsWorldPosInsideCaptureRadius(pos, origin, radius);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1687,7 +1754,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 				continue;
 			if (areaType == IA_AreaType.DefendObjective)
 				continue;
-			if (!marker.IsPositionInside(pos))
+			if (!IsWorldPosInsideCaptureRadius(pos, marker.GetOrigin(), marker.GetRadius()))
 				continue;
 
 			string areaName = marker.GetAreaName();
@@ -1804,6 +1871,48 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         m_playerCaptureScores.Clear();
         // Don't reset m_isCaptured here - that should only be reset when actually starting a new zone group
     }
+
+    //! Stop capture scoring and hide the HUD. Used when the AO moves on to a
+    //! defense while this group is still "active" for GetActiveGroup().
+    void RetireCapture()
+    {
+        m_isCapturing = false;
+        m_hasReached50Percent = true;
+        m_isCaptured = true;
+        m_captureProgress = CAPTURE_TIME_SECONDS;
+        m_captureStatus = "Captured";
+        m_iPlayerCountInZone = 0;
+        USFactionScore = 1000;
+        if (m_FactionScores)
+            m_FactionScores.Set("US", 1000);
+        PublishCaptureHudState(IA_CaptureHudState.Hidden);
+    }
+
+    protected bool ShouldCloseCaptureForDefendOrShutdown(IA_AreaType areaType)
+    {
+        IA_Game game = IA_Game.Instantiate();
+        if (!game)
+            return false;
+
+        bool keepOptionalMortar = false;
+        if (areaType == IA_AreaType.MortarPit)
+            keepOptionalMortar = true;
+
+        if (game.HasActiveDefendMission() && !keepOptionalMortar)
+        {
+            RetireCapture();
+            return true;
+        }
+
+        IA_AreaInstance instance = game.GetAreaInstance(m_areaName);
+        if (instance && instance.IsShutDown())
+        {
+            RetireCapture();
+            return true;
+        }
+
+        return false;
+    }
     
     // Fully reset the zone for a new capture (called when moving to next zone group)
     void ResetForNewCapture()
@@ -1816,11 +1925,14 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         m_captureStatus = "Neutral";
         m_fHudPublishAcc = 0;
         m_iPlayerCountInZone = 0;
+        m_eLastPublishedHud = IA_CaptureHudState.Hidden;
         IA_MissionInitializer.PublishCaptureHud(m_areaName, IA_CaptureHudState.Hidden, 0);
     }
 
     protected void PublishCaptureHudState(IA_CaptureHudState state)
     {
+        m_eLastPublishedHud = state;
+
         float progress = 0;
         if (CAPTURE_TIME_SECONDS > 0)
             progress = m_captureProgress / CAPTURE_TIME_SECONDS;

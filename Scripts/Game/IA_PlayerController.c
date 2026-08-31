@@ -53,6 +53,17 @@ modded class SCR_PlayerController
 		Rpc(RpcAsk_IA_ForceCompleteZone);
 	}
 
+	void IA_AskForceCompleteZoneAndDefend()
+	{
+		if (Replication.IsServer())
+		{
+			IA_ForceCompleteZoneAndDefendIfAdmin();
+			return;
+		}
+
+		Rpc(RpcAsk_IA_ForceCompleteZoneAndDefend);
+	}
+
 	//------------------------------------------------------------------------------------------------
 	void IA_AskPromoteSelf()
 	{
@@ -103,6 +114,12 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_ForceCompleteZone()
 	{
 		IA_ForceCompleteZoneIfAdmin();
+	}
+
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_ForceCompleteZoneAndDefend()
+	{
+		IA_ForceCompleteZoneAndDefendIfAdmin();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -187,6 +204,21 @@ modded class SCR_PlayerController
 			return;
 
 		init.ServerForceCompleteZone();
+	}
+
+	protected void IA_ForceCompleteZoneAndDefendIfAdmin()
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Force complete + defend rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (!init)
+			return;
+
+		init.ServerForceCompleteZoneAndDefend();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -385,7 +417,7 @@ modded class SCR_PlayerController
 		IA_GmDirector dir = IA_GmDirector.GetInstance();
 		int liveBefore = dir.GetLiveGroupId();
 		IA_AreaMarker marker = dir.PlaceSite(areaType, pos, gmBucket, name, radius);
-		if (gmBucket == IA_GmBucket.Live && marker)
+		if (gmBucket == IA_GmBucket.Live && marker && marker.GetAreaType() != IA_AreaType.DefendObjective)
 			dir.HotAdd(marker);
 
 		if (!marker)

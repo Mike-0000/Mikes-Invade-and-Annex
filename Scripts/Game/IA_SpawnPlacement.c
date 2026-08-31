@@ -27,8 +27,18 @@ class IA_SpawnPlacement
 	static const float DROP_LZ_DOWN_M = 40.0;
 	static const float DROP_LZ_SEARCH_R = 40.0;
 	static const float DROP_LZ_SEARCH_WIDE_R = 80.0;
-	static const int DROP_LZ_SAMPLE_TRIES = 4;
+	static const int DROP_LZ_SAMPLE_TRIES = 8;
+	static const float DROP_WAVE_SEPARATION_M = 80.0;
 	static const string NAVMESH_PROJECT = "Soldiers";
+	static const float FLAT_SITE_STRICT_SLOPE = 0.12;
+	static const float FLAT_SITE_RELAXED_SLOPE = 0.25;
+	static const float FLAT_SITE_SLOPE_SAMPLE_M = 10.0;
+	static const float FLAT_SITE_FOOTPRINT_M = 12.0;
+	static const float FLAT_SITE_STRICT_HEIGHT_M = 2.5;
+	static const float FLAT_SITE_RELAXED_HEIGHT_M = 4.0;
+	static const float FLAT_SITE_NEAR_BEST_SLOPE = 0.04;
+	static const int FLAT_SITE_ATTEMPTS = 80;
+	static const float FLAT_SITE_PLAYER_MIN_M = 200.0;
 
 	static void CollectPlayerPositions(array<vector> positions)
 	{
@@ -805,5 +815,332 @@ class IA_SpawnPlacement
 
 			outPosts.Insert(pos);
 		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Walkable site in an annulus, kept off players. Used by Enhanced defense events.
+	static vector FindEventSite(vector center, float minR, float maxR)
+	{
+		if (center == vector.Zero)
+			return vector.Zero;
+		if (minR < 80)
+			minR = 80;
+		if (maxR < minR + 20)
+			maxR = minR + 80;
+
+		ref array<vector> players = new array<vector>();
+		CollectPlayerPositions(players);
+
+		int attempt;
+		for (attempt = 0; attempt < 16; attempt++)
+		{
+			float angle = IA_Game.rng.RandFloat01() * Math.PI2;
+			float dist = IA_Game.rng.RandFloatXY(minR, maxR);
+			vector probe;
+			probe[0] = center[0] + Math.Cos(angle) * dist;
+			probe[2] = center[2] + Math.Sin(angle) * dist;
+			probe[1] = center[1];
+
+			vector hit;
+			if (!TryWalkableAt(probe, hit))
+				continue;
+			if (IsNearAnyPlayer(hit, players, 200))
+				continue;
+			return hit;
+		}
+
+		return vector.Zero;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Terrain slope as rise/run over `sampleDist` along X and Z. Same method as
+	//! IA_MortarPitPlacer — tents and pits need this, not just walkable ground.
+	static float GetSlopeTangent(vector pos, float sampleDist)
+	{
+		if (sampleDist < 1.0)
+			sampleDist = FLAT_SITE_SLOPE_SAMPLE_M;
+
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return 999.0;
+
+		float y1 = world.GetSurfaceY(pos[0] + sampleDist, pos[2]);
+		float y2 = world.GetSurfaceY(pos[0] - sampleDist, pos[2]);
+		float y3 = world.GetSurfaceY(pos[0], pos[2] + sampleDist);
+		float y4 = world.GetSurfaceY(pos[0], pos[2] - sampleDist);
+
+		float diff1 = y1 - y2;
+		if (diff1 < 0)
+			diff1 = -diff1;
+		float diff2 = y3 - y4;
+		if (diff2 < 0)
+			diff2 = -diff2;
+
+		float slope1 = diff1 / (2.0 * sampleDist);
+		float slope2 = diff2 / (2.0 * sampleDist);
+		if (slope1 > slope2)
+			return slope1;
+		return slope2;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Max terrain-Y spread across a circle. Catches a hillside that a single
+	//! center slope sample can under-read for a tent/sandbag cluster.
+	static float GetFootprintHeightDelta(vector pos, float radius)
+	{
+		if (radius < 1.0)
+			radius = FLAT_SITE_FOOTPRINT_M;
+
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return 999.0;
+
+		float y0 = world.GetSurfaceY(pos[0], pos[2]);
+		float yMin = y0;
+		float yMax = y0;
+		int i;
+		for (i = 0; i < 8; i++)
+		{
+			float iF = i;
+			float ang = Math.PI2 * (iF / 8.0);
+			float y = world.GetSurfaceY(pos[0] + Math.Cos(ang) * radius, pos[2] + Math.Sin(ang) * radius);
+			if (y < yMin)
+				yMin = y;
+			if (y > yMax)
+				yMax = y;
+		}
+
+		return yMax - yMin;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Walkable annulus site that also has to be reasonably flat. Commander FOB
+	//! tents sit on GetSurfaceY — a mountain-side walkable probe still looks wrong.
+	static vector FindFlatEventSite(vector center, float minR, float maxR)
+	{
+		if (center == vector.Zero)
+			return vector.Zero;
+		if (minR < 80)
+			minR = 80;
+		if (maxR < minR + 20)
+			maxR = minR + 80;
+
+		ref array<vector> players = new array<vector>();
+		CollectPlayerPositions(players);
+
+		ref array<vector> candidates = new array<vector>();
+		CollectFlatEventCandidates(center, minR, maxR, players, candidates);
+
+		vector chosen = vector.Zero;
+		if (TryPickFlatEventSite(candidates, FLAT_SITE_STRICT_SLOPE, FLAT_SITE_STRICT_HEIGHT_M, chosen))
+			return chosen;
+
+		float wideMin = minR - 50.0;
+		float wideMax = maxR + 100.0;
+		if (wideMin < 80)
+			wideMin = 80;
+		if (wideMax < wideMin + 20)
+			wideMax = wideMin + 80;
+		CollectFlatEventCandidates(center, wideMin, wideMax, players, candidates);
+
+		if (TryPickFlatEventSite(candidates, FLAT_SITE_STRICT_SLOPE, FLAT_SITE_STRICT_HEIGHT_M, chosen))
+			return chosen;
+		if (TryPickFlatEventSite(candidates, FLAT_SITE_RELAXED_SLOPE, FLAT_SITE_RELAXED_HEIGHT_M, chosen))
+		{
+			Print("[IA][SpawnPlacement] flat event site used relaxed slope.", LogLevel.NORMAL);
+			return chosen;
+		}
+
+		if (candidates.IsEmpty())
+			return vector.Zero;
+
+		Print("[IA][SpawnPlacement] flat event site using flattest fallback.", LogLevel.WARNING);
+		return PickFlattestEventSite(candidates);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static void CollectFlatEventCandidates(vector center, float minR, float maxR, array<vector> players, notnull array<vector> outCandidates)
+	{
+		int attempt;
+		for (attempt = 0; attempt < FLAT_SITE_ATTEMPTS; attempt++)
+		{
+			float angle = IA_Game.rng.RandFloat01() * Math.PI2;
+			float dist = IA_Game.rng.RandFloatXY(minR, maxR);
+			vector probe;
+			probe[0] = center[0] + Math.Cos(angle) * dist;
+			probe[2] = center[2] + Math.Sin(angle) * dist;
+			probe[1] = center[1];
+
+			vector hit;
+			if (!TryWalkableAt(probe, hit))
+				continue;
+			if (IsNearAnyPlayer(hit, players, FLAT_SITE_PLAYER_MIN_M))
+				continue;
+			if (IsInOcean(hit))
+				continue;
+
+			outCandidates.Insert(hit);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static bool TryPickFlatEventSite(notnull array<vector> candidates, float maxSlope, float maxHeightDelta, out vector chosen)
+	{
+		chosen = vector.Zero;
+		ref array<vector> passers = new array<vector>();
+		foreach (vector sample : candidates)
+		{
+			if (GetSlopeTangent(sample, FLAT_SITE_SLOPE_SAMPLE_M) > maxSlope)
+				continue;
+			if (GetFootprintHeightDelta(sample, FLAT_SITE_FOOTPRINT_M) > maxHeightDelta)
+				continue;
+			passers.Insert(sample);
+		}
+
+		if (passers.IsEmpty())
+			return false;
+
+		chosen = PickFlattestEventSiteNearBest(passers);
+		return chosen != vector.Zero;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static vector PickFlattestEventSite(notnull array<vector> pool)
+	{
+		int n = pool.Count();
+		if (n <= 0)
+			return vector.Zero;
+		if (n == 1)
+			return pool[0];
+
+		vector best = pool[0];
+		float bestScore = 999.0;
+		int i;
+		for (i = 0; i < n; i++)
+		{
+			float score = ScoreFlatEventSite(pool[i]);
+			if (score < bestScore)
+			{
+				bestScore = score;
+				best = pool[i];
+			}
+		}
+
+		return best;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static vector PickFlattestEventSiteNearBest(notnull array<vector> pool)
+	{
+		int n = pool.Count();
+		if (n <= 0)
+			return vector.Zero;
+		if (n == 1)
+			return pool[0];
+
+		float bestScore = 999.0;
+		int i;
+		for (i = 0; i < n; i++)
+		{
+			float score = ScoreFlatEventSite(pool[i]);
+			if (score < bestScore)
+				bestScore = score;
+		}
+
+		ref array<vector> nearBest = new array<vector>();
+		for (i = 0; i < n; i++)
+		{
+			float score = ScoreFlatEventSite(pool[i]);
+			if (score <= bestScore + FLAT_SITE_NEAR_BEST_SLOPE)
+				nearBest.Insert(pool[i]);
+		}
+
+		int nearCount = nearBest.Count();
+		if (nearCount <= 0)
+			return pool[0];
+		if (nearCount == 1)
+			return nearBest[0];
+		return nearBest[IA_Game.rng.RandInt(0, nearCount)];
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected static float ScoreFlatEventSite(vector pos)
+	{
+		float slope = GetSlopeTangent(pos, FLAT_SITE_SLOPE_SAMPLE_M);
+		float heightDelta = GetFootprintHeightDelta(pos, FLAT_SITE_FOOTPRINT_M);
+		return slope + (heightDelta * 0.02);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Random open-sky sample in an annulus. Does not spiral from `center` — that
+	//! search is deterministic and stacked every Air Assault wave on one pad.
+	static bool TrySampleAnnulusDropLz(vector center, float minR, float maxR, int attempts, array<vector> players, float playerR, array<vector> avoidLzs, float avoidR, out vector outLz)
+	{
+		outLz = vector.Zero;
+		if (center == vector.Zero)
+			return false;
+		if (attempts < 1)
+			return false;
+		if (maxR < minR)
+			maxR = minR;
+
+		int attempt;
+		for (attempt = 0; attempt < attempts; attempt++)
+		{
+			float angle = IA_Game.rng.RandFloat01() * Math.PI2;
+			float dist = IA_Game.rng.RandFloatXY(minR, maxR);
+			vector probe;
+			probe[0] = center[0] + Math.Cos(angle) * dist;
+			probe[2] = center[2] + Math.Sin(angle) * dist;
+			probe[1] = center[1];
+
+			vector lz;
+			if (!TryFindDropLz(probe, DROP_LZ_SEARCH_WIDE_R, lz))
+				continue;
+			if (IsNearAnyPlayer(lz, players, playerR))
+				continue;
+			if (avoidR > 0.5 && IsNearAnyPlayer(lz, avoidLzs, avoidR))
+				continue;
+			outLz = lz;
+			return true;
+		}
+
+		return false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Air Assault LZ: hot drop near the AO when requested and safe, otherwise 150-300 m perimeter.
+	//! `avoidLzs` keeps later waves off a pad already used this defend.
+	static bool TryFindDefendDropLz(vector center, bool preferHotDrop, out vector outLz, array<vector> avoidLzs = null)
+	{
+		outLz = vector.Zero;
+		if (center == vector.Zero)
+			return false;
+
+		ref array<vector> players = new array<vector>();
+		CollectPlayerPositions(players);
+
+		if (preferHotDrop)
+		{
+			if (TrySampleAnnulusDropLz(center, 40, 120, 16, players, 80, avoidLzs, DROP_WAVE_SEPARATION_M, outLz))
+				return true;
+			if (TrySampleAnnulusDropLz(center, 30, 140, 10, players, 80, avoidLzs, 40, outLz))
+				return true;
+		}
+
+		if (TrySampleAnnulusDropLz(center, 150, 300, 24, players, 80, avoidLzs, DROP_WAVE_SEPARATION_M, outLz))
+			return true;
+		if (TrySampleAnnulusDropLz(center, 120, 320, 16, players, 80, avoidLzs, 40, outLz))
+			return true;
+		if (TrySampleAnnulusDropLz(center, 100, 350, 12, players, 80, null, 0, outLz))
+			return true;
+
+		vector fallback;
+		if (!TryFindDropLz(center, DROP_LZ_SEARCH_WIDE_R, fallback))
+			return false;
+		if (IsNearAnyPlayer(fallback, players, 80))
+			return false;
+		outLz = fallback;
+		return true;
 	}
 }

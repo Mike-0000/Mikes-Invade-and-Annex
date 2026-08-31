@@ -224,6 +224,7 @@ class IA_AiGroup
     private vector m_defendTarget = vector.Zero;
     // True when spawned by a defend / radio-tower / side-obj assault wave (not leftover garrison).
     private bool m_isDefendWaveGroup = false;
+    private bool m_bDefendHunter = false;
     private bool m_bInboundSimPinned = false;
     private vector m_vInboundTarget = vector.Zero;
     private bool m_bAirborneDrop = false;
@@ -233,9 +234,10 @@ class IA_AiGroup
     private float m_holdRadius = 0;
     private int m_iAirborneInFlight = 0;
     private vector m_vAirDropTarget = vector.Zero;
+    private vector m_vAirDropLz = vector.Zero;
     private float m_fAirSpawnRadius = 250;
-    private float m_fAirLzMin = 50;
-    private float m_fAirLzMax = 120;
+    private float m_fAirLzMin = 8;
+    private float m_fAirLzMax = 28;
     private MHJ_AiDropDirector m_airDirector;
     private IA_AreaInstance m_airDropArea;
     
@@ -249,6 +251,12 @@ class IA_AiGroup
 	// Assassination obj
 	
 	bool m_HVTGroup = false;
+	private bool m_bEliteProfile = false;
+	private bool m_bSweepPatrol = false;
+	private ref array<vector> m_vSweepPoints;
+	private int m_iSweepIndex = 0;
+	private int m_iSweepLaps = 0;
+	private vector m_vSweepCenter;
 	
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount, bool HVTGroup = false)
     {
@@ -367,6 +375,17 @@ class IA_AiGroup
 		
 			return "{5117311FB822FD1F}Prefabs/Characters/Factions/OPFOR/USSR_Army/Character_USSR_Officer.et";
 		
+		}
+
+		if (m_bEliteProfile)
+		{
+			int elitePick = Math.RandomInt(0, 3);
+			if (elitePick == 0)
+				includedLabels = {EEditableEntityLabel.ROLE_SHARPSHOOTER};
+			else if (elitePick == 1)
+				includedLabels = {EEditableEntityLabel.ROLE_LEADER};
+			else
+				includedLabels = {EEditableEntityLabel.ROLE_SCOUT};
 		}
 
 		SCR_Faction scrFaction = SCR_Faction.Cast(DesiredFaction);
@@ -529,14 +548,14 @@ class IA_AiGroup
     // - You need the group immediately (e.g., for vehicle spawning, reinforcements)
     // - You already have a good spawn position
     // - Performance is not a concern (small number of groups)
-    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false)
+    static IA_AiGroup CreateMilitaryGroupFromUnits(vector initialPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false, bool eliteProfile = false)
     {
         if (unitCount <= 0)
             return null;
 
         // For backward compatibility, create the group immediately at the initial position
         // The async road search should be initiated separately by callers that want it
-        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup, useExactPosition, keepAltitude);
+        return CreateMilitaryGroupAtPosition(initialPos, faction, unitCount, AreaFaction, HVTGroup, useExactPosition, keepAltitude, eliteProfile);
     }
     
     // Start an async road search and group creation
@@ -695,7 +714,7 @@ class IA_AiGroup
 	
     
     // Create a military group at a specific position (no road search)
-    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false)
+    static IA_AiGroup CreateMilitaryGroupAtPosition(vector spawnPos, IA_Faction faction, int unitCount, Faction AreaFaction, bool HVTGroup = false, bool useExactPosition = false, bool keepAltitude = false, bool eliteProfile = false)
     {
         if (unitCount <= 0)
             return null;
@@ -725,6 +744,8 @@ class IA_AiGroup
 
         IA_AiGroup grp = new IA_AiGroup(finalSpawnPos, IA_SquadType.Riflemen, faction, unitCount, HVTGroup);
         grp.m_isCivilian = false;
+        if (eliteProfile)
+            grp.SetEliteProfile(true);
 
         Resource groupRes;
         switch(faction){
@@ -1533,6 +1554,8 @@ class IA_AiGroup
         // General SetupDeathListener call - for military this also schedules CheckDangerEvents.
         // For civilians, their specific unit listener is already set.
         SetupDeathListener(); 
+        if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
+            GetGame().GetCallqueue().CallLater(ApplyCombatProfile, 2000, false);
         ScheduleNextStateEvaluation();
 
         // The recurring CheckDangerEvents is mainly for military AI reactions.
@@ -1793,8 +1816,7 @@ class IA_AiGroup
              return;
          }
          ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath);
-         
-
+         ApplyCombatToEntity(unitEntity);
     }
 
     private void SetupDeathListener()
@@ -1836,10 +1858,7 @@ class IA_AiGroup
             {
                 continue;
             }
-            EAISkill aiSkill = EAISkill.EXPERT;
-			SCR_AICombatComponent combatComponent = SCR_AICombatComponent.Cast(agent.FindComponent(SCR_AICombatComponent));
-			if (combatComponent)
-				combatComponent.SetAISkill(aiSkill);
+            ApplyCombatToAgent(agent);
 			
             // ccc.GetOnPlayerDeathWithParam().Insert(OnMemberDeath); //This line is now removed
             
@@ -2265,6 +2284,24 @@ class IA_AiGroup
         if (m_isVehiclePassengerGroup && !m_passengerDumped)
             return true;
 
+        if (m_bEliteProfile)
+            return true;
+
+        return false;
+    }
+
+    bool ShouldKeepOwnOrders()
+    {
+        if (IsPinnedGarrison())
+            return true;
+        if (IsDefendHunter())
+            return true;
+        if (m_isDefendWaveGroup)
+            return true;
+        if (m_bEliteProfile)
+            return true;
+        if (m_bSweepPatrol)
+            return true;
         return false;
     }
 
@@ -2970,6 +3007,13 @@ class IA_AiGroup
             return; // Do not allow any other logic to override the escape.
         }
 		
+        if (m_bSweepPatrol && !m_isInDefendMode)
+        {
+            if (!HasActiveWaypoint())
+                IssueNextSweepPoint();
+            return;
+        }
+
         // Override tactical state evaluation in defend mode - but don't constantly re-set the state
         if (m_isInDefendMode && m_defendTarget != vector.Zero)
         {
@@ -2977,9 +3021,12 @@ class IA_AiGroup
             // Don't constantly change the tactical state - it should already be set correctly
             if (!HasOrders())
             {
-                // Re-add the SearchAndDestroy order if it was somehow lost
-                AddOrder(m_defendTarget, IA_AiOrder.SearchAndDestroy, true);
-                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Defend mode group lost orders, re-adding SearchAndDestroy at %1", m_defendTarget.ToString()), LogLevel.WARNING);
+                vector restore = m_defendTarget;
+                if (m_bDefendHunter && m_tacticalStateTarget != vector.Zero)
+                    restore = m_tacticalStateTarget;
+                AddOrder(restore, IA_AiOrder.SearchAndDestroy, true);
+                EnableInboundSimulation(restore);
+                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Defend mode group lost orders, re-adding SearchAndDestroy at %1", restore.ToString()), LogLevel.WARNING);
             }
             return; // Don't do any further state evaluation in defend mode
         }
@@ -3781,6 +3828,9 @@ class IA_AiGroup
         if (m_isHoldingPost)
             return;
 
+        if (enable)
+            m_bSweepPatrol = false;
+
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
         
@@ -3794,10 +3844,12 @@ class IA_AiGroup
             
             // Set tactical state directly
             SetTacticalState(IA_GroupTacticalState.Attacking, defendPoint, null, true);
+            EnableInboundSimulation(defendPoint);
         }
         else
         {
             Print("[IA_AiGroup] Setting defend mode OFF for group", LogLevel.NORMAL);
+            m_bDefendHunter = false;
         }
     }
 
@@ -3836,13 +3888,36 @@ class IA_AiGroup
     {
         if (m_isHoldingPost)
             return true;
-        if (m_isInDefendMode)
-            return true;
         if (m_isMortarCrew)
             return true;
         if (IsObjectiveUnit())
             return true;
+        if (m_bDefendHunter)
+            return false;
+        if (m_isDefendWaveGroup)
+            return false;
+        if (m_bEliteProfile)
+            return false;
+        if (m_bSweepPatrol)
+            return false;
+        if (m_isInDefendMode)
+            return true;
         return false;
+    }
+
+    void SetDefendHunter(bool hunter)
+    {
+        m_bDefendHunter = hunter;
+    }
+
+    bool IsDefendHunter()
+    {
+        return m_bDefendHunter;
+    }
+
+    vector GetDefendTarget()
+    {
+        return m_defendTarget;
     }
 
     void SetDefendWaveGroup(bool isWaveGroup)
@@ -3855,17 +3930,206 @@ class IA_AiGroup
         return m_isDefendWaveGroup;
     }
 
+    void SetEliteProfile(bool elite)
+    {
+        m_bEliteProfile = elite;
+    }
+
+    bool IsEliteProfile()
+    {
+        return m_bEliteProfile;
+    }
+
+    //! Walk a ring that cuts inside the objective, then assault the center.
+    //! Vanilla Patrol WPs complete at 5 m and are not a looping route.
+    void StartSweepPatrol(vector center, float innerMin, float innerMax, float outerMin, float outerMax)
+    {
+        if (center == vector.Zero)
+            return;
+        if (innerMin < 40)
+            innerMin = 40;
+        if (innerMax < innerMin + 20)
+            innerMax = innerMin + 40;
+        if (outerMin < innerMax)
+            outerMin = innerMax + 40;
+        if (outerMax < outerMin + 20)
+            outerMax = outerMin + 80;
+
+        m_vSweepCenter = center;
+        m_iSweepIndex = 0;
+        m_iSweepLaps = 0;
+        m_bSweepPatrol = true;
+        if (!m_vSweepPoints)
+            m_vSweepPoints = new array<vector>();
+        m_vSweepPoints.Clear();
+
+        float baseAng = IA_Game.rng.RandFloat01() * Math.PI2;
+        int i;
+        for (i = 0; i < 6; i++)
+        {
+            float ang = baseAng + (i * (Math.PI2 / 6.0));
+            float minR = outerMin;
+            float maxR = outerMax;
+            if ((i % 2) == 1)
+            {
+                minR = innerMin;
+                maxR = innerMax;
+            }
+
+            float dist = IA_Game.rng.RandFloatXY(minR, maxR);
+            vector probe;
+            probe[0] = center[0] + Math.Cos(ang) * dist;
+            probe[2] = center[2] + Math.Sin(ang) * dist;
+            probe[1] = center[1];
+
+            vector walked;
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(probe, IA_SpawnPlacement.EMPTY_SEARCH_R, walked))
+                probe = walked;
+            else
+            {
+                probe[1] = GetGame().GetWorld().GetSurfaceY(probe[0], probe[2]);
+                probe[1] = probe[1] + 0.5;
+            }
+
+            m_vSweepPoints.Insert(probe);
+        }
+
+        SetTacticalState(IA_GroupTacticalState.Approaching, center, null, true);
+        EnableInboundSimulation(center);
+        IssueNextSweepPoint();
+        Print(string.Format("[IA][SweepPatrol] %1 legs around %2", m_vSweepPoints.Count(), center.ToString()), LogLevel.NORMAL);
+    }
+
+    protected void IssueNextSweepPoint()
+    {
+        if (!m_bSweepPatrol)
+            return;
+        if (m_isInDefendMode)
+            return;
+        if (!m_vSweepPoints || m_vSweepPoints.IsEmpty())
+            return;
+
+        if (m_iSweepIndex >= m_vSweepPoints.Count())
+        {
+            m_iSweepIndex = 0;
+            m_iSweepLaps = m_iSweepLaps + 1;
+            if (m_iSweepLaps >= 1 && m_vSweepCenter != vector.Zero)
+            {
+                m_bSweepPatrol = false;
+                SetDefendMode(true, m_vSweepCenter);
+                Print(string.Format("[IA][SweepPatrol] circuit done, assaulting %1", m_vSweepCenter.ToString()), LogLevel.NORMAL);
+                return;
+            }
+        }
+
+        vector next = m_vSweepPoints[m_iSweepIndex];
+        m_iSweepIndex = m_iSweepIndex + 1;
+        if (next == vector.Zero)
+            return;
+
+        RemoveAllOrders();
+        AddOrder(next, IA_AiOrder.Move, true);
+        EnableInboundSimulation(next);
+    }
+
+    //! Combat component lives on the controlled character, not the AIAgent.
+    void ApplyCombatProfile()
+    {
+        if (m_isCivilian)
+            return;
+        if (m_faction == IA_Faction.CIV)
+            return;
+        if (!m_group)
+            return;
+
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            ApplyCombatToAgent(agent);
+        }
+    }
+
+    void ApplyEliteCombatProfile()
+    {
+        ApplyCombatProfile();
+    }
+
+    protected void ApplyCombatToAgent(AIAgent agent)
+    {
+        if (!agent)
+            return;
+
+        ApplyCombatToEntity(agent.GetControlledEntity());
+    }
+
+    protected void ApplyEliteCombatToAgent(AIAgent agent)
+    {
+        ApplyCombatToAgent(agent);
+    }
+
+    protected void ApplyCombatToEntity(IEntity controlled)
+    {
+        if (!controlled)
+            return;
+        if (m_isCivilian)
+            return;
+        if (m_faction == IA_Faction.CIV)
+            return;
+
+        SCR_AICombatComponent combat = SCR_AICombatComponent.Cast(controlled.FindComponent(SCR_AICombatComponent));
+        if (!combat)
+            return;
+
+        EAISkill skill = EAISkill.EXPERT;
+        float fireRate = 1.0;
+        float perception = 1.0;
+        if (m_bEliteProfile)
+        {
+            skill = EAISkill.CYLON;
+            fireRate = 1.25;
+            perception = 1.5;
+        }
+
+        IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+        if (cfg)
+        {
+            if (m_bEliteProfile)
+            {
+                skill = cfg.GetAiSkillElite();
+                fireRate = cfg.m_fAiFireRateElite;
+                perception = cfg.m_fAiPerceptionElite;
+            }
+            else
+            {
+                skill = cfg.GetAiSkillNormal();
+                fireRate = cfg.m_fAiFireRateNormal;
+                perception = cfg.m_fAiPerceptionNormal;
+            }
+        }
+
+        combat.SetAISkill(skill);
+        combat.SetFireRateCoef(fireRate, true);
+        combat.SetPerceptionFactor(perception);
+    }
+
     bool IsAirborneDrop()
     {
         return m_bAirborneDrop;
     }
 
-    void BeginAirborneDrop(MHJ_AiDropDirector director, vector target, IA_AreaInstance areaInst, float spawnRadius, float lzMin, float lzMax)
+    //! `lz` is the landing pad. `attackTarget` is the S&D point after canopy
+    //! (defend marker / fight). Do not pass the pad as the attack — Air Assault
+    //! pads sit 150-300 m off the objective and every fireteam would stack there.
+    void BeginAirborneDrop(MHJ_AiDropDirector director, vector lz, vector attackTarget, IA_AreaInstance areaInst, float spawnRadius, float lzMin, float lzMax)
     {
         m_bAirborneDrop = true;
         m_bKeepAltitude = true;
         m_airDirector = director;
-        m_vAirDropTarget = target;
+        m_vAirDropLz = lz;
+        m_vAirDropTarget = attackTarget;
+        if (m_vAirDropTarget == vector.Zero)
+            m_vAirDropTarget = lz;
         m_airDropArea = areaInst;
         m_fAirSpawnRadius = spawnRadius;
         m_fAirLzMin = lzMin;
@@ -3916,10 +4180,13 @@ class IA_AiGroup
         RemoveAllOrders(true);
         AddOrder(m_vAirDropTarget, IA_AiOrder.SearchAndDestroy, true);
         SetTacticalState(IA_GroupTacticalState.Attacking, m_vAirDropTarget, null, true);
-        if (m_airDropArea)
+        if (m_airDropArea && !m_bDefendHunter)
             m_airDropArea.RegisterForcedReinforcementSND(this, m_vAirDropTarget, true);
 
-        Print(string.Format("[IA][Airborne] Fireteam landed, S&D at %1", m_vAirDropTarget.ToString()), LogLevel.NORMAL);
+        int hunterFlag = 0;
+        if (m_bDefendHunter)
+            hunterFlag = 1;
+        Print(string.Format("[IA][Airborne] Fireteam landed, S&D at %1 hunter=%2", m_vAirDropTarget.ToString(), hunterFlag), LogLevel.NORMAL);
     }
 
     protected void RegisterAirborneJumper(IEntity charEntity)
@@ -3931,17 +4198,20 @@ class IA_AiGroup
         if (!jumper)
             return;
 
-        vector lz = m_vAirDropTarget;
+        vector lz = m_vAirDropLz;
+        if (lz == vector.Zero)
+            lz = m_vAirDropTarget;
+
         bool foundLz = false;
         int attempt;
         for (attempt = 0; attempt < IA_SpawnPlacement.DROP_LZ_SAMPLE_TRIES; attempt++)
         {
-            vector sample = m_vAirDropTarget;
+            vector sample = lz;
             if (IA_Game.rng)
-                sample = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
+                sample = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, lz);
 
             vector dropLz;
-            if (IA_SpawnPlacement.TryFindDropLz(sample, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
+            if (IA_SpawnPlacement.TryDropLzAt(sample, dropLz))
             {
                 lz = dropLz;
                 foundLz = true;
@@ -3952,9 +4222,15 @@ class IA_AiGroup
         if (!foundLz)
         {
             vector dropLz;
-            if (IA_SpawnPlacement.TryFindDropLz(m_vAirDropTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz))
+            if (IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
             {
                 lz = dropLz;
+                if (IA_Game.rng)
+                {
+                    vector jitter = IA_Game.rng.GenerateRandomPointInRadius(4, 12, dropLz);
+                    jitter[1] = dropLz[1];
+                    lz = jitter;
+                }
                 foundLz = true;
             }
         }
@@ -3963,10 +4239,10 @@ class IA_AiGroup
         {
             Print("[IA][Airborne] Drop LZ open-sky miss, falling back to walkable", LogLevel.WARNING);
             vector walked;
-            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(m_vAirDropTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, walked))
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, walked))
                 lz = walked;
             else
-                lz = IA_SpawnPlacement.SnapInfantryPos(m_vAirDropTarget, IA_SpawnPlacement.EMPTY_SEARCH_R);
+                lz = IA_SpawnPlacement.SnapInfantryPos(lz, IA_SpawnPlacement.EMPTY_SEARCH_R);
         }
 
         if (!m_airDirector.AddJumper(jumper, lz))
@@ -4353,6 +4629,23 @@ class IA_AiGroup
                 SetTacticalState(IA_GroupTacticalState.Holding, holdAt, null, true);
                 Print(string.Format("[IA_AiGroup] Applied Hold Wait at %1", holdAt.ToString()), LogLevel.NORMAL);
             }
+            else if (m_bSweepPatrol)
+            {
+                if (!HasActiveWaypoint())
+                    IssueNextSweepPoint();
+                PinInboundAgents();
+            }
+            else if (m_isInDefendMode && m_defendTarget != vector.Zero)
+            {
+                if (!HasActiveWaypoint())
+                {
+                    RemoveAllOrders();
+                    AddOrder(m_defendTarget, IA_AiOrder.SearchAndDestroy, true);
+                    SetTacticalState(IA_GroupTacticalState.Attacking, m_defendTarget, null, true);
+                }
+                EnableInboundSimulation(m_defendTarget);
+                Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Reasserting defend assault at %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+            }
             else if (!IsInDefendMode() && !m_lastAssignedArea)
             {
                 // Explicitly set a default tactical state for the new group
@@ -4370,6 +4663,8 @@ class IA_AiGroup
             {
                 Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
                     IsInDefendMode(), m_lastAssignedArea != null), LogLevel.NORMAL);
+                if (m_bInboundSimPinned)
+                    PinInboundAgents();
             }
         }
         

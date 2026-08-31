@@ -32,11 +32,13 @@ class IA_ReinforcementSpawnRequest
     bool m_forDefendMission;
     int m_sectorIndex;
     int m_unitCountOverride;
+    bool m_bTightStagger;
+    bool m_bDefendHunter;
 }
 
 class IA_AreaInstance
 {
-    IA_Area m_area;
+    ref IA_Area m_area;
     IA_Faction m_faction;
     int m_strength;
     private ref array<ref IA_AiGroup> m_military  = {};
@@ -82,11 +84,13 @@ class IA_AreaInstance
     private bool m_bShutDown = false;
     private bool m_bDeferredCleanupPending = false;
     private const int DEFERRED_CLEANUP_RETRY_MS = 8000;
+    private ref IA_ObjectiveElitePatrol m_objectiveElitePatrol;
     
     // --- BEGIN ADDED: Reinforcement Wave Variables ---
     private int m_totalReinforcementQuota = 0;        // Max groups for this area type
-    private int m_reinforcementGroupsSpawned = 0;     // Groups spawned in this attack cycle
+    private int m_reinforcementGroupsSpawned = 0;     // Groups reserved/spawned in this attack cycle
     private int m_reinforcementWaveDelayTimer = 0;    // Ticks until next wave
+    private int m_pendingWaveUnits = 0;              // Defend-style units scheduled but not yet spawned
     private const int INITIAL_REINFORCEMENT_DELAY_TICKS = Math.RandomInt(3,6);
     // --- END ADDED ---
 
@@ -235,6 +239,15 @@ class IA_AreaInstance
                             if (m_military.Count() <= 1)
                                 break;
                             int index = m_military.Count() - 1;
+                            while (index >= 1)
+                            {
+                                IA_AiGroup skipGrp = m_military[index];
+                                if (!skipGrp || !skipGrp.IsEliteProfile())
+                                    break;
+                                index = index - 1;
+                            }
+                            if (index < 1)
+                                break;
                             IA_AiGroup group = m_military[index];
                             if (group)
                             {
@@ -258,6 +271,63 @@ class IA_AreaInstance
                 }
             }
         }
+
+        ApplyScaledReinforcementQuota();
+    }
+
+    //! Occupying groups already multiply by scale. Quota / garrison counts must too,
+    //! otherwise a low AI Scale Multiplier shrinks squads but still streams a full
+    //! set of extra groups. Never raise the authored count (high-pop already uses
+    //! larger squads and a 2-group wave).
+    protected int ScaleGroupCountDown(int baseCount)
+    {
+        if (baseCount <= 0)
+            return 0;
+        if (m_aiScaleFactor >= 1.0)
+            return baseCount;
+        int n = Math.Round(baseCount * m_aiScaleFactor);
+        if (n < 1)
+            n = 1;
+        return n;
+    }
+
+    protected void ApplyScaledReinforcementQuota()
+    {
+        if (!m_area)
+            return;
+        m_totalReinforcementQuota = ScaleGroupCountDown(m_area.GetReinforcementGroupQuota());
+    }
+
+    protected int CountAliveMilitaryUnits()
+    {
+        int total = 0;
+        if (!m_military)
+            return 0;
+        foreach (IA_AiGroup group : m_military)
+        {
+            if (group)
+                total = total + group.GetAliveCount();
+        }
+        return total;
+    }
+
+    protected void RefundReinforcementReservation(IA_ReinforcementSpawnRequest request)
+    {
+        if (!request)
+            return;
+        if (request.m_forDefendMission)
+        {
+            int n = request.m_unitCountOverride;
+            if (n < 1)
+                return;
+            if (m_pendingWaveUnits >= n)
+                m_pendingWaveUnits = m_pendingWaveUnits - n;
+            else
+                m_pendingWaveUnits = 0;
+            return;
+        }
+        if (m_reinforcementGroupsSpawned > 0)
+            m_reinforcementGroupsSpawned = m_reinforcementGroupsSpawned - 1;
     }
 
 	
@@ -305,6 +375,8 @@ class IA_AreaInstance
 
 	    if (area.GetAreaType() == IA_AreaType.MortarPit)
 	        GetGame().GetCallqueue().CallLater(inst.SetupMortarPitCrew, 12000, false);
+
+	    inst.TryStartObjectiveElitePatrol();
 	
 	    // Initialize central reaction manager
 	    inst.m_centralReactionManager = new IA_AIReactionManager();
@@ -518,6 +590,35 @@ class IA_AreaInstance
 		// --- END ADDED ---
     }
 
+    //! Complete and discard capture/destroy tasks without toasts so a defend
+    //! task can become the current map marker. ForceFinish uses this so GC'd
+    //! tasks are already COMPLETED and drop off the map immediately.
+    void DismissOpenTasks()
+    {
+        if (m_currentTaskEntity)
+        {
+            SCR_ETaskState currentState = m_currentTaskEntity.GetTaskState();
+            if (currentState != SCR_ETaskState.COMPLETED)
+                m_currentTaskEntity.SetTaskState(SCR_ETaskState.COMPLETED);
+            IA_Game.AddEntityToGc(m_currentTaskEntity);
+            m_currentTaskEntity = null;
+        }
+
+        if (!m_taskQueue)
+            return;
+
+        foreach (SCR_TriggerTask task : m_taskQueue)
+        {
+            if (!task)
+                continue;
+            SCR_ETaskState queuedState = task.GetTaskState();
+            if (queuedState != SCR_ETaskState.COMPLETED)
+                task.SetTaskState(SCR_ETaskState.COMPLETED);
+            IA_Game.AddEntityToGc(task);
+        }
+        m_taskQueue.Clear();
+    }
+
     void CompleteCurrentTask()
     {
         //////Print("[DEBUG] CompleteCurrentTask called.", LogLevel.DEBUG);
@@ -605,6 +706,7 @@ class IA_AreaInstance
         UpdateTask();
         RadioTowerDefenseTask();
         SideObjectiveDefenseTask();
+        TickObjectiveElitePatrol();
     }
 
     void Cleanup()
@@ -824,6 +926,7 @@ class IA_AreaInstance
         queue.Remove(_SpawnSingleAiGroupAndAddToArea);
         queue.Remove(_SpawnAndArmHostileCivilianGroup_Internal);
         queue.Remove(SpawnCivilianRevoltReinforcements);
+        queue.Remove(SpawnObjectiveElitePatrol);
     }
 
     void ForceFinish()
@@ -835,6 +938,14 @@ class IA_AreaInstance
                 areaName = m_area.GetName();
             Print(string.Format("[IA][Area] ForceFinish shutting down %1 so leftover AI cannot keep spawning.", areaName), LogLevel.WARNING);
 
+            IA_Game gameInst = IA_Game.Instantiate();
+            if (gameInst)
+            {
+                IA_DefendMission defend = gameInst.GetActiveDefendMission();
+                if (defend && defend.IsHostingArea(this))
+                    defend.OnHostAreaForceFinish();
+            }
+
             m_bShutDown = true;
             m_canSpawn = false;
             m_mortarCrewSetupDone = true;
@@ -844,21 +955,8 @@ class IA_AreaInstance
             m_isSideObjectiveDefenseActive = false;
             m_attackingFactions.Clear();
             CancelPendingSpawns();
-
-            if (m_taskQueue)
-            {
-                foreach (SCR_TriggerTask task : m_taskQueue)
-                {
-                    if (task) IA_Game.AddEntityToGc(task);
-                }
-                m_taskQueue.Clear();
-            }
-
-            if (m_currentTaskEntity)
-            {
-                IA_Game.AddEntityToGc(m_currentTaskEntity);
-                m_currentTaskEntity = null;
-            }
+            DismissOpenTasks();
+            CleanupObjectiveElitePatrol();
 
             SetDefendMode(false);
             SetRadioTowerDefenseActive(false);
@@ -886,7 +984,7 @@ class IA_AreaInstance
             
             // --- BEGIN MODIFIED: Don't override defend mode groups ---
             // Check if the group is already in defend mode - if so, don't change its state
-            if (group.IsPinnedGarrison() || group.IsAirborneDrop())
+            if (group.ShouldKeepOwnOrders() || group.IsAirborneDrop())
             {
                 Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, objective unit, mortar crew, or holding a post, preserving existing tactical state"), LogLevel.DEBUG);
                 if (group.IsHoldingPost())
@@ -998,12 +1096,17 @@ class IA_AreaInstance
         m_attackingFactions.Clear();
         m_strength = 0;
 
-        // --- BEGIN ADDED: Reset reinforcements on faction change ---
-        ResetReinforcementState();
-        // Also reset vehicle reinforcements (optional, but likely desired)
-        // m_vehicleReinforcements = IA_ReinforcementState.NotDone; // Consider if needed
-        // m_vehicleReinforcementTimer = 0;
-        // --- END ADDED ---
+        // Capture (or other faction flip) must stop inbound waves. Resetting to
+        // NotDone used to allow a second full quota, and leftover CallLater still
+        // delivered USSR groups into an already-taken zone.
+        CancelPendingSpawns();
+        m_pendingWaveUnits = 0;
+        m_reinforcements = IA_ReinforcementState.Done;
+        m_vehicleReinforcements = IA_ReinforcementState.Done;
+        if (m_isRadioTowerDefenseActive)
+            SetRadioTowerDefenseActive(false);
+        if (m_isSideObjectiveDefenseActive)
+            SetSideObjectiveDefenseActive(false, null);
 
         IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
         if (rep)
@@ -1064,15 +1167,16 @@ class IA_AreaInstance
             return;
         if (m_isSideObjectiveDefenseActive)
             return;
-        // Stop immediately if area is no longer under attack
-        if (!IsUnderAttack())
-        {
-            if (m_reinforcements != IA_ReinforcementState.NotDone) // Only reset if it wasn't already NotDone
-            {
-               ResetReinforcementState();
-            }
+        if (m_isRadioTowerDefenseActive)
             return;
-        }
+        if (m_area && m_area.GetAreaType() == IA_AreaType.RadioTower)
+            return;
+        if (m_faction == IA_Faction.US)
+            return;
+        // Pause if contact dropped, but keep quota progress. Resetting spawned
+        // count here let the next contact roll a second full allotment.
+        if (!IsUnderAttack())
+            return;
 
         // If already done, do nothing
         if (m_reinforcements == IA_ReinforcementState.Done)
@@ -1500,7 +1604,7 @@ class IA_AreaInstance
                     continue;
                     
                 // --- BEGIN ADDED: Skip groups in defend mode ---
-                if (g.IsPinnedGarrison())
+                if (g.ShouldKeepOwnOrders())
                     continue;
                 // --- END ADDED ---
                     
@@ -1530,7 +1634,7 @@ class IA_AreaInstance
                 continue;
                 
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units---
-            if (g.IsPinnedGarrison())
+            if (g.ShouldKeepOwnOrders())
                 continue;
             // --- END ADDED ---
 
@@ -1610,7 +1714,7 @@ class IA_AreaInstance
             if (g.ShouldSkipInfantryOrders()) continue;
             
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-            if (g.IsPinnedGarrison())
+            if (g.ShouldKeepOwnOrders())
             {
                 continue;
             }
@@ -1732,7 +1836,7 @@ class IA_AreaInstance
         foreach (IA_AiGroup g, IA_GroupTacticalState assignedState : currentAssignments)
         {
             // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
-            if (g.IsPinnedGarrison())
+            if (g.ShouldKeepOwnOrders())
                 continue;
             // --- END ADDED ---
             
@@ -2183,6 +2287,13 @@ class IA_AreaInstance
                  continue;
              }
              
+             // Hunters retarget on leashed player contact; everyone else on the pin stays put.
+             if (g.IsDefendHunter())
+             {
+                 TickDefendHunter(g, primaryThreatLocation, validThreatLocation, isUnderAttack, currentTime);
+                 continue;
+             }
+
              // --- BEGIN ADDED: Skip groups in defend mode AND objective units ---
              if (g.IsPinnedGarrison())
              {
@@ -2691,7 +2802,7 @@ class IA_AreaInstance
                 
                 // Find healthy defenders to convert to attackers
                 foreach (IA_AiGroup g : m_military) {
-                    if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison())
+                    if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.ShouldKeepOwnOrders())
                         continue;
                         
                     IA_GroupTacticalState groupState;
@@ -2733,7 +2844,7 @@ class IA_AreaInstance
 
         foreach (IA_AiGroup g : m_military)
         {
-            if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison()) continue;
+            if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.ShouldKeepOwnOrders()) continue;
             
             // Get the current state and check for attacking/flanking groups.
             // Approaching groups are fully protected from contact-timeout conversion —
@@ -2805,7 +2916,7 @@ class IA_AreaInstance
                 
                 foreach (IA_AiGroup g : m_military)
                 {
-                    if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison()) continue;
+                    if (!g || g.GetAliveCount() == 0 || g.ShouldSkipInfantryOrders() || g.ShouldKeepOwnOrders()) continue;
                     
                     IA_GroupTacticalState currentGrpState = g.GetTacticalState();
                     
@@ -4040,7 +4151,7 @@ class IA_AreaInstance
         }
         
         // --- BEGIN ADDED: Skip groups in defend mode ---
-        if (m_isInDefendMode && group.IsInDefendMode())
+        if (m_isInDefendMode && group.IsInDefendMode() && !group.IsDefendHunter())
         {
             // Print(string.Format("[ApplyUnderFireReactionToGroup] Skipping group in defend mode at %1", group.GetOrigin().ToString()), LogLevel.DEBUG);
             return;
@@ -4183,7 +4294,7 @@ class IA_AreaInstance
         }
         
         // --- BEGIN ADDED: Skip groups in defend mode ---
-        if (m_isInDefendMode && group.IsInDefendMode())
+        if (m_isInDefendMode && group.IsInDefendMode() && !group.IsDefendHunter())
         {
             // Print(string.Format("[ApplyEnemySpottedReactionToGroup] Skipping group in defend mode at %1", group.GetOrigin().ToString()), LogLevel.DEBUG);
             return;
@@ -4360,6 +4471,8 @@ class IA_AreaInstance
     private ref map<IA_AiGroup, int> m_lastThreatUpdateTime = new map<IA_AiGroup, int>(); // Last time each group had its threat position updated
     private const int THREAT_UPDATE_INTERVAL = 30; // Update threat position every 60 seconds if needed
     private const float THREAT_POSITION_UPDATE_THRESHOLD = 50.0; // Update if threat moves more than 50m
+    private const float DEFEND_HUNTER_CHANCE = 0.30;
+    private const float DEFEND_HUNTER_LEASH_M = 300.0;
     // --- END ADDED ---
 
     // --- Add tracking for last "under fire" time ---
@@ -4764,7 +4877,7 @@ class IA_AreaInstance
 
             foreach (IA_AiGroup g : m_military)
             {
-                if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.IsPinnedGarrison() || convertCount >= neededAttackers)
+                if (!g || g.GetAliveCount() < 3 || g.ShouldSkipInfantryOrders() || g.ShouldKeepOwnOrders() || convertCount >= neededAttackers)
                     continue;
                     
                 IA_GroupTacticalState state;
@@ -4793,7 +4906,99 @@ class IA_AreaInstance
     }
 
     // --- BEGIN ADDED: Spawn Reinforcement Wave Logic ---
-    bool SpawnReinforcementWave(int groupsToSpawn, Faction AreaFaction, bool forDefendMission = false)
+    void PickDefendHunterSlots(int teamCount, notnull array<int> outSlots)
+    {
+        outSlots.Clear();
+        if (teamCount < 1)
+            return;
+
+        int hunterWant = Math.Round(teamCount * DEFEND_HUNTER_CHANCE);
+        if (hunterWant < 1 && teamCount >= 2)
+            hunterWant = 1;
+        if (hunterWant < 1 && teamCount == 1 && IA_Game.rng.RandFloat01() < DEFEND_HUNTER_CHANCE)
+            hunterWant = 1;
+        if (hunterWant > teamCount)
+            hunterWant = teamCount;
+        if (hunterWant < 1)
+            return;
+
+        ref array<int> pool = new array<int>();
+        int i;
+        for (i = 0; i < teamCount; i++)
+        {
+            pool.Insert(i);
+        }
+
+        int h;
+        for (h = 0; h < hunterWant; h++)
+        {
+            if (pool.IsEmpty())
+                break;
+            int pick = 0;
+            if (pool.Count() > 1)
+                pick = Math.RandomInt(0, pool.Count());
+            outSlots.Insert(pool[pick]);
+            pool.Remove(pick);
+        }
+    }
+
+    protected vector ResolveDefendHunterTarget(vector threat, bool validThreat, bool underAttack)
+    {
+        vector pin = m_defendTarget;
+        if (pin == vector.Zero)
+            pin = m_area.GetOrigin();
+        if (!underAttack || !validThreat || threat == vector.Zero)
+            return pin;
+        if (vector.Distance(threat, pin) > DEFEND_HUNTER_LEASH_M)
+            return pin;
+        return threat;
+    }
+
+    protected void TickDefendHunter(IA_AiGroup g, vector threat, bool validThreat, bool underAttack, int currentTime)
+    {
+        if (!g)
+            return;
+        if (g.ShouldSkipInfantryOrders())
+            return;
+        if (g.IsAirborneDrop())
+            return;
+
+        vector huntAt = ResolveDefendHunterTarget(threat, validThreat, underAttack);
+
+        vector currentAssigned = vector.Zero;
+        bool hasAssigned = m_assignedThreatPosition.Find(g, currentAssigned);
+
+        bool hasInvestigated = false;
+        m_hasInvestigatedThreat.Find(g, hasInvestigated);
+
+        int lastUpdate = currentTime - 120;
+        if (!m_lastThreatUpdateTime.Find(g, lastUpdate))
+            lastUpdate = currentTime - 120;
+
+        int timeSince = currentTime - lastUpdate;
+        bool shouldUpdate = false;
+        if (!g.HasActiveWaypoint())
+            shouldUpdate = true;
+        else if (hasInvestigated || timeSince > THREAT_UPDATE_INTERVAL)
+            shouldUpdate = true;
+        else if (hasAssigned && huntAt != vector.Zero && vector.Distance(huntAt, currentAssigned) > THREAT_POSITION_UPDATE_THRESHOLD)
+            shouldUpdate = true;
+
+        if (!shouldUpdate)
+            return;
+
+        m_assignedThreatPosition.Set(g, huntAt);
+        m_lastThreatUpdateTime.Set(g, currentTime);
+        m_hasInvestigatedThreat.Set(g, false);
+        m_investigationProgress.Set(g, 0.0);
+        m_assignedGroupStates.Set(g, IA_GroupTacticalState.Attacking);
+
+        g.RemoveAllOrders(true);
+        g.AddOrder(huntAt, IA_AiOrder.SearchAndDestroy, true);
+        g.SetTacticalState(IA_GroupTacticalState.Attacking, huntAt, null, true);
+    }
+
+    bool SpawnReinforcementWave(int groupsToSpawn, Faction AreaFaction, bool forDefendMission = false, bool tightStagger = false)
     {
         if (m_bShutDown)
             return false;
@@ -4846,19 +5051,40 @@ class IA_AreaInstance
         Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
             m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
 
+        // Reserve against the cap now. Quota used to increment only when the
+        // delayed enactor succeeded, so overlapping waves could overshoot.
+        if (!forDefendMission)
+            m_reinforcementGroupsSpawned = m_reinforcementGroupsSpawned + actualSpawnCount;
+
+        ref array<int> hunterSlots = new array<int>();
+        if (forDefendMission)
+            PickDefendHunterSlots(actualSpawnCount, hunterSlots);
+
         for (int i = 0; i < actualSpawnCount; i++)
         {
-			int sectorIndex = (m_reinforcementGroupsSpawned + i) % 4;
+			int sectorIndex = i % 4;
+			if (!forDefendMission)
+				sectorIndex = (m_reinforcementGroupsSpawned - actualSpawnCount + i) % 4;
 			int unitCountOverride = -1;
 			if (forDefendMission && defendFireteamSizes)
+			{
 				unitCountOverride = defendFireteamSizes[i];
+				if (unitCountOverride > 0)
+					m_pendingWaveUnits = m_pendingWaveUnits + unitCountOverride;
+			}
 
 			ref IA_ReinforcementSpawnRequest request = new IA_ReinforcementSpawnRequest();
 			request.m_areaFaction = AreaFaction;
 			request.m_forDefendMission = forDefendMission;
 			request.m_sectorIndex = sectorIndex;
 			request.m_unitCountOverride = unitCountOverride;
+			request.m_bTightStagger = tightStagger;
+			request.m_bDefendHunter = false;
+			if (forDefendMission && hunterSlots.Find(i) != -1)
+				request.m_bDefendHunter = true;
 			int spawnDelayMs = 2000 + (i * Math.RandomInt(12000, 20000));
+			if (tightStagger)
+				spawnDelayMs = 400 + (i * Math.RandomInt(2500, 4500));
 			GetGame().GetCallqueue().CallLater(this.SpawnReinforcementEnactorFromRequest, spawnDelayMs, false, request);
         }
         
@@ -4868,15 +5094,22 @@ class IA_AreaInstance
 
 	void SpawnReinforcementEnactorFromRequest(IA_ReinforcementSpawnRequest request)
 	{
-		if (m_bShutDown)
-			return;
 		if (!request)
 			return;
+		if (m_bShutDown)
+		{
+			RefundReinforcementReservation(request);
+			return;
+		}
 
-		SpawnReinforcementEnactor(request.m_areaFaction, request.m_forDefendMission, request.m_sectorIndex, request.m_unitCountOverride);
+		bool spawned = SpawnReinforcementEnactor(request.m_areaFaction, request.m_forDefendMission, request.m_sectorIndex, request.m_unitCountOverride, request.m_bDefendHunter);
+		if (!spawned)
+			RefundReinforcementReservation(request);
+		else if (request.m_forDefendMission)
+			RefundReinforcementReservation(request);
 	}
 
-	bool SpawnReinforcementEnactor(Faction AreaFaction, bool forDefendMission = false, int sectorIndex = 0, int unitCountOverride = -1){
+	bool SpawnReinforcementEnactor(Faction AreaFaction, bool forDefendMission = false, int sectorIndex = 0, int unitCountOverride = -1, bool defendHunter = false){
 	
 		    if (m_bShutDown)
 		        return false;
@@ -4930,6 +5163,8 @@ class IA_AreaInstance
                 
                 if (forDefendMission)
                     grp.SetDefendWaveGroup(true);
+                if (defendHunter)
+                    grp.SetDefendHunter(true);
 
                 grp.Spawn();
 
@@ -4948,7 +5183,10 @@ class IA_AreaInstance
                     targetPos = m_defendTarget;
                     initialState = IA_GroupTacticalState.Attacking;
                     grp.SetDefendMode(true, m_defendTarget);
-                    Print(string.Format("[AreaInstance.SpawnReinforcementWave] Setting reinforcement group to defend mode, target: %1", m_defendTarget.ToString()), LogLevel.DEBUG);
+                    if (defendHunter)
+                        Print(string.Format("[AreaInstance.SpawnReinforcementWave] Hunter fireteam, pin %1 leash %2m", m_defendTarget.ToString(), DEFEND_HUNTER_LEASH_M), LogLevel.NORMAL);
+                    else
+                        Print(string.Format("[AreaInstance.SpawnReinforcementWave] Setting reinforcement group to defend mode, target: %1", m_defendTarget.ToString()), LogLevel.DEBUG);
                 }
                 else
                 {
@@ -4972,7 +5210,7 @@ class IA_AreaInstance
                         targetPos.ToString(), m_area.GetName()), LogLevel.DEBUG);
                 }
                 // Defend fireteams: ~70% bee-line assault, ~30% flank via neighboring sector staging
-                else if (forDefendMission && m_isInDefendMode && m_defendTarget != vector.Zero)
+                else if (forDefendMission && m_isInDefendMode && m_defendTarget != vector.Zero && !defendHunter)
                 {
                     if (IA_Game.rng.RandFloat01() < 0.30)
                     {
@@ -5063,7 +5301,6 @@ class IA_AreaInstance
                     Print(string.Format("[SpawnReinforcementWave] Staging at %1 (~300m from OBJ), arc: %2° (%3 routing pts).",
                         stagingPos.ToString(), Math.Round(totalAngle * 180.0 / Math.PI), numArcPoints), LogLevel.DEBUG);
                 }
-                m_reinforcementGroupsSpawned++;
                 spawnedAny = true;
                 
                 Print(string.Format("[AreaInstance.SpawnReinforcementWave] Spawned reinforcement group (%1 units, faction: %2) at %3. Total spawned: %4/%5.",
@@ -5224,19 +5461,26 @@ class IA_AreaInstance
         return m_areaGroup;
     }
     // --- END ADDED ---
+
+    protected string GetAreaNameSafe()
+    {
+        if (!m_area)
+            return "unknown";
+        return m_area.GetName();
+    }
     
     // --- BEGIN ADDED: Defend Mode Support ---
     void SetDefendMode(bool enable, vector defendPoint = vector.Zero)
     {
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
-        
+
+        string areaName = GetAreaNameSafe();
         if (enable && defendPoint != vector.Zero)
         {
-            Print(string.Format("[IA_AreaInstance] Setting defend mode ON for area %1, target: %2", 
-                m_area.GetName(), defendPoint.ToString()), LogLevel.DEBUG);
-            
-            // Set all existing military groups to defend mode
+            Print(string.Format("[IA_AreaInstance] Setting defend mode ON for area %1, target: %2",
+                areaName, defendPoint.ToString()), LogLevel.DEBUG);
+
             foreach (IA_AiGroup group : m_military)
             {
                 if (group && group.IsSpawned() && !group.IsHoldingPost())
@@ -5247,10 +5491,9 @@ class IA_AreaInstance
         }
         else
         {
-            Print(string.Format("[IA_AreaInstance] Setting defend mode OFF for area %1", 
-                m_area.GetName()), LogLevel.DEBUG);
-                
-            // Return all military groups to normal mode
+            Print(string.Format("[IA_AreaInstance] Setting defend mode OFF for area %1",
+                areaName), LogLevel.DEBUG);
+
             foreach (IA_AiGroup group : m_military)
             {
                 if (group && group.IsSpawned() && !group.IsHoldingPost())
@@ -5259,7 +5502,7 @@ class IA_AreaInstance
                 }
             }
         }
-        }
+    }
     
     array<ref IA_AiGroup> GetMilitaryGroups()
     {
@@ -5737,6 +5980,57 @@ class IA_AreaInstance
         return m_area;
     }
 
+    IA_Faction GetOwningFaction()
+    {
+        return m_faction;
+    }
+
+    Faction GetAreaFaction()
+    {
+        return m_AreaFaction;
+    }
+
+    protected void TryStartObjectiveElitePatrol()
+    {
+        if (m_bShutDown)
+            return;
+        if (m_objectiveElitePatrol)
+            return;
+        if (!m_area)
+            return;
+        if (!IA_ObjectiveElitePatrol.CanHost(m_area.GetAreaType()))
+            return;
+
+        GetGame().GetCallqueue().CallLater(SpawnObjectiveElitePatrol, 2500, false);
+    }
+
+    protected void SpawnObjectiveElitePatrol()
+    {
+        if (m_bShutDown)
+            return;
+        if (m_objectiveElitePatrol)
+            return;
+        if (!m_canSpawn)
+            return;
+
+        m_objectiveElitePatrol = IA_ObjectiveElitePatrol.Create(this);
+    }
+
+    protected void TickObjectiveElitePatrol()
+    {
+        if (!m_objectiveElitePatrol)
+            return;
+        m_objectiveElitePatrol.Update();
+    }
+
+    protected void CleanupObjectiveElitePatrol()
+    {
+        if (!m_objectiveElitePatrol)
+            return;
+        m_objectiveElitePatrol.Cleanup();
+        m_objectiveElitePatrol = null;
+    }
+
     protected int BuildingGarrisonUnitCount()
     {
         int n = IA_SquadCount(IA_SquadType.Firesquad, m_faction);
@@ -5799,7 +6093,7 @@ class IA_AreaInstance
         if (!spawnFaction)
             spawnFaction = m_AreaFaction;
 
-        int want = IA_BuildingHoldFinder.CountForAreaType(m_area.GetAreaType());
+        int want = ScaleGroupCountDown(IA_BuildingHoldFinder.CountForAreaType(m_area.GetAreaType()));
         int spawned = 0;
         int delay = 0;
         int units = BuildingGarrisonUnitCount();
@@ -6090,7 +6384,7 @@ class IA_AreaInstance
         m_isRadioTowerDefenseActive = active;
         if (active)
         {
-            Print(string.Format("[IA_AreaInstance] Radio Tower Defense ACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+            Print(string.Format("[IA_AreaInstance] Radio Tower Defense ACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
             
             // Notify players that reinforcements have started and give instructions
             TriggerGlobalNotification("RadioTowerDefenseStarted", m_area.GetName());
@@ -6113,7 +6407,7 @@ class IA_AreaInstance
         }
         else
         {
-            Print(string.Format("[IA_AreaInstance] Radio Tower Defense DEACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+            Print(string.Format("[IA_AreaInstance] Radio Tower Defense DEACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
             m_radioTowerDefenseFaction = null;
         }
     }
@@ -6123,6 +6417,12 @@ class IA_AreaInstance
         // This task only applies to Radio Tower areas.
         if (!m_area || m_area.GetAreaType() != IA_AreaType.RadioTower || m_radioTowerDestroyed)
             return;
+        if (m_faction == IA_Faction.US)
+        {
+            if (m_isRadioTowerDefenseActive)
+                SetRadioTowerDefenseActive(false);
+            return;
+        }
         bool shouldBeActive = ShouldRadioTowerDefenseBeActive();
         Print("Passed Area Check for " + m_area.GetName(), LogLevel.DEBUG); 
         // Activate or deactivate radio tower defense based on combat state.
@@ -6144,12 +6444,7 @@ class IA_AreaInstance
         int currentTime = System.GetTickCount();
         if (currentTime - m_radioTowerLastWaveSpawnTime >= RADIO_TOWER_WAVE_INTERVAL)
         {
-            int currentAICount = 0;
-            foreach (IA_AiGroup group : m_military)
-            {
-                if (group && group.IsDefendWaveGroup())
-                    currentAICount += group.GetAliveCount();
-            }
+            int currentAICount = CountAliveMilitaryUnits() + m_pendingWaveUnits;
 
             Print(string.Format("[IA_AreaInstance] Radio Tower Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_radioTowerTargetAICount), LogLevel.DEBUG);
 
@@ -6173,12 +6468,7 @@ class IA_AreaInstance
         float scaleFactor = IA_Game.GetAIScaleFactor();
         int unitBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
 
-        int currentWaveAI = 0;
-        foreach (IA_AiGroup group : m_military)
-        {
-            if (group && group.IsDefendWaveGroup())
-                currentWaveAI += group.GetAliveCount();
-        }
+        int currentWaveAI = CountAliveMilitaryUnits() + m_pendingWaveUnits;
         int room = m_radioTowerTargetAICount - currentWaveAI;
         if (room < unitBudget)
             unitBudget = room;
@@ -6289,7 +6579,7 @@ class IA_AreaInstance
 	
 		if (active)
 		{
-			Print(string.Format("[IA_AreaInstance] Side Objective Defense ACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+			Print(string.Format("[IA_AreaInstance] Side Objective Defense ACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
 	
 			float scaleFactor = IA_Game.GetAIScaleFactor();
 			m_sideObjectiveTargetAICount = Math.Round(5 * ((scaleFactor*1.5) * (scaleFactor*1.5)));
@@ -6309,7 +6599,7 @@ class IA_AreaInstance
 		}
 		else
 		{
-			Print(string.Format("[IA_AreaInstance] Side Objective Defense DEACTIVATED for area %1", m_area.GetName()), LogLevel.DEBUG);
+			Print(string.Format("[IA_AreaInstance] Side Objective Defense DEACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
 			// Return AI to normal behavior
 			SetDefendMode(false);
 			m_sideObjectiveDefenseFaction = null;
@@ -6327,12 +6617,7 @@ class IA_AreaInstance
 		float scaleFactor = IA_Game.GetAIScaleFactor();
 		int unitBudget = IA_GetDefendWaveUnitBudget(scaleFactor);
 
-		int currentAICount = 0;
-		foreach (IA_AiGroup group : m_military)
-		{
-			if (group)
-				currentAICount += group.GetAliveCount();
-		}
+		int currentAICount = CountAliveMilitaryUnits() + m_pendingWaveUnits;
 		int room = m_sideObjectiveTargetAICount - currentAICount;
 		if (room < unitBudget)
 			unitBudget = room;
@@ -6356,11 +6641,7 @@ class IA_AreaInstance
 		int currentTime = System.GetTickCount();
 		if (currentTime - m_sideObjectiveLastWaveSpawnTime >= SIDE_OBJECTIVE_WAVE_INTERVAL)
 		{
-			int currentAICount = 0;
-			foreach (IA_AiGroup group : m_military)
-			{
-				if (group) currentAICount += group.GetAliveCount();
-			}
+			int currentAICount = CountAliveMilitaryUnits() + m_pendingWaveUnits;
 	
 			Print(string.Format("[IA_AreaInstance] Side Objective Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_sideObjectiveTargetAICount), LogLevel.DEBUG);
 	
