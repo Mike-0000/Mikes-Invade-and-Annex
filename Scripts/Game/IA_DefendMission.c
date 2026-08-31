@@ -946,6 +946,8 @@ class IA_DefendMission
         grp.Spawn();
         if (hold)
             grp.SetDefendMode(true, pos);
+        else
+            grp.EnableInboundSimulation(host.GetArea().GetOrigin());
         host.AddMilitaryGroup(grp);
         if (elite)
             GetGame().GetCallqueue().CallLater(grp.ApplyEliteCombatProfile, 2000, false);

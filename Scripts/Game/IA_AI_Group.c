@@ -252,6 +252,11 @@ class IA_AiGroup
 	
 	bool m_HVTGroup = false;
 	private bool m_bEliteProfile = false;
+	private bool m_bSweepPatrol = false;
+	private ref array<vector> m_vSweepPoints;
+	private int m_iSweepIndex = 0;
+	private int m_iSweepLaps = 0;
+	private vector m_vSweepCenter;
 	
     private void IA_AiGroup(vector initialPos, IA_SquadType squad, IA_Faction fac, int unitCount, bool HVTGroup = false)
     {
@@ -2295,7 +2300,11 @@ class IA_AiGroup
             return true;
         if (IsDefendHunter())
             return true;
+        if (m_isDefendWaveGroup)
+            return true;
         if (m_bEliteProfile)
+            return true;
+        if (m_bSweepPatrol)
             return true;
         return false;
     }
@@ -3002,6 +3011,13 @@ class IA_AiGroup
             return; // Do not allow any other logic to override the escape.
         }
 		
+        if (m_bSweepPatrol && !m_isInDefendMode)
+        {
+            if (!HasActiveWaypoint())
+                IssueNextSweepPoint();
+            return;
+        }
+
         // Override tactical state evaluation in defend mode - but don't constantly re-set the state
         if (m_isInDefendMode && m_defendTarget != vector.Zero)
         {
@@ -3013,6 +3029,7 @@ class IA_AiGroup
                 if (m_bDefendHunter && m_tacticalStateTarget != vector.Zero)
                     restore = m_tacticalStateTarget;
                 AddOrder(restore, IA_AiOrder.SearchAndDestroy, true);
+                EnableInboundSimulation(restore);
                 Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Defend mode group lost orders, re-adding SearchAndDestroy at %1", restore.ToString()), LogLevel.WARNING);
             }
             return; // Don't do any further state evaluation in defend mode
@@ -3815,6 +3832,9 @@ class IA_AiGroup
         if (m_isHoldingPost)
             return;
 
+        if (enable)
+            m_bSweepPatrol = false;
+
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
         
@@ -3828,6 +3848,7 @@ class IA_AiGroup
             
             // Set tactical state directly
             SetTacticalState(IA_GroupTacticalState.Attacking, defendPoint, null, true);
+            EnableInboundSimulation(defendPoint);
         }
         else
         {
@@ -3877,6 +3898,12 @@ class IA_AiGroup
             return true;
         if (m_bDefendHunter)
             return false;
+        if (m_isDefendWaveGroup)
+            return false;
+        if (m_bEliteProfile)
+            return false;
+        if (m_bSweepPatrol)
+            return false;
         if (m_isInDefendMode)
             return true;
         return false;
@@ -3915,6 +3942,98 @@ class IA_AiGroup
     bool IsEliteProfile()
     {
         return m_bEliteProfile;
+    }
+
+    //! Walk a ring that cuts inside the objective, then assault the center.
+    //! Vanilla Patrol WPs complete at 5 m and are not a looping route.
+    void StartSweepPatrol(vector center, float innerMin, float innerMax, float outerMin, float outerMax)
+    {
+        if (center == vector.Zero)
+            return;
+        if (innerMin < 40)
+            innerMin = 40;
+        if (innerMax < innerMin + 20)
+            innerMax = innerMin + 40;
+        if (outerMin < innerMax)
+            outerMin = innerMax + 40;
+        if (outerMax < outerMin + 20)
+            outerMax = outerMin + 80;
+
+        m_vSweepCenter = center;
+        m_iSweepIndex = 0;
+        m_iSweepLaps = 0;
+        m_bSweepPatrol = true;
+        if (!m_vSweepPoints)
+            m_vSweepPoints = new array<vector>();
+        m_vSweepPoints.Clear();
+
+        float baseAng = IA_Game.rng.RandFloat01() * Math.PI2;
+        int i;
+        for (i = 0; i < 6; i++)
+        {
+            float ang = baseAng + (i * (Math.PI2 / 6.0));
+            float minR = outerMin;
+            float maxR = outerMax;
+            if ((i % 2) == 1)
+            {
+                minR = innerMin;
+                maxR = innerMax;
+            }
+
+            float dist = IA_Game.rng.RandFloatXY(minR, maxR);
+            vector probe;
+            probe[0] = center[0] + Math.Cos(ang) * dist;
+            probe[2] = center[2] + Math.Sin(ang) * dist;
+            probe[1] = center[1];
+
+            vector walked;
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(probe, IA_SpawnPlacement.EMPTY_SEARCH_R, walked))
+                probe = walked;
+            else
+            {
+                probe[1] = GetGame().GetWorld().GetSurfaceY(probe[0], probe[2]);
+                probe[1] = probe[1] + 0.5;
+            }
+
+            m_vSweepPoints.Insert(probe);
+        }
+
+        SetTacticalState(IA_GroupTacticalState.Approaching, center, null, true);
+        EnableInboundSimulation(center);
+        IssueNextSweepPoint();
+        Print(string.Format("[IA][SweepPatrol] %1 legs around %2", m_vSweepPoints.Count(), center.ToString()), LogLevel.NORMAL);
+    }
+
+    protected void IssueNextSweepPoint()
+    {
+        if (!m_bSweepPatrol)
+            return;
+        if (m_isInDefendMode)
+            return;
+        if (!m_vSweepPoints || m_vSweepPoints.IsEmpty())
+            return;
+
+        if (m_iSweepIndex >= m_vSweepPoints.Count())
+        {
+            m_iSweepIndex = 0;
+            m_iSweepLaps = m_iSweepLaps + 1;
+            if (m_iSweepLaps >= 1 && m_vSweepCenter != vector.Zero)
+            {
+                m_bSweepPatrol = false;
+                SetDefendMode(true, m_vSweepCenter);
+                Print(string.Format("[IA][SweepPatrol] circuit done, assaulting %1", m_vSweepCenter.ToString()), LogLevel.NORMAL);
+                return;
+            }
+        }
+
+        vector next = m_vSweepPoints[m_iSweepIndex];
+        m_iSweepIndex = m_iSweepIndex + 1;
+        if (next == vector.Zero)
+            return;
+
+        RemoveAllOrders();
+        AddOrder(next, IA_AiOrder.Move, true);
+        EnableInboundSimulation(next);
     }
 
     //! Combat component lives on the controlled character, not the AIAgent.
@@ -4467,6 +4586,23 @@ class IA_AiGroup
                 SetTacticalState(IA_GroupTacticalState.Holding, holdAt, null, true);
                 Print(string.Format("[IA_AiGroup] Applied Hold Wait at %1", holdAt.ToString()), LogLevel.NORMAL);
             }
+            else if (m_bSweepPatrol)
+            {
+                if (!HasActiveWaypoint())
+                    IssueNextSweepPoint();
+                PinInboundAgents();
+            }
+            else if (m_isInDefendMode && m_defendTarget != vector.Zero)
+            {
+                if (!HasActiveWaypoint())
+                {
+                    RemoveAllOrders();
+                    AddOrder(m_defendTarget, IA_AiOrder.SearchAndDestroy, true);
+                    SetTacticalState(IA_GroupTacticalState.Attacking, m_defendTarget, null, true);
+                }
+                EnableInboundSimulation(m_defendTarget);
+                Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Reasserting defend assault at %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+            }
             else if (!IsInDefendMode() && !m_lastAssignedArea)
             {
                 // Explicitly set a default tactical state for the new group
@@ -4484,6 +4620,8 @@ class IA_AiGroup
             {
                 Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
                     IsInDefendMode(), m_lastAssignedArea != null), LogLevel.NORMAL);
+                if (m_bInboundSimPinned)
+                    PinInboundAgents();
             }
         }
         

@@ -65,8 +65,7 @@ class IA_ObjectiveElitePatrol
 		grp.SetAssignedArea(area);
 		grp.Spawn();
 		host.AddMilitaryGroup(grp);
-		grp.RemoveAllOrders();
-		grp.AddOrder(Jitter(center, 180, 260), IA_AiOrder.Patrol, true);
+		grp.StartSweepPatrol(center, 80, 160, 220, 380);
 		GetGame().GetCallqueue().CallLater(grp.ApplyEliteCombatProfile, 2000, false);
 
 		m_Host = host;

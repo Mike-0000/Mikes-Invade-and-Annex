@@ -272,7 +272,7 @@ class IA_DefendEvent
 		{
 			if (AreAllDead())
 				Succeed("Elite patrol destroyed.");
-			else if (m_bEngaged && m_Primary)
+			else if (m_bEngaged && m_Primary && !m_Primary.IsInDefendMode())
 				m_Primary.SetDefendMode(true, m_Director.GetDefendPoint());
 			return;
 		}
@@ -367,10 +367,7 @@ class IA_DefendEvent
 			m_Primary = m_Director.SpawnEventGroup(m_vSite, 8, true, false, false);
 			Track(m_Primary);
 			if (m_Primary)
-			{
-				m_Primary.RemoveAllOrders();
-				m_Primary.AddOrder(Jitter(m_Director.GetDefendPoint(), 180, 260), IA_AiOrder.Patrol, true);
-			}
+				m_Primary.StartSweepPatrol(m_Director.GetDefendPoint(), 80, 160, 220, 380);
 			return;
 		}
 

@@ -667,14 +667,17 @@ class IA_AreaGroupManager
             return false;
 
             grp.SetAssignedArea(areaInst.GetArea());
+            grp.Spawn();
             if (forDefendMission)
+            {
+                grp.SetDefendWaveGroup(true);
                 grp.SetDefendMode(true, targetPos);
+            }
             bool hunter = false;
             if (forDefendMission && IA_Game.rng.RandFloat01() < 0.30)
             {
                 hunter = true;
                 grp.SetDefendHunter(true);
-                grp.SetDefendWaveGroup(true);
             }
             grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
         // If no waypoint exists yet, add one explicitly
@@ -697,7 +700,6 @@ class IA_AreaGroupManager
             }
         }
         areaInst.AddMilitaryGroup(grp);
-        grp.Spawn();
         grp.EnableInboundSimulation(targetPos);
         if (!hunter)
             IA_LockGroupToSearchAndDestroy(areaInst, grp, targetPos);
