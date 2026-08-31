@@ -224,6 +224,7 @@ class IA_AiGroup
     private vector m_defendTarget = vector.Zero;
     // True when spawned by a defend / radio-tower / side-obj assault wave (not leftover garrison).
     private bool m_isDefendWaveGroup = false;
+    private bool m_bDefendHunter = false;
     private bool m_bInboundSimPinned = false;
     private vector m_vInboundTarget = vector.Zero;
     private bool m_bAirborneDrop = false;
@@ -233,9 +234,10 @@ class IA_AiGroup
     private float m_holdRadius = 0;
     private int m_iAirborneInFlight = 0;
     private vector m_vAirDropTarget = vector.Zero;
+    private vector m_vAirDropLz = vector.Zero;
     private float m_fAirSpawnRadius = 250;
-    private float m_fAirLzMin = 50;
-    private float m_fAirLzMax = 120;
+    private float m_fAirLzMin = 8;
+    private float m_fAirLzMax = 28;
     private MHJ_AiDropDirector m_airDirector;
     private IA_AreaInstance m_airDropArea;
     
@@ -2991,9 +2993,11 @@ class IA_AiGroup
             // Don't constantly change the tactical state - it should already be set correctly
             if (!HasOrders())
             {
-                // Re-add the SearchAndDestroy order if it was somehow lost
-                AddOrder(m_defendTarget, IA_AiOrder.SearchAndDestroy, true);
-                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Defend mode group lost orders, re-adding SearchAndDestroy at %1", m_defendTarget.ToString()), LogLevel.WARNING);
+                vector restore = m_defendTarget;
+                if (m_bDefendHunter && m_tacticalStateTarget != vector.Zero)
+                    restore = m_tacticalStateTarget;
+                AddOrder(restore, IA_AiOrder.SearchAndDestroy, true);
+                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Defend mode group lost orders, re-adding SearchAndDestroy at %1", restore.ToString()), LogLevel.WARNING);
             }
             return; // Don't do any further state evaluation in defend mode
         }
@@ -3812,6 +3816,7 @@ class IA_AiGroup
         else
         {
             Print("[IA_AiGroup] Setting defend mode OFF for group", LogLevel.NORMAL);
+            m_bDefendHunter = false;
         }
     }
 
@@ -3850,13 +3855,30 @@ class IA_AiGroup
     {
         if (m_isHoldingPost)
             return true;
-        if (m_isInDefendMode)
-            return true;
         if (m_isMortarCrew)
             return true;
         if (IsObjectiveUnit())
             return true;
+        if (m_bDefendHunter)
+            return false;
+        if (m_isInDefendMode)
+            return true;
         return false;
+    }
+
+    void SetDefendHunter(bool hunter)
+    {
+        m_bDefendHunter = hunter;
+    }
+
+    bool IsDefendHunter()
+    {
+        return m_bDefendHunter;
+    }
+
+    vector GetDefendTarget()
+    {
+        return m_defendTarget;
     }
 
     void SetDefendWaveGroup(bool isWaveGroup)
@@ -3918,12 +3940,18 @@ class IA_AiGroup
         return m_bAirborneDrop;
     }
 
-    void BeginAirborneDrop(MHJ_AiDropDirector director, vector target, IA_AreaInstance areaInst, float spawnRadius, float lzMin, float lzMax)
+    //! `lz` is the landing pad. `attackTarget` is the S&D point after canopy
+    //! (defend marker / fight). Do not pass the pad as the attack — Air Assault
+    //! pads sit 150-300 m off the objective and every fireteam would stack there.
+    void BeginAirborneDrop(MHJ_AiDropDirector director, vector lz, vector attackTarget, IA_AreaInstance areaInst, float spawnRadius, float lzMin, float lzMax)
     {
         m_bAirborneDrop = true;
         m_bKeepAltitude = true;
         m_airDirector = director;
-        m_vAirDropTarget = target;
+        m_vAirDropLz = lz;
+        m_vAirDropTarget = attackTarget;
+        if (m_vAirDropTarget == vector.Zero)
+            m_vAirDropTarget = lz;
         m_airDropArea = areaInst;
         m_fAirSpawnRadius = spawnRadius;
         m_fAirLzMin = lzMin;
@@ -3974,10 +4002,13 @@ class IA_AiGroup
         RemoveAllOrders(true);
         AddOrder(m_vAirDropTarget, IA_AiOrder.SearchAndDestroy, true);
         SetTacticalState(IA_GroupTacticalState.Attacking, m_vAirDropTarget, null, true);
-        if (m_airDropArea)
+        if (m_airDropArea && !m_bDefendHunter)
             m_airDropArea.RegisterForcedReinforcementSND(this, m_vAirDropTarget, true);
 
-        Print(string.Format("[IA][Airborne] Fireteam landed, S&D at %1", m_vAirDropTarget.ToString()), LogLevel.NORMAL);
+        int hunterFlag = 0;
+        if (m_bDefendHunter)
+            hunterFlag = 1;
+        Print(string.Format("[IA][Airborne] Fireteam landed, S&D at %1 hunter=%2", m_vAirDropTarget.ToString(), hunterFlag), LogLevel.NORMAL);
     }
 
     protected void RegisterAirborneJumper(IEntity charEntity)
@@ -3989,17 +4020,20 @@ class IA_AiGroup
         if (!jumper)
             return;
 
-        vector lz = m_vAirDropTarget;
+        vector lz = m_vAirDropLz;
+        if (lz == vector.Zero)
+            lz = m_vAirDropTarget;
+
         bool foundLz = false;
         int attempt;
         for (attempt = 0; attempt < IA_SpawnPlacement.DROP_LZ_SAMPLE_TRIES; attempt++)
         {
-            vector sample = m_vAirDropTarget;
+            vector sample = lz;
             if (IA_Game.rng)
-                sample = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, m_vAirDropTarget);
+                sample = IA_Game.rng.GenerateRandomPointInRadius(m_fAirLzMin, m_fAirLzMax, lz);
 
             vector dropLz;
-            if (IA_SpawnPlacement.TryFindDropLz(sample, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
+            if (IA_SpawnPlacement.TryDropLzAt(sample, dropLz))
             {
                 lz = dropLz;
                 foundLz = true;
@@ -4010,9 +4044,15 @@ class IA_AiGroup
         if (!foundLz)
         {
             vector dropLz;
-            if (IA_SpawnPlacement.TryFindDropLz(m_vAirDropTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz))
+            if (IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz))
             {
                 lz = dropLz;
+                if (IA_Game.rng)
+                {
+                    vector jitter = IA_Game.rng.GenerateRandomPointInRadius(4, 12, dropLz);
+                    jitter[1] = dropLz[1];
+                    lz = jitter;
+                }
                 foundLz = true;
             }
         }
@@ -4021,10 +4061,10 @@ class IA_AiGroup
         {
             Print("[IA][Airborne] Drop LZ open-sky miss, falling back to walkable", LogLevel.WARNING);
             vector walked;
-            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(m_vAirDropTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, walked))
+            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, walked))
                 lz = walked;
             else
-                lz = IA_SpawnPlacement.SnapInfantryPos(m_vAirDropTarget, IA_SpawnPlacement.EMPTY_SEARCH_R);
+                lz = IA_SpawnPlacement.SnapInfantryPos(lz, IA_SpawnPlacement.EMPTY_SEARCH_R);
         }
 
         if (!m_airDirector.AddJumper(jumper, lz))

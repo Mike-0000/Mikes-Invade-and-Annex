@@ -65,6 +65,7 @@ class IA_AreaGroupManager
     private Faction m_airborneFaction;
     private bool m_airborneDefend = false;
     private bool m_airborneHotDrop = false;
+    private ref array<vector> m_recentDropLzs = new array<vector>();
 
     // Entry point called periodically (from MissionInitializer) to evaluate spawning of QRFs for the whole area group
     void Shutdown()
@@ -72,6 +73,8 @@ class IA_AreaGroupManager
         m_bShutDown = true;
         m_qrfRetryPending = false;
         m_bAirbornePending = false;
+        if (m_recentDropLzs)
+            m_recentDropLzs.Clear();
         ScriptCallQueue queue = GetGame().GetCallqueue();
         if (queue)
         {
@@ -663,10 +666,17 @@ class IA_AreaGroupManager
         if (!grp)
             return false;
 
-        grp.SetAssignedArea(areaInst.GetArea());
-        if (forDefendMission)
-            grp.SetDefendMode(true, targetPos);
-        grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+            grp.SetAssignedArea(areaInst.GetArea());
+            if (forDefendMission)
+                grp.SetDefendMode(true, targetPos);
+            bool hunter = false;
+            if (forDefendMission && IA_Game.rng.RandFloat01() < 0.30)
+            {
+                hunter = true;
+                grp.SetDefendHunter(true);
+                grp.SetDefendWaveGroup(true);
+            }
+            grp.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
         // If no waypoint exists yet, add one explicitly
         if (!grp.HasActiveWaypoint())
         {
@@ -689,8 +699,8 @@ class IA_AreaGroupManager
         areaInst.AddMilitaryGroup(grp);
         grp.Spawn();
         grp.EnableInboundSimulation(targetPos);
-        // Lock S&D order to this threat for the lifetime of this reinforcement
-        IA_LockGroupToSearchAndDestroy(areaInst, grp, targetPos);
+        if (!hunter)
+            IA_LockGroupToSearchAndDestroy(areaInst, grp, targetPos);
         return true;
     }
 
@@ -754,27 +764,26 @@ class IA_AreaGroupManager
 
         int jumperCount = IA_Game.GetAirborneQRFJumperCount();
 
-        vector lz = targetPos;
-        if (lz == vector.Zero)
-            lz = areaInst.GetArea().GetOrigin();
+        vector attackTarget = targetPos;
+        if (attackTarget == vector.Zero)
+            attackTarget = areaInst.GetArea().GetOrigin();
 
         vector dropLz;
         bool foundLz = false;
         if (forDefendMission)
-            foundLz = IA_SpawnPlacement.TryFindDefendDropLz(lz, m_airborneHotDrop, dropLz);
+            foundLz = IA_SpawnPlacement.TryFindDefendDropLz(attackTarget, m_airborneHotDrop, dropLz, m_recentDropLzs);
         if (!foundLz)
-            foundLz = IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz);
+            foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz);
         if (!foundLz)
-            foundLz = IA_SpawnPlacement.TryFindDropLz(lz, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz);
+            foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz);
         if (!foundLz)
         {
             Print("[QRF] Airborne miss: no open-sky LZ.", LogLevel.WARNING);
             return false;
         }
-        lz = dropLz;
 
-        vector release = lz;
-        vector wind = MHJ_FlightAero.WindWorld(lz[1] + MHJ_Constants.AI_DROP_AGL, 0);
+        vector release = dropLz;
+        vector wind = MHJ_FlightAero.WindWorld(dropLz[1] + MHJ_Constants.AI_DROP_AGL, 0);
         wind[1] = 0;
         if (wind.Length() > 0.2)
         {
@@ -782,18 +791,39 @@ class IA_AreaGroupManager
             upwind.Normalize();
             release = release + upwind * 120;
         }
-        release[1] = lz[1] + MHJ_Constants.AI_DROP_AGL;
+        release[1] = dropLz[1] + MHJ_Constants.AI_DROP_AGL;
 
-        MHJ_AiDropDirector director = MHJ_AiDropDirector.SpawnStick(lz);
+        MHJ_AiDropDirector director = MHJ_AiDropDirector.SpawnStick(dropLz);
         if (!director)
         {
             Print("[QRF] Airborne miss: drop stick refused or missing.", LogLevel.WARNING);
             return false;
         }
 
+        RememberDropLz(dropLz);
+        Print(string.Format("[QRF] Airborne LZ %1 attack %2 dist=%3 hot=%4",
+            dropLz.ToString(), attackTarget.ToString(), vector.Distance(dropLz, attackTarget), m_airborneHotDrop), LogLevel.NORMAL);
+
         int remaining = jumperCount;
         int teamIndex = 0;
         bool spawnedAny = false;
+        int teamCount = 0;
+        int countRemain = jumperCount;
+        while (countRemain > 0)
+        {
+            int previewSize = 5;
+            if (countRemain <= 6)
+                previewSize = countRemain;
+            if (previewSize < 1)
+                break;
+            teamCount = teamCount + 1;
+            countRemain = countRemain - previewSize;
+        }
+
+        ref array<int> hunterSlots = new array<int>();
+        if (forDefendMission)
+            areaInst.PickDefendHunterSlots(teamCount, hunterSlots);
+
         while (remaining > 0)
         {
             int teamSize = 5;
@@ -811,8 +841,13 @@ class IA_AreaGroupManager
 
             grp.SetAssignedArea(areaInst.GetArea());
             if (forDefendMission)
-                grp.SetDefendMode(true, lz);
-            grp.BeginAirborneDrop(director, lz, areaInst, 250, 50, 120);
+                grp.SetDefendMode(true, attackTarget);
+            if (forDefendMission && hunterSlots.Find(teamIndex) != -1)
+            {
+                grp.SetDefendHunter(true);
+                grp.SetDefendWaveGroup(true);
+            }
+            grp.BeginAirborneDrop(director, dropLz, attackTarget, areaInst, 250, 8, 28);
             areaInst.AddMilitaryGroup(grp);
 
             int delayMs = teamIndex * 150;
@@ -829,6 +864,19 @@ class IA_AreaGroupManager
         if (!spawnedAny)
             Print("[QRF] Airborne miss: no fireteams created.", LogLevel.WARNING);
         return spawnedAny;
+    }
+
+    private void RememberDropLz(vector lz)
+    {
+        if (lz == vector.Zero)
+            return;
+        if (!m_recentDropLzs)
+            m_recentDropLzs = new array<vector>();
+        m_recentDropLzs.Insert(lz);
+        while (m_recentDropLzs.Count() > 6)
+        {
+            m_recentDropLzs.Remove(0);
+        }
     }
 
     private bool SpawnVehicleQRF(IA_AreaInstance areaInst, Faction enemyGameFaction, vector targetPos, bool preferAPC, bool allowTrucks, bool armourOnly, vector preferredSpawn, bool forDefendMission = false)

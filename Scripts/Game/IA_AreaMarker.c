@@ -359,9 +359,12 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	                m_prefabSpawned = true;
 	        }
 	    }
-	    
-	    // Special handling for Radio Tower and DefendObjective
+
 	    IA_AreaType areaType = GetAreaType();
+	    if (areaType == IA_AreaType.DefendObjective)
+	        return;
+
+	    // Special handling for Radio Tower and DefendObjective
 	    if (areaType == IA_AreaType.RadioTower)
 	    {
 	        // For Radio Tower, we only care if the prefab is destroyed
@@ -392,19 +395,14 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        }
 	        return; // Skip standard scoring for Radio Tower
 	    }
-	    
-	    // Skip capture logic for DefendObjective areas
-	    if (areaType == IA_AreaType.DefendObjective)
-	    {
-	        return; // DefendObjective areas are not capturable
-	    }
-	    
-	    // Skip capture logic if already captured
+
+	    // Complete + Defend (and natural defend) leave this group active, so
+	    // leftover towns would keep ticking capture after their tasks are gone.
 	    if (m_isCaptured)
-	    {
-	        return; // Zone already captured, no need to process
-	    }
-		
+	        return;
+	    if (ShouldCloseCaptureForDefendOrShutdown(areaType))
+	        return;
+
 		int playersInZone = CountPlayersInRadius();
 		bool occupancyChanged = false;
 		if (playersInZone > 0 && m_iPlayerCountInZone <= 0)
@@ -1832,6 +1830,48 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
     {
         m_playerCaptureScores.Clear();
         // Don't reset m_isCaptured here - that should only be reset when actually starting a new zone group
+    }
+
+    //! Stop capture scoring and hide the HUD. Used when the AO moves on to a
+    //! defense while this group is still "active" for GetActiveGroup().
+    void RetireCapture()
+    {
+        m_isCapturing = false;
+        m_hasReached50Percent = true;
+        m_isCaptured = true;
+        m_captureProgress = CAPTURE_TIME_SECONDS;
+        m_captureStatus = "Captured";
+        m_iPlayerCountInZone = 0;
+        USFactionScore = 1000;
+        if (m_FactionScores)
+            m_FactionScores.Set("US", 1000);
+        PublishCaptureHudState(IA_CaptureHudState.Hidden);
+    }
+
+    protected bool ShouldCloseCaptureForDefendOrShutdown(IA_AreaType areaType)
+    {
+        IA_Game game = IA_Game.Instantiate();
+        if (!game)
+            return false;
+
+        bool keepOptionalMortar = false;
+        if (areaType == IA_AreaType.MortarPit)
+            keepOptionalMortar = true;
+
+        if (game.HasActiveDefendMission() && !keepOptionalMortar)
+        {
+            RetireCapture();
+            return true;
+        }
+
+        IA_AreaInstance instance = game.GetAreaInstance(m_areaName);
+        if (instance && instance.IsShutDown())
+        {
+            RetireCapture();
+            return true;
+        }
+
+        return false;
     }
     
     // Fully reset the zone for a new capture (called when moving to next zone group)

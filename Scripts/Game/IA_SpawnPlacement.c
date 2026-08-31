@@ -27,7 +27,8 @@ class IA_SpawnPlacement
 	static const float DROP_LZ_DOWN_M = 40.0;
 	static const float DROP_LZ_SEARCH_R = 40.0;
 	static const float DROP_LZ_SEARCH_WIDE_R = 80.0;
-	static const int DROP_LZ_SAMPLE_TRIES = 4;
+	static const int DROP_LZ_SAMPLE_TRIES = 8;
+	static const float DROP_WAVE_SEPARATION_M = 80.0;
 	static const string NAVMESH_PROJECT = "Soldiers";
 
 	static void CollectPlayerPositions(array<vector> positions)
@@ -843,8 +844,46 @@ class IA_SpawnPlacement
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Random open-sky sample in an annulus. Does not spiral from `center` — that
+	//! search is deterministic and stacked every Air Assault wave on one pad.
+	static bool TrySampleAnnulusDropLz(vector center, float minR, float maxR, int attempts, array<vector> players, float playerR, array<vector> avoidLzs, float avoidR, out vector outLz)
+	{
+		outLz = vector.Zero;
+		if (center == vector.Zero)
+			return false;
+		if (attempts < 1)
+			return false;
+		if (maxR < minR)
+			maxR = minR;
+
+		int attempt;
+		for (attempt = 0; attempt < attempts; attempt++)
+		{
+			float angle = IA_Game.rng.RandFloat01() * Math.PI2;
+			float dist = IA_Game.rng.RandFloatXY(minR, maxR);
+			vector probe;
+			probe[0] = center[0] + Math.Cos(angle) * dist;
+			probe[2] = center[2] + Math.Sin(angle) * dist;
+			probe[1] = center[1];
+
+			vector lz;
+			if (!TryFindDropLz(probe, DROP_LZ_SEARCH_WIDE_R, lz))
+				continue;
+			if (IsNearAnyPlayer(lz, players, playerR))
+				continue;
+			if (avoidR > 0.5 && IsNearAnyPlayer(lz, avoidLzs, avoidR))
+				continue;
+			outLz = lz;
+			return true;
+		}
+
+		return false;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	//! Air Assault LZ: hot drop near the AO when requested and safe, otherwise 150-300 m perimeter.
-	static bool TryFindDefendDropLz(vector center, bool preferHotDrop, out vector outLz)
+	//! `avoidLzs` keeps later waves off a pad already used this defend.
+	static bool TryFindDefendDropLz(vector center, bool preferHotDrop, out vector outLz, array<vector> avoidLzs = null)
 	{
 		outLz = vector.Zero;
 		if (center == vector.Zero)
@@ -855,33 +894,25 @@ class IA_SpawnPlacement
 
 		if (preferHotDrop)
 		{
-			vector hot;
-			if (TryFindDropLz(center, 120, hot) && !IsNearAnyPlayer(hot, players, 80))
-			{
-				outLz = hot;
+			if (TrySampleAnnulusDropLz(center, 40, 120, 16, players, 80, avoidLzs, DROP_WAVE_SEPARATION_M, outLz))
 				return true;
-			}
+			if (TrySampleAnnulusDropLz(center, 30, 140, 10, players, 80, avoidLzs, 40, outLz))
+				return true;
 		}
 
-		int attempt;
-		for (attempt = 0; attempt < 12; attempt++)
-		{
-			float angle = IA_Game.rng.RandFloat01() * Math.PI2;
-			float dist = IA_Game.rng.RandFloatXY(150, 300);
-			vector probe;
-			probe[0] = center[0] + Math.Cos(angle) * dist;
-			probe[2] = center[2] + Math.Sin(angle) * dist;
-			probe[1] = center[1];
-
-			vector lz;
-			if (!TryFindDropLz(probe, DROP_LZ_SEARCH_WIDE_R, lz))
-				continue;
-			if (IsNearAnyPlayer(lz, players, 80))
-				continue;
-			outLz = lz;
+		if (TrySampleAnnulusDropLz(center, 150, 300, 24, players, 80, avoidLzs, DROP_WAVE_SEPARATION_M, outLz))
 			return true;
-		}
+		if (TrySampleAnnulusDropLz(center, 120, 320, 16, players, 80, avoidLzs, 40, outLz))
+			return true;
+		if (TrySampleAnnulusDropLz(center, 100, 350, 12, players, 80, null, 0, outLz))
+			return true;
 
-		return TryFindDropLz(center, DROP_LZ_SEARCH_WIDE_R, outLz);
+		vector fallback;
+		if (!TryFindDropLz(center, DROP_LZ_SEARCH_WIDE_R, fallback))
+			return false;
+		if (IsNearAnyPlayer(fallback, players, 80))
+			return false;
+		outLz = fallback;
+		return true;
 	}
 }

@@ -1068,7 +1068,8 @@ class IA_MissionInitializer : GenericEntity
 	}
 
 	//! Keep the defend-wave host alive. ForceFinish cancels pending CallLater
-	//! fireteams and refuses later SpawnReinforcementWave calls.
+	//! fireteams and refuses later SpawnReinforcementWave calls. Mortar pits stay
+	//! up so the optional silence-the-tubes task can still be captured.
 	private void ForceFinishCurrentAreaInstancesExceptDefend()
 	{
 		if (!m_currentAreaInstances)
@@ -1091,8 +1092,80 @@ class IA_MissionInitializer : GenericEntity
 				Print("[IA][Defend] Keeping host area " + areaName + " alive for defense waves", LogLevel.NORMAL);
 				continue;
 			}
+
+			IA_Area area = instance.GetArea();
+			if (area && area.GetAreaType() == IA_AreaType.MortarPit)
+			{
+				Print("[IA][Defend] Keeping mortar pit " + area.GetName() + " capturable during defense", LogLevel.NORMAL);
+				continue;
+			}
+
 			instance.ForceFinish();
 		}
+	}
+
+	private IA_AreaInstance FindAreaInstanceByName(string areaName)
+	{
+		if (areaName.IsEmpty())
+			return null;
+
+		IA_Game game = IA_Game.Instantiate();
+		if (game)
+		{
+			IA_AreaInstance fromGame = game.GetAreaInstance(areaName);
+			if (fromGame)
+				return fromGame;
+		}
+
+		if (!m_currentAreaInstances)
+			return null;
+
+		int instCount = m_currentAreaInstances.Count();
+		int instIdx;
+		for (instIdx = 0; instIdx < instCount; instIdx++)
+		{
+			IA_AreaInstance candidate = m_currentAreaInstances[instIdx];
+			if (!candidate || !candidate.GetArea())
+				continue;
+			if (candidate.GetArea().GetName() == areaName)
+				return candidate;
+		}
+
+		return null;
+	}
+
+	//! Complete leftover capture/destroy tasks and freeze their markers so they
+	//! cannot be captured during the defense. Optional mortar pits stay open.
+	private void RetireGroupObjectivesForDefend(int groupId)
+	{
+		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+		if (!markers)
+			return;
+
+		int retired = 0;
+		foreach (IA_AreaMarker marker : markers)
+		{
+			if (!marker)
+				continue;
+			if (marker.m_areaGroup != groupId)
+				continue;
+
+			IA_AreaType areaType = marker.GetAreaType();
+			if (areaType == IA_AreaType.DefendObjective)
+				continue;
+			if (areaType == IA_AreaType.MortarPit)
+				continue;
+
+			marker.RetireCapture();
+
+			IA_AreaInstance instance = FindAreaInstanceByName(marker.GetAreaName());
+			if (instance)
+				instance.DismissOpenTasks();
+
+			retired = retired + 1;
+		}
+
+		Print("[IA][Defend] Retired " + retired.ToString() + " leftover capture objectives for group " + groupId, LogLevel.NORMAL);
 	}
 
 	// --- BEGIN ADDED: Method to trigger global area completed notification ---
@@ -2776,6 +2849,7 @@ class IA_MissionInitializer : GenericEntity
 		IA_DefendMission defendMission = IA_DefendMission.Create(defendPoint, completedGroup, selectedMarker.GetAreaName());
 		if (defendMission)
 		{
+			RetireGroupObjectivesForDefend(completedGroup);
 			if (gameInstance)
 				gameInstance.SetActiveDefendMission(defendMission);
 			defendMission.StartDefendMission();

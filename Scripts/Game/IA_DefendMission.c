@@ -504,7 +504,8 @@ class IA_DefendMission
         
         Print(string.Format("[IA_DefendMission] Creating defend task for area %1 at position %2", 
             firstArea.m_area.GetName(), m_defendPoint.ToString()), LogLevel.NORMAL);
-            
+
+        firstArea.DismissOpenTasks();
         firstArea.QueueTask(taskTitle, taskDesc, m_defendPoint);
     }
     
