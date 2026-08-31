@@ -107,7 +107,7 @@ class IA_RankHudPanel
 		statsRow.GetStyle().m_bBlockHit = false;
 
 		ref MUI_Row killCell = runtime.CreateRow("sessionKillCell");
-		killCell.SetGap(2);
+		killCell.SetGap(6);
 		killCell.GetStyle().m_bBlockHit = false;
 		killCell.SetHugWidth();
 
