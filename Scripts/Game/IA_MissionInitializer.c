@@ -1111,6 +1111,45 @@ class IA_MissionInitializer : GenericEntity
 		}
 	}
 
+	//! Admin Complete + Defend finishes optional mortar pits. Natural defense
+	//! still leaves them capturable so players can silence tubes during the hold.
+	private void CompleteMortarPitsForGroup(int groupId)
+	{
+		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+		if (markers)
+		{
+			foreach (IA_AreaMarker marker : markers)
+			{
+				if (!marker)
+					continue;
+				if (marker.m_areaGroup != groupId)
+					continue;
+				if (marker.GetAreaType() != IA_AreaType.MortarPit)
+					continue;
+
+				marker.RetireCapture();
+
+				IA_AreaInstance fromMarker = FindAreaInstanceByName(marker.GetAreaName());
+				if (fromMarker && !fromMarker.IsShutDown())
+					fromMarker.ForceFinish();
+			}
+		}
+
+		if (!m_currentAreaInstances)
+			return;
+
+		foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
+		{
+			if (!instance || instance.IsShutDown())
+				continue;
+			IA_Area area = instance.GetArea();
+			if (!area || area.GetAreaType() != IA_AreaType.MortarPit)
+				continue;
+
+			instance.ForceFinish();
+		}
+	}
+
 	private IA_AreaInstance FindAreaInstanceByName(string areaName)
 	{
 		if (areaName.IsEmpty())
@@ -2109,6 +2148,7 @@ class IA_MissionInitializer : GenericEntity
 
 		if (CheckAndStartDefendMission(groupID, true))
 		{
+			CompleteMortarPitsForGroup(groupID);
 			ForceFinishCurrentAreaInstancesExceptDefend();
 			GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
 			GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
