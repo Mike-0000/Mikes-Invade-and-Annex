@@ -938,7 +938,7 @@ class IA_DefendMission
         if (count < 1)
             count = 1;
 
-        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, IA_Faction.USSR, count, m_defendFaction, hvt, true, false, elite);
+        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(pos, IA_Faction.USSR, count, m_defendFaction, hvt, hvt, false, elite);
         if (!grp)
             return null;
 

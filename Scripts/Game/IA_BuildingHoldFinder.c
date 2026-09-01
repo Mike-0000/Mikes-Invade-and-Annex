@@ -151,6 +151,18 @@ class IA_BuildingHoldFinder
 				continue;
 
 			float area = w * l;
+			float minSide = w;
+			if (l < minSide)
+				minSide = l;
+			float maxSide = w;
+			if (l > maxSide)
+				maxSide = l;
+			if (minSide > 0.1)
+			{
+				float aspect = maxSide / minSide;
+				if (maxSide > 35 && aspect > 3.5)
+					continue;
+			}
 			int insertAt = ranked.Count();
 			int j;
 			int rankedCount = ranked.Count();
@@ -193,13 +205,9 @@ class IA_BuildingHoldFinder
 				return null;
 		}
 
-		vector spawnPos;
-		if (!TrySampleGroundSpawn(mins, maxs, spawnPos))
-			return null;
-
 		ref IA_BuildingHoldSpot spot = new IA_BuildingHoldSpot();
 		spot.m_holdPos = holdPos;
-		spot.m_spawnPos = spawnPos;
+		spot.m_spawnPos = holdPos;
 		spot.m_radius = RadiusFromBounds(mins, maxs);
 		return spot;
 	}
@@ -437,13 +445,9 @@ class IA_BuildingHoldFinder
 			if (IsNearExistingSpot(post, outSpots, MIN_SEP_M))
 				continue;
 
-			vector spawnPos;
-			if (!FindGroundSpawnForHold(post, spawnPos))
-				continue;
-
 			ref IA_BuildingHoldSpot spot = new IA_BuildingHoldSpot();
 			spot.m_holdPos = post;
-			spot.m_spawnPos = spawnPos;
+			spot.m_spawnPos = post;
 			spot.m_radius = IA_GmHoldPost.DEFAULT_RADIUS;
 			outSpots.Insert(spot);
 		}

@@ -65,6 +65,7 @@ class IA_RoadSearchState
     bool m_tryingAlternatives = false;
     vector m_foundSpawnPos = vector.Zero;
     bool m_roadFound = false;
+    bool m_originRetry = false;
     
     // Search configuration
     ref array<int> m_searchDistances = {25, 50, 75, 100, 200, 300, 400, 800, 1200};
@@ -582,7 +583,7 @@ class IA_AiGroup
         GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, IA_RoadSearchState.SEARCH_DELAY_MS, false, searchState);
     }
     
-    // Perform one step of the road search
+    // One budgeted origin search. Exact is mortar / HVT / airborne only.
     static void PerformNextRoadSearch(IA_RoadSearchState searchState)
     {
         if (!searchState)
@@ -591,94 +592,51 @@ class IA_AiGroup
         if (searchState.m_useExactPosition)
         {
             searchState.m_foundSpawnPos = searchState.m_initialPos;
-            searchState.m_roadFound = false; // Not technically a road, but we have our position
+            searchState.m_roadFound = false;
             CompleteAsyncGroupCreation(searchState);
             return;
         }
-            
-        // If not trying alternatives yet
-        if (!searchState.m_tryingAlternatives)
+
+        vector origin;
+        if (searchState.m_holdPost)
         {
-            // Check if we've exhausted all distance searches
-            if (searchState.m_currentDistanceIndex >= searchState.m_searchDistances.Count())
-            {
-                // Move to alternative search phase
-                searchState.m_tryingAlternatives = true;
-                searchState.m_alternativeAttempt = 0;
-                
-                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] No road found within %1m of %2. Starting alternative search...", 
-                    searchState.m_searchDistances[searchState.m_searchDistances.Count() - 1], 
-                    searchState.m_initialPos.ToString()), LogLevel.WARNING);
-                    
-                // Continue with alternative search
-                GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, IA_RoadSearchState.SEARCH_DELAY_MS, false, searchState);
-                return;
-            }
-            
-            // Try current search distance
-            int searchDistance = searchState.m_searchDistances[searchState.m_currentDistanceIndex];
-            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(searchState.m_initialPos, searchDistance, searchState.m_activeGroup);
-            
-            if (roadPos != vector.Zero)
-            {
-                // Found a road!
-                searchState.m_foundSpawnPos = roadPos;
-                searchState.m_roadFound = true;
-                
-                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] Found road at distance %1m from initial pos %2. Road pos: %3", 
-                    searchDistance, searchState.m_initialPos.ToString(), roadPos.ToString()), LogLevel.NORMAL);
-                    
-                // Complete the group creation
-                CompleteAsyncGroupCreation(searchState);
-                return;
-            }
-            
-            // No road found at this distance, try next
-            searchState.m_currentDistanceIndex++;
-            GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, IA_RoadSearchState.SEARCH_DELAY_MS, false, searchState);
+            vector holdAt = searchState.m_holdTarget;
+            if (holdAt == vector.Zero)
+                holdAt = searchState.m_initialPos;
+            origin = IA_SpawnPlacement.FindHoldInfantryOrigin(holdAt);
         }
         else
         {
-            // Alternative search phase
-            if (searchState.m_alternativeAttempt >= IA_RoadSearchState.ALTERNATIVE_ATTEMPTS)
-            {
-                // All searches exhausted, use initial position
-                searchState.m_foundSpawnPos = searchState.m_initialPos;
-                searchState.m_roadFound = false;
-                
-                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] WARNING: No road found for group spawn. Using initial position %1. AI navigation may be impaired!", 
-                    searchState.m_initialPos.ToString()), LogLevel.WARNING);
-                    
-                CompleteAsyncGroupCreation(searchState);
-                return;
-            }
-            
-            // Try alternative search from random point
-            float angle = Math.RandomFloat(0, Math.PI2);
-            float distance = Math.RandomFloat(100, 500);
-            vector searchPoint;
-            searchPoint[0] = searchState.m_initialPos[0] + Math.Cos(angle) * distance;
-            searchPoint[1] = searchState.m_initialPos[1];
-            searchPoint[2] = searchState.m_initialPos[2] + Math.Sin(angle) * distance;
-            
-            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(searchPoint, 200, searchState.m_activeGroup);
-            
-            if (roadPos != vector.Zero)
-            {
-                searchState.m_foundSpawnPos = roadPos;
-                searchState.m_roadFound = true;
-                
-                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] Found road via alternative search (attempt %1) at %2", 
-                    searchState.m_alternativeAttempt + 1, roadPos.ToString()), LogLevel.NORMAL);
-                    
-                CompleteAsyncGroupCreation(searchState);
-                return;
-            }
-            
-            // Try next alternative
-            searchState.m_alternativeAttempt++;
-            GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, IA_RoadSearchState.SEARCH_DELAY_MS, false, searchState);
+            origin = IA_SpawnPlacement.FindOccupyingInfantryOrigin(searchState.m_initialPos, -1);
         }
+
+        if (origin == vector.Zero)
+        {
+            if (!searchState.m_originRetry)
+            {
+                searchState.m_originRetry = true;
+                vector preloadAt = searchState.m_initialPos;
+                if (searchState.m_holdPost && searchState.m_holdTarget != vector.Zero)
+                    preloadAt = searchState.m_holdTarget;
+                AIWorld aiWorld = GetGame().GetAIWorld();
+                if (aiWorld && preloadAt != vector.Zero)
+                    aiWorld.RequestNavmeshLoad(preloadAt);
+
+                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] origin miss, retrying budget at %1", searchState.m_initialPos.ToString()), LogLevel.NORMAL);
+                GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, 400, false, searchState);
+                return;
+            }
+
+            Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] no origin in budget at %1 hold=%2", searchState.m_initialPos.ToString(), searchState.m_holdPost), LogLevel.WARNING);
+            searchState.m_foundSpawnPos = vector.Zero;
+            searchState.m_roadFound = false;
+            CompleteAsyncGroupCreation(searchState);
+            return;
+        }
+
+        searchState.m_foundSpawnPos = origin;
+        searchState.m_roadFound = true;
+        CompleteAsyncGroupCreation(searchState);
     }
     
     // Complete the async group creation
@@ -686,8 +644,14 @@ class IA_AiGroup
     {
         if (!searchState)
             return;
-            
-        // Create the group at the found position
+
+        if (searchState.m_foundSpawnPos == vector.Zero && !searchState.m_useExactPosition)
+        {
+            if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
+                searchState.m_callbackInstance.OnAsyncGroupCreated(null, false);
+            return;
+        }
+
         IA_AiGroup grp = CreateMilitaryGroupAtPosition(searchState.m_foundSpawnPos, searchState.m_faction, 
             searchState.m_unitCount, searchState.m_areaFaction, false, searchState.m_useExactPosition, searchState.m_keepAltitude);
 
@@ -697,14 +661,12 @@ class IA_AiGroup
             if (holdAt == vector.Zero)
                 holdAt = searchState.m_foundSpawnPos;
             grp.SetHoldPost(holdAt, searchState.m_holdRadius);
-            grp.SpawnNextUnit();
+            if (searchState.m_keepAltitude)
+                grp.SpawnNextUnit();
         }
-            
-        // Call the callback if set
+
         if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
         {
-            // Note: This is a simplified callback mechanism. In real implementation,
-            // you might need to use a more robust callback system
             searchState.m_callbackInstance.OnAsyncGroupCreated(grp, searchState.m_roadFound);
         }
     }
@@ -718,29 +680,10 @@ class IA_AiGroup
     {
         if (unitCount <= 0)
             return null;
+        if (spawnPos == vector.Zero)
+            return null;
 
-        // --- BEGIN MODIFIED: Road Spawning for Synchronous Groups (Bypass for HVT) ---
         vector finalSpawnPos = spawnPos;
-        if (!HVTGroup && !useExactPosition)
-        {
-            int activeGroup = IA_VehicleManager.GetActiveGroup();
-            // Search for a road within 150m of the requested spawn position
-            vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(spawnPos, 150, activeGroup);
-            
-            if (roadPos != vector.Zero)
-            {
-                finalSpawnPos = roadPos;
-                Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Road spawn found. Original: %1, Road: %2", spawnPos, finalSpawnPos), LogLevel.DEBUG);
-            }
-        }
-        else
-        {
-            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] HVT or exact position spawn detected, bypassing road snapping. Spawning at exact location: %1", finalSpawnPos.ToString()), LogLevel.DEBUG);
-        }
-        // --- END MODIFIED ---
-
-        if (!keepAltitude)
-            finalSpawnPos = IA_SpawnPlacement.SnapInfantryPos(finalSpawnPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
 
         IA_AiGroup grp = new IA_AiGroup(finalSpawnPos, IA_SquadType.Riflemen, faction, unitCount, HVTGroup);
         grp.m_isCivilian = false;
@@ -1458,6 +1401,12 @@ class IA_AiGroup
                 vector roadPos = IA_VehicleManager.FindRandomRoadEntityInZone(m_initialPosition, 300, IA_VehicleManager.GetActiveGroup());
                 if (roadPos != vector.Zero)
                     spawnPos = roadPos;
+                else
+                {
+                    vector meshPos = IA_SpawnPlacement.FindOccupyingInfantryOrigin(m_initialPosition, -1);
+                    if (meshPos != vector.Zero)
+                        spawnPos = meshPos;
+                }
             }
 
             Resource groupPrefabRes = Resource.Load("{71783D1DEDC4E150}Prefabs/Groups/Group_CIV.et");
@@ -1485,9 +1434,6 @@ class IA_AiGroup
                 vector unitPos = spawnPos;
                 if (civIndex > 0)
                     unitPos = spawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
-
-                if (!m_bKeepAltitude)
-                    unitPos = IA_SpawnPlacement.SnapInfantryPos(unitPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
 
                 string resourceName = IA_RandomCivilianResourceName();
                 Resource charRes = Resource.Load(resourceName);
@@ -1546,8 +1492,6 @@ class IA_AiGroup
             groundPos = m_group.GetOrigin(); // Fallback to m_group's current origin
         }
 
-        if (!m_bKeepAltitude)
-            groundPos = IA_SpawnPlacement.SnapInfantryPos(groundPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
         m_group.SetOrigin(groundPos);
         m_lastConfirmedPosition = groundPos;
             
@@ -4442,11 +4386,6 @@ class IA_AiGroup
         else if (!m_HVTGroup)
         {
             unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
-            vector walked;
-            if (IA_SpawnPlacement.TryFindWalkableInfantryPos(unitSpawnPos, IA_SpawnPlacement.UNIT_SEARCH_R, walked))
-                unitSpawnPos = walked;
-            else
-                unitSpawnPos = m_staggeredSpawnPos;
         }
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
@@ -4705,11 +4644,6 @@ class IA_AiGroup
         
         // Generate spawn position
         vector unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
-        vector walked;
-        if (IA_SpawnPlacement.TryFindWalkableInfantryPos(unitSpawnPos, IA_SpawnPlacement.UNIT_SEARCH_R, walked))
-            unitSpawnPos = walked;
-        else
-            unitSpawnPos = m_staggeredSpawnPos;
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
         {
@@ -5030,7 +4964,7 @@ class IA_AiGroup
             return null;
         }
     
-        vector groundPos = IA_SpawnPlacement.SnapInfantryPos(spawnPos, IA_SpawnPlacement.EMPTY_SEARCH_R);
+        vector groundPos = spawnPos;
         grp.m_group.SetOrigin(groundPos);
     
         // KEY DIFFERENCE: Use civilian prefabs

@@ -431,10 +431,19 @@ class IA_AssassinationObjective : IA_SideObjective
             }
         }
 
+        vector guardOrigin = IA_SpawnPlacement.FindHoldInfantryOrigin(hvtSpawnPos);
+        if (guardOrigin == vector.Zero)
+            guardOrigin = IA_SpawnPlacement.FindOccupyingInfantryOrigin(hvtSpawnPos, -1);
+
         // Spawn guards
         for (int i = 0; i < 5; i++)
         {
-            vector guardPos = hvtSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(10, 25, vector.Zero);
+            if (guardOrigin == vector.Zero)
+                break;
+
+            vector guardPos = guardOrigin;
+            if (i > 0)
+                guardPos = guardOrigin + IA_Game.rng.GenerateRandomPointInRadius(3, 8, vector.Zero);
             IA_AiGroup guardGroup = IA_AiGroup.CreateMilitaryGroupFromUnits(guardPos, m_EnemyIAFaction, 4, m_EnemyGameFaction);
             if (guardGroup)
             {

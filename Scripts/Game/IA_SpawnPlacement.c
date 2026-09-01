@@ -7,6 +7,16 @@ class IA_SpawnPlacement
 	static const float CENTER_MIN_M = 220.0;
 	static const float CENTER_MAX_M = 550.0;
 	static const float HARD_CAP_FROM_CENTER_M = 600.0;
+	static const float OCCUPY_MIN_M = 80.0;
+	static const float OCCUPY_MAX_M = 250.0;
+	static const float HOLD_ORIGIN_MIN_M = 15.0;
+	static const float HOLD_ORIGIN_MAX_M = 80.0;
+	static const float REINF_MIN_M = 80.0;
+	static const float REINF_MAX_M = 180.0;
+	static const float REINF_PLAYER_MIN_M = 100.0;
+	static const int SAFE_ORIGIN_ROAD_TRIES = 8;
+	static const int SAFE_ORIGIN_MESH_TRIES = 12;
+	static const float SAFE_ORIGIN_REACH_M = 16.0;
 	static const float ARRIVE_UNPIN_M = 120.0;
 	static const int SAME_RADIUS_TRIES = 8;
 	static const float EMPTY_CYLINDER_R = 0.6;
@@ -87,46 +97,22 @@ class IA_SpawnPlacement
 		return false;
 	}
 
-	//! Occupying / scale-up spawn is not inbound. If the requested town point is
-	//! inside PLAYER_MIN_M, move it to a legal inbound point. When a fight is
-	//! already near the AO, keep the point exact so later road-search cannot
-	//! walk it onto a player. Returns false if no safe point exists.
+	//! Occupying origin on road or Soldiers navmesh inside the occupying budget.
+	//! Requested scatter / marker is the search anchor, not a spawn pose.
 	static bool ResolveOccupyingSpawn(vector requested, vector center, bool wasExact, out vector outPos, out bool outExact)
 	{
-		outPos = requested;
-		outExact = wasExact;
+		outPos = vector.Zero;
+		outExact = false;
 
-		if (requested == vector.Zero || center == vector.Zero)
+		vector anchor = center;
+		if (requested != vector.Zero)
+			anchor = requested;
+		if (anchor == vector.Zero)
 			return false;
 
-		ref array<vector> players = new array<vector>();
-		CollectPlayerPositions(players);
-
-		if (IsNearAnyPlayer(requested, players, PLAYER_MIN_M))
-		{
-			vector inbound = FindInboundInfantrySpawn(center, -1);
-			if (inbound == vector.Zero)
-				return false;
-
-			Print(string.Format("[IA][SpawnPlacement] occupying relocate from %1 to %2", requested.ToString(), inbound.ToString()), LogLevel.NORMAL);
-			outPos = inbound;
-			outExact = true;
-			return true;
-		}
-
-		if (IsFightNearAo(center, players))
-			outExact = true;
-
-		outPos = SnapInfantryPos(outPos, EMPTY_SEARCH_R);
-		if (IsNearAnyPlayer(outPos, players, PLAYER_MIN_M))
-		{
-			vector inbound = FindInboundInfantrySpawn(center, -1);
-			if (inbound == vector.Zero)
-				return false;
-
-			outPos = inbound;
-			outExact = true;
-		}
+		outPos = FindOccupyingInfantryOrigin(anchor, -1);
+		if (outPos == vector.Zero)
+			return false;
 
 		return true;
 	}
@@ -489,57 +475,146 @@ class IA_SpawnPlacement
 		return true;
 	}
 
-	static vector FindInboundInfantrySpawn(vector center, int sectorIndex)
+	static bool PassesSafeOrigin(vector pos, vector anchor, float minR, float maxR, array<vector> players, float playerMin, int sectorIndex)
 	{
-		if (center == vector.Zero)
+		if (pos == vector.Zero)
+			return false;
+		if (IsInOcean(pos))
+			return false;
+
+		float fromAnchor = vector.DistanceXZ(pos, anchor);
+		if (fromAnchor < minR)
+			return false;
+		if (fromAnchor > maxR)
+			return false;
+		if (sectorIndex >= 0 && !IsInSector(pos, anchor, sectorIndex))
+			return false;
+		if (playerMin > 0.5 && IsNearAnyPlayer(pos, players, playerMin))
+			return false;
+
+		return true;
+	}
+
+	static bool TryNavmeshReachable(vector sample, out vector outPos)
+	{
+		outPos = vector.Zero;
+		if (sample == vector.Zero)
+			return false;
+
+		AIWorld aiWorld = GetGame().GetAIWorld();
+		if (!aiWorld)
+			return false;
+
+		aiWorld.RequestNavmeshLoad(sample);
+		NavmeshWorldComponent navmesh = aiWorld.GetNavmeshWorldComponent(NAVMESH_PROJECT);
+		if (!navmesh)
+			return false;
+
+		if (!navmesh.IsTileLoaded(sample) && !navmesh.IsTileRequested(sample))
+			navmesh.LoadTileIn(sample);
+
+		if (!navmesh.IsTileLoaded(sample) && !navmesh.IsTileValid(sample))
+			return false;
+
+		vector reachable = sample;
+		if (!navmesh.GetReachablePoint(sample, SAFE_ORIGIN_REACH_M, reachable))
+			return false;
+		if (reachable == vector.Zero)
+			return false;
+		if (IsInOcean(reachable))
+			return false;
+
+		outPos = reachable;
+		return true;
+	}
+
+	//! Road in [minR, maxR], else Soldiers GetReachablePoint in that ring. Never expands.
+	static vector FindSafeInfantryOrigin(vector anchor, float minR, float maxR, float playerMin, int sectorIndex = -1)
+	{
+		if (anchor == vector.Zero)
+			return vector.Zero;
+		if (minR < 0)
+			minR = 0;
+		if (maxR < minR)
+			maxR = minR;
+
+		AIWorld preloadWorld = GetGame().GetAIWorld();
+		if (preloadWorld)
+			preloadWorld.RequestNavmeshLoad(anchor);
+
+		ref array<vector> players = new array<vector>();
+		CollectPlayerPositions(players);
+
+		int roadGroup = IA_VehicleManager.GetActiveGroup();
+		int sectorPass;
+		for (sectorPass = 0; sectorPass < 2; sectorPass++)
+		{
+			int sector = sectorIndex;
+			if (sectorPass == 1)
+				sector = -1;
+
+			int roadTry;
+			for (roadTry = 0; roadTry < SAFE_ORIGIN_ROAD_TRIES; roadTry++)
+			{
+				vector road = IA_VehicleManager.FindRoadInAnnulus(anchor, minR, maxR, roadGroup);
+				if (road == vector.Zero)
+					break;
+				if (!PassesSafeOrigin(road, anchor, minR, maxR, players, playerMin, sector))
+					continue;
+				return road;
+			}
+
+			int meshTry;
+			for (meshTry = 0; meshTry < SAFE_ORIGIN_MESH_TRIES; meshTry++)
+			{
+				vector sample = SamplePolar(anchor, minR, maxR, sector);
+				if (sector >= 0 && !IsInSector(sample, anchor, sector))
+					continue;
+
+				vector reached;
+				if (!TryNavmeshReachable(sample, reached))
+					continue;
+				if (!PassesSafeOrigin(reached, anchor, minR, maxR, players, playerMin, sector))
+					continue;
+				return reached;
+			}
+
+			if (sectorIndex < 0)
+				break;
+		}
+
+		Print(string.Format("[IA][SpawnPlacement] miss safe origin anchor=%1 min=%2 max=%3", anchor.ToString(), minR, maxR), LogLevel.WARNING);
+		return vector.Zero;
+	}
+
+	static vector FindOccupyingInfantryOrigin(vector center, int sectorIndex = -1)
+	{
+		return FindSafeInfantryOrigin(center, OCCUPY_MIN_M, OCCUPY_MAX_M, PLAYER_MIN_M, sectorIndex);
+	}
+
+	static vector FindHoldInfantryOrigin(vector holdPos)
+	{
+		if (holdPos == vector.Zero)
 			return vector.Zero;
 
 		ref array<vector> players = new array<vector>();
 		CollectPlayerPositions(players);
 
-		bool fightNear = IsFightNearAo(center, players);
-		vector found;
+		float playerMin = 0;
+		if (IsNearAnyPlayer(holdPos, players, PLAYER_MIN_M))
+			playerMin = PLAYER_MIN_M;
 
-		if (TryInfantryPhase(center, players, CENTER_MIN_M, CENTER_MAX_M, sectorIndex, fightNear, found))
-			return found;
-
-		if (sectorIndex >= 0)
-		{
-			if (TryInfantryPhase(center, players, CENTER_MIN_M, CENTER_MAX_M, -1, fightNear, found))
-				return found;
-		}
-
-		if (TryInfantryPhase(center, players, CENTER_MIN_M, HARD_CAP_FROM_CENTER_M, -1, fightNear, found))
-			return found;
-
-		if (fightNear)
-		{
-			if (TryInfantryPhase(center, players, CENTER_MIN_M, HARD_CAP_FROM_CENTER_M, -1, false, found))
-				return found;
-		}
-
-		Print(string.Format("[IA][SpawnPlacement] miss infantry center=%1 players=%2", center.ToString(), players.Count()), LogLevel.WARNING);
-		return vector.Zero;
+		return FindSafeInfantryOrigin(holdPos, HOLD_ORIGIN_MIN_M, HOLD_ORIGIN_MAX_M, playerMin, -1);
 	}
 
-	static bool TryInfantryPhase(vector center, array<vector> players, float minR, float maxR, int sectorIndex, bool applyPlayerMax, out vector outPos)
+	static vector FindReinforcementInfantryOrigin(vector fightPos, int sectorIndex = -1)
 	{
-		outPos = vector.Zero;
-		int attempt;
-		for (attempt = 0; attempt < SAME_RADIUS_TRIES; attempt++)
-		{
-			vector sample = SamplePolar(center, minR, maxR, sectorIndex);
-			if (sectorIndex >= 0 && !IsInSector(sample, center, sectorIndex))
-				continue;
+		return FindSafeInfantryOrigin(fightPos, REINF_MIN_M, REINF_MAX_M, REINF_PLAYER_MIN_M, sectorIndex);
+	}
 
-			vector snapped;
-			if (TrySnapInfantryPoint(sample, center, players, maxR, applyPlayerMax, snapped))
-			{
-				outPos = snapped;
-				return true;
-			}
-		}
-		return false;
+	static vector FindInboundInfantrySpawn(vector center, int sectorIndex)
+	{
+		return FindOccupyingInfantryOrigin(center, sectorIndex);
 	}
 
 	static vector FindInboundVehicleSpawn(vector center, int roadGroup, int sectorIndex)

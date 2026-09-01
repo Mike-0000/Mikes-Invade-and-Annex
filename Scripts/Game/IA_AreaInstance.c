@@ -3022,7 +3022,7 @@ class IA_AreaInstance
             if (scaledUnitCountForThisGroup <= 0) 
                 continue;
 
-            vector pos = vector.Zero;
+            vector pos = m_area.GetOrigin();
             bool useExactPos = false;
             bool holdPost = false;
             vector holdTarget = vector.Zero;
@@ -3033,29 +3033,17 @@ class IA_AreaInstance
             {
                 pos = garrisonPost;
                 holdTarget = garrisonPost;
-                useExactPos = true;
+                useExactPos = false;
                 holdPost = true;
                 holdRadius = 5;
             }
 
-            if (pos == vector.Zero && !spawnPoints.IsEmpty())
+            if (!holdPost && !spawnPoints.IsEmpty())
             {
                 int randomIndex = Math.RandomInt(0, spawnPoints.Count());
                 IA_AISpawnPoint chosenPoint = spawnPoints[randomIndex];
                 if (chosenPoint)
-                    pos = chosenPoint.GetRandomSpawnPosition();
-
-                if (pos != vector.Zero)
-                    useExactPos = true;
-            }
-
-            if (pos == vector.Zero)
-            {
-                if (insideArea)
-                    pos = IA_Game.rng.GenerateRandomPointInRadius(2, m_area.GetRadius() / 8, m_area.GetOrigin());
-                else
-                    pos = IA_Game.rng.GenerateRandomPointInRadius(m_area.GetRadius() * 0.95, m_area.GetRadius() * 1.25, m_area.GetOrigin());
-                useExactPos = false;
+                    pos = chosenPoint.GetOrigin();
             }
             
             GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, accumulatedDelay, false, pos, scaledUnitCountForThisGroup, AreaFaction, useExactPos, holdPost, holdTarget, holdRadius);
@@ -3610,8 +3598,9 @@ class IA_AreaInstance
         m_civilians.Clear();
         for (int i = 0; i < number; i = i + 1)
         {
-            vector pos = IA_Game.rng.GenerateRandomPointInRadius(1, m_area.GetRadius() / 3, m_area.GetOrigin());
-            pos = IA_SpawnPlacement.SnapInfantryPos(pos, IA_SpawnPlacement.EMPTY_SEARCH_R);
+            vector pos = IA_SpawnPlacement.FindOccupyingInfantryOrigin(m_area.GetOrigin(), -1);
+            if (pos == vector.Zero)
+                continue;
             IA_AiGroup civ = IA_AiGroup.CreateCivilianGroup(pos);
             civ.SetOwningAreaInstance(this);
             
@@ -5124,7 +5113,7 @@ class IA_AreaInstance
                 else
                     center = m_area.GetOrigin();
 
-                vector spawnPos = IA_SpawnPlacement.FindInboundInfantrySpawn(center, sectorIndex);
+                vector spawnPos = IA_SpawnPlacement.FindReinforcementInfantryOrigin(center, sectorIndex);
                 if (spawnPos == vector.Zero)
                     return false;
 
@@ -5153,7 +5142,7 @@ class IA_AreaInstance
             if (scaledUnitCount < 1)
                 scaledUnitCount = 1;
 
-            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, scaledUnitCount, AreaFaction, false, true);
+            IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, scaledUnitCount, AreaFaction, false, false);
 
             // 5. Spawn and Integrate
             if (grp)
@@ -6057,20 +6046,13 @@ class IA_AreaInstance
             return false;
 
         vector holdPos = post.GetOrigin();
-        vector spawnPos;
-        if (!IA_BuildingHoldFinder.FindGroundSpawnForHold(holdPos, spawnPos))
-        {
-            spawnPos = holdPos;
-            Print(string.Format("[IA_AreaInstance] No ground-floor spawn for hold at %1, using marker pose", holdPos.ToString()), LogLevel.WARNING);
-        }
-
         float radius;
         if (!post.TryClaim(holdPos, radius))
             return false;
 
         Faction spawnFaction = m_AreaFaction;
         int units = BuildingGarrisonUnitCount();
-        GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, 0, false, spawnPos, units, spawnFaction, true, true, holdPos, radius);
+        GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, 0, false, holdPos, units, spawnFaction, false, true, holdPos, radius);
         Print(string.Format("[IA_AreaInstance] Scheduled Hold fireteam for %1 at %2", m_area.GetName(), holdPos.ToString()), LogLevel.NORMAL);
         return true;
     }
@@ -6130,7 +6112,6 @@ class IA_AreaInstance
 
                 IA_GmHoldPost autoPost = IA_GmHoldPost.SpawnAt(spot.m_holdPos, spot.m_radius);
                 vector holdPos = spot.m_holdPos;
-                vector spawnPos = spot.m_spawnPos;
                 float radius = spot.m_radius;
                 if (autoPost)
                 {
@@ -6138,7 +6119,7 @@ class IA_AreaInstance
                         continue;
                 }
 
-                GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, spawnPos, units, spawnFaction, true, true, holdPos, radius);
+                GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, holdPos, units, spawnFaction, false, true, holdPos, radius);
                 delay = delay + Math.RandomInt(400, 1200);
                 spawned = spawned + 1;
             }
@@ -6160,39 +6141,27 @@ class IA_AreaInstance
             return;
         }
 
-        vector safePos;
-        bool exact;
-        bool keepAltitude = false;
         vector holdAt = holdTarget;
         if (holdPost)
         {
             if (holdAt == vector.Zero)
                 holdAt = spawnPos;
 
-            keepAltitude = true;
-            exact = true;
-            safePos = spawnPos;
-
-            ref array<vector> players = new array<vector>();
-            IA_SpawnPlacement.CollectPlayerPositions(players);
-            if (IA_SpawnPlacement.IsNearAnyPlayer(spawnPos, players, IA_SpawnPlacement.PLAYER_MIN_M))
-            {
-                vector inbound = IA_SpawnPlacement.FindInboundInfantrySpawn(m_area.GetOrigin(), -1);
-                if (inbound != vector.Zero)
-                    safePos = inbound;
-            }
-
-            IA_AiGroup.StartAsyncMilitaryGroupCreation(safePos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, exact, keepAltitude, true, holdAt, holdRadius);
+            IA_AiGroup.StartAsyncMilitaryGroupCreation(holdAt, m_faction, unitCountForGroup, areaFactionForGroupTask, this, false, false, true, holdAt, holdRadius);
             return;
         }
 
-        if (!IA_SpawnPlacement.ResolveOccupyingSpawn(spawnPos, m_area.GetOrigin(), useExactPosition, safePos, exact))
+        if (useExactPosition)
         {
-            Print(string.Format("[IA][AreaInstance] occupying spawn skipped, no inbound point away from players at %1", spawnPos.ToString()), LogLevel.WARNING);
+            IA_AiGroup.StartAsyncMilitaryGroupCreation(spawnPos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, true, true);
             return;
         }
 
-        IA_AiGroup.StartAsyncMilitaryGroupCreation(safePos, m_faction, unitCountForGroup, areaFactionForGroupTask, this, exact);
+        vector anchor = spawnPos;
+        if (anchor == vector.Zero && m_area)
+            anchor = m_area.GetOrigin();
+
+        IA_AiGroup.StartAsyncMilitaryGroupCreation(anchor, m_faction, unitCountForGroup, areaFactionForGroupTask, this, false);
     }
 
     protected bool TryTakeGarrisonPost(out vector outPos)
@@ -6530,7 +6499,7 @@ class IA_AreaInstance
         // This combines logic from SpawnReinforcementEnactor and the arming step.
         
         vector center = m_area.GetOrigin();
-        vector spawnPos = IA_SpawnPlacement.FindInboundInfantrySpawn(center, -1);
+        vector spawnPos = IA_SpawnPlacement.FindReinforcementInfantryOrigin(center, -1);
         if (spawnPos == vector.Zero)
             return;
     

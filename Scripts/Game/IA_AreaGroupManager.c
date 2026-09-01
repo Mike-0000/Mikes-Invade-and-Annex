@@ -559,7 +559,7 @@ class IA_AreaGroupManager
             spawnCenter = targetAreaInst.GetArea().GetOrigin();
 
         int activeGroup = IA_VehicleManager.GetActiveGroup();
-        vector infAnchor = IA_SpawnPlacement.FindInboundInfantrySpawn(spawnCenter, -1);
+        vector infAnchor = IA_SpawnPlacement.FindReinforcementInfantryOrigin(spawnCenter, -1);
         vector vehAnchor = IA_SpawnPlacement.FindInboundVehicleSpawn(spawnCenter, activeGroup, -1);
 
         bool success = false;
@@ -567,6 +567,12 @@ class IA_AreaGroupManager
         {
             case IA_QRFType.Infantry:
             {
+                if (infAnchor == vector.Zero)
+                {
+                    Print("[QRF] Infantry origin miss in budget; inserting airborne.", LogLevel.WARNING);
+                    success = ScheduleAirborneQRF(targetAreaInst, enemyGameFaction, targetPos, forDefendMission);
+                    break;
+                }
                 bool s1 = SpawnInfantryQRF(targetAreaInst, enemyGameFaction, targetPos, ComputeClusterPos(infAnchor, 0), forDefendMission);
                 bool s2 = false;
                 if (IA_Game.GetAIScaleFactor() >= 1.0)
@@ -654,15 +660,15 @@ class IA_AreaGroupManager
             preferredUsable = false;
 
         if (!preferredUsable)
-            spawnPos = IA_SpawnPlacement.FindInboundInfantrySpawn(areaInst.GetArea().GetOrigin(), -1);
+            spawnPos = IA_SpawnPlacement.FindReinforcementInfantryOrigin(areaInst.GetArea().GetOrigin(), -1);
 
         if (spawnPos == vector.Zero)
         {
-            Print(string.Format("[QRF] Infantry miss: no inbound spawn near %1.", areaInst.GetArea().GetOrigin()), LogLevel.WARNING);
+            Print(string.Format("[QRF] Infantry miss: no origin in budget near %1.", areaInst.GetArea().GetOrigin()), LogLevel.WARNING);
             return false;
         }
 
-        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, unitCount, enemyGameFaction, false, true);
+        IA_AiGroup grp = IA_AiGroup.CreateMilitaryGroupFromUnits(spawnPos, IA_Faction.USSR, unitCount, enemyGameFaction, false, false);
         if (!grp)
             return false;
 
