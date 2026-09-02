@@ -5,13 +5,14 @@ alwaysApply: true
 
 # Experimental worktrees
 
-UI, HALO, and I&A each have a production folder on `main` and a `*-Exp` worktree on `experimental`. **Always edit the Exp paths.** Never write to the production folders, even if both are in the workspace.
+UI, HALO, I&A, and Anizay each have a production folder on `main` and a `*-Exp` worktree on `experimental`. **Always edit the Exp paths.** Never write to the production folders, even if both are in the workspace.
 
 | Production (read / Workbench publish only) | Edit here |
 |---|---|
 | `F:\Mikes-UI` | `F:\Mikes-UI-Exp` |
 | `F:\Mikes-HALO-Jump` | `F:\Mikes-HALO-Jump-Exp` |
 | `F:\Mikes-Invade-and-Annex` | `F:\Mikes-Invade-and-Annex-Exp` |
+| `F:\Mikes-Anizay-Invade-and-Annex` | `F:\Mikes-Anizay-Invade-and-Annex-Exp` |
 
 - Commit in the Exp worktree (`experimental`) at the end of any turn that edited files. Do not `git checkout experimental` in a production folder.
 - Do not edit any `addon.gproj`. Production and experimental Workshop GUIDs stay on their branches.
