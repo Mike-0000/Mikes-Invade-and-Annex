@@ -4451,7 +4451,8 @@ class IA_AiGroup
         }
         else if (!m_HVTGroup)
         {
-            unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+            vector scattered = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+            unitSpawnPos = IA_SpawnPlacement.OutdoorOrOrigin(m_staggeredSpawnPos, scattered);
         }
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
@@ -4709,7 +4710,8 @@ class IA_AiGroup
         }
         
         // Generate spawn position
-        vector unitSpawnPos = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+        vector scatteredCiv = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
+        vector unitSpawnPos = IA_SpawnPlacement.OutdoorOrOrigin(m_staggeredSpawnPos, scatteredCiv);
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
         {
