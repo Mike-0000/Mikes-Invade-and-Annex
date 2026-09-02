@@ -4238,8 +4238,9 @@ class IA_AiGroup
                 if (IA_Game.rng)
                 {
                     vector jitter = IA_Game.rng.GenerateRandomPointInRadius(4, 12, dropLz);
-                    jitter[1] = dropLz[1];
-                    lz = jitter;
+                    vector jitterLz;
+                    if (IA_SpawnPlacement.TryDropLzAt(jitter, jitterLz))
+                        lz = jitterLz;
                 }
                 foundLz = true;
             }
