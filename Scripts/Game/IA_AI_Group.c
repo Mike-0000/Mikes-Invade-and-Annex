@@ -1510,10 +1510,35 @@ class IA_AiGroup
 		
         if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
         {
+            GetGame().GetCallqueue().Remove(this.CheckDangerEvents);
             GetGame().GetCallqueue().CallLater(CheckDangerEvents, Math.RandomInt(250, 750), true); // Recurring for military
         }
 
         return true;
+    }
+
+    protected IA_Faction ResolveEntityFaction(IEntity entity)
+    {
+        if (!entity)
+            return IA_Faction.NONE;
+
+        Faction faction = SCR_AIFactionHandling.GetEntityPerceivedFaction(entity);
+        if (!faction)
+            faction = SCR_AIFactionHandling.GetEntityFaction(entity);
+        if (!faction)
+            return IA_Faction.NONE;
+
+        string factionKey = faction.GetFactionKey();
+        if (factionKey == "US")
+            return IA_Faction.US;
+        if (factionKey == "USSR")
+            return IA_Faction.USSR;
+        if (factionKey == "FIA")
+            return IA_Faction.FIA;
+        if (factionKey == "CIV")
+            return IA_Faction.CIV;
+
+        return IA_Faction.NONE;
     }
 
     // Process a danger event at the group level
@@ -1541,36 +1566,10 @@ class IA_AiGroup
         IA_Faction sourceFaction = IA_Faction.NONE;
         if (sourceEntity)
         {
-            // Try to get faction from a character entity
-            SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(sourceEntity);
-            if (character)
-            {
-                FactionAffiliationComponent factionComponent = FactionAffiliationComponent.Cast(character.FindComponent(FactionAffiliationComponent));
-                if (factionComponent)
-                {
-                    Faction faction = factionComponent.GetAffiliatedFaction();
-                    if (!faction)
-                        return; // Ignore if faction cannot be determined
-                    string factionKey = faction.GetFactionKey();
-                    // Map the faction key to our IA_Faction enum
-                    if (factionKey == "US")
-                        sourceFaction = IA_Faction.US;
-                    else if (factionKey == "USSR")
-                        sourceFaction = IA_Faction.USSR;
-                    else if (factionKey == "FIA")
-                        sourceFaction = IA_Faction.FIA;
-                    else if (factionKey == "CIV")
-                        sourceFaction = IA_Faction.CIV; // Include CIV to potentially ignore civilian sources later
-                        
-                }
-            }
-            
-            // --- MODIFIED CHECK: Skip if source faction is unknown OR same as own faction OR civilian ---
+            sourceFaction = ResolveEntityFaction(sourceEntity);
             if (sourceFaction == IA_Faction.NONE || sourceFaction == m_faction || sourceFaction == IA_Faction.CIV)
-                return; // Ignore unknown, friendly, or civilian sources
-            // --- END MODIFIED CHECK ---
+                return;
                 
-            // If we identified a valid enemy faction, set it (we know it's not NONE, CIV and not m_faction here)
             m_engagedEnemyFaction = sourceFaction;
         }
         
@@ -1834,10 +1833,6 @@ class IA_AiGroup
         if (dangerCount <= 0)
             return;
         
-        IEntity agentEntity = agent.GetControlledEntity(); 
-        FactionAffiliationComponent agentFacComp = FactionAffiliationComponent.Cast(agentEntity.FindComponent(FactionAffiliationComponent));
-        FactionKey agentFactionKey = agentFacComp.GetAffiliatedFactionKey();
-        
         for (int i = 0; i < dangerCount; i++)
         {
             int outCount;
@@ -1864,24 +1859,39 @@ class IA_AiGroup
                     mappedDangerType = IA_GroupDangerType.WeaponFire;
                     reactionType = IA_AIReactionType.EnemySpotted;
                     AIDangerEventWeaponFire eventWeaponFire = AIDangerEventWeaponFire.Cast(dangerEvent);
-                    sourceEntity = eventWeaponFire.GetObject();
+                    if (!eventWeaponFire)
+                    {
+                        handleEvent = false;
+                        continue;
+                    }
 
-                    // Check if sourceEntity is valid before proceeding
+                    IEntity instigator = eventWeaponFire.GetInstigatorEntity();
+                    IEntity shooter = eventWeaponFire.GetObject();
+                    sourceEntity = instigator;
+                    if (!sourceEntity && shooter)
+                    {
+                        Turret turret = Turret.Cast(shooter);
+                        if (turret)
+                        {
+                            IEntity shooterRoot = shooter.GetRootParent();
+                            if (shooterRoot && Vehicle.Cast(shooterRoot))
+                                sourceEntity = shooterRoot;
+                            else
+                                sourceEntity = shooter;
+                        }
+                        else
+                        {
+                            sourceEntity = shooter;
+                        }
+                    }
+
+                    // Skip only when a resolved faction exists and is friendly.
                     if (sourceEntity)
                     {
-                        FactionAffiliationComponent facComp = FactionAffiliationComponent.Cast(sourceEntity.FindComponent(FactionAffiliationComponent));
-                        // Check if facComp is valid before checking faction key
-                        if (facComp)
-                        {
-                            FactionKey sourceFactionKey = facComp.GetAffiliatedFactionKey();
-                            if(agentFactionKey == sourceFactionKey) // Check For Friendly Fire
-                                continue; 
-                        }else{
+                        IA_Faction fireFaction = ResolveEntityFaction(sourceEntity);
+                        if (fireFaction != IA_Faction.NONE && fireFaction == m_faction)
                             continue;
-                        }
-                        // else: Cannot determine source faction, assume hostile for now
                     }
-                    // else: Cannot determine source entity, assume hostile
 
                     intensity = 0.6;
                     break;
@@ -3006,6 +3016,7 @@ class IA_AiGroup
                     m_tacticalState == IA_GroupTacticalState.Defending || 
                     m_tacticalState == IA_GroupTacticalState.DefendPatrol ||
                     m_tacticalState == IA_GroupTacticalState.Flanking ||
+                    m_tacticalState == IA_GroupTacticalState.Retreating ||
                     m_tacticalState == IA_GroupTacticalState.LastStand)
                 {
 					if(m_tacticalState == IA_GroupTacticalState.DefendPatrol && timeSinceLastOrder < 150)
@@ -3031,7 +3042,7 @@ class IA_AiGroup
 //                    this), LogLevel.WARNING);
                     
                 // Request state change rather than making it directly
-                RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
+                RequestTacticalStateChange(IA_GroupTacticalState.Retreating, m_lastDangerPosition);
                 return;
             }
             
@@ -3051,7 +3062,7 @@ class IA_AiGroup
                 // High danger - request retreat or defend based on current danger level
                 if (m_currentDangerLevel > 0.7)
                 {
-                    RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
+                    RequestTacticalStateChange(IA_GroupTacticalState.Retreating, m_lastDangerPosition);
                 }
                 else
                 {
@@ -3073,7 +3084,7 @@ class IA_AiGroup
                     // Request appropriate response based on current state and strength
                     if (aliveCount <= 2)
                     {
-                        RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
+                        RequestTacticalStateChange(IA_GroupTacticalState.Retreating, m_lastDangerPosition);
                     }
                     else // More than 2 units alive
                     {
@@ -3262,7 +3273,7 @@ class IA_AiGroup
             if (!m_isCivilian && m_faction != IA_Faction.CIV && m_faction != IA_Faction.NONE)
             {
                 // Request tactical state for military units
-                RequestTacticalStateChange(IA_GroupTacticalState.Retreating, GetOrigin());
+                RequestTacticalStateChange(IA_GroupTacticalState.Retreating, m_lastDangerPosition);
             }
             else // Civilian Path for aliveCount <= 2
             {
@@ -3315,6 +3326,41 @@ class IA_AiGroup
         return m_lastDangerPosition;
     }
     // --- END ADDED ---
+
+    // targetPos for Retreating is the threat to leave, not the destination.
+    protected vector ComputeRetreatDestination(vector threatHint)
+    {
+        vector groupPos = GetOrigin();
+        if (groupPos == vector.Zero)
+            groupPos = m_lastConfirmedPosition;
+
+        vector threat = vector.Zero;
+        if (threatHint != vector.Zero && vector.DistanceSq(threatHint, groupPos) > 25.0)
+            threat = threatHint;
+        else if (m_lastDangerPosition != vector.Zero && vector.DistanceSq(m_lastDangerPosition, groupPos) > 25.0)
+            threat = m_lastDangerPosition;
+        else if (m_lastAssignedArea)
+            threat = m_lastAssignedArea.GetOrigin();
+
+        vector away = groupPos - threat;
+        away[1] = 0;
+        if (away.LengthSq() < 1.0)
+        {
+            if (m_lastAssignedArea)
+            {
+                away = groupPos - m_lastAssignedArea.GetOrigin();
+                away[1] = 0;
+            }
+            if (away.LengthSq() < 1.0)
+                away = Vector(Math.RandomFloat(-1, 1), 0, Math.RandomFloat(-1, 1));
+        }
+
+        if (away.LengthSq() < 0.01)
+            away = Vector(1, 0, 0);
+
+        away = away.Normalized();
+        return groupPos + away * 100.0;
+    }
     
     // --- BEGIN ADDED: Getter for Initial Unit Count ---
     int GetInitialUnitCount()
@@ -3386,6 +3432,7 @@ class IA_AiGroup
         {
             return;
         }
+        GetGame().GetCallqueue().Remove(this.CheckDangerEvents);
         UnpinInboundSimulation();
         m_isSpawned = false;
         
@@ -3589,6 +3636,25 @@ class IA_AiGroup
                 {
                     AddOrder(targetPos, IA_AiOrder.PriorityMove, true);
                 }
+                break;
+
+            case IA_GroupTacticalState.Retreating:
+                vector retreatDest = ComputeRetreatDestination(targetPos);
+                AddOrder(retreatDest, IA_AiOrder.PriorityMove, true);
+                AddOrder(retreatDest, IA_AiOrder.Defend, false);
+                break;
+
+            case IA_GroupTacticalState.LastStand:
+                vector lastStandPos;
+                if (targetPos != vector.Zero)
+                    lastStandPos = targetPos;
+                else
+                    lastStandPos = m_lastConfirmedPosition;
+
+                if (lastStandPos[1] < 5)
+                    lastStandPos[1] = lastStandPos[1] + 0.5;
+
+                AddOrder(lastStandPos, IA_AiOrder.Defend, true);
                 break;
                 
             default:
@@ -4708,9 +4774,13 @@ class IA_AiGroup
         if (m_isHoldingPost)
             return;
 
-        // Don't create redundant requests
+        // Same state: refresh the target so a newer explosion is not ignored.
         if (m_hasPendingStateRequest && m_requestedState == newState)
+        {
+            m_requestedStatePosition = targetPos;
+            m_requestedStateEntity = targetEntity;
             return;
+        }
             
         // Log the request
         //Print(string.Format("[IA_AiGroup.RequestTacticalStateChange] Group %1 requesting state change from %2 to %3", 
