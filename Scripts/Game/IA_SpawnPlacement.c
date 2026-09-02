@@ -15,7 +15,7 @@ class IA_SpawnPlacement
 	static const float REINF_MAX_M = 180.0;
 	static const float REINF_PLAYER_MIN_M = 100.0;
 	static const int SAFE_ORIGIN_ROAD_TRIES = 8;
-	static const int SAFE_ORIGIN_MESH_TRIES = 12;
+	static const int SAFE_ORIGIN_MESH_TRIES = 20;
 	static const float SAFE_ORIGIN_REACH_M = 16.0;
 	static const float ARRIVE_UNPIN_M = 120.0;
 	static const int SAME_RADIUS_TRIES = 8;
@@ -29,6 +29,12 @@ class IA_SpawnPlacement
 	static const float SURFACE_BIAS_M = 0.05;
 	static const float MAX_ABOVE_TERRAIN_M = 4.5;
 	static const float OPEN_SKY_M = 12.0;
+	static const float SHELL_COLUMN_M = 200.0;
+	static const float SHELL_FLOOR_EPS_M = 1.5;
+	static const float SHELL_WORLD_COVER_M = 2.5;
+	static const float SHELL_XZ_MIN_M = 10.0;
+	static const float SHELL_HEIGHT_MIN_M = 6.0;
+	static const int SHELL_SKIP_MAX = 6;
 	static const float GROUND_FLOOR_PROBE_M = 2.15;
 	static const float GROUND_FLOOR_MAX_ABOVE_M = 1.35;
 	static const float INTERIOR_INBOUND_M = 1.7;
@@ -258,6 +264,100 @@ class IA_SpawnPlacement
 		return true;
 	}
 
+	//! Large horizontal footprint plus height: hangar, warehouse, monument.
+	//! Trees are skipped before this runs.
+	static bool IsLargeShellEntity(IEntity ent)
+	{
+		if (!ent)
+			return false;
+
+		vector mins;
+		vector maxs;
+		ent.GetWorldBounds(mins, maxs);
+		float sx = maxs[0] - mins[0];
+		float sz = maxs[2] - mins[2];
+		float sy = maxs[1] - mins[1];
+		if (sx <= SHELL_XZ_MIN_M)
+			return false;
+		if (sz <= SHELL_XZ_MIN_M)
+			return false;
+		if (sy <= SHELL_HEIGHT_MIN_M)
+			return false;
+
+		return true;
+	}
+
+	//! First building-like shell from well above must be the stand floor.
+	//! Trees and small props are skipped so forests and streets stay valid.
+	//! HasOpenSky stays 12 m for garrison; do not reuse this there.
+	static bool IsOutdoorStandPose(vector pos)
+	{
+		if (pos == vector.Zero)
+			return false;
+
+		BaseWorld world = GetGame().GetWorld();
+		if (!world)
+			return false;
+
+		float startY = pos[1] + SHELL_COLUMN_M;
+		float endY = pos[1] + 0.17;
+		float span = startY - endY;
+		if (span < 1.0)
+			return true;
+
+		ref TraceParam down = new TraceParam();
+		down.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+		ref array<IEntity> skipped = new array<IEntity>();
+		down.ExcludeArray = skipped;
+
+		int skipCount;
+		for (skipCount = 0; skipCount <= SHELL_SKIP_MAX; skipCount++)
+		{
+			down.Start = Vector(pos[0], startY, pos[2]);
+			down.End = Vector(pos[0], endY, pos[2]);
+			float coef = world.TraceMove(down, null);
+			if (coef >= 1.0)
+				return true;
+
+			float hitY = startY - (coef * span);
+			if (hitY <= pos[1] + SHELL_FLOOR_EPS_M)
+				return true;
+
+			IEntity hitEnt = down.TraceEnt;
+			if (!hitEnt)
+			{
+				if ((hitY - pos[1]) > SHELL_WORLD_COVER_M)
+					return false;
+
+				return true;
+			}
+
+			if (hitEnt.IsInherited(BaseTree))
+			{
+				skipped.Insert(hitEnt);
+				continue;
+			}
+
+			if (Building.Cast(hitEnt))
+				return false;
+
+			if (IsLargeShellEntity(hitEnt))
+				return false;
+
+			skipped.Insert(hitEnt);
+		}
+
+		return true;
+	}
+
+	static vector OutdoorOrOrigin(vector origin, vector candidate)
+	{
+		if (IsOutdoorStandPose(candidate))
+			return candidate;
+
+		return origin;
+	}
+
 	//! Streets and rooftops are valid. Interiors fail the open-sky test.
 	//! Does not use TryWalkableAt — that helper rejects anything above MAX_ABOVE_TERRAIN_M.
 	static bool TryDropLzAt(vector sample, out vector outPos)
@@ -294,6 +394,9 @@ class IA_SpawnPlacement
 			return false;
 
 		if (!HasOpenSky(hit))
+			return false;
+
+		if (!IsOutdoorStandPose(hit))
 			return false;
 
 		if (!SCR_WorldTools.TraceCilinderUtil(hit + Vector(0, 1.0, 0), EMPTY_CYLINDER_R, 2.0, TraceFlags.ENTS | TraceFlags.OCEAN, world))
@@ -375,6 +478,9 @@ class IA_SpawnPlacement
 			return false;
 
 		if (!HasStandRoom(hit))
+			return false;
+
+		if (!IsOutdoorStandPose(hit))
 			return false;
 
 		if (!SCR_WorldTools.TraceCilinderUtil(hit + Vector(0, 1.0, 0), EMPTY_CYLINDER_R, 2.0, TraceFlags.ENTS | TraceFlags.OCEAN, world))
@@ -475,7 +581,7 @@ class IA_SpawnPlacement
 		return true;
 	}
 
-	static bool PassesSafeOrigin(vector pos, vector anchor, float minR, float maxR, array<vector> players, float playerMin, int sectorIndex)
+	static bool PassesSafeOriginDistance(vector pos, vector anchor, float minR, float maxR, array<vector> players, float playerMin, int sectorIndex)
 	{
 		if (pos == vector.Zero)
 			return false;
@@ -490,6 +596,16 @@ class IA_SpawnPlacement
 		if (sectorIndex >= 0 && !IsInSector(pos, anchor, sectorIndex))
 			return false;
 		if (playerMin > 0.5 && IsNearAnyPlayer(pos, players, playerMin))
+			return false;
+
+		return true;
+	}
+
+	static bool PassesSafeOrigin(vector pos, vector anchor, float minR, float maxR, array<vector> players, float playerMin, int sectorIndex)
+	{
+		if (!PassesSafeOriginDistance(pos, anchor, minR, maxR, players, playerMin, sectorIndex))
+			return false;
+		if (!IsOutdoorStandPose(pos))
 			return false;
 
 		return true;
@@ -545,6 +661,7 @@ class IA_SpawnPlacement
 		ref array<vector> players = new array<vector>();
 		CollectPlayerPositions(players);
 
+		int enclosedRejects = 0;
 		int roadGroup = IA_VehicleManager.GetActiveGroup();
 		int sectorPass;
 		for (sectorPass = 0; sectorPass < 2; sectorPass++)
@@ -559,8 +676,13 @@ class IA_SpawnPlacement
 				vector road = IA_VehicleManager.FindRoadInAnnulus(anchor, minR, maxR, roadGroup);
 				if (road == vector.Zero)
 					break;
-				if (!PassesSafeOrigin(road, anchor, minR, maxR, players, playerMin, sector))
+				if (!PassesSafeOriginDistance(road, anchor, minR, maxR, players, playerMin, sector))
 					continue;
+				if (!IsOutdoorStandPose(road))
+				{
+					enclosedRejects = enclosedRejects + 1;
+					continue;
+				}
 				return road;
 			}
 
@@ -574,8 +696,13 @@ class IA_SpawnPlacement
 				vector reached;
 				if (!TryNavmeshReachable(sample, reached))
 					continue;
-				if (!PassesSafeOrigin(reached, anchor, minR, maxR, players, playerMin, sector))
+				if (!PassesSafeOriginDistance(reached, anchor, minR, maxR, players, playerMin, sector))
 					continue;
+				if (!IsOutdoorStandPose(reached))
+				{
+					enclosedRejects = enclosedRejects + 1;
+					continue;
+				}
 				return reached;
 			}
 
@@ -583,7 +710,7 @@ class IA_SpawnPlacement
 				break;
 		}
 
-		Print(string.Format("[IA][SpawnPlacement] miss safe origin anchor=%1 min=%2 max=%3", anchor.ToString(), minR, maxR), LogLevel.WARNING);
+		Print(string.Format("[IA][SpawnPlacement] miss safe origin anchor=%1 min=%2 max=%3 enclosed=%4", anchor.ToString(), minR, maxR, enclosedRejects), LogLevel.WARNING);
 		return vector.Zero;
 	}
 
@@ -665,6 +792,8 @@ class IA_SpawnPlacement
 
 			roadPos[1] = GetGame().GetWorld().GetSurfaceY(roadPos[0], roadPos[2]);
 			if (!IsLegalInbound(roadPos, center, players, maxR, applyPlayerMax))
+				continue;
+			if (!IsOutdoorStandPose(roadPos))
 				continue;
 
 			outPos = roadPos;

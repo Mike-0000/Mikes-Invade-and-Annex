@@ -1360,16 +1360,12 @@ class IA_AreaInstance
         bool isUnderAttack = IsUnderAttack();
         vector primaryThreatLocation = m_area.GetOrigin(); // Default if no specific threat found
         bool validThreatLocation = false;
-        float globalThreatLevel = 0.0;
 
         if (isUnderAttack)
         {
             vector dangerSum = vector.Zero;
             int dangerCount = 0;
-            float dangerLevelSum = 0.0;
-            int dangerLevelCount = 0;
             vector currentDangerPos;
-            int latestDangerTime = 0; // Track latest danger time used in calculation
             const int MAX_THREAT_STALENESS_SECONDS = 90; // If danger info is older than this, consider it stale
 
             foreach (IA_AiGroup g_threat : m_military) {
@@ -1387,22 +1383,9 @@ class IA_AreaInstance
                          {
                             dangerSum += currentDangerPos;
                             dangerCount++;
-                            if (groupLastDangerTime > latestDangerTime) {
-                                latestDangerTime = groupLastDangerTime; // Update latest time stamp
-                            }
                          }
                     }
                 }
-                // Still calculate overall danger level based on all groups reporting any danger (less strict time limit?)
-                float groupDanger = g_threat.GetCurrentDangerLevel();
-                 if (groupDanger > 0) {
-                     dangerLevelSum += groupDanger;
-                     dangerLevelCount++;
-                 }
-            }
-
-            if (dangerLevelCount > 0) {
-                globalThreatLevel = dangerLevelSum / dangerLevelCount;
             }
 
             // Check if we calculated a position AND if the data isn't too stale
@@ -1410,71 +1393,13 @@ class IA_AreaInstance
             {
                 primaryThreatLocation = dangerSum / dangerCount;
                 validThreatLocation = true; // Position calculated from recent data
-                //Print(string.Format("[AreaInstance.MilitaryTask] Threat assessed from recent group danger near: %1 (Latest event: %2s ago)",
-//                    primaryThreatLocation.ToString(), System.GetUnixTime() - latestDangerTime), LogLevel.DEBUG);
             } else {
-                 //Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. No RECENT (<%2s) threat location found via danger events, using origin as fallback.",
-//                    m_area.GetName(), MAX_THREAT_STALENESS_SECONDS), LogLevel.DEBUG);
                  primaryThreatLocation = m_area.GetOrigin(); // Fallback to origin
                  validThreatLocation = false; // Mark as invalid since it's stale/fallback
             }
 
-            // --- Existing Force Defend / Flanking Allowance Logic ---
-            // (Based on globalThreatLevel calculated from group danger)
-            float attritionRatio = GetAttritionRatio();
-            float dangerThreshold;
-            if (m_criticalState)
-            {
-                dangerThreshold = 1.1;
-            }
-            else
-            {
-                dangerThreshold = 1.1;
-            }
-            if ((globalThreatLevel > dangerThreshold) && (attritionRatio >= m_unitLossThreshold)) {
-                m_forceDefend = true;
-                //Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL THREAT LEVEL (%1): Area '%2' is forcing defensive posture (Critical: %3) - THREAT OVERDRIVE ACTIVE",
-//                    globalThreatLevel, m_area.GetName(), m_criticalState), LogLevel.DEBUG);
-            } else {
-                m_forceDefend = false;
-            }
-            
-            // --- BEGIN MODIFIED: Make flanking more available ---
-            // Original code:
-            /*
-            float flankingThreshold;
-            if (m_criticalState)
-            {
-                flankingThreshold = 0.5;
-            }
-            else
-            {
-                flankingThreshold = 0.6;
-            }
-            m_allowFlankingOperations = !m_forceDefend && globalThreatLevel < flankingThreshold;
-            */
-            
-            // New more permissive logic - allow flanking in most circumstances
-            // Only restrict flanking in extreme critical situations (very high threat + force defend active)
-            if (m_forceDefend && globalThreatLevel > 1.5) {
-                m_allowFlankingOperations = false;
-                //Print(string.Format("[AreaInstance.MilitaryTask] CRITICAL: Flanking operations disabled due to extreme threat (%1)", globalThreatLevel), LogLevel.DEBUG);
-            } else {
-                m_allowFlankingOperations = true;
-                //Print(string.Format("[AreaInstance.MilitaryTask] Flanking operations allowed (Threat: %1, ForceDefend: %2)", globalThreatLevel, m_forceDefend), LogLevel.DEBUG);
-            }
-            // --- END MODIFIED ---
-            
-            if (dangerCount > 0) {
-                primaryThreatLocation = dangerSum / dangerCount;
-                validThreatLocation = true;
-                //Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. Threat assessed from own groups near: %2", m_area.GetName(), primaryThreatLocation.ToString()), LogLevel.DEBUG);
-            } else {
-                 //Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' UNDER ATTACK. No specific threat location found, using origin.", m_area.GetName()), LogLevel.DEBUG);
-            }
+            m_allowFlankingOperations = true;
         } else {
-             //Print(string.Format("[AreaInstance.MilitaryTask] Area '%1' SECURE.", m_area.GetName()), LogLevel.DEBUG);
-             m_forceDefend = false;
              m_allowFlankingOperations = true;
         }
 
@@ -1495,28 +1420,7 @@ class IA_AreaInstance
             localTargetFlankers = 0;
              //Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (Secure/Empty): Default State: DefendPatrol. Def=%1", localTargetDefenders), LogLevel.DEBUG);
         }
-        else if (m_forceDefend)
-        {
-            defaultStateForArea = IA_GroupTacticalState.Defending;
-            float defenderPercentage;
-            if (m_criticalState)
-            {
-                defenderPercentage = 0.9;
-            }
-            else
-            {
-                defenderPercentage = 0.8;
-            }
-            // --- Use renamed local variable ---
-            localTargetDefenders = Math.Max(1, Math.Round(totalMilitaryGroups * defenderPercentage));
-            // --- Use renamed local variables ---
-            localTargetAttackers = totalMilitaryGroups - localTargetDefenders;
-            localTargetFlankers = 0; // No flanking in emergency mode
-            //Print(string.Format("[AreaInstance.MilitaryTask] Role Calc (EMERGENCY): Def=%1, Att=%2, Flk=0, Critical=%3",
-                // --- Use renamed local variables ---
-//                localTargetDefenders, localTargetAttackers, m_criticalState), LogLevel.DEBUG);
-        }
-        else // This block handles standard "under attack" (not emergency forceDefend)
+        else
         {
             defaultStateForArea = IA_GroupTacticalState.Attacking; // Default response
             float defenderPercentage;
@@ -1796,15 +1700,6 @@ class IA_AreaInstance
                 }
             }
 
-            // Emergency defense check overrides other peril checks
-            if (m_forceDefend && (currentAssignedState == IA_GroupTacticalState.Flanking))
-            {
-                perilDetected = true;
-                stateAfterPeril = IA_GroupTacticalState.Defending;
-                //Print(string.Format("[AreaInstance.MilitaryTask] EMERGENCY MODE: Converting Flanking Group %1 to Defender", 
-//                    g.GetOrigin().ToString()), LogLevel.DEBUG);
-            }
-
             if (perilDetected)
             {
                 m_assignedGroupStates.Set(g, stateAfterPeril); // Update assignment map immediately
@@ -1953,7 +1848,7 @@ class IA_AreaInstance
         }
         
         // If we're under attack and offensive force is too weak, adjust target roles
-        if (isUnderAttack && !m_forceDefend && totalAliveUnits >= 6) // Only rebalance for areas with sufficient units
+        if (isUnderAttack && totalAliveUnits >= 6) // Only rebalance for areas with sufficient units
         {
             // Define minimum offensive force percentage (at least 30% of total force)
             const float MIN_OFFENSIVE_PERCENTAGE = 0.30;
@@ -2189,9 +2084,8 @@ class IA_AreaInstance
             }
             else if (requestedState == IA_GroupTacticalState.Defending || requestedState == IA_GroupTacticalState.DefendPatrol)
             {
-                if (currentDefendersAfterCap >= finalTargetDefenders && !m_forceDefend)
+                if (currentDefendersAfterCap >= finalTargetDefenders)
                 {
-                    // Only deny if we're not in force defend mode
                     approveRequest = false;
                     reason = string.Format("Area already has %1/%2 defenders (after cap)", currentDefendersAfterCap, finalTargetDefenders);
                 }
@@ -2218,13 +2112,6 @@ class IA_AreaInstance
             {
                 // Usually approve non-standard states with a moderate probability
                 approveRequest = (Math.RandomFloat(0, 1) < 0.6);
-            }
-
-            // Emergency defense override - always approve defensive state changes in emergency
-            if (m_forceDefend && (requestedState == IA_GroupTacticalState.Defending || requestedState == IA_GroupTacticalState.DefendPatrol))
-            {
-                approveRequest = true;
-                reason = "Emergency defense mode - defensive requests approved";
             }
 
             if (approveRequest)
@@ -2906,7 +2793,7 @@ class IA_AreaInstance
         bool areaHasRecentContact = (currentTime - m_areaLastUnderFireTime) < MAX_AREA_WITHOUT_CONTACT;
 
         // Only perform contact checks if the area is not currently under attack
-        if (!isUnderAttack && !m_forceDefend)
+        if (!isUnderAttack)
         {
             // Area-wide check to return to patrol mode (remains inside the condition)
             if (!areaHasRecentContact)
@@ -3344,7 +3231,7 @@ class IA_AreaInstance
                 vector groupPos = vehicleGroup.GetOrigin();
                 
                 // Use tactical state system instead of direct orders
-                vehicleGroup.SetTacticalState(IA_GroupTacticalState.Defending, groupPos);
+                AssignAuthorityState(vehicleGroup, IA_GroupTacticalState.Defending, groupPos);
                 
                 //////Print("[DEBUG] IA_AreaInstance.HandleDestroyedVehicle: Issued defend orders to surviving group members", LogLevel.DEBUG);
             }
@@ -3991,7 +3878,7 @@ class IA_AreaInstance
             {
                 float approachingDanger = group.GetDangerLevel();
                 if (approachingDanger > 0.8)
-                    ApplyEnemySpottedReactionToGroup(group, group.GetOrigin(), approachingDanger);
+                    ApplyEnemySpottedReactionToGroup(group, ResolveReactionThreat(group), approachingDanger);
                 processedGroups.Insert(group, true);
                 continue;
             }
@@ -4026,7 +3913,7 @@ class IA_AreaInstance
             {
                 highestDanger = dangerLevel;
                 highestDangerGroup = group;
-                highestDangerPos = group.GetOrigin();
+                highestDangerPos = ResolveReactionThreat(group);
             }
             
             float underFireThreshold = 0.98;
@@ -4039,7 +3926,7 @@ class IA_AreaInstance
                 //    group.GetOrigin().ToString(), dangerLevel), LogLevel.DEBUG);
                     
                 // Add to central reaction manager for later group-wide processing
-                m_centralReactionManager.TriggerReaction(IA_AIReactionType.UnderFire, dangerLevel, group.GetOrigin()); // Use TriggerReaction
+                m_centralReactionManager.TriggerReaction(IA_AIReactionType.UnderFire, dangerLevel, ResolveReactionThreat(group));
                 
                 // Mark this group as processed
                 processedGroups.Insert(group, true);
@@ -4053,7 +3940,7 @@ class IA_AreaInstance
                 if (!processedGroups.Contains(group))
                 {
                     // Create a reaction state and apply it
-                    ApplyEnemySpottedReactionToGroup(group, group.GetOrigin(), dangerLevel);
+                    ApplyEnemySpottedReactionToGroup(group, ResolveReactionThreat(group), dangerLevel);
                     
                     // Mark this group as processed
                     processedGroups.Insert(group, true);
@@ -4105,6 +3992,32 @@ class IA_AreaInstance
     }
 
     // --- Add these helper methods for reaction processing ---
+    private void AssignAuthorityState(IA_AiGroup group, IA_GroupTacticalState newState, vector targetPos)
+    {
+        if (!group)
+            return;
+
+        if (group.IsPinnedGarrison())
+            return;
+
+        m_assignedGroupStates.Set(group, newState);
+        m_stateStartTimes.Set(group, System.GetUnixTime());
+        m_stateStability.Set(group, 0);
+        group.SetTacticalState(newState, targetPos, null, true);
+    }
+
+    private vector ResolveReactionThreat(IA_AiGroup group)
+    {
+        if (!group)
+            return vector.Zero;
+
+        vector pos = group.GetLastDangerPosition();
+        if (pos != vector.Zero)
+            return pos;
+
+        return group.GetOrigin();
+    }
+
     private void BreakApproachingToAttack(IA_AiGroup group, vector targetPos)
     {
         if (!group)
@@ -4114,12 +4027,9 @@ class IA_AreaInstance
             return;
 
         if (targetPos == vector.Zero)
-            targetPos = group.GetOrigin();
+            targetPos = ResolveReactionThreat(group);
 
-        m_assignedGroupStates.Set(group, IA_GroupTacticalState.Attacking);
-        m_stateStartTimes.Set(group, System.GetUnixTime());
-        m_stateStability.Set(group, 0);
-        group.SetTacticalState(IA_GroupTacticalState.Attacking, targetPos, null, true);
+        AssignAuthorityState(group, IA_GroupTacticalState.Attacking, targetPos);
         Print(string.Format("[AreaInstance] Approaching group at %1 broke off to Attacking toward %2.",
             group.GetOrigin().ToString(), targetPos.ToString()), LogLevel.DEBUG);
     }
@@ -4221,7 +4131,7 @@ class IA_AreaInstance
             if (intensity >= 0.8 && distanceToSource < 50 && aliveCount < 3)
             {
                 // Hold position if too close with small numbers
-                group.SetTacticalState(IA_GroupTacticalState.Defending, group.GetOrigin());
+                AssignAuthorityState(group, IA_GroupTacticalState.Defending, group.GetOrigin());
             }
             else
             {
@@ -4252,7 +4162,7 @@ class IA_AreaInstance
             // If very close to threat, hold position
             if (distanceToSource < 100 && intensity > 0.7)
             {
-                group.SetTacticalState(IA_GroupTacticalState.Defending, group.GetOrigin());
+                AssignAuthorityState(group, IA_GroupTacticalState.Defending, group.GetOrigin());
             }
             // If medium distance and large group, send some to attack
             else if (distanceToSource < 250 && aliveCount > 5)
@@ -4263,7 +4173,7 @@ class IA_AreaInstance
             // Otherwise defend in place
             else
             {
-                group.SetTacticalState(IA_GroupTacticalState.Defending, group.GetOrigin());
+                AssignAuthorityState(group, IA_GroupTacticalState.Defending, group.GetOrigin());
             }
         }
     }
@@ -4352,12 +4262,12 @@ class IA_AreaInstance
             // Medium groups would be more cautious
             else if (distanceToSource < 300 && aliveCount > 3)
             {
-                group.SetTacticalState(IA_GroupTacticalState.Defending, group.GetOrigin());
+                AssignAuthorityState(group, IA_GroupTacticalState.Defending, group.GetOrigin());
             }
             // Small groups would be defensive
             else
             {
-                group.SetTacticalState(IA_GroupTacticalState.Defending, group.GetOrigin());
+                AssignAuthorityState(group, IA_GroupTacticalState.Defending, group.GetOrigin());
             }
         }
     }
@@ -4475,7 +4385,6 @@ class IA_AreaInstance
     // --- END ADDED ---
 
     // State control flags - very specific conditions where units can change states
-    private bool m_forceDefend = false; // Emergency defensive mode for the entire area
     private bool m_allowFlankingOperations = true; // Whether flanking is tactically viable now
     private int m_reassignmentCooldown = 0; // Cooldown for next batch of reassignments
     private const float MAX_OFFENSIVE_ROLE_PERCENTAGE = 0.2; // Cap offensive roles at 30% of total groups
