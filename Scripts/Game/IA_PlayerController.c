@@ -64,6 +64,17 @@ modded class SCR_PlayerController
 		Rpc(RpcAsk_IA_ForceCompleteZoneAndDefend);
 	}
 
+	void IA_AskForceCompleteObjectivesAndSeizeBase()
+	{
+		if (Replication.IsServer())
+		{
+			IA_ForceCompleteObjectivesAndSeizeBaseIfAdmin();
+			return;
+		}
+
+		Rpc(RpcAsk_IA_ForceCompleteObjectivesAndSeizeBase);
+	}
+
 	//------------------------------------------------------------------------------------------------
 	void IA_AskPromoteSelf()
 	{
@@ -120,6 +131,12 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_ForceCompleteZoneAndDefend()
 	{
 		IA_ForceCompleteZoneAndDefendIfAdmin();
+	}
+
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_ForceCompleteObjectivesAndSeizeBase()
+	{
+		IA_ForceCompleteObjectivesAndSeizeBaseIfAdmin();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -219,6 +236,21 @@ modded class SCR_PlayerController
 			return;
 
 		init.ServerForceCompleteZoneAndDefend();
+	}
+
+	protected void IA_ForceCompleteObjectivesAndSeizeBaseIfAdmin()
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Force seize base rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (!init)
+			return;
+
+		init.ServerForceCompleteObjectivesAndSeizeBase();
 	}
 
 	//------------------------------------------------------------------------------------------------

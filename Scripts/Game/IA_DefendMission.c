@@ -26,6 +26,11 @@ class IA_DefendMission
     private ref IA_AreaGroupManager m_ownedQrfManager; // kept alive for truck arrival CallLaters if needed
     private ref IA_EnhancedDefendDirector m_Enhanced;
     private bool m_bEnhancedClockOn;
+    private IA_AreaInstance m_ExplicitHost;
+    private int m_iActivationSerial;
+    private bool m_bPreparationAlreadyComplete;
+    private bool m_bDynamicBase;
+    private ref IA_Config m_DefenseConfig;
 
     private float m_fStartMult = 0.75;
     private float m_fPeakMult = 1.75;
@@ -54,10 +59,42 @@ class IA_DefendMission
     static IA_DefendMission Create(vector defendPoint, int groupID, string markerName = "")
     {
         IA_DefendMission mission = new IA_DefendMission(defendPoint, groupID, markerName);
-        IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+        IA_Config cfg = mission.GetDefenseConfig();
         if (cfg && !cfg.UseLegacyDefense())
             mission.m_Enhanced = IA_EnhancedDefendDirector.Create(mission);
         return mission;
+    }
+
+    static IA_DefendMission CreateForDynamicBase(vector defendPoint, int groupId, string displayName, IA_AreaInstance host, Faction enemyFaction, int activationSerial, IA_Config defenseConfigSnapshot)
+    {
+        IA_DefendMission mission = new IA_DefendMission(defendPoint, groupId, displayName);
+        mission.m_ExplicitHost = host;
+        mission.m_defendFaction = enemyFaction;
+        mission.m_iActivationSerial = activationSerial;
+        mission.m_bPreparationAlreadyComplete = true;
+        mission.m_bDynamicBase = true;
+        mission.m_DefenseConfig = defenseConfigSnapshot;
+        IA_Config cfg = mission.GetDefenseConfig();
+        if (cfg && !cfg.UseLegacyDefense())
+            mission.m_Enhanced = IA_EnhancedDefendDirector.Create(mission);
+        return mission;
+    }
+
+    IA_Config GetDefenseConfig()
+    {
+        if (m_DefenseConfig)
+            return m_DefenseConfig;
+        return IA_MissionInitializer.GetGlobalConfig();
+    }
+
+    bool IsPreparedDynamicBase()
+    {
+        return m_bPreparationAlreadyComplete;
+    }
+
+    int GetActivationSerial()
+    {
+        return m_iActivationSerial;
     }
     
     void StartDefendMission()
@@ -207,18 +244,61 @@ class IA_DefendMission
         m_affectedAreas.Clear();
         m_ownedQrfManager = null;
         
-        // Notify IA_Game and mission initializer that defend mission is complete
         IA_Game gameInstance = IA_Game.Instantiate();
         if (gameInstance)
+            gameInstance.SetActiveDefendMission(null);
+
+        if (m_bDynamicBase)
         {
-            gameInstance.SetActiveDefendMission(null); // Clear the active defend mission
-            
-            // Notify mission initializer to proceed to next zone
-            if (initializer)
+            IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+            if (init)
             {
-                initializer.OnDefendMissionComplete();
+                IA_DynamicObjectiveDirector director = init.GetDynamicObjectiveDirector();
+                if (director && director.GetObjective())
+                    director.GetObjective().OnDefenseEnded(m_iActivationSerial, true);
             }
+            return;
         }
+
+        if (initializer)
+            initializer.OnDefendMissionComplete();
+    }
+
+    void AbortDefendMission()
+    {
+        if (!m_isActive && !m_Enhanced)
+        {
+            m_isActive = false;
+            return;
+        }
+
+        Print("[IA_DefendMission] Aborting defend mission without success.", LogLevel.WARNING);
+        if (m_Enhanced)
+            m_Enhanced.CleanupEvents();
+        m_isActive = false;
+        DismissDefendTask();
+        IA_MissionInitializer.PublishDefendHud("", IA_DefendHudState.Hidden, 0, 0, 0, IA_DefendHudPhase.None);
+
+        foreach (IA_AreaInstance area : m_affectedAreas)
+        {
+            if (area)
+                area.SetDefendMode(false);
+        }
+        m_affectedAreas.Clear();
+        m_ownedQrfManager = null;
+
+        IA_Game gameInstance = IA_Game.Instantiate();
+        if (gameInstance && gameInstance.GetActiveDefendMission() == this)
+            gameInstance.SetActiveDefendMission(null);
+    }
+
+    protected void DismissDefendTask()
+    {
+        if (m_affectedAreas.IsEmpty())
+            return;
+        IA_AreaInstance firstArea = m_affectedAreas[0];
+        if (firstArea)
+            firstArea.DismissOpenTasks();
     }
     
     private int CalculateTargetAICount()
@@ -421,6 +501,18 @@ class IA_DefendMission
     
     private void CollectAffectedAreas()
     {
+        if (m_ExplicitHost)
+        {
+            if (m_ExplicitHost.IsShutDown() || m_ExplicitHost.GetAreaGroup() != m_groupID)
+            {
+                Print("[IA_DefendMission] Explicit dynamic-base host is not live for this group.", LogLevel.ERROR);
+                return;
+            }
+            m_affectedAreas.Clear();
+            m_affectedAreas.Insert(m_ExplicitHost);
+            return;
+        }
+
         IA_Game gameInstance = IA_Game.Instantiate();
         if (!gameInstance)
         {
@@ -660,10 +752,7 @@ class IA_DefendMission
             return false;
         }
 
-        IA_AreaGroupManager qrfManager = null;
-        IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
-        if (init)
-            qrfManager = init.GetCurrentAreaGroupManager();
+        IA_AreaGroupManager qrfManager = GetOrCreateQrfManager(targetArea);
 
         // Fallback if the group manager was cleared: keep a owned manager alive for vehicle CallLaters
         if (!qrfManager)
@@ -755,8 +844,21 @@ class IA_DefendMission
 
     void OnHostAreaForceFinish()
     {
-        if (m_isActive)
-            EndDefendMission();
+        if (!m_isActive)
+            return;
+        if (m_bDynamicBase)
+        {
+            AbortDefendMission();
+            IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+            if (init)
+            {
+                IA_DynamicObjectiveDirector director = init.GetDynamicObjectiveDirector();
+                if (director && director.GetObjective())
+                    director.GetObjective().OnDefenseEnded(m_iActivationSerial, false);
+            }
+            return;
+        }
+        EndDefendMission();
     }
 
     void BeginEnhancedHold()
@@ -998,7 +1100,7 @@ class IA_DefendMission
     {
         IA_AreaGroupManager qrfManager = null;
         IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
-        if (init)
+        if (init && !m_bDynamicBase)
             qrfManager = init.GetCurrentAreaGroupManager();
         if (qrfManager)
             return qrfManager;

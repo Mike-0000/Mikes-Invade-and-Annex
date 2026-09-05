@@ -762,6 +762,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
             return IA_AreaType.DefendObjective;
         else if (m_areaType == "MortarPit")
             return IA_AreaType.MortarPit;
+        else if (m_areaType == "DynamicBase")
+            return IA_AreaType.DynamicBase;
         return IA_AreaType.Property; // Fallback
     }
 

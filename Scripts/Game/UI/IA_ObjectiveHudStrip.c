@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------------------------
 //! Middle-left dock for live capture and defend bars. Pattern: Create(runtime)
 //! → overlay.AddChild. Keep as protected ref. Children are IA_CaptureHud tiles
-//! plus one IA_DefendHud; they Hug their chrome and pack left-to-right. Align
+//! plus IA_DefendHud and IA_BaseObjectiveHud; they Hug their chrome and pack left-to-right. Align
 //! 0.25 sits the group halfway between the left edge and screen center.
 //! Capture tiles appear for every packed slot whose capture radius contains
 //! the local player, including 0% blocked zones.
@@ -16,6 +16,7 @@ class IA_ObjectiveHudStrip : MUI_Row
 
 	protected ref array<ref IA_CaptureHud> m_aCaptures;
 	protected ref IA_DefendHud m_Defend;
+	protected ref IA_BaseObjectiveHud m_Base;
 	protected ref array<string> m_aAreas;
 	protected ref array<int> m_aStates;
 	protected ref array<float> m_aProgress;
@@ -67,6 +68,8 @@ class IA_ObjectiveHudStrip : MUI_Row
 
 		m_Defend = IA_DefendHud.Create(runtime);
 		AddChild(m_Defend);
+		m_Base = IA_BaseObjectiveHud.Create(runtime);
+		AddChild(m_Base);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -81,6 +84,8 @@ class IA_ObjectiveHudStrip : MUI_Row
 		}
 		if (m_Defend)
 			m_Defend.Abort();
+		if (m_Base)
+			m_Base.Abort();
 		m_sLastPacked = "";
 		m_aAreas.Clear();
 		m_aStates.Clear();
@@ -234,6 +239,8 @@ class IA_ObjectiveHudStrip : MUI_Row
 		}
 		if (m_Defend && m_Defend.IsVisible())
 			live = live + 1;
+		if (m_Base && m_Base.IsVisible())
+			live = live + 1;
 		if (live <= 0)
 			return;
 
@@ -266,5 +273,7 @@ class IA_ObjectiveHudStrip : MUI_Row
 		}
 		if (m_Defend && m_Defend.IsVisible())
 			m_Defend.SetDockWidth(tileW);
+		if (m_Base && m_Base.IsVisible())
+			m_Base.SetDockWidth(tileW);
 	}
 }

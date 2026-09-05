@@ -105,6 +105,8 @@ class IA_AreaGroupManager
         if (!forDefend && IA_MissionInitializer.IsQRFDisabled())
             return; // QRF globally disabled (legacy defend holds still get QRF)
 
+        if (!forDefend && IA_MissionInitializer.BlocksAutomaticPressure())
+            return;
         if (!forDefend && IA_GmDirector.IsAutoQrfOff())
             return;
 

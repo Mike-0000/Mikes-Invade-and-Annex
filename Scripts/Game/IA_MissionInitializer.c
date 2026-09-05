@@ -119,6 +119,12 @@ class IA_MissionInitializer : GenericEntity
 
 	[RplProp()]
 	string m_sAiCombatPacked_Rpl = "";
+
+	[RplProp()]
+	string m_sDynamicBaseConfigPacked_Rpl = "";
+
+	[RplProp()]
+	string m_sDynamicBaseStatusPacked_Rpl = "";
 	// --- END ADDED ---
 
 	protected static const int CAPTURE_HUD_MAX = 6;
@@ -148,6 +154,16 @@ class IA_MissionInitializer : GenericEntity
 
 	// Static reference for global access
 	static IA_MissionInitializer s_instance;
+
+	protected int m_iAoActivationSerial;
+	protected ref IA_DynamicObjectiveDirector m_DynamicObjectives;
+	protected bool m_bDynamicFallbackDispatched;
+	protected bool m_bDynamicCompleted;
+	protected bool m_bForceAuthoredOnFallback;
+	protected int m_iLastBaseStatusPublishMs;
+	protected int m_iLastBaseStatusPhase = -1;
+	protected string m_sBaseHudParsedFrom;
+	protected ref IA_BaseHudStatus m_BaseHudStatus;
 
 	int GetCurrentIndex(){
 		return m_currentIndex;
@@ -308,6 +324,8 @@ class IA_MissionInitializer : GenericEntity
 	        ////Print("[ERROR] IA_MissionInitializer.ProceedToNextZone: groupsArray is null or empty!", LogLevel.ERROR);
 	        return;
 	    }
+
+		CancelActiveDynamicObjective(IA_BaseCancelReason.AoReplaced);
 
         // --- BEGIN ADDED: Clear existing areas from IA_Game ---    
         IA_Game gameInstance = IA_Game.Instantiate();
@@ -478,6 +496,7 @@ class IA_MissionInitializer : GenericEntity
         // For now, keeping original timing, but this is a potential point of failure if it expects synchronous population.
 	    GetGame().GetCallqueue().CallLater(CheckCurrentZoneComplete, accumulatedDelay + 5000, true); // Start checking 5s after last area is scheduled
 	    ////Print("[DEBUG_ZONE_GROUP] Started monitoring completion for group " + currentGroup + " (check starts in " + (accumulatedDelay + 5000) + "ms)", LogLevel.NORMAL);
+		BeginDynamicObjectiveAo(currentGroup);
 	}
     void Shuffle(array<int> arr)
     {
@@ -493,6 +512,8 @@ class IA_MissionInitializer : GenericEntity
 	
 	void InitializeNow()
 {
+	CancelActiveDynamicObjective(IA_BaseCancelReason.MissionShutdown);
+
     IA_Game leftoverGame = IA_Game.Instantiate();
     if (leftoverGame)
         leftoverGame.ClearAllAreas();
@@ -683,6 +704,18 @@ class IA_MissionInitializer : GenericEntity
 				m_currentAreaGroupManager.QRFTask();
 			return;
 		}
+
+		if (m_DynamicObjectives && m_DynamicObjectives.OwnsActivation(m_iAoActivationSerial) && m_DynamicObjectives.IsBlockingAoCompletion())
+		{
+			if (!m_DynamicObjectives.BlocksAutomaticPressure())
+			{
+				if (!m_currentAreaGroupManager && m_currentAreaInstances)
+					m_currentAreaGroupManager = new IA_AreaGroupManager(m_currentAreaInstances);
+				if (m_currentAreaGroupManager)
+					m_currentAreaGroupManager.QRFTask();
+			}
+			return;
+		}
 		
 		////Print("Running CheckCurrentZoneComplete",LogLevel.NORMAL);
 		if (!m_currentAreaInstances)
@@ -700,8 +733,13 @@ class IA_MissionInitializer : GenericEntity
         if (m_currentAreaGroupManager)
 		{
 			Print("[AreaGroupManager] Performing periodic check for area group " + groupsArray[m_currentIndex], LogLevel.NORMAL);
+			bool skipPressure = BlocksAutomaticPressure();
             int currentTime = System.GetUnixTime();
-            if (s_artilleryDisabledUntil > 0 && currentTime < s_artilleryDisabledUntil)
+            if (skipPressure)
+            {
+                Print("[IA_MissionInitializer] Skipping automatic artillery/QRF while a dynamic base is placing or assembling.", LogLevel.DEBUG);
+            }
+            else if (s_artilleryDisabledUntil > 0 && currentTime < s_artilleryDisabledUntil)
             {
                 Print(string.Format("[IA_MissionInitializer] Skipping artillery check due to side objective cooldown. %1 seconds remaining.", s_artilleryDisabledUntil - currentTime), LogLevel.DEBUG);
             }
@@ -710,8 +748,8 @@ class IA_MissionInitializer : GenericEntity
                 m_currentAreaGroupManager.ArtilleryStrikeTask();
             }
 
-            // Always evaluate QRF independently of artillery state
-            m_currentAreaGroupManager.QRFTask();
+            if (!skipPressure)
+            	m_currentAreaGroupManager.QRFTask();
 		}
 		
 		////Print("Running CheckCurrentZoneComplete 1",LogLevel.NORMAL);
@@ -828,18 +866,13 @@ class IA_MissionInitializer : GenericEntity
 		if(actualCompletedZones >= amountOfRequiredZones){ // Optional mortar pits do not gate AO progression
 			//Print("[INFO] All " + amountOfZones + " zones in group " + currentGroup + " complete. Proceeding to next.", LogLevel.WARNING);
 
-			// --- BEGIN ADDED: Check for defend mission before proceeding ---
-			if (CheckAndStartDefendMission(currentGroup))
+			if (m_DynamicObjectives && m_DynamicObjectives.TryBeginTerminalObjective(false))
 			{
-				ForceFinishCurrentAreaInstancesExceptDefend();
-				GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
-				GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
-				Print("[IA_MissionInitializer] Defend mission started for group " + currentGroup + ". Delaying progression.", LogLevel.NORMAL);
+				GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+				Print("[IA_MissionInitializer] Dynamic base accepted for group " + currentGroup + ".", LogLevel.NORMAL);
 				return;
 			}
-			// --- END ADDED ---
-
-			SuccessZoneComplete(currentGroup);
+			ContinueWithoutDynamicBase(m_iAoActivationSerial, currentGroup);
 		}
 		else {
 			//Print("[DEBUG_ZONE_GROUP] Group " + currentGroup + " still needs " + (amountOfZones - actualCompletedZones) + " more zones to complete. Will re-check.", LogLevel.NORMAL);
@@ -1391,6 +1424,7 @@ class IA_MissionInitializer : GenericEntity
         {
             GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
             GetGame().GetCallqueue().CallLater(CheckCurrentZoneComplete, 5000, true);
+			BeginDynamicObjectiveAo(liveGroup);
         }
 
         Print(string.Format("[IA_MissionInitializer] Appended Live site '%1' to group %2", name, liveGroup), LogLevel.NORMAL);
@@ -1448,6 +1482,8 @@ class IA_MissionInitializer : GenericEntity
             vector origin = stagedMarker.GetOrigin();
             dir.RememberPlacedSite(stagedMarker.GetAreaType(), origin[0], origin[2], stagingId, stagedMarker.GetRadius(), stagedMarker.GetAreaName());
         }
+
+		CancelActiveDynamicObjective(IA_BaseCancelReason.AoReplaced);
 
         if (m_currentAreaGroupManager)
         {
@@ -1965,6 +2001,8 @@ class IA_MissionInitializer : GenericEntity
 				IA_Config.UnpackDefenseExtras(m_config, tokens[22]);
 			if (tokens.Count() > 23)
 				IA_Config.UnpackAiCombatExtras(m_config, tokens[23]);
+			if (tokens.Count() > 24)
+				IA_Config.UnpackDynamicBaseExtras(m_config, tokens[24]);
 		}
 
 		PushConfigToReplication();
@@ -2011,6 +2049,7 @@ class IA_MissionInitializer : GenericEntity
 			m_iCivilianRevoltNotificationDelay_Rpl = m_config.m_iCivilianRevoltNotificationDelay;
 			m_iCivilianRevoltReinforcementDelay_Rpl = m_config.m_iCivilianRevoltReinforcementDelay;
 			m_sAiCombatPacked_Rpl = IA_Config.PackAiCombatExtras(m_config);
+			m_sDynamicBaseConfigPacked_Rpl = IA_Config.PackDynamicBaseExtras(m_config);
 
 			m_sDesiredEnemyFactionKey_Rpl = "";
 			if (m_config.m_sDesiredEnemyFactionKeys && m_config.m_sDesiredEnemyFactionKeys.Count() > 0)
@@ -2070,6 +2109,7 @@ class IA_MissionInitializer : GenericEntity
 	protected void RPC_ForceCompleteZone()
 	{
 		Print("[IA_MissionInitializer] RPC_ForceCompleteZone received. Forcing zone completion.", LogLevel.WARNING);
+		CancelActiveDynamicObjective(IA_BaseCancelReason.AdminComplete);
 		
 		// Ensure ProceedToNextZone logic can run
 		if (m_currentAreaInstances)
@@ -2098,6 +2138,27 @@ class IA_MissionInitializer : GenericEntity
 	{
 		Print("[IA_MissionInitializer] RPC_ForceCompleteZoneAndDefend received.", LogLevel.WARNING);
 
+		if (m_DynamicObjectives && m_DynamicObjectives.GetObjective())
+		{
+			int phase = m_DynamicObjectives.GetObjective().GetPhase();
+			if (phase == IA_BaseObjectivePhase.Defend)
+			{
+				Print("[IA_MissionInitializer] Complete + Defend: dynamic-base defense already active.", LogLevel.WARNING);
+				return;
+			}
+			if (phase == IA_BaseObjectivePhase.Seize || phase == IA_BaseObjectivePhase.Regroup || phase == IA_BaseObjectivePhase.Warning)
+			{
+				if (m_DynamicObjectives.AdminBypassToDefend())
+				{
+					GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+					Print("[IA_MissionInitializer] Complete + Defend: admin bypass into the live base defense.", LogLevel.WARNING);
+					return;
+				}
+			}
+			if (phase == IA_BaseObjectivePhase.Placing)
+				CancelActiveDynamicObjective(IA_BaseCancelReason.AdminDirectDefense);
+		}
+
 		int groupID = GetActiveGroup();
 		if (groupID < 0)
 		{
@@ -2119,6 +2180,70 @@ class IA_MissionInitializer : GenericEntity
 
 		Print("[IA_MissionInitializer] No DefendObjective on this AO — completing without a defense.", LogLevel.WARNING);
 		RPC_ForceCompleteZone();
+	}
+
+	static void ForceCompleteObjectivesAndSeizeBase()
+	{
+		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (pc)
+		{
+			pc.IA_AskForceCompleteObjectivesAndSeizeBase();
+			return;
+		}
+
+		IA_MissionInitializer init = GetInstance();
+		if (!init)
+			return;
+
+		if (Replication.IsServer())
+			init.RPC_ForceCompleteObjectivesAndSeizeBase();
+	}
+
+	void ServerForceCompleteObjectivesAndSeizeBase()
+	{
+		if (!Replication.IsServer())
+			return;
+		RPC_ForceCompleteObjectivesAndSeizeBase();
+	}
+
+	protected void RPC_ForceCompleteObjectivesAndSeizeBase()
+	{
+		Print("[IA_MissionInitializer] RPC_ForceCompleteObjectivesAndSeizeBase received.", LogLevel.WARNING);
+
+		int groupID = GetActiveGroup();
+		if (groupID < 0)
+		{
+			if (groupsArray && groupsArray.IsIndexValid(m_currentIndex))
+				groupID = groupsArray[m_currentIndex];
+			else
+				groupID = m_currentIndex;
+		}
+
+		if (m_DynamicObjectives && m_DynamicObjectives.GetObjective())
+		{
+			int phase = m_DynamicObjectives.GetObjective().GetPhase();
+			if (phase == IA_BaseObjectivePhase.Placing || phase == IA_BaseObjectivePhase.Seize || phase == IA_BaseObjectivePhase.Regroup || phase == IA_BaseObjectivePhase.Warning || phase == IA_BaseObjectivePhase.Defend)
+			{
+				Print("[IA_MissionInitializer] Seize-base force ignored: a base job is already active.", LogLevel.WARNING);
+				return;
+			}
+		}
+
+		if (!m_DynamicObjectives)
+			m_DynamicObjectives = new IA_DynamicObjectiveDirector();
+		if (!m_DynamicObjectives.OwnsActivation(m_iAoActivationSerial))
+			BeginDynamicObjectiveAo(groupID);
+
+		RetireGroupObjectivesForDefend(groupID);
+		m_bForceAuthoredOnFallback = true;
+		if (m_DynamicObjectives.TryBeginTerminalObjective(true))
+		{
+			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+			Print("[IA_MissionInitializer] Forced remaining objectives complete; starting a validated base attempt.", LogLevel.WARNING);
+			return;
+		}
+
+		ContinueWithoutDynamicBase(m_iAoActivationSerial, groupID);
 	}
 	// --- END ADDED ---
 
@@ -2694,6 +2819,267 @@ class IA_MissionInitializer : GenericEntity
 		return m_currentAreaGroupManager;
 	}
 
+	int GetAoActivationSerial()
+	{
+		return m_iAoActivationSerial;
+	}
+
+	IA_DynamicObjectiveDirector GetDynamicObjectiveDirector()
+	{
+		return m_DynamicObjectives;
+	}
+
+	static bool BlocksAutomaticPressure()
+	{
+		IA_MissionInitializer init = GetInstance();
+		if (!init || !init.m_DynamicObjectives)
+			return false;
+		return init.m_DynamicObjectives.BlocksAutomaticPressure();
+	}
+
+	void BeginDynamicObjectiveAo(int groupId)
+	{
+		m_iAoActivationSerial = m_iAoActivationSerial + 1;
+		m_bDynamicFallbackDispatched = false;
+		m_bDynamicCompleted = false;
+		m_bForceAuthoredOnFallback = false;
+		if (!m_DynamicObjectives)
+			m_DynamicObjectives = new IA_DynamicObjectiveDirector();
+		m_DynamicObjectives.BeginAo(m_iAoActivationSerial, groupId);
+		Print(string.Format("[IA_MissionInitializer] Dynamic-base AO serial %1 for group %2.", m_iAoActivationSerial, groupId), LogLevel.NORMAL);
+	}
+
+	protected void CancelActiveDynamicObjective(int reason)
+	{
+		if (!m_DynamicObjectives)
+			return;
+		m_DynamicObjectives.Cancel(reason);
+	}
+
+	void HandleDynamicObjectiveResult(int activationSerial, int result, string reason)
+	{
+		if (activationSerial != m_iAoActivationSerial)
+			return;
+
+		if (result == IA_DynamicObjectiveResult.Completed)
+		{
+			if (m_bDynamicCompleted)
+				return;
+			m_bDynamicCompleted = true;
+			OnDefendMissionComplete();
+			return;
+		}
+
+		if (result == IA_DynamicObjectiveResult.Fallback)
+		{
+			ContinueWithoutDynamicBase(activationSerial, GetActiveGroup());
+			return;
+		}
+
+		if (result == IA_DynamicObjectiveResult.Failed)
+			Print("[IA_MissionInitializer] Dynamic base failed (" + reason + "). Waiting for admin recovery.", LogLevel.ERROR);
+	}
+
+	protected void ContinueWithoutDynamicBase(int serial, int groupId)
+	{
+		if (serial != m_iAoActivationSerial)
+			return;
+		if (m_bDynamicFallbackDispatched)
+			return;
+		m_bDynamicFallbackDispatched = true;
+
+		bool forceDefend = m_bForceAuthoredOnFallback;
+		m_bForceAuthoredOnFallback = false;
+
+		if (CheckAndStartDefendMission(groupId, forceDefend))
+		{
+			ForceFinishCurrentAreaInstancesExceptDefend();
+			GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
+			GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
+			Print("[IA_MissionInitializer] Authored defense started after dynamic-base miss for group " + groupId, LogLevel.NORMAL);
+			return;
+		}
+
+		SuccessZoneComplete(groupId);
+	}
+
+	void RetireOrdinaryObjectivesForBase(int serial, IA_AreaInstance host)
+	{
+		if (serial != m_iAoActivationSerial)
+			return;
+		if (!host)
+			return;
+
+		GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
+		GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
+		RetireGroupObjectivesForDefend(host.GetAreaGroup());
+
+		ref array<ref IA_AreaInstance> keep = new array<ref IA_AreaInstance>();
+		keep.Insert(host);
+		if (m_currentAreaInstances)
+		{
+			int count = m_currentAreaInstances.Count();
+			int i;
+			for (i = 0; i < count; i++)
+			{
+				IA_AreaInstance instance = m_currentAreaInstances[i];
+				if (!instance || instance == host)
+					continue;
+				IA_Area area = instance.GetArea();
+				if (area && area.GetAreaType() == IA_AreaType.MortarPit)
+				{
+					keep.Insert(instance);
+					continue;
+				}
+				instance.CancelPendingSpawns();
+				instance.ForceFinish();
+			}
+			m_currentAreaInstances.Clear();
+			int keepCount = keep.Count();
+			for (i = 1; i < keepCount; i++)
+				m_currentAreaInstances.Insert(keep[i]);
+		}
+
+		if (m_currentAreaGroupManager)
+		{
+			m_currentAreaGroupManager.Shutdown();
+			delete m_currentAreaGroupManager;
+			m_currentAreaGroupManager = null;
+		}
+		m_currentAreaGroupManager = new IA_AreaGroupManager(keep);
+		Print("[IA_MissionInitializer] Retired ordinary AO hosts for the captured base.", LogLevel.NORMAL);
+	}
+
+	void PublishBaseObjectiveStatus(bool force, int serial, int groupId, int phase, string siteId, vector sitePos, vector capPos, float capR, int capturePermille, int eligiblePresent, int target, int allPresent, int remain, int reason)
+	{
+		if (!Replication.IsServer())
+			return;
+
+		int now = System.GetTickCount();
+		bool phaseChanged = phase != m_iLastBaseStatusPhase;
+		if (!force && !phaseChanged && (now - m_iLastBaseStatusPublishMs) < 1000)
+			return;
+
+		m_iLastBaseStatusPublishMs = now;
+		m_iLastBaseStatusPhase = phase;
+
+		string packed = "1";
+		packed = packed + "|" + serial.ToString();
+		packed = packed + "|" + groupId.ToString();
+		packed = packed + "|" + phase.ToString();
+		packed = packed + "|" + siteId;
+		packed = packed + "|" + sitePos[0].ToString();
+		packed = packed + "|" + sitePos[1].ToString();
+		packed = packed + "|" + sitePos[2].ToString();
+		packed = packed + "|" + capPos[0].ToString();
+		packed = packed + "|" + capPos[1].ToString();
+		packed = packed + "|" + capPos[2].ToString();
+		packed = packed + "|" + capR.ToString();
+		packed = packed + "|" + capturePermille.ToString();
+		packed = packed + "|" + eligiblePresent.ToString();
+		packed = packed + "|" + target.ToString();
+		packed = packed + "|" + allPresent.ToString();
+		packed = packed + "|" + remain.ToString();
+		packed = packed + "|" + reason.ToString();
+
+		if (m_sDynamicBaseStatusPacked_Rpl == packed)
+			return;
+		m_sDynamicBaseStatusPacked_Rpl = packed;
+		Replication.BumpMe();
+	}
+
+	IA_BaseHudStatus GetBaseObjectiveStatus()
+	{
+		if (m_sBaseHudParsedFrom == m_sDynamicBaseStatusPacked_Rpl && m_BaseHudStatus)
+			return m_BaseHudStatus;
+
+		m_sBaseHudParsedFrom = m_sDynamicBaseStatusPacked_Rpl;
+		m_BaseHudStatus = ParseBaseObjectiveStatus(m_sDynamicBaseStatusPacked_Rpl);
+		return m_BaseHudStatus;
+	}
+
+	protected IA_BaseHudStatus ParseBaseObjectiveStatus(string packed)
+	{
+		ref IA_BaseHudStatus status = new IA_BaseHudStatus();
+		if (packed.IsEmpty())
+			return status;
+
+		ref array<string> tokens = new array<string>();
+		packed.Split("|", tokens, false);
+		if (tokens.Count() < 18)
+			return status;
+
+		int version;
+		int serial;
+		int groupId;
+		int phase;
+		int capturePermille;
+		int eligiblePresent;
+		int target;
+		int allPresent;
+		int remain;
+		int reason;
+		float x;
+		float y;
+		float z;
+		float cx;
+		float cy;
+		float cz;
+		float radius;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[0], version))
+			return status;
+		if (version != 1)
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[1], serial))
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[2], groupId))
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[3], phase))
+			return status;
+		if (!IA_DynamicParse.TryParseFloatToken(tokens[5], x))
+			return status;
+		if (!IA_DynamicParse.TryParseFloatToken(tokens[6], y))
+			return status;
+		if (!IA_DynamicParse.TryParseFloatToken(tokens[7], z))
+			return status;
+		if (!IA_DynamicParse.TryParseFloatToken(tokens[8], cx))
+			return status;
+		if (!IA_DynamicParse.TryParseFloatToken(tokens[9], cy))
+			return status;
+		if (!IA_DynamicParse.TryParseFloatToken(tokens[10], cz))
+			return status;
+		if (!IA_DynamicParse.TryParseFloatToken(tokens[11], radius))
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[12], capturePermille))
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[13], eligiblePresent))
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[14], target))
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[15], allPresent))
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[16], remain))
+			return status;
+		if (!IA_DynamicParse.TryParseIntToken(tokens[17], reason))
+			return status;
+
+		status.m_iVersion = version;
+		status.m_iSerial = serial;
+		status.m_iGroupId = groupId;
+		status.m_iPhase = phase;
+		status.m_sSiteId = tokens[4];
+		status.m_vSite = Vector(x, y, z);
+		status.m_vCapture = Vector(cx, cy, cz);
+		status.m_fCaptureRadius = radius;
+		status.m_iCapturePermille = capturePermille;
+		status.m_iEligiblePresent = eligiblePresent;
+		status.m_iTarget = target;
+		status.m_iAllPresent = allPresent;
+		status.m_iRemainingSec = remain;
+		status.m_iReason = reason;
+		return status;
+	}
+
 	// Static getter for config
 	static IA_Config GetGlobalConfig()
 	{
@@ -2745,6 +3131,7 @@ class IA_MissionInitializer : GenericEntity
 				}
 
 				IA_Config.UnpackAiCombatExtras(clientConfig, s_instance.m_sAiCombatPacked_Rpl);
+				IA_Config.UnpackDynamicBaseExtras(clientConfig, s_instance.m_sDynamicBaseConfigPacked_Rpl);
 
 				return clientConfig;
 			}

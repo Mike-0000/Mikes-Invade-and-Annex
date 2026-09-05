@@ -244,6 +244,7 @@ class IA_AiGroup
     
     // Staggered spawning state
     private int m_pendingUnitsToSpawn = 0;
+    private bool m_bSpawnAborted = false;
     private int m_unitsSpawnedCount = 0;
     private vector m_staggeredSpawnPos = vector.Zero;
     private IA_Faction m_staggeredSpawnFaction = IA_Faction.NONE;
@@ -3436,8 +3437,25 @@ class IA_AiGroup
         // by the updated SetTacticalState logic for IA_GroupTacticalState.InVehicle.
     }
 
+    bool HasPendingUnitSpawns()
+    {
+        return m_pendingUnitsToSpawn > 0 && !m_bSpawnAborted;
+    }
+
+    int GetPendingUnitCount()
+    {
+        if (m_bSpawnAborted)
+            return 0;
+        return m_pendingUnitsToSpawn;
+    }
+
     void Despawn()
     {
+        m_bSpawnAborted = true;
+        m_pendingUnitsToSpawn = 0;
+        ScriptCallQueue queue = GetGame().GetCallqueue();
+        if (queue)
+            queue.Remove(this.SpawnNextUnit);
         if (!IsSpawned())
         {
             return;
@@ -4421,6 +4439,8 @@ class IA_AiGroup
     // Method to spawn the next unit in the staggered spawning process
     void SpawnNextUnit()
     {
+        if (m_bSpawnAborted)
+            return;
         if (m_pendingUnitsToSpawn <= 0)
         {
             // All units spawned, finalize the group
@@ -4696,6 +4716,8 @@ class IA_AiGroup
     // Method to spawn the next hostile civilian unit in the staggered spawning process
     void SpawnNextHostileCivilianUnit()
     {
+        if (m_bSpawnAborted)
+            return;
         if (m_pendingUnitsToSpawn <= 0)
         {
             // All units spawned, finalize the group

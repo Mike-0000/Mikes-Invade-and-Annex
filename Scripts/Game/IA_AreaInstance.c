@@ -82,6 +82,7 @@ class IA_AreaInstance
     private int m_currentTask = 0;
     private bool m_canSpawn   = true;
     private bool m_bShutDown = false;
+    private bool m_bDynamicObjectiveHost = false;
     private bool m_bDeferredCleanupPending = false;
     private const int DEFERRED_CLEANUP_RETRY_MS = 8000;
     private ref IA_ObjectiveElitePatrol m_objectiveElitePatrol;
@@ -200,7 +201,7 @@ class IA_AreaInstance
         //////Print("[PLAYER_SCALING] Area " + m_area.GetName() + " updated: AI Scale=" + m_aiScaleFactor + ", Max Vehicles=" + m_maxVehicles, LogLevel.DEBUG);
         
         // If this is a significant scale change (more than 30% difference), adjust military units
-        if (m_military && !m_military.IsEmpty() && previousScaleFactor > 0) 
+        if (!m_bDynamicObjectiveHost && m_military && !m_military.IsEmpty() && previousScaleFactor > 0) 
         {
             float scaleDifference = Math.AbsFloat(m_aiScaleFactor - previousScaleFactor) / previousScaleFactor;
             
@@ -332,7 +333,7 @@ class IA_AreaInstance
 
 	
 	
-	static IA_AreaInstance Create(IA_Area area, IA_Faction faction, Faction AreaFaction, int startStrength = 0, int groupID = -1)
+	static IA_AreaInstance Create(IA_Area area, IA_Faction faction, Faction AreaFaction, int startStrength = 0, int groupID = -1, bool dynamicObjectiveHost = false)
 	{
 		if(!area){
 			// Print("[DEBUG] area is NULL! ", LogLevel.DEBUG);
@@ -345,6 +346,7 @@ class IA_AreaInstance
 	    inst.m_strength = startStrength;
 		inst.m_areaGroup = groupID;
 		inst.m_AreaFaction = AreaFaction;
+		inst.m_bDynamicObjectiveHost = dynamicObjectiveHost;
 		
 			
 	    inst.m_area.SetInstantiated(true);
@@ -358,25 +360,28 @@ class IA_AreaInstance
 	    inst.UpdatePlayerScaling(playerCount, scaleFactor, maxVehicles);
 	    
 	    //////Print("[PLAYER_SCALING] New area created with scale factor: " + scaleFactor + ", player count: " + playerCount, LogLevel.DEBUG);
-	
-	    int groupCount = area.GetMilitaryAiGroupCount();
-	    inst.GenerateRandomAiGroups(groupCount, true, AreaFaction);
-	
-	    int civCount = area.GetCivilianCount();
-	    if (civCount > 0)
-	        inst.GenerateCivilians(civCount);
-	    
-	    // Also spawn initial vehicles for the area (skip for mortar pits)
-	    if (area.GetAreaType() != IA_AreaType.MortarPit)
-	    {
-	        inst.SpawnInitialVehicles();
-	        inst.SpawnInitialCivVehicles();
-	    }
 
-	    if (area.GetAreaType() == IA_AreaType.MortarPit)
-	        GetGame().GetCallqueue().CallLater(inst.SetupMortarPitCrew, 12000, false);
+		if (!dynamicObjectiveHost)
+		{
+		    int groupCount = area.GetMilitaryAiGroupCount();
+		    inst.GenerateRandomAiGroups(groupCount, true, AreaFaction);
+		
+		    int civCount = area.GetCivilianCount();
+		    if (civCount > 0)
+		        inst.GenerateCivilians(civCount);
+		    
+		    // Also spawn initial vehicles for the area (skip for mortar pits)
+		    if (area.GetAreaType() != IA_AreaType.MortarPit)
+		    {
+		        inst.SpawnInitialVehicles();
+		        inst.SpawnInitialCivVehicles();
+		    }
 
-	    inst.TryStartObjectiveElitePatrol();
+		    if (area.GetAreaType() == IA_AreaType.MortarPit)
+		        GetGame().GetCallqueue().CallLater(inst.SetupMortarPitCrew, 12000, false);
+
+		    inst.TryStartObjectiveElitePatrol();
+		}
 	
 	    // Initialize central reaction manager
 	    inst.m_centralReactionManager = new IA_AIReactionManager();
@@ -669,7 +674,8 @@ class IA_AreaInstance
         }
         else if (m_currentTask == 2)
         {
-            ReinforcementsTask();
+            if (!m_bDynamicObjectiveHost)
+                ReinforcementsTask();
         }
         else if (m_currentTask == 3)
         {
@@ -677,7 +683,8 @@ class IA_AreaInstance
         }
         else if (m_currentTask == 4)
         {
-            VehicleReinforcementsTask();
+            if (!m_bDynamicObjectiveHost)
+                VehicleReinforcementsTask();
         }
         else if (m_currentTask == 5)
         {
@@ -685,15 +692,18 @@ class IA_AreaInstance
         }
         else if (m_currentTask == 6)
         {
-            CivilianOrderTask();
+            if (!m_bDynamicObjectiveHost)
+                CivilianOrderTask();
         }
         else if (m_currentTask == 7)
         {
-            AiAttackersTask();
+            if (!m_bDynamicObjectiveHost)
+                AiAttackersTask();
         }
         else if (m_currentTask == 8)
         {
-            VehicleManagementTask();
+            if (!m_bDynamicObjectiveHost)
+                VehicleManagementTask();
         }
         else if (m_currentTask == 9)
         {
@@ -704,9 +714,12 @@ class IA_AreaInstance
             m_currentTask = 0;
         }
         UpdateTask();
-        RadioTowerDefenseTask();
-        SideObjectiveDefenseTask();
-        TickObjectiveElitePatrol();
+        if (!m_bDynamicObjectiveHost)
+        {
+            RadioTowerDefenseTask();
+            SideObjectiveDefenseTask();
+            TickObjectiveElitePatrol();
+        }
     }
 
     void Cleanup()
@@ -914,7 +927,7 @@ class IA_AreaInstance
         return m_bShutDown;
     }
 
-    protected void CancelPendingSpawns()
+    void CancelPendingSpawns()
     {
         ScriptCallQueue queue = GetGame().GetCallqueue();
         if (!queue)
@@ -1070,6 +1083,8 @@ class IA_AreaInstance
 
     void OnAttacked(IA_Faction attacker)
     {
+        if (m_bDynamicObjectiveHost)
+            return;
         if (attacker == m_faction)
             return;
         if (m_reinforcements == IA_ReinforcementState.NotDone)
@@ -5357,6 +5372,11 @@ class IA_AreaInstance
     int GetAreaGroup()
     {
         return m_areaGroup;
+    }
+
+    bool IsDynamicObjectiveHost()
+    {
+        return m_bDynamicObjectiveHost;
     }
     // --- END ADDED ---
 

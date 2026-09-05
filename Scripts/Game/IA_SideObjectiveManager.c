@@ -101,6 +101,8 @@ class IA_SideObjectiveManager
 	
     void TryStartNewSideObjective()
     {
+        if (IA_MissionInitializer.BlocksAutomaticPressure())
+            return;
         if (IA_GmDirector.IsAutoSideOff())
             return;
 

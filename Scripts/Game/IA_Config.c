@@ -183,6 +183,33 @@ class IA_Config{
 	[Attribute(defvalue: "0.20", UIWidgets.Slider, category: "Defense", desc: "Air Assault hot-drop chance (0-1). Remainder uses a 150-300 m perimeter LZ.", params: "0 1 0.01")]
 	float m_fDefendHotDropChance = 0.20;
 
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Dynamic Base", desc: "After required AO objectives, attempt a seize-regroup-defend base.")]
+	bool m_bDynamicBaseEnabled = true;
+
+	[Attribute(defvalue: "100", UIWidgets.EditBox, category: "Dynamic Base", desc: "Chance (0-100) to select a dynamic base after required objectives.")]
+	int m_iDynamicBaseChancePct = 100;
+
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Dynamic Base", desc: "Automatically start a dynamic base in Game Master mode.")]
+	bool m_bDynamicBaseInGm = false;
+
+	[Attribute(defvalue: "0", UIWidgets.EditBox, category: "Dynamic Base", desc: "0 Auto, 1 Full, 2 Compact.")]
+	int m_iDynamicBaseSizeMode = 0;
+
+	[Attribute(defvalue: "90", UIWidgets.EditBox, category: "Dynamic Base", desc: "Uncontested command-zone capture seconds.")]
+	int m_iDynamicBaseCaptureSec = 90;
+
+	[Attribute(defvalue: "90", UIWidgets.EditBox, category: "Dynamic Base", desc: "Minimum regroup seconds before the counterattack warning.")]
+	int m_iDynamicBaseRegroupMinSec = 90;
+
+	[Attribute(defvalue: "240", UIWidgets.EditBox, category: "Dynamic Base", desc: "Maximum regroup seconds before the warning if anyone is present.")]
+	int m_iDynamicBaseRegroupMaxSec = 240;
+
+	[Attribute(defvalue: "0.60", UIWidgets.Slider, category: "Dynamic Base", desc: "Eligible-force fraction required to leave regroup after the minimum wait.", params: "0.1 1 0.01")]
+	float m_fDynamicBaseRegroupFraction = 0.60;
+
+	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "Dynamic Base", desc: "Garrison size multiplier (0.25-2.0).")]
+	float m_fDynamicBaseGarrisonMultiplier = 1.0;
+
 	[Attribute(defvalue: EAISkill.VETERAN.ToString(), UIWidgets.ComboBox, "Aim skill for normal infantry. Vanilla EAISkill only changes aim-error sigma.", "", ParamEnumArray.FromEnum(EAISkill), category: "AI Combat")]
 	EAISkill m_eAiSkillNormal = EAISkill.VETERAN;
 
@@ -320,6 +347,123 @@ class IA_Config{
 			m_fDefendHotDropChance = 0;
 		if (m_fDefendHotDropChance > 1)
 			m_fDefendHotDropChance = 1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void ClampDynamicBaseSettings()
+	{
+		if (m_iDynamicBaseChancePct < 0)
+			m_iDynamicBaseChancePct = 0;
+		if (m_iDynamicBaseChancePct > 100)
+			m_iDynamicBaseChancePct = 100;
+
+		if (m_iDynamicBaseSizeMode < 0 || m_iDynamicBaseSizeMode > 2)
+			m_iDynamicBaseSizeMode = 0;
+
+		if (m_iDynamicBaseCaptureSec < 30)
+			m_iDynamicBaseCaptureSec = 30;
+		if (m_iDynamicBaseCaptureSec > 300)
+			m_iDynamicBaseCaptureSec = 300;
+
+		if (m_iDynamicBaseRegroupMinSec < 0)
+			m_iDynamicBaseRegroupMinSec = 0;
+		if (m_iDynamicBaseRegroupMinSec > 300)
+			m_iDynamicBaseRegroupMinSec = 300;
+
+		if (m_iDynamicBaseRegroupMaxSec < m_iDynamicBaseRegroupMinSec)
+			m_iDynamicBaseRegroupMaxSec = m_iDynamicBaseRegroupMinSec;
+		if (m_iDynamicBaseRegroupMaxSec > 600)
+			m_iDynamicBaseRegroupMaxSec = 600;
+
+		if (m_fDynamicBaseRegroupFraction < 0.10)
+			m_fDynamicBaseRegroupFraction = 0.10;
+		if (m_fDynamicBaseRegroupFraction > 1.0)
+			m_fDynamicBaseRegroupFraction = 1.0;
+
+		if (m_fDynamicBaseGarrisonMultiplier < 0.25)
+			m_fDynamicBaseGarrisonMultiplier = 0.25;
+		if (m_fDynamicBaseGarrisonMultiplier > 2.0)
+			m_fDynamicBaseGarrisonMultiplier = 2.0;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string PackDynamicBaseExtras(notnull IA_Config cfg)
+	{
+		cfg.ClampDynamicBaseSettings();
+		int enabledI = 0;
+		if (cfg.m_bDynamicBaseEnabled)
+			enabledI = 1;
+		int gmI = 0;
+		if (cfg.m_bDynamicBaseInGm)
+			gmI = 1;
+
+		string packed = "1";
+		packed = packed + "," + enabledI.ToString();
+		packed = packed + "," + cfg.m_iDynamicBaseChancePct.ToString();
+		packed = packed + "," + gmI.ToString();
+		packed = packed + "," + cfg.m_iDynamicBaseSizeMode.ToString();
+		packed = packed + "," + cfg.m_iDynamicBaseCaptureSec.ToString();
+		packed = packed + "," + cfg.m_iDynamicBaseRegroupMinSec.ToString();
+		packed = packed + "," + cfg.m_iDynamicBaseRegroupMaxSec.ToString();
+		packed = packed + "," + cfg.m_fDynamicBaseRegroupFraction.ToString();
+		packed = packed + "," + cfg.m_fDynamicBaseGarrisonMultiplier.ToString();
+		return packed;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static void UnpackDynamicBaseExtras(notnull IA_Config cfg, string packed)
+	{
+		if (packed.IsEmpty())
+			return;
+
+		ref array<string> parts = new array<string>();
+		packed.Split(",", parts, false);
+		if (parts.Count() != 10)
+			return;
+
+		int version;
+		int enabledI;
+		int chancePct;
+		int gmI;
+		int sizeMode;
+		int captureSec;
+		int regroupMin;
+		int regroupMax;
+		float regroupFrac;
+		float garrisonMult;
+		if (!IA_DynamicParse.TryParseIntToken(parts[0], version))
+			return;
+		if (version != 1)
+			return;
+		if (!IA_DynamicParse.TryParseIntToken(parts[1], enabledI))
+			return;
+		if (!IA_DynamicParse.TryParseIntToken(parts[2], chancePct))
+			return;
+		if (!IA_DynamicParse.TryParseIntToken(parts[3], gmI))
+			return;
+		if (!IA_DynamicParse.TryParseIntToken(parts[4], sizeMode))
+			return;
+		if (!IA_DynamicParse.TryParseIntToken(parts[5], captureSec))
+			return;
+		if (!IA_DynamicParse.TryParseIntToken(parts[6], regroupMin))
+			return;
+		if (!IA_DynamicParse.TryParseIntToken(parts[7], regroupMax))
+			return;
+		if (!IA_DynamicParse.TryParseFloatToken(parts[8], regroupFrac))
+			return;
+		if (!IA_DynamicParse.TryParseFloatToken(parts[9], garrisonMult))
+			return;
+
+		cfg.m_bDynamicBaseEnabled = enabledI != 0;
+		cfg.m_iDynamicBaseChancePct = chancePct;
+		cfg.m_bDynamicBaseInGm = gmI != 0;
+		cfg.m_iDynamicBaseSizeMode = sizeMode;
+		cfg.m_iDynamicBaseCaptureSec = captureSec;
+		cfg.m_iDynamicBaseRegroupMinSec = regroupMin;
+		cfg.m_iDynamicBaseRegroupMaxSec = regroupMax;
+		cfg.m_fDynamicBaseRegroupFraction = regroupFrac;
+		cfg.m_fDynamicBaseGarrisonMultiplier = garrisonMult;
+		cfg.ClampDynamicBaseSettings();
 	}
 
 	//------------------------------------------------------------------------------------------------
