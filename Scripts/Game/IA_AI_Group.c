@@ -645,6 +645,12 @@ class IA_AiGroup
         if (!searchState)
             return;
 
+        if (searchState.m_callbackInstance)
+        {
+            if (searchState.m_callbackInstance.IsShutDown() || !searchState.m_callbackInstance.GetArea())
+                return;
+        }
+
         if (searchState.m_foundSpawnPos == vector.Zero && !searchState.m_useExactPosition)
         {
             if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
@@ -661,14 +667,18 @@ class IA_AiGroup
             if (holdAt == vector.Zero)
                 holdAt = searchState.m_foundSpawnPos;
             grp.SetHoldPost(holdAt, searchState.m_holdRadius);
-            if (searchState.m_keepAltitude)
-                grp.SpawnNextUnit();
         }
 
         if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
         {
             searchState.m_callbackInstance.OnAsyncGroupCreated(grp, searchState.m_roadFound);
         }
+
+        // Keep-altitude creation defers every unit, including mortar crews and guards.
+        // Let the area assign the crew role before spawning can finalize the group
+        // and issue a default DefendPatrol waypoint.
+        if (grp && searchState.m_keepAltitude)
+            grp.SpawnNextUnit();
     }
 	
 	
