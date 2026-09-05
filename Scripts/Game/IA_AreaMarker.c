@@ -354,16 +354,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    {
 	        if (GetAreaType() == IA_AreaType.MortarPit)
 	        {
-	            if (m_isCaptured)
-	            {
+	            SpawnMortarPitComposition();
+	            if (m_spawnedEntity)
 	                m_prefabSpawned = true;
-	            }
-	            else
-	            {
-	                SpawnMortarPitComposition();
-	                if (m_spawnedEntity)
-	                    m_prefabSpawned = true;
-	            }
 	        }
 	    }
 
@@ -612,34 +605,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        if (GetAreaType() == IA_AreaType.MortarPit)
 	        {
 	            IA_Game game = IA_Game.Instantiate();
-	            IA_AreaInstance areaInstance = null;
 	            if (game)
-	                areaInstance = game.GetAreaInstance(m_areaName);
-	            if (!areaInstance && game)
 	            {
-	                array<IA_AreaInstance> instances = game.GetAreaInstances();
-	                if (instances)
-	                {
-	                    foreach (IA_AreaInstance candidate : instances)
-	                    {
-	                        if (!candidate || !candidate.IsMortarPitArea())
-	                            continue;
-	                        if (candidate.GetAreaGroup() != m_areaGroup)
-	                            continue;
-	                        areaInstance = candidate;
-	                        break;
-	                    }
-	                }
-	            }
-	            if (areaInstance)
-	            {
-	                if (areaInstance.GetCurrentTaskEntity())
-	                {
-	                    SCR_ETaskState pitTaskState = areaInstance.GetCurrentTaskEntity().GetTaskState();
-	                    if (pitTaskState != SCR_ETaskState.COMPLETED)
-	                        areaInstance.GetCurrentTaskEntity().SetTaskState(SCR_ETaskState.COMPLETED);
-	                }
-	                areaInstance.CompleteCurrentTask();
+	                IA_AreaInstance areaInstance = game.GetAreaInstance(m_areaName);
+	                if (areaInstance && areaInstance.GetCurrentTaskEntity())
+	                    areaInstance.GetCurrentTaskEntity().SetTaskState(SCR_ETaskState.COMPLETED);
 	            }
 	        }
 	        
