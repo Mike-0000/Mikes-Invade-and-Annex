@@ -2136,50 +2136,8 @@ class IA_MissionInitializer : GenericEntity
 
 	protected void RPC_ForceCompleteZoneAndDefend()
 	{
-		Print("[IA_MissionInitializer] RPC_ForceCompleteZoneAndDefend received.", LogLevel.WARNING);
-
-		if (m_DynamicObjectives && m_DynamicObjectives.GetObjective())
-		{
-			int phase = m_DynamicObjectives.GetObjective().GetPhase();
-			if (phase == IA_BaseObjectivePhase.Defend)
-			{
-				Print("[IA_MissionInitializer] Complete + Defend: dynamic-base defense already active.", LogLevel.WARNING);
-				return;
-			}
-			if (phase == IA_BaseObjectivePhase.Seize || phase == IA_BaseObjectivePhase.Regroup || phase == IA_BaseObjectivePhase.Warning)
-			{
-				if (m_DynamicObjectives.AdminBypassToDefend())
-				{
-					GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
-					Print("[IA_MissionInitializer] Complete + Defend: admin bypass into the live base defense.", LogLevel.WARNING);
-					return;
-				}
-			}
-			if (phase == IA_BaseObjectivePhase.Placing)
-				CancelActiveDynamicObjective(IA_BaseCancelReason.AdminDirectDefense);
-		}
-
-		int groupID = GetActiveGroup();
-		if (groupID < 0)
-		{
-			if (groupsArray && groupsArray.IsIndexValid(m_currentIndex))
-				groupID = groupsArray[m_currentIndex];
-			else
-				groupID = m_currentIndex;
-		}
-
-		if (CheckAndStartDefendMission(groupID, true))
-		{
-			ForceFinishCurrentAreaInstancesExceptDefend();
-			GetGame().GetCallqueue().Remove(_SpawnAreaInstanceWithDelay);
-			GetGame().GetCallqueue().Remove(_SpawnGroupVehiclesWithDelay);
-			GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
-			Print("[IA_MissionInitializer] Forced zone complete started a defense for group " + groupID, LogLevel.NORMAL);
-			return;
-		}
-
-		Print("[IA_MissionInitializer] No DefendObjective on this AO — completing without a defense.", LogLevel.WARNING);
-		RPC_ForceCompleteZone();
+		Print("[IA_MissionInitializer] RPC_ForceCompleteZoneAndDefend received. Starting the full seize-regroup-defend chain.", LogLevel.WARNING);
+		RPC_ForceCompleteObjectivesAndSeizeBase();
 	}
 
 	static void ForceCompleteObjectivesAndSeizeBase()

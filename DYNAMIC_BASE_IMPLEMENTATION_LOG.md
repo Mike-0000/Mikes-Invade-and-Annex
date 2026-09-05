@@ -14,7 +14,7 @@ This is **not** a game-tested release. Workbench compile and dedicated playtest 
 | 4 Seize / regroup / status | Code complete | Sampler, 90s uncontested capture, roster/regroup/warning, replicated HUD tile, seize/regroup tasks. |
 | 5 Prepared defense and cancellation | Code complete | `CreateForDynamicBase`, `AbortDefendMission`, enhanced Probe/clock/event shift, success routes through director then `OnDefendMissionComplete` once. |
 | 6 Runtime placement | Code complete, unvalidated | Candidate shortlist, 45s deadline, Full-then-Compact, 0/90/180/270, player 250 m + LOS, lattice routes, staggered garrison. No in-engine geometry/nav acceptance. |
-| 7 Natural / GM / admin sequencing | Code complete | AO serial, `TryBeginTerminalObjective`, fallback helper, ordinary-host retire on commit, Complete AO / Complete+Defend / Complete objectives+seize base, QRF/side/arty pressure gates. |
+| 7 Natural / GM / admin sequencing | Code complete | AO serial, `TryBeginTerminalObjective`, fallback helper, ordinary-host retire on commit, Complete AO / Complete+Defend (full seize chain) / Complete objectives+seize base, QRF/side/arty pressure gates. |
 | 8 Dedicated playtest | Not started | No Workbench compile, no dedicated-server run, no acceptance-matrix results. |
 
 ## Changed contracts
@@ -32,6 +32,10 @@ This is **not** a game-tested release. Workbench compile and dedicated playtest 
 3. Prove two infantry routes from distinct entries to HQ on Full and Compact at 0/90/180/270.
 4. Dedicated-server JIP: props, task, map marker, HUD phase/countdown during Seize/Regroup/Warning/Defend.
 5. Run runbook §14 acceptance IDs before calling the feature game-tested.
+
+## Playtest admin note
+
+`Complete + Defend` now starts the same validated field-base attempt as `Complete objectives + seize base`. It no longer skips capture/regroup or jumps to an authored Defend marker. Clicking it again while Placing/Seize/Regroup/Warning/Defend is ignored so the live chain can be played.
 
 ## Tuned values
 
