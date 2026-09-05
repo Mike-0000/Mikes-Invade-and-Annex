@@ -14,7 +14,7 @@ class IA_DynamicSiteInstance
 	protected vector m_vOrigin;
 	protected float m_fYawDeg;
 	protected ref IA_DynamicSiteLayout m_Layout;
-	protected IA_AreaInstance m_Host;
+	protected ref IA_AreaInstance m_Host;
 	protected ref array<IEntity> m_aRoots;
 	protected ref array<ref IA_AiGroup> m_aGarrison;
 	protected int m_iGarrisonBudget;
@@ -23,7 +23,7 @@ class IA_DynamicSiteInstance
 	protected int m_iLastCleanupUnix;
 	protected ref array<ref Tuple2<vector, vector>> m_aNavAreas;
 	protected ref array<bool> m_aNavRedoRoads;
-	protected SCR_MapMarkerBase m_MapMarker;
+	protected ref SCR_MapMarkerBase m_MapMarker;
 	protected Faction m_EnemyFaction;
 
 	//------------------------------------------------------------------------------------------------
@@ -150,12 +150,9 @@ class IA_DynamicSiteInstance
 	vector WorldToLocalFlat(vector world)
 	{
 		vector delta = world - m_vOrigin;
-		float yaw = m_fYawDeg * Math.DEG2RAD;
-		float c = Math.Cos(yaw);
-		float s = Math.Sin(yaw);
-		float lx = (delta[0] * c) + (delta[2] * s);
-		float lz = (-delta[0] * s) + (delta[2] * c);
-		return Vector(lx, 0, lz);
+		vector rootMat[4];
+		m_Layout.BuildRootTransform(m_vOrigin, m_fYawDeg, rootMat);
+		return Vector(vector.Dot(delta, rootMat[0]), 0, vector.Dot(delta, rootMat[2]));
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -181,6 +178,26 @@ class IA_DynamicSiteInstance
 			}
 		}
 		return false;
+	}
+
+	// Trace exclusions must include children: compositions have most colliders there.
+	void CollectOwnedEntities(notnull array<IEntity> entities)
+	{
+		foreach (IEntity root : m_aRoots)
+			CollectEntityTree(root, entities);
+	}
+
+	protected void CollectEntityTree(IEntity entity, notnull array<IEntity> entities)
+	{
+		if (!entity)
+			return;
+		entities.Insert(entity);
+		IEntity child = entity.GetChildren();
+		while (child)
+		{
+			CollectEntityTree(child, entities);
+			child = child.GetSibling();
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -386,10 +403,24 @@ class IA_DynamicSiteInstance
 	{
 		if (!m_MapMarker)
 			return;
-		SCR_MapMarkerManagerComponent mgr = SCR_MapMarkerManagerComponent.GetInstance();
-		if (mgr)
-			mgr.RemoveStaticMarker(m_MapMarker);
+
+		// Keep a local ref: RemoveStaticMarker drops the manager's ref, then
+		// calls GetMarkerID() again. A non-ref member is collected in between.
+		ref SCR_MapMarkerBase marker = m_MapMarker;
 		m_MapMarker = null;
+
+		SCR_MapMarkerManagerComponent mgr = SCR_MapMarkerManagerComponent.GetInstance();
+		if (!mgr)
+			return;
+
+		int markerId = marker.GetMarkerID();
+		if (markerId != -1)
+		{
+			if (!mgr.GetStaticMarkerByID(markerId) && !mgr.GetDisabledMarkerByID(markerId))
+				return;
+		}
+
+		mgr.RemoveStaticMarker(marker);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -437,7 +468,7 @@ class IA_DynamicSiteInstance
 		{
 			IA_AiGroup group = m_aGarrison[i];
 			if (group)
-				group.Despawn();
+				group.CancelPendingUnitSpawns();
 		}
 		if (m_Host)
 			m_Host.CancelPendingSpawns();
@@ -446,6 +477,8 @@ class IA_DynamicSiteInstance
 	//------------------------------------------------------------------------------------------------
 	void BeginDeferredCleanup()
 	{
+		if (m_bCleanupArmed)
+			return;
 		m_bCleanupArmed = true;
 		m_iLastCleanupUnix = 0;
 		RemoveMapMarker();
@@ -502,7 +535,7 @@ class IA_DynamicSiteInstance
 		{
 			IEntity root = m_aRoots[i];
 			if (root)
-				IA_Game.AddEntityToGc(root);
+				SCR_EntityHelper.DeleteEntityAndChildren(root);
 		}
 	}
 
@@ -520,17 +553,4 @@ class IA_DynamicSiteInstance
 	}
 
 	//------------------------------------------------------------------------------------------------
-	void ImmediateRollback()
-	{
-		CancelOwnedSpawns();
-		DeleteRoots();
-		m_aRoots.Clear();
-		if (m_Host && !m_Host.IsShutDown())
-			m_Host.ForceFinish();
-		IA_Game game = IA_Game.Instantiate();
-		if (game && m_Host)
-			game.RemoveTransientArea(m_Host);
-		m_Host = null;
-		RemoveMapMarker();
-	}
 }
