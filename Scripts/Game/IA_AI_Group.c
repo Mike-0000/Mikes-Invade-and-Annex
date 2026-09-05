@@ -661,9 +661,12 @@ class IA_AiGroup
             if (holdAt == vector.Zero)
                 holdAt = searchState.m_foundSpawnPos;
             grp.SetHoldPost(holdAt, searchState.m_holdRadius);
-            if (searchState.m_keepAltitude)
-                grp.SpawnNextUnit();
         }
+
+        // CreateMilitaryGroupAtPosition skips SpawnNextUnit when keepAltitude is set.
+        // Mortar exact spawn uses that flag with holdPost false; start stagger here.
+        if (grp && searchState.m_keepAltitude)
+            grp.SpawnNextUnit();
 
         if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
         {
