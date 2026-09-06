@@ -1,0 +1,31 @@
+GenericEntity {
+ ID "D42F9B075A1D58D9"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{CF90B79614CB5441}Assets/Props/Military/Camps/PalletAmmo_01/PalletAmmo_01_Soviet.xob"
+  }
+  RigidBody {
+   ModelGeometry 1
+   Static 1
+  }
+  Hierarchy "{A84E2B6A48FC5EAE}" {
+   Enabled 1
+  }
+  RplComponent : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+ }
+ coords 0 0 0
+ {
+  GenericEntity {
+   ID "394F5EB6C77653A1"
+   components {
+    MeshObject "{52F0B4B05BC0C1F4}" {
+     Object "{B7A6ED694C9469AF}Assets/Props/Military/Camps/PalletAmmo_01/CamoNet_PalletAmmo_Soviet.xob"
+    }
+    Hierarchy {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

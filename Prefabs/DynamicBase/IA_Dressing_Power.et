@@ -1,0 +1,74 @@
+GenericEntity {
+ ID "0BA76AA76AB95249"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{BF76579A28EF5EA1}Prefabs/DynamicBase/IA_InfrastructureAsset_generator.et" {
+   ID "C1BBBBC7E47E5159"
+   components {
+    Hierarchy "{F892FD8E195B5D10}" {
+     Enabled 1
+    }
+   }
+   coords -0.6 -0.000342 0
+   angles 0 90 0
+  }
+  GenericEntity : "{E4416C4C6938BEEE}Prefabs/Props/Crates/CrateWooden_02/CrateWooden_02_1x1x1.et" {
+   ID "2D8FC12004B95A46"
+   components {
+    Hierarchy "{63FAA005A94E5AB3}" {
+     Enabled 1
+    }
+   }
+   coords 0.8 -0.000173 0.3
+   angles 0 0 0
+  }
+  GenericEntity : "{099D5A2F225859E5}Prefabs/DynamicBase/IA_InfrastructureAsset_electric.et" {
+   ID "6FFBC319D34C52F3"
+   components {
+    Hierarchy "{5436FC21302C593E}" {
+     Enabled 1
+    }
+   }
+   coords 0.8 0.617366 -0.202
+   angles 0 180 0
+  }
+  GenericEntity : "{BD65F1D86388640D}Prefabs/Props/Civilian/FireExtinguisher_01.et" {
+   ID "D62658270C7E55E9"
+   components {
+    Hierarchy "{612CC03481C2560E}" {
+     Enabled 1
+    }
+   }
+   coords -1.1 0.000054 -0.85
+   angles 0 0 0
+  }
+  GenericEntity : "{A419F4547954DA05}Prefabs/Props/Construction/CableReel/CableReelWooden_01.et" {
+   ID "D2FA4DFAE2BC5CF4"
+   components {
+    Hierarchy "{826F8FFE9C13546C}" {
+     Enabled 1
+    }
+   }
+   coords 0.9 0.011512 1.55
+   angles 0 0 0
+  }
+  GenericEntity : "{CFB089173D9D52F4}Prefabs/DynamicBase/IA_InfrastructureAsset_nosmoking.et" {
+   ID "D87C1FE98C9055C8"
+   components {
+    Hierarchy "{20D7A9B1F60B5EAB}" {
+     Enabled 1
+    }
+   }
+   coords 1.304 0.516000 0.3
+   angles 0 90 0
+  }
+ }
+}

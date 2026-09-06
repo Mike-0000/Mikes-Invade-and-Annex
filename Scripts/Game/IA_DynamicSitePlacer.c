@@ -365,7 +365,10 @@ class IA_DynamicSitePlacer
 				m_iGarrisonLeft = Math.Round(Math.Min(36, m_ActiveLayout.m_iMaxGarrison) * 1.75);
 			m_Building.SetGarrisonBudget(m_iGarrisonLeft);
 			m_iGuardSlot = 0;
-			Print(string.Format("[IA][Base] Initial garrison budget=%1 layout=%2 max=%3", m_iGarrisonLeft, m_ActiveLayout.m_sName, m_ActiveLayout.m_iMaxGarrison), LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA][Base] Initial garrison budget=%1 layout=%2 max=%3", m_iGarrisonLeft, m_ActiveLayout.m_sName, m_ActiveLayout.m_iMaxGarrison), LogLevel.NORMAL);
+			}
 			return;
 		}
 
@@ -431,7 +434,10 @@ class IA_DynamicSitePlacer
 			group.SetAssignedArea(host.GetArea());
 		group.SetDefendPost(defendCenter, defendRadius);
 		group.Spawn(IA_AiOrder.Defend, defendCenter);
-		Print(string.Format("[IA][Base] Garrison spawn=%1 defendCenter=%2 radius=%3 priority=%4", post, defendCenter, defendRadius, IA_AiGroup.WP_PRIORITY_DEFEND_POST), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][Base] Garrison spawn=%1 defendCenter=%2 radius=%3 priority=%4", post, defendCenter, defendRadius, IA_AiGroup.WP_PRIORITY_DEFEND_POST), LogLevel.NORMAL);
+		}
 		m_Building.AddGarrisonGroup(group);
 		group.SpawnNextUnit();
 		m_iGarrisonLeft = m_iGarrisonLeft - size;
@@ -490,7 +496,10 @@ class IA_DynamicSitePlacer
 	protected void FailCurrent(string reason)
 	{
 		RecordRejection(reason);
-		Print(string.Format("[IA][Base] Placement candidate failed: %1", reason), LogLevel.WARNING);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][Base] Placement candidate failed: %1", reason), LogLevel.NORMAL);
+		}
 		if (m_Building && m_Director)
 			m_Director.RetireSite(m_Building);
 		m_Building = null;
@@ -509,7 +518,7 @@ class IA_DynamicSitePlacer
 		m_Result = result;
 		m_Building = null;
 		m_bComplete = true;
-		Print(string.Format("[IA][Base] Placement committed serial=%1 site=%2 layout=%3 yaw=%4", m_iSerial, result.m_Site.GetSiteId(), m_ActiveLayout.m_sName, result.m_Site.GetYawDeg()), LogLevel.NORMAL);
+		IA_Log.Info(string.Format("[IA][Base] Placement committed serial=%1 site=%2 layout=%3 yaw=%4", m_iSerial, result.m_Site.GetSiteId(), m_ActiveLayout.m_sName, result.m_Site.GetYawDeg()));
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -682,7 +691,10 @@ class IA_DynamicSitePlacer
 					// Consume all qualified sites of this size before surveying smaller ones.
 					if (!m_aShortlist.IsEmpty())
 						return;
-					Print(string.Format("[IA][Base] Layout search exhausted: %1 anchors=%2 refinement_positions=%3", m_aLayouts[m_iSurveyLayout].m_sName, m_iSampleCount, m_iRefinementSample), LogLevel.NORMAL);
+					if (IA_Log.IsDebugEnabled())
+					{
+						Print(string.Format("[IA][Base] Layout search exhausted: %1 anchors=%2 refinement_positions=%3", m_aLayouts[m_iSurveyLayout].m_sName, m_iSampleCount, m_iRefinementSample), LogLevel.NORMAL);
+					}
 					m_iSurveyLayout++;
 					if (m_iSurveyLayout >= m_aLayouts.Count())
 					{
@@ -764,7 +776,10 @@ class IA_DynamicSitePlacer
 			cand.m_iSeed = m_iSeed + m_iSampleCount;
 			m_aShortlist.Insert(cand);
 			m_bSurveyAnchorActive = false;
-			Print(string.Format("[IA][Base] Terrain-qualified site: layout=%1 center=%2 yaw=%3 anchors_sampled=%4", layout.m_sName, origin, yaw, m_iSampleCount), LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA][Base] Terrain-qualified site: layout=%1 center=%2 yaw=%3 anchors_sampled=%4", layout.m_sName, origin, yaw, m_iSampleCount), LogLevel.NORMAL);
+			}
 		}
 	}
 
@@ -985,7 +1000,12 @@ class IA_DynamicSitePlacer
 				reason += "/" + m_sTerrainDetail.Substring(7, end - 7);
 		}
 		if (!m_Rejections.Contains(reason))
-			Print(string.Format("[IA][Base] Rejection example: %1 center=%2 yaw=%3 %4", reason, origin, yaw, m_sTerrainDetail), LogLevel.WARNING);
+			{
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print(string.Format("[IA][Base] Rejection example: %1 center=%2 yaw=%3 %4", reason, origin, yaw, m_sTerrainDetail), LogLevel.NORMAL);
+				}
+			}
 		RecordRejection(reason);
 	}
 

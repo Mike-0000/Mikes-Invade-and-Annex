@@ -179,7 +179,10 @@ class IA_AreaInstance
 	void OnCivilianKilledByPlayer()
     {
         m_civiliansKilledByPlayer++;
-        Print(string.Format("[AreaInstance] A civilian was killed by a player in area %1. Total player kills for this area: %2", m_area.GetName(), m_civiliansKilledByPlayer), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[AreaInstance] A civilian was killed by a player in area %1. Total player kills for this area: %2", m_area.GetName(), m_civiliansKilledByPlayer), LogLevel.NORMAL);
+        }
     }
 
     int GetCiviliansKilledByPlayer()
@@ -412,7 +415,10 @@ class IA_AreaInstance
 		// Check if the task is currently active
 		if (m_currentTaskEntity && m_currentTaskEntity.GetTaskName() == taskTitle)
 		{
-			Print(string.Format("[IA_AreaInstance] Completing current task: %1", taskTitle), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA_AreaInstance] Completing current task: %1", taskTitle), LogLevel.NORMAL);
+			}
 			
 			// Trigger task completion notification
 			TriggerGlobalNotification("TaskCompleted", taskTitle);
@@ -442,7 +448,10 @@ class IA_AreaInstance
 			SCR_TriggerTask queuedTask = m_taskQueue[i];
 			if (queuedTask && queuedTask.GetTaskName() == taskTitle)
 			{
-				Print(string.Format("[IA_AreaInstance] Found and removing queued task: %1", taskTitle), LogLevel.DEBUG);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print(string.Format("[IA_AreaInstance] Found and removing queued task: %1", taskTitle), LogLevel.NORMAL);
+				}
 				
 				// Trigger task completion notification
 				TriggerGlobalNotification("TaskCompleted", taskTitle);
@@ -919,7 +928,10 @@ class IA_AreaInstance
     void CancelReinforcements()
     {
         m_reinforcements = IA_ReinforcementState.Done;
-        Print(string.Format("[AreaInstance] Reinforcements for area %1 have been cancelled by an external source (e.g., generator destroyed).", m_area.GetName()), LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[AreaInstance] Reinforcements for area %1 have been cancelled by an external source (e.g., generator destroyed).", m_area.GetName()), LogLevel.NORMAL);
+        }
     }
 
     bool IsShutDown()
@@ -999,7 +1011,10 @@ class IA_AreaInstance
             // Check if the group is already in defend mode - if so, don't change its state
             if (group.ShouldKeepOwnOrders() || group.IsAirborneDrop())
             {
-                Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, objective unit, mortar crew, or holding a post, preserving existing tactical state"), LogLevel.DEBUG);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[AreaInstance.AddMilitaryGroup] Group is in defend mode, objective unit, mortar crew, or holding a post, preserving existing tactical state"), LogLevel.NORMAL);
+                }
                 if (group.IsHoldingPost())
                 {
                     vector holdAt = group.GetHoldPost();
@@ -1015,7 +1030,10 @@ class IA_AreaInstance
             // Defend/Attack; DefendWaypoint.OnDeselected GetOuts every turret.
             if (group.IsDriving() || group.GetReferencedEntity() || group.IsVehicleCrewGroup() || group.IsVehiclePassengerGroup())
             {
-                Print("[AreaInstance.AddMilitaryGroup] Vehicle group, assigning InVehicle", LogLevel.DEBUG);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print("[AreaInstance.AddMilitaryGroup] Vehicle group, assigning InVehicle", LogLevel.NORMAL);
+                }
                 m_assignedGroupStates.Insert(group, IA_GroupTacticalState.InVehicle);
                 return;
             }
@@ -2153,7 +2171,9 @@ class IA_AreaInstance
         }
         // --- END MOVED ---
 
-        // --- BEGIN ADDED: Log state distribution after reassignment ---
+        // Do not scan all groups solely for diagnostics in production.
+        if (IA_Log.IsDebugEnabled())
+        {
         int postReassignmentDefenders = 0;
         int postReassignmentAttackers = 0;
         int postReassignmentFlankers = 0;
@@ -2174,8 +2194,8 @@ class IA_AreaInstance
         }
         Print(string.Format("[AreaInstance.MilitaryTask] Post-Reassignment State Map: Def=%1, Att=%2, Flk=%3, Other=%4 (Targets: Def=%5, Att=%6, Flk=%7)",
             postReassignmentDefenders, postReassignmentAttackers, postReassignmentFlankers, postReassignmentOther,
-            localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.DEBUG);
-        // --- END ADDED ---
+            localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
+        }
 
         // --- Stage 7: Enforcement & Idle Handling ---
         foreach (IA_AiGroup g : m_military)
@@ -2281,8 +2301,11 @@ class IA_AreaInstance
                     m_stateStartTimes.Set(g, currentTime);
                     m_stateStability.Set(g, 0);
                     g.SetTacticalState(IA_GroupTacticalState.Attacking, assaultTarget, null, true);
-                    Print(string.Format("[MilitaryOrderTask] Approaching group at %1 made contact, breaking off to Attacking toward %2.",
-                        g.GetOrigin().ToString(), assaultTarget.ToString()), LogLevel.DEBUG);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[MilitaryOrderTask] Approaching group at %1 made contact, breaking off to Attacking toward %2.",
+                            g.GetOrigin().ToString(), assaultTarget.ToString()), LogLevel.NORMAL);
+                    }
                     continue;
                 }
 
@@ -2292,8 +2315,11 @@ class IA_AreaInstance
                     m_stateStartTimes.Set(g, currentTime);
                     m_stateStability.Set(g, 0);
                     g.SetTacticalState(IA_GroupTacticalState.Attacking, assaultTarget, null, true);
-                    Print(string.Format("[MilitaryOrderTask] Approaching group at %1 reached jump-off, transitioning to Attacking toward %2.",
-                        g.GetOrigin().ToString(), assaultTarget.ToString()), LogLevel.DEBUG);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[MilitaryOrderTask] Approaching group at %1 reached jump-off, transitioning to Attacking toward %2.",
+                            g.GetOrigin().ToString(), assaultTarget.ToString()), LogLevel.NORMAL);
+                    }
                     continue;
                 }
 
@@ -2902,7 +2928,10 @@ class IA_AreaInstance
         // Manual IA_AISpawnPoint markers inside this area override default scatter.
         // Building Hold groups spawn separately and do not consume these occupying slots.
         ref array<IA_AISpawnPoint> spawnPoints = IA_AISpawnPoint.GetSpawnPointsInArea(m_area);
-        Print(string.Format("[IA_AreaInstance] Found %1 spawn points inside area %2.", spawnPoints.Count(), m_area.GetName()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AreaInstance] Found %1 spawn points inside area %2.", spawnPoints.Count(), m_area.GetName()), LogLevel.NORMAL);
+        }
 		int accumulatedDelay = 0;
 
         for (int i = 0; i < scaledNumberOfGroupsToSpawn; i = i + 1)
@@ -3018,7 +3047,10 @@ class IA_AreaInstance
         int guardCount = IA_AreaMarker.GetMortarPitGuardCount();
         GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, delay, false, m_area.GetOrigin(), guardCount, m_AreaFaction, true, false, vector.Zero, 0);
 
-        Print(string.Format("[IA][MortarPit] AI scheduled: %1 gunners on tubes, %2 guards", mortars.Count(), guardCount), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][MortarPit] AI scheduled: %1 gunners on tubes, %2 guards", mortars.Count(), guardCount), LogLevel.NORMAL);
+        }
     }
 
     private void VehicleReinforcementsTask()
@@ -3475,7 +3507,10 @@ class IA_AreaInstance
 	    {
 	        if (!config.m_bEnableCivilianSpawning)
 	        {
-	            Print(string.Format("[IA_AreaInstance] Civilian spawning disabled by config for area %1", m_area.GetName()), LogLevel.NORMAL);
+	            if (IA_Log.IsDebugEnabled())
+	            {
+	            	Print(string.Format("[IA_AreaInstance] Civilian spawning disabled by config for area %1", m_area.GetName()), LogLevel.NORMAL);
+	            }
 	            m_initialCivilianCount = 0;
 	            m_isInitialCivilianSpawnDone = true; // Mark as done so we don't try later
 	            return;
@@ -3486,7 +3521,10 @@ class IA_AreaInstance
 	        {
 	            int oldNumber = number;
 	            number = Math.Round(number * scaler);
-	            Print(string.Format("[IA_AreaInstance] Applied civilian count multiplier: %1 (Original: %2, New: %3)", scaler, oldNumber, number), LogLevel.NORMAL);
+	            if (IA_Log.IsDebugEnabled())
+	            {
+	            	Print(string.Format("[IA_AreaInstance] Applied civilian count multiplier: %1 (Original: %2, New: %3)", scaler, oldNumber, number), LogLevel.NORMAL);
+	            }
 	        }
 	    }
 	    // --- END MODIFIED ---
@@ -4045,8 +4083,11 @@ class IA_AreaInstance
             targetPos = ResolveReactionThreat(group);
 
         AssignAuthorityState(group, IA_GroupTacticalState.Attacking, targetPos);
-        Print(string.Format("[AreaInstance] Approaching group at %1 broke off to Attacking toward %2.",
-            group.GetOrigin().ToString(), targetPos.ToString()), LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[AreaInstance] Approaching group at %1 broke off to Attacking toward %2.",
+                group.GetOrigin().ToString(), targetPos.ToString()), LogLevel.NORMAL);
+        }
     }
 
     private void ApplyUnderFireReactionToGroup(IA_AiGroup group, vector sourcePos, float intensity)
@@ -4438,13 +4479,19 @@ class IA_AreaInstance
             return;
         }
 		
-		Print(string.Format("[AreaInstance] Checking civilian status for area %1. Civ count =" + m_aliveCivilianCount, m_area.GetName()), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[AreaInstance] Checking civilian status for area %1. Civ count =" + m_aliveCivilianCount, m_area.GetName()), LogLevel.NORMAL);
+		}
 		
         if (!m_canSpawn || m_civilians.IsEmpty())
 		{
 			if(m_aliveCivilianCount != 0)
             {
-                Print(string.Format("[AreaInstance] Civilian list for area %1 is empty. Resetting count to 0. Initial: %2, Previous: %3", m_area.GetName(), m_initialCivilianCount, m_aliveCivilianCount), LogLevel.DEBUG);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[AreaInstance] Civilian list for area %1 is empty. Resetting count to 0. Initial: %2, Previous: %3", m_area.GetName(), m_initialCivilianCount, m_aliveCivilianCount), LogLevel.NORMAL);
+                }
 				m_aliveCivilianCount = 0;
             }
             return;
@@ -4477,8 +4524,11 @@ class IA_AreaInstance
 						m_civilians.Remove(i); // Clean up any that died during spawn
 				}
 				
-				Print(string.Format("[AreaInstance] Initial civilian spawn for area %1 complete. Initial: %2, Actually Alive: %3", 
-					m_area.GetName(), m_initialCivilianCount, initialAliveCount), LogLevel.DEBUG);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print(string.Format("[AreaInstance] Initial civilian spawn for area %1 complete. Initial: %2, Actually Alive: %3", 
+						m_area.GetName(), m_initialCivilianCount, initialAliveCount), LogLevel.NORMAL);
+				}
 				m_aliveCivilianCount = initialAliveCount;
 			}
 		}
@@ -4498,8 +4548,11 @@ class IA_AreaInstance
 		int currentAliveCount = m_civilians.Count();
 		if (m_aliveCivilianCount != currentAliveCount)
         {
-            Print(string.Format("[AreaInstance] Civilian count for area %1 updated. Initial: %2, Previous: %3, Current: %4.", 
-                m_area.GetName(), m_initialCivilianCount, m_aliveCivilianCount, currentAliveCount), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[AreaInstance] Civilian count for area %1 updated. Initial: %2, Previous: %3, Current: %4.", 
+                    m_area.GetName(), m_initialCivilianCount, m_aliveCivilianCount, currentAliveCount), LogLevel.NORMAL);
+            }
             m_aliveCivilianCount = currentAliveCount;
         }
 		// --- END NEW LOGIC ---
@@ -4916,24 +4969,36 @@ class IA_AreaInstance
         if (m_bShutDown)
             return false;
 
-		Print(string.Format("SpawnReinforcementWave called for area %1. Request: %2 groups. Current: %3/%4. ForDefend: %5", 
-		    m_area.GetName(), groupsToSpawn, m_reinforcementGroupsSpawned, m_totalReinforcementQuota, forDefendMission), LogLevel.DEBUG);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("SpawnReinforcementWave called for area %1. Request: %2 groups. Current: %3/%4. ForDefend: %5", 
+			    m_area.GetName(), groupsToSpawn, m_reinforcementGroupsSpawned, m_totalReinforcementQuota, forDefendMission), LogLevel.NORMAL);
+		}
 		
 		// --- BEGIN ADDED: Log defend mode status ---
 		if (m_isInDefendMode)
 		{
-		    Print(string.Format("[SpawnReinforcementWave] Area is in DEFEND MODE. Defend target: %1", m_defendTarget.ToString()), LogLevel.DEBUG);
+		    if (IA_Log.IsDebugEnabled())
+		    {
+		    	Print(string.Format("[SpawnReinforcementWave] Area is in DEFEND MODE. Defend target: %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+		    }
 		}
 		else
 		{
-		    Print(string.Format("[SpawnReinforcementWave] Area is in NORMAL MODE. Using area origin: %1", m_area.GetOrigin().ToString()), LogLevel.DEBUG);
+		    if (IA_Log.IsDebugEnabled())
+		    {
+		    	Print(string.Format("[SpawnReinforcementWave] Area is in NORMAL MODE. Using area origin: %1", m_area.GetOrigin().ToString()), LogLevel.NORMAL);
+		    }
 		}
 		// --- END ADDED ---
         // Allow defend missions to bypass normal reinforcement quota
         if (!forDefendMission && m_reinforcementGroupsSpawned >= m_totalReinforcementQuota)
         {
-            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Quota met (%2/%3).", 
-                m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Quota met (%2/%3).", 
+                    m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+            }
             return false; // Quota already met
         }
 		
@@ -4949,7 +5014,10 @@ class IA_AreaInstance
             defendFireteamSizes = new array<int>();
             IA_BuildDefendFireteamSizes(unitBudget, defendFireteamSizes);
             actualSpawnCount = defendFireteamSizes.Count();
-            Print(string.Format("[AreaInstance.SpawnReinforcementWave] DEFEND MISSION: unit budget %1 -> %2 fireteams", unitBudget, actualSpawnCount), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[AreaInstance.SpawnReinforcementWave] DEFEND MISSION: unit budget %1 -> %2 fireteams", unitBudget, actualSpawnCount), LogLevel.NORMAL);
+            }
         }
         else
         {
@@ -4957,12 +5025,18 @@ class IA_AreaInstance
         }
         if (actualSpawnCount <= 0) 
         {
-            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Calculated spawn count is zero or negative.", m_area.GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 cannot spawn: Calculated spawn count is zero or negative.", m_area.GetName()), LogLevel.NORMAL);
+            }
             return false; // Should not happen if initial check passed, but safety first
         }
         
-        Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
-            m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Area %1 attempting to spawn %2 reinforcement groups (Quota: %3/%4).", 
+                m_area.GetName(), actualSpawnCount, m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+        }
 
         // Reserve against the cap now. Quota used to increment only when the
         // delayed enactor succeeded, so overlapping waves could overshoot.
@@ -5072,7 +5146,10 @@ class IA_AreaInstance
             if (grp)
             {
                 grp.SetAssignedArea(m_area);
-                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Explicitly assigned reinforcement group to area %1", m_area.GetName()), LogLevel.DEBUG);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[AreaInstance.SpawnReinforcementWave] Explicitly assigned reinforcement group to area %1", m_area.GetName()), LogLevel.NORMAL);
+                }
                 
                 if (forDefendMission)
                     grp.SetDefendWaveGroup(true);
@@ -5097,9 +5174,19 @@ class IA_AreaInstance
                     initialState = IA_GroupTacticalState.Attacking;
                     grp.SetDefendMode(true, m_defendTarget);
                     if (defendHunter)
-                        Print(string.Format("[AreaInstance.SpawnReinforcementWave] Hunter fireteam, pin %1 leash %2m", m_defendTarget.ToString(), DEFEND_HUNTER_LEASH_M), LogLevel.NORMAL);
+                        {
+                            if (IA_Log.IsDebugEnabled())
+                            {
+                                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Hunter fireteam, pin %1 leash %2m", m_defendTarget.ToString(), DEFEND_HUNTER_LEASH_M), LogLevel.NORMAL);
+                            }
+                        }
                     else
-                        Print(string.Format("[AreaInstance.SpawnReinforcementWave] Setting reinforcement group to defend mode, target: %1", m_defendTarget.ToString()), LogLevel.DEBUG);
+                        {
+                            if (IA_Log.IsDebugEnabled())
+                            {
+                                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Setting reinforcement group to defend mode, target: %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+                            }
+                        }
                 }
                 else
                 {
@@ -5119,8 +5206,11 @@ class IA_AreaInstance
                     m_assignedGroupStates.Set(grp, IA_GroupTacticalState.Approaching);
                     grp.RemoveAllOrders();
                     grp.AddOrder(targetPos, IA_AiOrder.Move, true);
-                    Print(string.Format("[SpawnReinforcementWave] Zone reinforce hold at %1 for %2.",
-                        targetPos.ToString(), m_area.GetName()), LogLevel.DEBUG);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[SpawnReinforcementWave] Zone reinforce hold at %1 for %2.",
+                            targetPos.ToString(), m_area.GetName()), LogLevel.NORMAL);
+                    }
                 }
                 // Defend fireteams: ~70% bee-line assault, ~30% flank via neighboring sector staging
                 else if (forDefendMission && m_isInDefendMode && m_defendTarget != vector.Zero && !defendHunter)
@@ -5143,8 +5233,11 @@ class IA_AreaInstance
                         grp.AddOrder(stagingPos, IA_AiOrder.Move, true);
                         grp.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, false);
 
-                        Print(string.Format("[SpawnReinforcementWave] Defend flank fireteam staging at %1 (sector %2 -> %3).",
-                            stagingPos.ToString(), sectorIndex, flankSector), LogLevel.DEBUG);
+                        if (IA_Log.IsDebugEnabled())
+                        {
+                            Print(string.Format("[SpawnReinforcementWave] Defend flank fireteam staging at %1 (sector %2 -> %3).",
+                                stagingPos.ToString(), sectorIndex, flankSector), LogLevel.NORMAL);
+                        }
                     }
                 }
                 // For standard counter-attacks (not defend mode), route around the OBJ
@@ -5211,13 +5304,19 @@ class IA_AreaInstance
                     grp.AddOrder(stagingPos, IA_AiOrder.Move, true);
                     grp.AddOrder(targetPos, IA_AiOrder.SearchAndDestroy, false);
 
-                    Print(string.Format("[SpawnReinforcementWave] Staging at %1 (~300m from OBJ), arc: %2° (%3 routing pts).",
-                        stagingPos.ToString(), Math.Round(totalAngle * 180.0 / Math.PI), numArcPoints), LogLevel.DEBUG);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[SpawnReinforcementWave] Staging at %1 (~300m from OBJ), arc: %2° (%3 routing pts).",
+                            stagingPos.ToString(), Math.Round(totalAngle * 180.0 / Math.PI), numArcPoints), LogLevel.NORMAL);
+                    }
                 }
                 spawnedAny = true;
                 
-                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Spawned reinforcement group (%1 units, faction: %2) at %3. Total spawned: %4/%5.",
-                    scaledUnitCount, typename.EnumToString(IA_Faction, IA_Faction.USSR), spawnPos.ToString(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.DEBUG);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[AreaInstance.SpawnReinforcementWave] Spawned reinforcement group (%1 units, faction: %2) at %3. Total spawned: %4/%5.",
+                        scaledUnitCount, typename.EnumToString(IA_Faction, IA_Faction.USSR), spawnPos.ToString(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+                }
             }
             else
             {
@@ -5396,8 +5495,11 @@ class IA_AreaInstance
         string areaName = GetAreaNameSafe();
         if (enable && defendPoint != vector.Zero)
         {
-            Print(string.Format("[IA_AreaInstance] Setting defend mode ON for area %1, target: %2",
-                areaName, defendPoint.ToString()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] Setting defend mode ON for area %1, target: %2",
+                    areaName, defendPoint.ToString()), LogLevel.NORMAL);
+            }
 
             foreach (IA_AiGroup group : m_military)
             {
@@ -5409,8 +5511,11 @@ class IA_AreaInstance
         }
         else
         {
-            Print(string.Format("[IA_AreaInstance] Setting defend mode OFF for area %1",
-                areaName), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] Setting defend mode OFF for area %1",
+                    areaName), LogLevel.NORMAL);
+            }
 
             foreach (IA_AiGroup group : m_military)
             {
@@ -5482,14 +5587,20 @@ class IA_AreaInstance
         if (!mortars || mortars.IsEmpty() || (plannedGuns >= 2 && haveGuns < plannedGuns && m_mortarCrewSetupAttempts < 12))
         {
             // Composition may not have spawned yet (EOnFrame); retry briefly.
-            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: mortars not ready for %1 (%2/%3), retrying.", m_area.GetName(), haveGuns, plannedGuns), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: mortars not ready for %1 (%2/%3), retrying.", m_area.GetName(), haveGuns, plannedGuns), LogLevel.NORMAL);
+            }
             GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 3000, false);
             return;
         }
 
         if (!m_military || m_military.IsEmpty())
         {
-            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: no military groups yet for %1, retrying.", m_area.GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: no military groups yet for %1, retrying.", m_area.GetName()), LogLevel.NORMAL);
+            }
             GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 4000, false);
             return;
         }
@@ -5508,7 +5619,10 @@ class IA_AreaInstance
 
         if (spawnedReady <= 0)
         {
-            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: no spawned groups for %1, retrying.", m_area.GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: no spawned groups for %1, retrying.", m_area.GetName()), LogLevel.NORMAL);
+            }
             GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 4000, false);
             return;
         }
@@ -5561,7 +5675,10 @@ class IA_AreaInstance
         int emptyGuns = CountUnoccupiedMortars(mortars);
         if (!m_mortarCrewGroup)
         {
-            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: occupy failed for %1, retrying.", m_area.GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: occupy failed for %1, retrying.", m_area.GetName()), LogLevel.NORMAL);
+            }
             GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 3000, false);
             return;
         }
@@ -5573,7 +5690,10 @@ class IA_AreaInstance
         bool stillNeedCrews = assignedCrews < mortars.Count();
         if (stillNeedCrews && unclaimedEmpty > 0)
         {
-            Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: %1 guns still unclaimed for %2, retrying occupy.", unclaimedEmpty, m_area.GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: %1 guns still unclaimed for %2, retrying occupy.", unclaimedEmpty, m_area.GetName()), LogLevel.NORMAL);
+            }
             GetGame().GetCallqueue().CallLater(SetupMortarPitCrew, 3000, false);
             return;
         }
@@ -5591,7 +5711,10 @@ class IA_AreaInstance
         }
 
         m_mortarCrewSetupDone = true;
-        Print(string.Format("[IA][MortarPit] Battery crewed for %1: %2 guns, %3 empty, %4 crew groups", m_area.GetName(), mortars.Count(), emptyGuns, m_mortarCrewGroups.Count()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][MortarPit] Battery crewed for %1: %2 guns, %3 empty, %4 crew groups", m_area.GetName(), mortars.Count(), emptyGuns, m_mortarCrewGroups.Count()), LogLevel.NORMAL);
+        }
     }
 
     // Casual pit security: vanilla Defend + Loiter/Observation posts, not DefendPatrol.
@@ -5982,7 +6105,10 @@ class IA_AreaInstance
         Faction spawnFaction = m_AreaFaction;
         int units = BuildingGarrisonUnitCount();
         GetGame().GetCallqueue().CallLater(this._SpawnSingleAiGroupAndAddToArea, 0, false, holdPos, units, spawnFaction, false, true, holdPos, radius);
-        Print(string.Format("[IA_AreaInstance] Scheduled Hold fireteam for %1 at %2", m_area.GetName(), holdPos.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AreaInstance] Scheduled Hold fireteam for %1 at %2", m_area.GetName(), holdPos.ToString()), LogLevel.NORMAL);
+        }
         return true;
     }
 
@@ -6054,7 +6180,10 @@ class IA_AreaInstance
             }
         }
 
-        Print(string.Format("[IA_AreaInstance] Building garrison: %1 extra Hold groups in %2", spawned, m_area.GetName()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AreaInstance] Building garrison: %1 extra Hold groups in %2", spawned, m_area.GetName()), LogLevel.NORMAL);
+        }
     }
 	
     // --- END ADDED ---
@@ -6106,7 +6235,10 @@ class IA_AreaInstance
                 m_availableGarrisonPosts = new array<vector>();
             IA_SpawnPlacement.FindGarrisonPosts(m_area.GetOrigin(), m_area.GetRadius(), m_availableGarrisonPosts);
             IA_GmHoldPost.ExcludeCoveredPositions(m_availableGarrisonPosts, m_area);
-            Print(string.Format("[IA_AreaInstance] Found %1 CoverPost/ObservationPost hold spots in %2", m_availableGarrisonPosts.Count(), m_area.GetName()), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] Found %1 CoverPost/ObservationPost hold spots in %2", m_availableGarrisonPosts.Count(), m_area.GetName()), LogLevel.NORMAL);
+            }
         }
 
         if (!m_availableGarrisonPosts)
@@ -6176,7 +6308,10 @@ class IA_AreaInstance
         }
         else
         {
-             Print("[IA_AreaInstance.OnAsyncGroupCreated] Group not properly spawned, skipping strength update for this group.", LogLevel.DEBUG);
+             if (IA_Log.IsDebugEnabled())
+             {
+                 Print("[IA_AreaInstance.OnAsyncGroupCreated] Group not properly spawned, skipping strength update for this group.", LogLevel.NORMAL);
+             }
         }
     }
     // --- END ADDED ---
@@ -6282,7 +6417,10 @@ class IA_AreaInstance
         m_isRadioTowerDefenseActive = active;
         if (active)
         {
-            Print(string.Format("[IA_AreaInstance] Radio Tower Defense ACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] Radio Tower Defense ACTIVATED for area %1", GetAreaNameSafe()), LogLevel.NORMAL);
+            }
             
             // Notify players that reinforcements have started and give instructions
             TriggerGlobalNotification("RadioTowerDefenseStarted", m_area.GetName());
@@ -6291,7 +6429,10 @@ class IA_AreaInstance
             // defend-mode S&D parks every group on the pad for the rest of the fight.
 
             // Calculate target AI count, same as defend mission
-            Print(string.Format("[IA_RadioTowerDefense] Calculated target AI count: %1 (scale factor: %2)", m_radioTowerTargetAICount, scaleFactor), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_RadioTowerDefense] Calculated target AI count: %1 (scale factor: %2)", m_radioTowerTargetAICount, scaleFactor), LogLevel.NORMAL);
+            }
 
             m_radioTowerLastWaveSpawnTime = System.GetTickCount();
 
@@ -6305,7 +6446,10 @@ class IA_AreaInstance
         }
         else
         {
-            Print(string.Format("[IA_AreaInstance] Radio Tower Defense DEACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] Radio Tower Defense DEACTIVATED for area %1", GetAreaNameSafe()), LogLevel.NORMAL);
+            }
             m_radioTowerDefenseFaction = null;
         }
     }
@@ -6322,7 +6466,10 @@ class IA_AreaInstance
             return;
         }
         bool shouldBeActive = ShouldRadioTowerDefenseBeActive();
-        Print("Passed Area Check for " + m_area.GetName(), LogLevel.DEBUG); 
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("Passed Area Check for " + m_area.GetName(), LogLevel.NORMAL);
+        } 
         // Activate or deactivate radio tower defense based on combat state.
         if (shouldBeActive && !m_isRadioTowerDefenseActive)
         {
@@ -6330,25 +6477,37 @@ class IA_AreaInstance
         }
         else if (!shouldBeActive && m_isRadioTowerDefenseActive)
         {
-            Print(string.Format("[IA_AreaInstance] AI in %1 are no longer in combat. Deactivating radio tower defense.", m_area.GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] AI in %1 are no longer in combat. Deactivating radio tower defense.", m_area.GetName()), LogLevel.NORMAL);
+            }
             SetRadioTowerDefenseActive(false);
         }
         
         // If defense mode is not active at this point, do nothing further.
         if (!m_isRadioTowerDefenseActive)
             return;
-        Print("Passed Defense Check for " + m_area.GetName(), LogLevel.DEBUG);  
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("Passed Defense Check for " + m_area.GetName(), LogLevel.NORMAL);
+        }  
         // --- Continuous wave spawning logic ---
         int currentTime = System.GetTickCount();
         if (currentTime - m_radioTowerLastWaveSpawnTime >= RADIO_TOWER_WAVE_INTERVAL)
         {
             int currentAICount = CountAliveMilitaryUnits() + m_pendingWaveUnits;
 
-            Print(string.Format("[IA_AreaInstance] Radio Tower Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_radioTowerTargetAICount), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AreaInstance] Radio Tower Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_radioTowerTargetAICount), LogLevel.NORMAL);
+            }
 
             if (currentAICount < m_radioTowerTargetAICount)
             {
-				Print(string.Format("[IA_AreaInstance] Radio Tower Defense Task: AI count low, spawning new wave for %1.", m_area.GetName()), LogLevel.DEBUG);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print(string.Format("[IA_AreaInstance] Radio Tower Defense Task: AI count low, spawning new wave for %1.", m_area.GetName()), LogLevel.NORMAL);
+				}
                 SpawnRadioTowerDefenseWave();
             }
             m_radioTowerLastWaveSpawnTime = currentTime;
@@ -6372,11 +6531,17 @@ class IA_AreaInstance
             unitBudget = room;
         if (unitBudget < 2)
         {
-            Print(string.Format("[IA_RadioTowerDefense] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_RadioTowerDefense] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.NORMAL);
+            }
             return;
         }
 
-        Print(string.Format("[IA_AreaInstance] Spawning radio tower defense wave: budget %1 units for area %2.", unitBudget, m_area.GetName()), LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AreaInstance] Spawning radio tower defense wave: budget %1 units for area %2.", unitBudget, m_area.GetName()), LogLevel.NORMAL);
+        }
         
         // First arg is unit budget when forDefendMission == true
         SpawnReinforcementWave(unitBudget, m_radioTowerDefenseFaction, true);
@@ -6387,7 +6552,10 @@ class IA_AreaInstance
         if (m_radioTowerDestroyed)
             return;
             
-        Print(string.Format("[IA_AreaInstance] Radio Tower at %1 has been marked as destroyed.", m_area.GetName()), LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AreaInstance] Radio Tower at %1 has been marked as destroyed.", m_area.GetName()), LogLevel.NORMAL);
+        }
         m_radioTowerDestroyed = true;
         SetRadioTowerDefenseActive(false);
     }
@@ -6409,7 +6577,10 @@ class IA_AreaInstance
         const int baseGroupsForRevolt = 3; 
         int waveSize = Math.Max(2, Math.Round(baseGroupsForRevolt * scaleFactor));
         
-        Print(string.Format("[IA_AreaInstance] Spawning large civilian revolt reinforcement wave of size %1 for area %2", waveSize, m_area.GetName()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AreaInstance] Spawning large civilian revolt reinforcement wave of size %1 for area %2", waveSize, m_area.GetName()), LogLevel.NORMAL);
+        }
 
         // Set the area to defend mode, targeting its own origin. This mimics radio tower/defend missions.
         SetDefendMode(true, m_area.GetOrigin());
@@ -6463,7 +6634,10 @@ class IA_AreaInstance
 
             AddMilitaryGroup(grp); // Add them to the military roster since they are combatants
             
-            Print(string.Format("[AreaInstance] Spawned and armed hostile civilian reinforcement group (%1 units) for area %2.", scaledUnitCount, m_area.GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[AreaInstance] Spawned and armed hostile civilian reinforcement group (%1 units) for area %2.", scaledUnitCount, m_area.GetName()), LogLevel.NORMAL);
+            }
         }
     }
 
@@ -6477,11 +6651,17 @@ class IA_AreaInstance
 	
 		if (active)
 		{
-			Print(string.Format("[IA_AreaInstance] Side Objective Defense ACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA_AreaInstance] Side Objective Defense ACTIVATED for area %1", GetAreaNameSafe()), LogLevel.NORMAL);
+			}
 	
 			float scaleFactor = IA_Game.GetAIScaleFactor();
 			m_sideObjectiveTargetAICount = Math.Round(5 * ((scaleFactor*1.5) * (scaleFactor*1.5)));
-			Print(string.Format("[IA_SideObjectiveDefense] Calculated target AI count: %1 (scale factor: %2)", m_sideObjectiveTargetAICount, scaleFactor), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA_SideObjectiveDefense] Calculated target AI count: %1 (scale factor: %2)", m_sideObjectiveTargetAICount, scaleFactor), LogLevel.NORMAL);
+			}
 			
 			m_sideObjectiveDefenseFaction = enemyFaction;
 			m_sideObjectiveLastWaveSpawnTime = System.GetTickCount();
@@ -6497,7 +6677,10 @@ class IA_AreaInstance
 		}
 		else
 		{
-			Print(string.Format("[IA_AreaInstance] Side Objective Defense DEACTIVATED for area %1", GetAreaNameSafe()), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA_AreaInstance] Side Objective Defense DEACTIVATED for area %1", GetAreaNameSafe()), LogLevel.NORMAL);
+			}
 			// Return AI to normal behavior
 			SetDefendMode(false);
 			m_sideObjectiveDefenseFaction = null;
@@ -6521,11 +6704,17 @@ class IA_AreaInstance
 			unitBudget = room;
 		if (unitBudget < 2)
 		{
-			Print(string.Format("[IA_SideObjectiveDefense] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA_SideObjectiveDefense] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.NORMAL);
+			}
 			return;
 		}
 
-		Print(string.Format("[IA_AreaInstance] Spawning side objective defense wave: budget %1 units for area %2.", unitBudget, m_area.GetName()), LogLevel.DEBUG);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA_AreaInstance] Spawning side objective defense wave: budget %1 units for area %2.", unitBudget, m_area.GetName()), LogLevel.NORMAL);
+		}
 		
 		// First arg is unit budget when forDefendMission == true
 		SpawnReinforcementWave(unitBudget, m_sideObjectiveDefenseFaction, true);
@@ -6541,11 +6730,17 @@ class IA_AreaInstance
 		{
 			int currentAICount = CountAliveMilitaryUnits() + m_pendingWaveUnits;
 	
-			Print(string.Format("[IA_AreaInstance] Side Objective Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_sideObjectiveTargetAICount), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA_AreaInstance] Side Objective Defense Task: Checking AI count for %1. Current: %2, Target: %3.", m_area.GetName(), currentAICount, m_sideObjectiveTargetAICount), LogLevel.NORMAL);
+			}
 	
 			if (currentAICount < m_sideObjectiveTargetAICount)
 			{
-				Print(string.Format("[IA_AreaInstance] Side Objective Defense Task: AI count low, spawning new wave for %1.", m_area.GetName()), LogLevel.DEBUG);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print(string.Format("[IA_AreaInstance] Side Objective Defense Task: AI count low, spawning new wave for %1.", m_area.GetName()), LogLevel.NORMAL);
+				}
 				SpawnSideObjectiveDefenseWave();
 			}
 			m_sideObjectiveLastWaveSpawnTime = currentTime;
@@ -6563,7 +6758,10 @@ class IA_AreaInstance
         m_isEscapeSequenceActive = active;
         if (active)
         {
-            Print(string.Format("[AreaInstance] Escape sequence ACTIVATED for area %1. Halting military order task.", m_area.GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[AreaInstance] Escape sequence ACTIVATED for area %1. Halting military order task.", m_area.GetName()), LogLevel.NORMAL);
+            }
         }
     }
 }

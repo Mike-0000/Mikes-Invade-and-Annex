@@ -1,0 +1,44 @@
+GenericEntity {
+ ID "2E77C32DEE025351"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "AC755E1E6A885360"
+   components {
+    Hierarchy "{71F6591E1C1D52F5}" {
+     Enabled 1
+    }
+   }
+   coords -0.6 0.000267 0
+   angles 0 25 0
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "801624E8217C5140"
+   components {
+    Hierarchy "{44D9AB2751B05541}" {
+     Enabled 1
+    }
+   }
+   coords 0.6 0.000267 0.25
+   angles 0 -20 0
+  }
+  GenericEntity : "{88A1A9164B53E2E5}Prefabs/Props/Industrial/Pallets/MarsBox_01_green.et" {
+   ID "8E8764B38C415AC8"
+   components {
+    Hierarchy "{3B33DB5F5F535590}" {
+     Enabled 1
+    }
+   }
+   coords -1.2 -0.000874 0.8
+   angles 0 0 0
+  }
+ }
+}

@@ -1,0 +1,54 @@
+GenericEntity {
+ ID "DADF9D4769365992"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+   ID "43DC9577683A5AF0"
+   components {
+    Hierarchy "{D8F030FF691E5375}" {
+     Enabled 1
+    }
+   }
+   coords 0 0.000000 0
+   angles 0 0 0
+  }
+  GenericEntity : "{88A1A9164B53E2E5}Prefabs/Props/Industrial/Pallets/MarsBox_01_green.et" {
+   ID "8FBEAFA4161552C7"
+   components {
+    Hierarchy "{E61042A19A745A67}" {
+     Enabled 1
+    }
+   }
+   coords 1.2 -0.000874 0.3
+   angles 0 0 0
+  }
+  GenericEntity : "{0F866B72D473D8C4}Prefabs/Props/Industrial/ToolBox_01/ToolBox_01_grey.et" {
+   ID "79C3634D35995FAE"
+   components {
+    Hierarchy "{1DBA8C78706F562E}" {
+     Enabled 1
+    }
+   }
+   coords -0.25 0.899073 0
+   angles 0 0 0
+  }
+  GenericEntity : "{C1C087BC66975A4E}Prefabs/DynamicBase/IA_InfrastructureAsset_lamp.et" {
+   ID "5DE64B4B4A825B97"
+   components {
+    Hierarchy "{38D437ED92B055D5}" {
+     Enabled 1
+    }
+   }
+   coords 0.3 0.899073 0
+   angles 0 0 0
+  }
+ }
+}

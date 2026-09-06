@@ -20,6 +20,11 @@ SCR_AIWorld : "{70CCCF16487C927F}Prefabs/AI/SCR_AIWorld_Eden.et" {
 SCR_BaseGameMode GameMode_Base1 : "{094E7507AE9AA9DF}Prefabs/GameMode_IA.et" {
  coords 5000 80.875 5000
  m_fAutoReloadTime 10
+ {
+  PerceptionManager PerceptionManager1 : "{028DAEAD63E056BE}Prefabs/World/Game/PerceptionManager.et" {
+   coords 0 0 0
+  }
+ }
 }
 ScriptedChatEntity : "{F69BC912AC8236F9}Prefabs/MP/ScriptedChatEntity.et" {
  coords 1510.078 0 2870.772
@@ -32,23 +37,9 @@ IA_ReplicationWorkaround : "{1C5F0CA68E666359}Components/Replication_Workaround.
 }
 SCR_SpawnPoint : "{5A2220DD0C16958B}Prefabs/MP/Spawning/SpawnPoint_US.et" {
  coords 4937.396 28.775 11763.429
- angleY 91.248
+ angles 0 91.248 0
  m_Info SCR_UIInfo "{56B4CC4ECACA2C37}" {
   Name "HQ"
- }
-}
-SCR_BaseTaskManager : "{87208DAD6F3C0DE2}Prefabs/MP/Managers/Tasks/TaskManager_Editor.et" {
- coords 1406.474 38 2902.029
- {
-  SCR_BaseTaskSupportEntity {
-   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
-  }
-  SCR_EditorTaskSupportEntity {
-   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
-  }
-  SCR_TriggerTaskSupportEntity {
-   m_sTaskPrefab "{1D0F815858EE24AC}Prefabs/Tasks/BaseTask.et"
-  }
  }
 }
 IA_MissionInitializer : "{C03DC6A4928E4E77}Components/Mission_Initializer.et" {

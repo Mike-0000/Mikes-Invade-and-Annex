@@ -6,12 +6,19 @@ from check_dynamic_base_layouts import read_layout
 
 ROOT = Path(__file__).resolve().parents[1]
 scenes = json.loads((ROOT / 'docs/dynamic-base-interior-scenes.json').read_text())['scenes']
-colors = dict(Briefing='#e6a7d9', Mess='#9ed5a0', Stores='#e9c579', Water='#83c9e5', Workshop='#f2a77d', Utility='#c7c0ee')
+palette = {'Command / medical':'#e6a7d9', 'Food / rest':'#9ed5a0', 'Supply handling':'#e9c579', 'Water / washing':'#83c9e5',
+           'Power / maintenance':'#f2a77d', 'Sanitation':'#c7c0ee', 'Entrance lighting':'#fff098', 'Waste':'#b7bcc2'}
+colors = {}
+for kinds, color in [(['BriefingLit','Comms','CommsLit','Medical','MedicalLit'], '#e6a7d9'),
+                     (['Mess','MessLit','KitchenLit','Rest'], '#9ed5a0'), (['Stores','StoresCovered'], '#e9c579'),
+                     (['WaterWash','BulkWater'], '#83c9e5'), (['Power','WorkshopLit'], '#f2a77d'),
+                     (['Sanitation'], '#c7c0ee'), (['EntranceLight'], '#fff098'), (['Waste'], '#b7bcc2')]:
+    colors.update(dict.fromkeys(kinds, color))
 parts = ['<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="990" viewBox="0 0 1440 990">',
          '<title>Dynamic base interiors: authored scene placement</title>',
          '<rect width="1440" height="990" fill="#142027"/>',
          '<style>text{font-family:Segoe UI,Arial,sans-serif;fill:#e8eded}.muted{fill:#afc0c6;font-size:13px}</style>',
-         '<text x="28" y="36" font-size="24" font-weight="600">Field-base interiors</text>',
+         '<text x="28" y="36" font-size="24" font-weight="600">Field-base infrastructure and daily life</text>',
          '<text x="28" y="60" class="muted">Purposeful pockets of activity · unchanged sandbag walls · clear approach lanes · all plans at the same scale</text>']
 
 for index, name in enumerate(scenes):
@@ -44,12 +51,13 @@ for index, name in enumerate(scenes):
     for post in posts:
         x,y=pt(*post)
         parts.append(f'<circle cx="{x}" cy="{y}" r="2" fill="#fff"/>')
-    parts.append(f'<text x="{cx}" y="{oy+369}" text-anchor="middle" class="muted">↑ Main entrance</text>')
+    parts.append(f'<text x="{cx}" y="{oy+377}" text-anchor="middle" class="muted">↑ Main entrance</text>')
 
-for i,(name,color) in enumerate(colors.items()):
-    x=32+i*230
-    parts += [f'<rect x="{x}" y="894" width="15" height="15" rx="2" fill="{color}"/>',
-              f'<text x="{x+24}" y="906" font-size="14">{name}</text>']
+for i,(name,color) in enumerate(palette.items()):
+    x=32+(i%4)*350
+    y=881+(i//4)*27
+    parts += [f'<rect x="{x}" y="{y}" width="15" height="15" rx="2" fill="{color}"/>',
+              f'<text x="{x+24}" y="{y+12}" font-size="14">{name}</text>']
 parts += ['<text x="28" y="942" class="muted">Colored rectangles are measured vignette pads; white dots are guard posts. Paths remain clear.</text>',
           '<text x="28" y="965" class="muted">Authored plan, not an in-game screenshot. Individual scenes are omitted where terrain or existing objects prevent a clean fit.</text>', '</svg>']
 output=ROOT/'docs/dynamic-base-interiors.svg'

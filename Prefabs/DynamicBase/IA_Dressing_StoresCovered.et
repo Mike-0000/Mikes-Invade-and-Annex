@@ -1,0 +1,54 @@
+GenericEntity {
+ ID "73308E6FBCBF5BBE"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{BA4D420FC21458D4}Prefabs/DynamicBase/IA_InfrastructureAsset_covered.et" {
+   ID "517F8AA4D73B5595"
+   components {
+    Hierarchy "{A84E2B6A48FC5EAE}" {
+     Enabled 1
+    }
+   }
+   coords -0.85 0.002211 0.5
+   angles 0 0 0
+  }
+  GenericEntity : "{D7F69BF7D2DCA0A8}Prefabs/Props/Industrial/Pallets/Pallet_01.et" {
+   ID "49560E329F6E52D3"
+   components {
+    Hierarchy "{A5EA931CBF5B57AD}" {
+     Enabled 1
+    }
+   }
+   coords 0.9 0.002289 0.4
+   angles 0 8 0
+  }
+  GenericEntity : "{88A1A9164B53E2E5}Prefabs/Props/Industrial/Pallets/MarsBox_01_green.et" {
+   ID "3B7F75C60A8353D6"
+   components {
+    Hierarchy "{0917FC7557FE5083}" {
+     Enabled 1
+    }
+   }
+   coords 0.9 0.143126 0.4
+   angles 0 8 0
+  }
+  GenericEntity : "{BD65F1D86388640D}Prefabs/Props/Civilian/FireExtinguisher_01.et" {
+   ID "598CAB86E82E59E3"
+   components {
+    Hierarchy "{0A5A88FF77D556B1}" {
+     Enabled 1
+    }
+   }
+   coords -0.9 0.000054 -0.6
+   angles 0 0 0
+  }
+ }
+}

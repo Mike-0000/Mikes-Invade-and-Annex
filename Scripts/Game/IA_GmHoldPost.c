@@ -77,7 +77,10 @@ class IA_GmHoldPost : ScriptedGameTriggerEntity
 		m_bClaimed = true;
 		pos = GetOrigin();
 		radius = GetHoldRadius();
-		Print(string.Format("[IA_GmHoldPost] Claimed building hold at %1 radius %2 m", pos.ToString(), radius), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA_GmHoldPost] Claimed building hold at %1 radius %2 m", pos.ToString(), radius), LogLevel.NORMAL);
+		}
 		return true;
 	}
 
@@ -108,7 +111,10 @@ class IA_GmHoldPost : ScriptedGameTriggerEntity
 		if (radius > 0)
 			post.SetHoldRadius(radius);
 
-		Print(string.Format("[IA_GmHoldPost] Spawned building hold at %1 radius %2 m", post.GetOrigin().ToString(), post.GetHoldRadius()), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA_GmHoldPost] Spawned building hold at %1 radius %2 m", post.GetOrigin().ToString(), post.GetHoldRadius()), LogLevel.NORMAL);
+		}
 		return post;
 	}
 

@@ -1,0 +1,45 @@
+GenericEntity {
+ ID "505DECC207445433"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{03B7CEBF2E960E2C}Assets/Props/Furniture/LightTable_01/LightTable_01.xob"
+  }
+  RigidBody {
+   ModelGeometry 1
+   Static 1
+  }
+  Hierarchy "{38D437ED92B055D5}" {
+   Enabled 1
+  }
+  RplComponent : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  ParametricMaterialInstanceComponent "{6196F1A0EA27341B}" {
+   ColorEmissive 0.141 0.112 0.068 1
+   EmissiveMultiplier 11
+   UseUserParamOne 0
+   UseUserParamTwo 0
+   UseUserParamThree 0
+   UseUserParamFour 0
+   UseUserParamAlpha 0
+  }
+  SCR_BaseInteractiveLightComponent "{6196F1A0EA27341D}" {
+   Enabled 1
+   m_aLightData {
+    SCR_BaseLightData "{6196F1A0EA273416}" {
+     m_eLightType POINT
+     m_vLightOffset 0 0.2 0
+     m_vLightColor 1 0.896 0.687
+     m_fRadius 4
+     m_fIntensityClipEV -10
+     m_vFlareOffset 0 0.02 0
+     m_fScale 0.2
+     m_eLightFlags 0
+    }
+   }
+   m_bGradualLightning 1
+   m_fLV 2
+   m_eInitialLightState LIT
+  }
+ }
+ coords 0 0 0
+}

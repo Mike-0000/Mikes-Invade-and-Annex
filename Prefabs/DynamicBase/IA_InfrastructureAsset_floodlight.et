@@ -1,0 +1,52 @@
+GenericEntity {
+ ID "74026E477CEB55DF"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{460B761B275F1C18}Assets/Props/Military/Generators/GeneratorFloodlight_01/GeneratorFloodlight_01.xob"
+   Materials {
+    MaterialAssignClass "{5706D698289BDF5C}" {
+     SourceMaterial "GeneratorFloodlight_01"
+     AssignedMaterial "{08EA93189CC303E6}Assets/Props/Military/Generators/GeneratorFloodlight_01/Data/GeneratorFloodlight_01_USSR.emat"
+    }
+    MaterialAssignClass "{5706D698289BDF47}" {
+     SourceMaterial "GeneratorFloodlight_01_Decal_lable"
+     AssignedMaterial "{417C7E45BF68C008}Assets/Props/Military/Generators/GeneratorFloodlight_01/Data/GeneratorFloodlight_01_Decal_lable_USSR.emat"
+    }
+   }
+   LODFactors {
+    2 1.5 1.5 0.5 0.5 0.5 0.5
+   }
+  }
+  RigidBody {
+   ModelGeometry 1
+   Static 1
+  }
+  Hierarchy "{C8C88265A0C45704}" {
+   Enabled 1
+  }
+  RplComponent : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  ParametricMaterialInstanceComponent "{5882B9E6BC817AEA}" {
+   UseUserParamAlpha 0
+  }
+  SCR_BaseInteractiveLightComponent "{5882B9E6B4EFC9DF}" {
+   m_aLightData {
+    SCR_BaseLightData "{58CF1C10765BAE08}" {
+     m_eLightType SPOT
+     m_vLightOffset -0.029 3.6 0.2
+     m_vLightColor 1 0.969 0.69
+     m_fConeAngle 95
+     m_vLightConeDirection 0 -0.6 1
+     m_fRadius 14
+     m_fIntensityClipEV -10
+     m_eFlareType Disabled
+     m_eLightFlags 0
+    }
+   }
+   m_fLV 7
+   m_fDistanceAttenuation 1.1
+   m_eInitialLightState LIT
+  }
+ }
+ coords 0 0 0
+}

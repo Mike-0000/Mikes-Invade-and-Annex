@@ -9,7 +9,10 @@ class IA_StatsManager
     {
         m_aEventQue = new array<ref IA_StatEvent>();
         GetGame().GetCallqueue().CallLater(SendBatch, BATCH_SEND_INTERVAL * 1000, true);
-        Print("IA_StatsManager initialized, will send batches every " + BATCH_SEND_INTERVAL + " seconds.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA_StatsManager initialized, will send batches every " + BATCH_SEND_INTERVAL + " seconds.", LogLevel.NORMAL);
+        }
     }
 
     static IA_StatsManager GetInstance()
@@ -101,11 +104,17 @@ class IA_StatsManager
         }
         payload = payload + "]";
         
-        Print("IA_StatsManager: Constructed payload: " + payload, LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA][Stats] Batch payload prepared.", LogLevel.NORMAL);
+        }
         
         IA_ApiHandler.GetInstance().SubmitStats(payload);
         
-        Print("IA_StatsManager: Sending batch of " + eventCount + " events.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA_StatsManager: Sending batch of " + eventCount + " events.", LogLevel.NORMAL);
+        }
 
         // Clear the queue after sending
         m_aEventQue.Clear();

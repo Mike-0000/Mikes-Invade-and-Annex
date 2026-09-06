@@ -27,13 +27,19 @@ class IA_MortarPitPlacer
 
 		if (IA_AreaMarker.HasMortarPitMarkerForGroup(groupNumber))
 		{
-			Print(string.Format("[IA_MortarPitPlacer] Group %1 already has a MortarPit marker.", groupNumber), LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA_MortarPitPlacer] Group %1 already has a MortarPit marker.", groupNumber), LogLevel.NORMAL);
+			}
 			return;
 		}
 
 		if (Math.RandomFloat01() >= SPAWN_CHANCE)
 		{
-			Print(string.Format("[IA][MortarPit] Group %1 skipped (no pit this AO, %2 chance).", groupNumber, SPAWN_CHANCE), LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA][MortarPit] Group %1 skipped (no pit this AO, %2 chance).", groupNumber, SPAWN_CHANCE), LogLevel.NORMAL);
+			}
 			return;
 		}
 
@@ -415,6 +421,9 @@ class IA_MortarPitPlacer
 		if (sites.IsEmpty())
 			sites = CollectNonMortarSites(groupNumber);
 		float nearDist = DistanceToNearestObjective(pos, sites);
-		Print(string.Format("[IA_MortarPitPlacer] Auto-placed MortarPit for group %1 at %2 with %3 guns (%4 m from nearest site)", groupNumber, pos, mortarCount, nearDist), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA_MortarPitPlacer] Auto-placed MortarPit for group %1 at %2 with %3 guns (%4 m from nearest site)", groupNumber, pos, mortarCount, nearDist), LogLevel.NORMAL);
+		}
 	}
 };

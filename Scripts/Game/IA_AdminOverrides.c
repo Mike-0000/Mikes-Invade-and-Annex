@@ -116,7 +116,7 @@ class IA_AdminOverrides
 			return false;
 		}
 
-		Print("[IA][AdminOverrides] Cleared " + CONFIG_PATH, LogLevel.NORMAL);
+		IA_Log.Info("[IA][AdminOverrides] Cleared " + CONFIG_PATH);
 		return true;
 	}
 
@@ -323,7 +323,7 @@ class IA_AdminOverrides
 
 		file.WriteLine(ToJson());
 		file.Close();
-		Print("[IA][AdminOverrides] Saved " + CONFIG_PATH, LogLevel.NORMAL);
+		IA_Log.Info("[IA][AdminOverrides] Saved " + CONFIG_PATH);
 		return true;
 	}
 

@@ -1,0 +1,74 @@
+GenericEntity {
+ ID "F38BD1E967435EB9"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+   ID "75F5B34297A85446"
+   components {
+    Hierarchy "{AA0ED94478F55E02}" {
+     Enabled 1
+    }
+   }
+   coords -0.8 0.000000 0
+   angles 0 0 0
+  }
+  GenericEntity : "{0F866B72D473D8C4}Prefabs/Props/Industrial/ToolBox_01/ToolBox_01_grey.et" {
+   ID "69524F883A395170"
+   components {
+    Hierarchy "{A819273B42DB57B0}" {
+     Enabled 1
+    }
+   }
+   coords -0.8 0.899073 0
+   angles 0 8 0
+  }
+  GenericEntity : "{B3D9BC5688598B6E}Prefabs/Props/VehicleParts/Tires/Wheel_Ural4320.et" {
+   ID "D226C4DBD81F55DC"
+   components {
+    Hierarchy "{7AA2CD625D195E17}" {
+     Enabled 1
+    }
+   }
+   coords 0.85 0.015546 0.15
+   angles 0 0 0
+  }
+  GenericEntity : "{B3D9BC5688598B6E}Prefabs/Props/VehicleParts/Tires/Wheel_Ural4320.et" {
+   ID "E6A5546CF7F45917"
+   components {
+    Hierarchy "{6C3DE553993E5048}" {
+     Enabled 1
+    }
+   }
+   coords 0.85 0.481621 0.15
+   angles 0 12 0
+  }
+  GenericEntity : "{BD65F1D86388640D}Prefabs/Props/Civilian/FireExtinguisher_01.et" {
+   ID "B4ED98D90B6E59CA"
+   components {
+    Hierarchy "{D75488F9D4255B80}" {
+     Enabled 1
+    }
+   }
+   coords -1.3 0.000054 -0.6
+   angles 0 0 0
+  }
+  GenericEntity : "{C1C087BC66975A4E}Prefabs/DynamicBase/IA_InfrastructureAsset_lamp.et" {
+   ID "0335A45320455DDE"
+   components {
+    Hierarchy "{38D437ED92B055D5}" {
+     Enabled 1
+    }
+   }
+   coords -0.35 0.899073 0.1
+   angles 0 0 0
+  }
+ }
+}

@@ -1115,8 +1115,11 @@ class IA_VehicleManager: GenericEntity
             crewGroup.Spawn();
         crewGroup.AssignVehicle(vehicle, destination);
 
-        Print(string.Format("[IA][Vehicle] Fill seats unique=%1 crew=%2 cargo=%3 spawnCrew=%4 spawnCargo=%5",
-            compartmentCount, crewSeats, cargoSeats, crewUnits, cargoUnits), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][Vehicle] Fill seats unique=%1 crew=%2 cargo=%3 spawnCrew=%4 spawnCargo=%5",
+                compartmentCount, crewSeats, cargoSeats, crewUnits, cargoUnits), LogLevel.NORMAL);
+        }
 
         if (cargoUnits > 0)
         {

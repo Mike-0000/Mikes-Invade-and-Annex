@@ -57,7 +57,10 @@ class IA_ChangeRoleUserAction : ScriptedUserAction
         if (success)
         {
             string roleName = IA_RoleManager.GetRoleName(m_TargetRole);
-            Print(string.Format("You are now a %1", roleName), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("You are now a %1", roleName), LogLevel.NORMAL);
+            }
         }
         else
         {

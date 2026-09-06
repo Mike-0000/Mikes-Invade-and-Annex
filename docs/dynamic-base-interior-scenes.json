@@ -18,18 +18,86 @@
     ],
     "Workshop": [
       2.0,
-      2.2
+      1.3
     ],
     "Utility": [
       1.7,
+      1.3
+    ],
+    "WaterWash": [
+      1.4,
+      1.2
+    ],
+    "BulkWater": [
+      2.2,
+      3.4
+    ],
+    "Sanitation": [
+      2.4,
+      2.8
+    ],
+    "Kitchen": [
+      3.5,
+      3.2
+    ],
+    "StoresCovered": [
+      1.9,
+      1.6
+    ],
+    "Power": [
+      2.0,
+      2.5
+    ],
+    "Medical": [
+      2.0,
+      2.0
+    ],
+    "Rest": [
+      2.0,
+      1.8
+    ],
+    "Comms": [
+      2.0,
+      1.3
+    ],
+    "Waste": [
+      1.0,
+      0.7
+    ],
+    "EntranceLight": [
+      2.0,
+      1.5
+    ],
+    "BriefingLit": [
+      2.3,
+      2.6
+    ],
+    "MessLit": [
+      1.7,
+      1.5
+    ],
+    "KitchenLit": [
+      3.5,
+      3.2
+    ],
+    "WorkshopLit": [
+      2.0,
+      1.3
+    ],
+    "MedicalLit": [
+      2.0,
+      2.0
+    ],
+    "CommsLit": [
+      2.0,
       1.3
     ]
   },
   "scenes": {
     "Full": [
       {
-        "id": "dressing_briefing_0",
-        "kind": "Briefing",
+        "id": "dressing_briefinglit_0",
+        "kind": "BriefingLit",
         "x": 14,
         "z": 49,
         "yaw": 0,
@@ -37,13 +105,13 @@
         "half_depth": 2.6
       },
       {
-        "id": "dressing_mess_1",
-        "kind": "Mess",
+        "id": "dressing_kitchenlit_1",
+        "kind": "KitchenLit",
         "x": -47,
         "z": 53,
         "yaw": 0,
-        "half_width": 1.7,
-        "half_depth": 1.5
+        "half_width": 3.5,
+        "half_depth": 3.2
       },
       {
         "id": "dressing_mess_2",
@@ -55,22 +123,22 @@
         "half_depth": 1.5
       },
       {
-        "id": "dressing_water_3",
-        "kind": "Water",
+        "id": "dressing_bulkwater_3",
+        "kind": "BulkWater",
         "x": -78,
         "z": 32,
         "yaw": 0,
-        "half_width": 1.4,
-        "half_depth": 1.2
+        "half_width": 2.2,
+        "half_depth": 3.4
       },
       {
-        "id": "dressing_stores_4",
-        "kind": "Stores",
+        "id": "dressing_storescovered_4",
+        "kind": "StoresCovered",
         "x": 45,
         "z": -26,
         "yaw": 0,
-        "half_width": 1.8,
-        "half_depth": 2.9
+        "half_width": 1.9,
+        "half_depth": 1.6
       },
       {
         "id": "dressing_stores_5",
@@ -82,64 +150,100 @@
         "half_depth": 2.9
       },
       {
-        "id": "dressing_workshop_6",
-        "kind": "Workshop",
+        "id": "dressing_workshoplit_6",
+        "kind": "WorkshopLit",
         "x": -67,
         "z": -22,
         "yaw": 0,
         "half_width": 2.0,
-        "half_depth": 2.2
+        "half_depth": 1.3
       },
       {
-        "id": "dressing_utility_7",
-        "kind": "Utility",
+        "id": "dressing_commslit_7",
+        "kind": "CommsLit",
         "x": 28,
         "z": 57,
         "yaw": 0,
-        "half_width": 1.7,
+        "half_width": 2.0,
         "half_depth": 1.3
       },
       {
-        "id": "dressing_water_8",
-        "kind": "Water",
+        "id": "dressing_medicallit_8",
+        "kind": "MedicalLit",
         "x": 78,
         "z": 33,
         "yaw": 0,
-        "half_width": 1.4,
-        "half_depth": 1.2
+        "half_width": 2.0,
+        "half_depth": 2.0
       },
       {
-        "id": "dressing_utility_9",
-        "kind": "Utility",
+        "id": "dressing_power_9",
+        "kind": "Power",
         "x": 72,
         "z": -32,
         "yaw": 0,
-        "half_width": 1.7,
-        "half_depth": 1.3
+        "half_width": 2.0,
+        "half_depth": 2.5
       },
       {
-        "id": "dressing_stores_10",
-        "kind": "Stores",
+        "id": "dressing_storescovered_10",
+        "kind": "StoresCovered",
         "x": -30,
         "z": -58,
         "yaw": 0,
-        "half_width": 1.8,
-        "half_depth": 2.9
+        "half_width": 1.9,
+        "half_depth": 1.6
       },
       {
-        "id": "dressing_mess_11",
-        "kind": "Mess",
+        "id": "dressing_rest_11",
+        "kind": "Rest",
         "x": -15,
         "z": 43,
+        "yaw": 90,
+        "half_width": 2.0,
+        "half_depth": 1.8
+      },
+      {
+        "id": "dressing_sanitation_12",
+        "kind": "Sanitation",
+        "x": -78,
+        "z": -3,
+        "yaw": 90,
+        "half_width": 2.4,
+        "half_depth": 2.8
+      },
+      {
+        "id": "dressing_sanitation_13",
+        "kind": "Sanitation",
+        "x": 78,
+        "z": 3,
         "yaw": 0,
-        "half_width": 1.7,
+        "half_width": 2.4,
+        "half_depth": 2.8
+      },
+      {
+        "id": "dressing_waste_14",
+        "kind": "Waste",
+        "x": 76,
+        "z": -62,
+        "yaw": 0,
+        "half_width": 1.0,
+        "half_depth": 0.7
+      },
+      {
+        "id": "dressing_entrancelight_15",
+        "kind": "EntranceLight",
+        "x": 9,
+        "z": -60,
+        "yaw": 0,
+        "half_width": 2.0,
         "half_depth": 1.5
       }
     ],
     "Compact": [
       {
-        "id": "dressing_briefing_0",
-        "kind": "Briefing",
+        "id": "dressing_briefinglit_0",
+        "kind": "BriefingLit",
         "x": 16,
         "z": 30,
         "yaw": 0,
@@ -147,73 +251,109 @@
         "half_depth": 2.6
       },
       {
-        "id": "dressing_mess_1",
-        "kind": "Mess",
+        "id": "dressing_kitchenlit_1",
+        "kind": "KitchenLit",
         "x": -21,
         "z": 27,
         "yaw": 0,
-        "half_width": 1.7,
-        "half_depth": 1.5
+        "half_width": 3.5,
+        "half_depth": 3.2
       },
       {
-        "id": "dressing_water_2",
-        "kind": "Water",
+        "id": "dressing_bulkwater_2",
+        "kind": "BulkWater",
         "x": -49,
         "z": 10,
         "yaw": 0,
-        "half_width": 1.4,
-        "half_depth": 1.2
+        "half_width": 2.2,
+        "half_depth": 3.4
       },
       {
-        "id": "dressing_stores_3",
-        "kind": "Stores",
+        "id": "dressing_storescovered_3",
+        "kind": "StoresCovered",
         "x": 24,
         "z": -39,
         "yaw": 0,
-        "half_width": 1.8,
-        "half_depth": 2.9
+        "half_width": 1.9,
+        "half_depth": 1.6
       },
       {
-        "id": "dressing_workshop_4",
-        "kind": "Workshop",
+        "id": "dressing_workshoplit_4",
+        "kind": "WorkshopLit",
         "x": -15,
         "z": -27,
         "yaw": 0,
         "half_width": 2.0,
-        "half_depth": 2.2
-      },
-      {
-        "id": "dressing_utility_5",
-        "kind": "Utility",
-        "x": 42,
-        "z": -21,
-        "yaw": 0,
-        "half_width": 1.7,
         "half_depth": 1.3
       },
       {
-        "id": "dressing_mess_6",
-        "kind": "Mess",
+        "id": "dressing_power_5",
+        "kind": "Power",
+        "x": 42,
+        "z": -21,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 2.5
+      },
+      {
+        "id": "dressing_rest_6",
+        "kind": "Rest",
         "x": -34,
         "z": 43,
         "yaw": 0,
-        "half_width": 1.7,
-        "half_depth": 1.5
+        "half_width": 2.0,
+        "half_depth": 1.8
       },
       {
-        "id": "dressing_water_7",
-        "kind": "Water",
+        "id": "dressing_medical_7",
+        "kind": "Medical",
         "x": 42,
         "z": 8,
         "yaw": 0,
-        "half_width": 1.4,
-        "half_depth": 1.2
+        "half_width": 2.0,
+        "half_depth": 2.0
+      },
+      {
+        "id": "dressing_comms_8",
+        "kind": "Comms",
+        "x": 29,
+        "z": 42,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 1.3
+      },
+      {
+        "id": "dressing_sanitation_9",
+        "kind": "Sanitation",
+        "x": -49,
+        "z": -13,
+        "yaw": 0,
+        "half_width": 2.4,
+        "half_depth": 2.8
+      },
+      {
+        "id": "dressing_waste_10",
+        "kind": "Waste",
+        "x": 39,
+        "z": -40,
+        "yaw": 0,
+        "half_width": 1.0,
+        "half_depth": 0.7
+      },
+      {
+        "id": "dressing_entrancelight_11",
+        "kind": "EntranceLight",
+        "x": 9,
+        "z": -42,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 1.5
       }
     ],
     "Courtyard": [
       {
-        "id": "dressing_briefing_0",
-        "kind": "Briefing",
+        "id": "dressing_briefinglit_0",
+        "kind": "BriefingLit",
         "x": 16,
         "z": 30,
         "yaw": 0,
@@ -221,17 +361,17 @@
         "half_depth": 2.6
       },
       {
-        "id": "dressing_mess_1",
-        "kind": "Mess",
+        "id": "dressing_kitchenlit_1",
+        "kind": "KitchenLit",
         "x": -25,
-        "z": 30,
+        "z": 31,
         "yaw": 0,
-        "half_width": 1.7,
-        "half_depth": 1.5
+        "half_width": 3.5,
+        "half_depth": 3.2
       },
       {
-        "id": "dressing_water_2",
-        "kind": "Water",
+        "id": "dressing_waterwash_2",
+        "kind": "WaterWash",
         "x": -6,
         "z": -25,
         "yaw": 0,
@@ -239,37 +379,64 @@
         "half_depth": 1.2
       },
       {
-        "id": "dressing_stores_3",
-        "kind": "Stores",
+        "id": "dressing_storescovered_3",
+        "kind": "StoresCovered",
         "x": 26,
         "z": -7,
-        "yaw": 90,
-        "half_width": 1.8,
-        "half_depth": 2.9
+        "yaw": 0,
+        "half_width": 1.9,
+        "half_depth": 1.6
       },
       {
-        "id": "dressing_utility_4",
-        "kind": "Utility",
+        "id": "dressing_power_4",
+        "kind": "Power",
         "x": 39,
         "z": -25,
         "yaw": 0,
-        "half_width": 1.7,
-        "half_depth": 1.3
+        "half_width": 2.0,
+        "half_depth": 2.5
       },
       {
-        "id": "dressing_mess_5",
-        "kind": "Mess",
-        "x": 25,
+        "id": "dressing_medical_5",
+        "kind": "Medical",
+        "x": -7,
+        "z": -16,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 2.0
+      },
+      {
+        "id": "dressing_sanitation_6",
+        "kind": "Sanitation",
+        "x": -37,
+        "z": 31,
+        "yaw": 0,
+        "half_width": 2.4,
+        "half_depth": 2.8
+      },
+      {
+        "id": "dressing_waste_7",
+        "kind": "Waste",
+        "x": 37,
         "z": 30,
         "yaw": 0,
-        "half_width": 1.7,
+        "half_width": 1.0,
+        "half_depth": 0.7
+      },
+      {
+        "id": "dressing_entrancelight_8",
+        "kind": "EntranceLight",
+        "x": 9,
+        "z": -29,
+        "yaw": 0,
+        "half_width": 2.0,
         "half_depth": 1.5
       }
     ],
     "Roadside": [
       {
-        "id": "dressing_briefing_0",
-        "kind": "Briefing",
+        "id": "dressing_briefinglit_0",
+        "kind": "BriefingLit",
         "x": 17,
         "z": 33,
         "yaw": 0,
@@ -286,8 +453,8 @@
         "half_depth": 1.5
       },
       {
-        "id": "dressing_water_2",
-        "kind": "Water",
+        "id": "dressing_waterwash_2",
+        "kind": "WaterWash",
         "x": -17,
         "z": -6,
         "yaw": 0,
@@ -295,28 +462,64 @@
         "half_depth": 1.2
       },
       {
-        "id": "dressing_stores_3",
-        "kind": "Stores",
+        "id": "dressing_storescovered_3",
+        "kind": "StoresCovered",
         "x": 18,
         "z": 22,
         "yaw": 0,
-        "half_width": 1.8,
-        "half_depth": 2.9
+        "half_width": 1.9,
+        "half_depth": 1.6
       },
       {
-        "id": "dressing_utility_4",
-        "kind": "Utility",
+        "id": "dressing_power_4",
+        "kind": "Power",
         "x": 17,
-        "z": -42,
+        "z": -40,
+        "yaw": 90,
+        "half_width": 2.0,
+        "half_depth": 2.5
+      },
+      {
+        "id": "dressing_workshoplit_5",
+        "kind": "WorkshopLit",
+        "x": -17,
+        "z": -38,
         "yaw": 0,
-        "half_width": 1.7,
+        "half_width": 2.0,
         "half_depth": 1.3
+      },
+      {
+        "id": "dressing_sanitation_6",
+        "kind": "Sanitation",
+        "x": -22,
+        "z": 38,
+        "yaw": 0,
+        "half_width": 2.4,
+        "half_depth": 2.8
+      },
+      {
+        "id": "dressing_waste_7",
+        "kind": "Waste",
+        "x": 20,
+        "z": -6,
+        "yaw": 0,
+        "half_width": 1.0,
+        "half_depth": 0.7
+      },
+      {
+        "id": "dressing_entrancelight_8",
+        "kind": "EntranceLight",
+        "x": 11,
+        "z": -40,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 1.5
       }
     ],
     "CommandPost": [
       {
-        "id": "dressing_briefing_0",
-        "kind": "Briefing",
+        "id": "dressing_briefinglit_0",
+        "kind": "BriefingLit",
         "x": 18,
         "z": 19,
         "yaw": 0,
@@ -333,8 +536,8 @@
         "half_depth": 1.5
       },
       {
-        "id": "dressing_water_2",
-        "kind": "Water",
+        "id": "dressing_waterwash_2",
+        "kind": "WaterWash",
         "x": -7,
         "z": -20,
         "yaw": 0,
@@ -349,12 +552,57 @@
         "yaw": 90,
         "half_width": 1.8,
         "half_depth": 2.9
+      },
+      {
+        "id": "dressing_power_4",
+        "kind": "Power",
+        "x": 25,
+        "z": 7,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 2.5
+      },
+      {
+        "id": "dressing_comms_5",
+        "kind": "Comms",
+        "x": 15,
+        "z": 13,
+        "yaw": 90,
+        "half_width": 2.0,
+        "half_depth": 1.3
+      },
+      {
+        "id": "dressing_sanitation_6",
+        "kind": "Sanitation",
+        "x": -23,
+        "z": 20,
+        "yaw": 0,
+        "half_width": 2.4,
+        "half_depth": 2.8
+      },
+      {
+        "id": "dressing_waste_7",
+        "kind": "Waste",
+        "x": 6,
+        "z": -20,
+        "yaw": 90,
+        "half_width": 1.0,
+        "half_depth": 0.7
+      },
+      {
+        "id": "dressing_entrancelight_8",
+        "kind": "EntranceLight",
+        "x": -5,
+        "z": -16,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 1.5
       }
     ],
     "RallyPost": [
       {
-        "id": "dressing_mess_0",
-        "kind": "Mess",
+        "id": "dressing_messlit_0",
+        "kind": "MessLit",
         "x": -9,
         "z": -6,
         "yaw": 0,
@@ -371,13 +619,22 @@
         "half_depth": 2.9
       },
       {
-        "id": "dressing_water_2",
-        "kind": "Water",
+        "id": "dressing_waterwash_2",
+        "kind": "WaterWash",
         "x": -10,
         "z": -17,
         "yaw": 0,
         "half_width": 1.4,
         "half_depth": 1.2
+      },
+      {
+        "id": "dressing_power_3",
+        "kind": "Power",
+        "x": 9,
+        "z": -5,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 2.5
       }
     ]
   }

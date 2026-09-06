@@ -1151,7 +1151,10 @@ class IA_SpawnPlacement
 			return chosen;
 		if (TryPickFlatEventSite(candidates, FLAT_SITE_RELAXED_SLOPE, FLAT_SITE_RELAXED_HEIGHT_M, chosen))
 		{
-			Print("[IA][SpawnPlacement] flat event site used relaxed slope.", LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("[IA][SpawnPlacement] flat event site used relaxed slope.", LogLevel.NORMAL);
+			}
 			return chosen;
 		}
 

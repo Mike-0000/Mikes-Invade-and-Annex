@@ -85,12 +85,12 @@ class IA_ApiConfigManager
             
             if (readBytes > 0 && serverName != "")
             {
-                Print("IA_ApiConfigManager: Server name '" + serverName + "' loaded from " + SERVER_NAME_PATH, LogLevel.NORMAL);
+                IA_Log.Info("IA_ApiConfigManager: Server name '" + serverName + "' loaded from " + SERVER_NAME_PATH);
                 return serverName;
             }
         }
         
-        Print("IA_ApiConfigManager: No server name file found or it's empty. Creating a new default config.", LogLevel.NORMAL);
+        IA_Log.Info("IA_ApiConfigManager: No server name file found or it's empty. Creating a new default config.");
         string defaultServerName = "Default Name - PLEASE RENAME IN server_name.txt, in I&A Server Profile Folder";
 		
 		FileIO.MakeDirectory(CONFIG_DIR);
@@ -99,7 +99,7 @@ class IA_ApiConfigManager
         {
             writeFile.WriteLine(defaultServerName);
             writeFile.Close();
-			Print("IA_ApiConfigManager: Created default server name file at " + SERVER_NAME_PATH, LogLevel.NORMAL);
+			IA_Log.Info("IA_ApiConfigManager: Created default server name file at " + SERVER_NAME_PATH);
             return defaultServerName;
         }
 		else
@@ -125,7 +125,7 @@ class IA_ApiConfigManager
         {
             file.WriteLine(m_Config.ToJson());
             file.Close();
-            Print("IA_ApiConfigManager: Configuration saved to " + CONFIG_PATH, LogLevel.NORMAL);
+            IA_Log.Info("IA_ApiConfigManager: Configuration saved to " + CONFIG_PATH);
         }
         else
         {
@@ -149,13 +149,13 @@ class IA_ApiConfigManager
             if (fileContent != "")
             {
                 m_Config = IA_ApiConfig.FromJson(fileContent);
-                Print("IA_ApiConfigManager: Configuration loaded from " + CONFIG_PATH, LogLevel.NORMAL);
+                IA_Log.Info("IA_ApiConfigManager: Configuration loaded from " + CONFIG_PATH);
                 return;
             }
         }
         
         // If file doesn't exist, is empty, or failed to read.
-        Print("IA_ApiConfigManager: No config file found or it's empty. Creating a new default config.", LogLevel.NORMAL);
+        IA_Log.Info("IA_ApiConfigManager: No config file found or it's empty. Creating a new default config.");
         m_Config = IA_ApiConfig.GetDefault();
         SaveConfig();
     }

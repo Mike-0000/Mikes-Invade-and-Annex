@@ -92,7 +92,10 @@ class IA_ReplicationWorkaround : GenericEntity
 
 	[RplRpc(RplChannel.Reliable, RplRcver.Broadcast)]
 	void RpcDo_TriggerGlobalNotificationFinal(string messageType, string taskTitle, int playerId){
-		Print("Going For RpcDo_TriggerGlobalNotificationFinal",LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print("Going For RpcDo_TriggerGlobalNotificationFinal",LogLevel.NORMAL);
+		}
 		PlayerController pc = GetGame().GetPlayerManager().GetPlayerController(playerId);
 		if(!pc)
 			return;

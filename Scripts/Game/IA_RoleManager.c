@@ -62,7 +62,10 @@ class IA_RoleManager
         m_RoleLimits[IA_PlayerRole.PILOT] = 7;
         m_RoleLimits[IA_PlayerRole.CREWMAN] = 14;
         
-        Print("IA_RoleManager initialized", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA_RoleManager initialized", LogLevel.NORMAL);
+        }
     }
     
     //------------------------------------------------------------------------------------------------
@@ -126,10 +129,13 @@ class IA_RoleManager
         // Check if role is full
         if (IsRoleFull(newRole))
         {
-            Print(string.Format("Role %1 is at capacity (%2/%3)", 
-                typename.EnumToString(IA_PlayerRole, newRole),
-                GetRoleCount(newRole),
-                GetRoleLimit(newRole)), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("Role %1 is at capacity (%2/%3)", 
+                    typename.EnumToString(IA_PlayerRole, newRole),
+                    GetRoleCount(newRole),
+                    GetRoleLimit(newRole)), LogLevel.NORMAL);
+            }
             return false;
         }
         
@@ -172,14 +178,20 @@ class IA_RoleManager
                     if (currentRole != newRole)
                     {
                         char.SetRole(newRole, true); // Force replication as this is a server-authoritative change
-                        Print(string.Format("Assigned role %1 to player %2", 
-                            typename.EnumToString(IA_PlayerRole, newRole), 
-                            playerId), LogLevel.NORMAL);
+                        if (IA_Log.IsDebugEnabled())
+                        {
+                            Print(string.Format("Assigned role %1 to player %2", 
+                                typename.EnumToString(IA_PlayerRole, newRole), 
+                                playerId), LogLevel.NORMAL);
+                        }
                     }
                     else
                     {
-                        Print(string.Format("Player %1 already has role %2, skipping assignment", 
-                            playerId, typename.EnumToString(IA_PlayerRole, newRole)), LogLevel.DEBUG);
+                        if (IA_Log.IsDebugEnabled())
+                        {
+                            Print(string.Format("Player %1 already has role %2, skipping assignment", 
+                                playerId, typename.EnumToString(IA_PlayerRole, newRole)), LogLevel.NORMAL);
+                        }
                     }
                 }
                 else

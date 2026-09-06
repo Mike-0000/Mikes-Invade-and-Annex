@@ -1,0 +1,74 @@
+GenericEntity {
+ ID "01F7F11356305748"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+   ID "68C8AB37A9455423"
+   components {
+    Hierarchy "{DF4B7439D8835F9D}" {
+     Enabled 1
+    }
+   }
+   coords 0 0.000000 0
+   angles 0 0 0
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "D6585E8AD5D95CCA"
+   components {
+    Hierarchy "{13FF61188FC05DDC}" {
+     Enabled 1
+    }
+   }
+   coords -1.1 0.000267 0
+   angles 0 90 0
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "C4A45984D5BC5C13"
+   components {
+    Hierarchy "{3D4525227EEC5C16}" {
+     Enabled 1
+    }
+   }
+   coords 1 0.000267 0.2
+   angles 0 260 0
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "9345025564BC556D"
+   components {
+    Hierarchy "{4F73A13E147159F4}" {
+     Enabled 1
+    }
+   }
+   coords 0.05 0.000267 -0.95
+   angles 0 5 0
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "23F0C13967CA5CA5"
+   components {
+    Hierarchy "{1D70C93CEC0F5367}" {
+     Enabled 1
+    }
+   }
+   coords 0.32 0.990376 -0.03
+   angles 0 4 0
+  }
+  GenericEntity : "{C1C087BC66975A4E}Prefabs/DynamicBase/IA_InfrastructureAsset_lamp.et" {
+   ID "7C993A7AFBC55570"
+   components {
+    Hierarchy "{38D437ED92B055D5}" {
+     Enabled 1
+    }
+   }
+   coords -0.4 0.899073 0.05
+   angles 0 0 0
+  }
+ }
+}

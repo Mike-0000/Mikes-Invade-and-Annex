@@ -85,6 +85,23 @@ class IA_DynamicSiteLayout
 	static const ResourceName PREFAB_DRESSING_WATER = "{B3E06835E2455923}Prefabs/DynamicBase/IA_Dressing_Water.et";
 	static const ResourceName PREFAB_DRESSING_WORKSHOP = "{3A2537AB39405511}Prefabs/DynamicBase/IA_Dressing_Workshop.et";
 	static const ResourceName PREFAB_DRESSING_UTILITY = "{9F0EFC4CC9CD571D}Prefabs/DynamicBase/IA_Dressing_Utility.et";
+	static const ResourceName PREFAB_DRESSING_WATERWASH = "{AB8A3CB589625084}Prefabs/DynamicBase/IA_Dressing_WaterWash.et";
+	static const ResourceName PREFAB_DRESSING_BULKWATER = "{CE0933F9935A5FD4}Prefabs/DynamicBase/IA_Dressing_BulkWater.et";
+	static const ResourceName PREFAB_DRESSING_SANITATION = "{6F3672FEE4B857A1}Prefabs/DynamicBase/IA_Dressing_Sanitation.et";
+	static const ResourceName PREFAB_DRESSING_KITCHEN = "{0138CE87F30058BE}Prefabs/DynamicBase/IA_Dressing_Kitchen.et";
+	static const ResourceName PREFAB_DRESSING_STORESCOVERED = "{674112EA1BA85649}Prefabs/DynamicBase/IA_Dressing_StoresCovered.et";
+	static const ResourceName PREFAB_DRESSING_POWER = "{3F22F8B9E0EB5442}Prefabs/DynamicBase/IA_Dressing_Power.et";
+	static const ResourceName PREFAB_DRESSING_MEDICAL = "{AC27F856D7A750A7}Prefabs/DynamicBase/IA_Dressing_Medical.et";
+	static const ResourceName PREFAB_DRESSING_REST = "{754823CC537E5D85}Prefabs/DynamicBase/IA_Dressing_Rest.et";
+	static const ResourceName PREFAB_DRESSING_COMMS = "{BB26A698BEF55499}Prefabs/DynamicBase/IA_Dressing_Comms.et";
+	static const ResourceName PREFAB_DRESSING_WASTE = "{A70917953C1D58AB}Prefabs/DynamicBase/IA_Dressing_Waste.et";
+	static const ResourceName PREFAB_DRESSING_ENTRANCELIGHT = "{8726E742FEE65661}Prefabs/DynamicBase/IA_Dressing_EntranceLight.et";
+	static const ResourceName PREFAB_DRESSING_BRIEFINGLIT = "{986F4B80B0BE52E0}Prefabs/DynamicBase/IA_Dressing_BriefingLit.et";
+	static const ResourceName PREFAB_DRESSING_MESSLIT = "{06111FFC070A5834}Prefabs/DynamicBase/IA_Dressing_MessLit.et";
+	static const ResourceName PREFAB_DRESSING_KITCHENLIT = "{7381F407AD8A54B8}Prefabs/DynamicBase/IA_Dressing_KitchenLit.et";
+	static const ResourceName PREFAB_DRESSING_WORKSHOPLIT = "{965FEDAFCD3F54D5}Prefabs/DynamicBase/IA_Dressing_WorkshopLit.et";
+	static const ResourceName PREFAB_DRESSING_MEDICALLIT = "{A9D76F51AE7B5D37}Prefabs/DynamicBase/IA_Dressing_MedicalLit.et";
+	static const ResourceName PREFAB_DRESSING_COMMSLIT = "{D7D10DFBACA05AD0}Prefabs/DynamicBase/IA_Dressing_CommsLit.et";
 
 	int m_iLayoutId;
 	string m_sName;
@@ -343,18 +360,22 @@ class IA_DynamicSiteLayout
 		layout.AddCover("wall_eastN_24", 89.100, 67.300, 90, 3, 1);
 
 		// INTERIOR DRESSING BEGIN
-		layout.AddDressing("dressing_briefing_0", PREFAB_DRESSING_BRIEFING, 14, 49, 0, 2.3, 2.6, 8);
-		layout.AddDressing("dressing_mess_1", PREFAB_DRESSING_MESS, -47, 53, 0, 1.7, 1.5, 7);
+		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 14, 49, 0, 2.3, 2.6, 9);
+		layout.AddDressing("dressing_kitchenlit_1", PREFAB_DRESSING_KITCHENLIT, -47, 53, 0, 3.5, 3.2, 6);
 		layout.AddDressing("dressing_mess_2", PREFAB_DRESSING_MESS, -46, -2, 0, 1.7, 1.5, 7);
-		layout.AddDressing("dressing_water_3", PREFAB_DRESSING_WATER, -78, 32, 0, 1.4, 1.2, 6);
-		layout.AddDressing("dressing_stores_4", PREFAB_DRESSING_STORES, 45, -26, 0, 1.8, 2.9, 6);
+		layout.AddDressing("dressing_bulkwater_3", PREFAB_DRESSING_BULKWATER, -78, 32, 0, 2.2, 3.4, 4);
+		layout.AddDressing("dressing_storescovered_4", PREFAB_DRESSING_STORESCOVERED, 45, -26, 0, 1.9, 1.6, 6);
 		layout.AddDressing("dressing_stores_5", PREFAB_DRESSING_STORES, 30, -48, 0, 1.8, 2.9, 6);
-		layout.AddDressing("dressing_workshop_6", PREFAB_DRESSING_WORKSHOP, -67, -22, 0, 2, 2.2, 7);
-		layout.AddDressing("dressing_utility_7", PREFAB_DRESSING_UTILITY, 28, 57, 0, 1.7, 1.3, 5);
-		layout.AddDressing("dressing_water_8", PREFAB_DRESSING_WATER, 78, 33, 0, 1.4, 1.2, 6);
-		layout.AddDressing("dressing_utility_9", PREFAB_DRESSING_UTILITY, 72, -32, 0, 1.7, 1.3, 5);
-		layout.AddDressing("dressing_stores_10", PREFAB_DRESSING_STORES, -30, -58, 0, 1.8, 2.9, 6);
-		layout.AddDressing("dressing_mess_11", PREFAB_DRESSING_MESS, -15, 43, 0, 1.7, 1.5, 7);
+		layout.AddDressing("dressing_workshoplit_6", PREFAB_DRESSING_WORKSHOPLIT, -67, -22, 0, 2, 1.3, 7);
+		layout.AddDressing("dressing_commslit_7", PREFAB_DRESSING_COMMSLIT, 28, 57, 0, 2, 1.3, 5);
+		layout.AddDressing("dressing_medicallit_8", PREFAB_DRESSING_MEDICALLIT, 78, 33, 0, 2, 2, 6);
+		layout.AddDressing("dressing_power_9", PREFAB_DRESSING_POWER, 72, -32, 0, 2, 2.5, 7);
+		layout.AddDressing("dressing_storescovered_10", PREFAB_DRESSING_STORESCOVERED, -30, -58, 0, 1.9, 1.6, 6);
+		layout.AddDressing("dressing_rest_11", PREFAB_DRESSING_REST, -15, 43, 90, 2, 1.8, 4);
+		layout.AddDressing("dressing_sanitation_12", PREFAB_DRESSING_SANITATION, -78, -3, 90, 2.4, 2.8, 5);
+		layout.AddDressing("dressing_sanitation_13", PREFAB_DRESSING_SANITATION, 78, 3, 0, 2.4, 2.8, 5);
+		layout.AddDressing("dressing_waste_14", PREFAB_DRESSING_WASTE, 76, -62, 0, 1, 0.7, 3);
+		layout.AddDressing("dressing_entrancelight_15", PREFAB_DRESSING_ENTRANCELIGHT, 9, -60, 0, 2, 1.5, 2);
 		// INTERIOR DRESSING END
 		return layout;
 	}
@@ -534,14 +555,18 @@ class IA_DynamicSiteLayout
 		layout.AddCover("wall_eastN_16", 59.100, 47.300, 90, 3, 1);
 
 		// INTERIOR DRESSING BEGIN
-		layout.AddDressing("dressing_briefing_0", PREFAB_DRESSING_BRIEFING, 16, 30, 0, 2.3, 2.6, 8);
-		layout.AddDressing("dressing_mess_1", PREFAB_DRESSING_MESS, -21, 27, 0, 1.7, 1.5, 7);
-		layout.AddDressing("dressing_water_2", PREFAB_DRESSING_WATER, -49, 10, 0, 1.4, 1.2, 6);
-		layout.AddDressing("dressing_stores_3", PREFAB_DRESSING_STORES, 24, -39, 0, 1.8, 2.9, 6);
-		layout.AddDressing("dressing_workshop_4", PREFAB_DRESSING_WORKSHOP, -15, -27, 0, 2, 2.2, 7);
-		layout.AddDressing("dressing_utility_5", PREFAB_DRESSING_UTILITY, 42, -21, 0, 1.7, 1.3, 5);
-		layout.AddDressing("dressing_mess_6", PREFAB_DRESSING_MESS, -34, 43, 0, 1.7, 1.5, 7);
-		layout.AddDressing("dressing_water_7", PREFAB_DRESSING_WATER, 42, 8, 0, 1.4, 1.2, 6);
+		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 16, 30, 0, 2.3, 2.6, 9);
+		layout.AddDressing("dressing_kitchenlit_1", PREFAB_DRESSING_KITCHENLIT, -21, 27, 0, 3.5, 3.2, 6);
+		layout.AddDressing("dressing_bulkwater_2", PREFAB_DRESSING_BULKWATER, -49, 10, 0, 2.2, 3.4, 4);
+		layout.AddDressing("dressing_storescovered_3", PREFAB_DRESSING_STORESCOVERED, 24, -39, 0, 1.9, 1.6, 6);
+		layout.AddDressing("dressing_workshoplit_4", PREFAB_DRESSING_WORKSHOPLIT, -15, -27, 0, 2, 1.3, 7);
+		layout.AddDressing("dressing_power_5", PREFAB_DRESSING_POWER, 42, -21, 0, 2, 2.5, 7);
+		layout.AddDressing("dressing_rest_6", PREFAB_DRESSING_REST, -34, 43, 0, 2, 1.8, 4);
+		layout.AddDressing("dressing_medical_7", PREFAB_DRESSING_MEDICAL, 42, 8, 0, 2, 2, 5);
+		layout.AddDressing("dressing_comms_8", PREFAB_DRESSING_COMMS, 29, 42, 0, 2, 1.3, 4);
+		layout.AddDressing("dressing_sanitation_9", PREFAB_DRESSING_SANITATION, -49, -13, 0, 2.4, 2.8, 5);
+		layout.AddDressing("dressing_waste_10", PREFAB_DRESSING_WASTE, 39, -40, 0, 1, 0.7, 3);
+		layout.AddDressing("dressing_entrancelight_11", PREFAB_DRESSING_ENTRANCELIGHT, 9, -42, 0, 2, 1.5, 2);
 		// INTERIOR DRESSING END
 		return layout;
 	}
@@ -668,12 +693,15 @@ class IA_DynamicSiteLayout
 		layout.m_aGuardPosts.Insert(Vector(-7, 0, -20));
 		layout.m_aGuardPosts.Insert(Vector(10, 0, -20));
 		// INTERIOR DRESSING BEGIN
-		layout.AddDressing("dressing_briefing_0", PREFAB_DRESSING_BRIEFING, 16, 30, 0, 2.3, 2.6, 8);
-		layout.AddDressing("dressing_mess_1", PREFAB_DRESSING_MESS, -25, 30, 0, 1.7, 1.5, 7);
-		layout.AddDressing("dressing_water_2", PREFAB_DRESSING_WATER, -6, -25, 0, 1.4, 1.2, 6);
-		layout.AddDressing("dressing_stores_3", PREFAB_DRESSING_STORES, 26, -7, 90, 1.8, 2.9, 6);
-		layout.AddDressing("dressing_utility_4", PREFAB_DRESSING_UTILITY, 39, -25, 0, 1.7, 1.3, 5);
-		layout.AddDressing("dressing_mess_5", PREFAB_DRESSING_MESS, 25, 30, 0, 1.7, 1.5, 7);
+		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 16, 30, 0, 2.3, 2.6, 9);
+		layout.AddDressing("dressing_kitchenlit_1", PREFAB_DRESSING_KITCHENLIT, -25, 31, 0, 3.5, 3.2, 6);
+		layout.AddDressing("dressing_waterwash_2", PREFAB_DRESSING_WATERWASH, -6, -25, 0, 1.4, 1.2, 5);
+		layout.AddDressing("dressing_storescovered_3", PREFAB_DRESSING_STORESCOVERED, 26, -7, 0, 1.9, 1.6, 6);
+		layout.AddDressing("dressing_power_4", PREFAB_DRESSING_POWER, 39, -25, 0, 2, 2.5, 7);
+		layout.AddDressing("dressing_medical_5", PREFAB_DRESSING_MEDICAL, -7, -16, 0, 2, 2, 5);
+		layout.AddDressing("dressing_sanitation_6", PREFAB_DRESSING_SANITATION, -37, 31, 0, 2.4, 2.8, 5);
+		layout.AddDressing("dressing_waste_7", PREFAB_DRESSING_WASTE, 37, 30, 0, 1, 0.7, 3);
+		layout.AddDressing("dressing_entrancelight_8", PREFAB_DRESSING_ENTRANCELIGHT, 9, -29, 0, 2, 1.5, 2);
 		// INTERIOR DRESSING END
 		return layout;
 	}
@@ -793,11 +821,15 @@ class IA_DynamicSiteLayout
 		layout.m_aGuardPosts.Insert(Vector(0, 0, 6));
 		layout.m_aGuardPosts.Insert(Vector(0, 0, 44.7));
 		// INTERIOR DRESSING BEGIN
-		layout.AddDressing("dressing_briefing_0", PREFAB_DRESSING_BRIEFING, 17, 33, 0, 2.3, 2.6, 8);
+		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 17, 33, 0, 2.3, 2.6, 9);
 		layout.AddDressing("dressing_mess_1", PREFAB_DRESSING_MESS, -17, 23, 0, 1.7, 1.5, 7);
-		layout.AddDressing("dressing_water_2", PREFAB_DRESSING_WATER, -17, -6, 0, 1.4, 1.2, 6);
-		layout.AddDressing("dressing_stores_3", PREFAB_DRESSING_STORES, 18, 22, 0, 1.8, 2.9, 6);
-		layout.AddDressing("dressing_utility_4", PREFAB_DRESSING_UTILITY, 17, -42, 0, 1.7, 1.3, 5);
+		layout.AddDressing("dressing_waterwash_2", PREFAB_DRESSING_WATERWASH, -17, -6, 0, 1.4, 1.2, 5);
+		layout.AddDressing("dressing_storescovered_3", PREFAB_DRESSING_STORESCOVERED, 18, 22, 0, 1.9, 1.6, 6);
+		layout.AddDressing("dressing_power_4", PREFAB_DRESSING_POWER, 17, -40, 90, 2, 2.5, 7);
+		layout.AddDressing("dressing_workshoplit_5", PREFAB_DRESSING_WORKSHOPLIT, -17, -38, 0, 2, 1.3, 7);
+		layout.AddDressing("dressing_sanitation_6", PREFAB_DRESSING_SANITATION, -22, 38, 0, 2.4, 2.8, 5);
+		layout.AddDressing("dressing_waste_7", PREFAB_DRESSING_WASTE, 20, -6, 0, 1, 0.7, 3);
+		layout.AddDressing("dressing_entrancelight_8", PREFAB_DRESSING_ENTRANCELIGHT, 11, -40, 0, 2, 1.5, 2);
 		// INTERIOR DRESSING END
 		return layout;
 	}
@@ -890,10 +922,15 @@ class IA_DynamicSiteLayout
 		layout.m_aGuardPosts.Insert(Vector(20, 0, 14));
 		layout.m_aGuardPosts.Insert(Vector(-15, 0, 24));
 		// INTERIOR DRESSING BEGIN
-		layout.AddDressing("dressing_briefing_0", PREFAB_DRESSING_BRIEFING, 18, 19, 0, 2.3, 2.6, 8);
+		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 18, 19, 0, 2.3, 2.6, 9);
 		layout.AddDressing("dressing_mess_1", PREFAB_DRESSING_MESS, -19, 8, 0, 1.7, 1.5, 7);
-		layout.AddDressing("dressing_water_2", PREFAB_DRESSING_WATER, -7, -20, 0, 1.4, 1.2, 6);
+		layout.AddDressing("dressing_waterwash_2", PREFAB_DRESSING_WATERWASH, -7, -20, 0, 1.4, 1.2, 5);
 		layout.AddDressing("dressing_stores_3", PREFAB_DRESSING_STORES, 19, 7, 90, 1.8, 2.9, 6);
+		layout.AddDressing("dressing_power_4", PREFAB_DRESSING_POWER, 25, 7, 0, 2, 2.5, 7);
+		layout.AddDressing("dressing_comms_5", PREFAB_DRESSING_COMMS, 15, 13, 90, 2, 1.3, 4);
+		layout.AddDressing("dressing_sanitation_6", PREFAB_DRESSING_SANITATION, -23, 20, 0, 2.4, 2.8, 5);
+		layout.AddDressing("dressing_waste_7", PREFAB_DRESSING_WASTE, 6, -20, 90, 1, 0.7, 3);
+		layout.AddDressing("dressing_entrancelight_8", PREFAB_DRESSING_ENTRANCELIGHT, -5, -16, 0, 2, 1.5, 2);
 		// INTERIOR DRESSING END
 		return layout;
 	}
@@ -960,9 +997,10 @@ class IA_DynamicSiteLayout
 		layout.m_aGuardPosts.Insert(Vector(-13.5, 0, 8));
 		layout.m_aGuardPosts.Insert(Vector(13.5, 0, 8));
 		// INTERIOR DRESSING BEGIN
-		layout.AddDressing("dressing_mess_0", PREFAB_DRESSING_MESS, -9, -6, 0, 1.7, 1.5, 7);
+		layout.AddDressing("dressing_messlit_0", PREFAB_DRESSING_MESSLIT, -9, -6, 0, 1.7, 1.5, 7);
 		layout.AddDressing("dressing_stores_1", PREFAB_DRESSING_STORES, 9, -15, 90, 1.8, 2.9, 6);
-		layout.AddDressing("dressing_water_2", PREFAB_DRESSING_WATER, -10, -17, 0, 1.4, 1.2, 6);
+		layout.AddDressing("dressing_waterwash_2", PREFAB_DRESSING_WATERWASH, -10, -17, 0, 1.4, 1.2, 5);
+		layout.AddDressing("dressing_power_3", PREFAB_DRESSING_POWER, 9, -5, 0, 2, 2.5, 7);
 		// INTERIOR DRESSING END
 		return layout;
 	}

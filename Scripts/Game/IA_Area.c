@@ -33,7 +33,10 @@ class IA_Area
 
     void IA_Area(string nm, IA_AreaType t, vector org, float rad)
     {
-        Print("[IA_Area] Constructor called for area: " + nm, LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA_Area] Constructor called for area: " + nm, LogLevel.NORMAL);
+        }
         m_name   = nm;
         m_type   = t;
         m_origin = org;

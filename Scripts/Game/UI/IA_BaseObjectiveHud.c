@@ -152,7 +152,7 @@ class IA_BaseObjectiveHud : MUI_Surface
 		if (m_iPhase == IA_BaseObjectivePhase.Placing)
 		{
 			m_sTitle = "LOCATING BASE";
-			m_sBody = "Validating an operating base site.";
+			m_sBody = "Stand by. We're locating the enemy base.";
 			return;
 		}
 		if (m_iPhase == IA_BaseObjectivePhase.Failed)

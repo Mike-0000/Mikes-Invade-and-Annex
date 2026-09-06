@@ -191,7 +191,7 @@ passed. Live construction throughput and server frame times remain playtest item
 
 ## Interior scenery (2026-09-05)
 
-The six layouts now include optional functional scenery clusters, from three in RallyPost to twelve in Full. See [interior details](dynamic-base-interiors.md) and the [layout sheet](dynamic-base-interiors.svg). Existing sandbag geometry is preserved. Optional scenery is checked during construction and does not influence site search or size selection.
+The six layouts now include optional functional scenery clusters, from four in RallyPost to sixteen in Full after the infrastructure pass. See [infrastructure details](dynamic-base-infrastructure.md) and the [layout sheet](dynamic-base-interiors.svg). Existing sandbag geometry is preserved. Optional scenery is checked during construction and does not influence site search or size selection.
 
 ## Garrison defend posts (2026-09-05)
 

@@ -2,11 +2,11 @@
 <title>Dynamic base interiors: authored scene placement</title>
 <rect width="1440" height="990" fill="#142027"/>
 <style>text{font-family:Segoe UI,Arial,sans-serif;fill:#e8eded}.muted{fill:#afc0c6;font-size:13px}</style>
-<text x="28" y="36" font-size="24" font-weight="600">Field-base interiors</text>
+<text x="28" y="36" font-size="24" font-weight="600">Field-base infrastructure and daily life</text>
 <text x="28" y="60" class="muted">Purposeful pockets of activity · unchanged sandbag walls · clear approach lanes · all plans at the same scale</text>
 <rect x="16" y="80" width="462" height="385" rx="12" fill="#21313a"/>
 <text x="34" y="108" font-size="19" font-weight="600">Full</text>
-<text x="34" y="128" class="muted">180 × 140 m · 12 optional scenes</text>
+<text x="34" y="128" class="muted">180 × 140 m · 16 optional scenes</text>
 <path d="M250.0,442.0 L250.0,311.8" stroke="#3e6563" stroke-width="10"/>
 <path d="M61.0,311.8 L439.0,311.8" stroke="#3e6563" stroke-width="10"/>
 <path d="M250.0,311.8 L250.0,244.6" stroke="#3e6563" stroke-width="10"/>
@@ -234,28 +234,32 @@
 <rect x="435.43" y="162.0532" width="3.3599999999999883" height="7.559999999999988" fill="#82988b" rx="1"/>
 <rect x="435.43" y="155.9716" width="3.3599999999999883" height="7.559999999999988" fill="#82988b" rx="1"/>
 <rect x="435.43" y="149.89000000000001" width="3.3599999999999883" height="7.559999999999988" fill="#82988b" rx="1"/>
-<rect x="274.57" y="186.64" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Briefing: 14, 49</title></rect>
-<rect x="147.73000000000002" y="180.54999999999998" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -47, 53</title></rect>
+<rect x="274.57" y="186.64" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>BriefingLit: 14, 49</title></rect>
+<rect x="143.95000000000002" y="176.98" width="14.700000000000001" height="13.440000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>KitchenLit: -47, 53</title></rect>
 <rect x="149.82999999999998" y="296.05" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -46, -2</title></rect>
-<rect x="83.25999999999999" y="225.28" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>Water: -78, 32</title></rect>
-<rect x="340.72" y="343.51000000000005" width="7.5600000000000005" height="12.18" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>Stores: 45, -26</title></rect>
+<rect x="81.57999999999998" y="220.66000000000003" width="9.240000000000002" height="14.28" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>BulkWater: -78, 32</title></rect>
+<rect x="340.51" y="346.24" width="7.9799999999999995" height="6.720000000000001" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>StoresCovered: 45, -26</title></rect>
 <rect x="309.22" y="389.71000000000004" width="7.5600000000000005" height="12.18" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>Stores: 30, -48</title></rect>
-<rect x="105.09999999999998" y="336.58" width="8.4" height="9.240000000000002" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>Workshop: -67, -22</title></rect>
-<rect x="305.23" y="172.57000000000002" width="7.14" height="5.460000000000001" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Utility: 28, 57</title></rect>
-<rect x="410.86" y="223.17999999999998" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>Water: 78, 33</title></rect>
-<rect x="397.63000000000005" y="359.46999999999997" width="7.14" height="5.460000000000001" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Utility: 72, -32</title></rect>
-<rect x="183.22" y="410.71000000000004" width="7.5600000000000005" height="12.18" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>Stores: -30, -58</title></rect>
-<rect x="214.93" y="201.54999999999998" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -15, 43</title></rect>
+<rect x="105.09999999999998" y="338.46999999999997" width="8.4" height="5.460000000000001" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>WorkshopLit: -67, -22</title></rect>
+<rect x="304.6" y="172.57000000000002" width="8.4" height="5.460000000000001" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>CommsLit: 28, 57</title></rect>
+<rect x="409.6" y="221.5" width="8.4" height="8.4" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>MedicalLit: 78, 33</title></rect>
+<rect x="397.00000000000006" y="356.95" width="8.4" height="10.5" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>Power: 72, -32</title></rect>
+<rect x="183.01" y="413.44" width="7.9799999999999995" height="6.720000000000001" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>StoresCovered: -30, -58</title></rect>
+<rect x="214.72" y="200.5" width="7.5600000000000005" height="8.4" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Rest: -15, 43</title></rect>
+<rect x="80.32" y="296.26" width="11.76" height="10.08" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Sanitation: -78, -3</title></rect>
+<rect x="408.76" y="282.82" width="10.08" height="11.76" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Sanitation: 78, 3</title></rect>
+<rect x="407.5" y="423.73" width="4.2" height="2.94" fill="#b7bcc2" stroke="#f5f2e8" stroke-width=".7"><title>Waste: 76, -62</title></rect>
+<rect x="264.7" y="417.85" width="8.4" height="6.300000000000001" fill="#fff098" stroke="#f5f2e8" stroke-width=".7"><title>EntranceLight: 9, -60</title></rect>
 <circle cx="250.0" cy="248.8" r="2" fill="#fff"/>
 <circle cx="220.6" cy="408.4" r="2" fill="#fff"/>
 <circle cx="96.69999999999999" cy="345.4" r="2" fill="#fff"/>
 <circle cx="403.3" cy="345.4" r="2" fill="#fff"/>
 <circle cx="250.0" cy="181.6" r="2" fill="#fff"/>
 <circle cx="289.9" cy="292.9" r="2" fill="#fff"/>
-<text x="250" y="449" text-anchor="middle" class="muted">↑ Main entrance</text>
+<text x="250" y="457" text-anchor="middle" class="muted">↑ Main entrance</text>
 <rect x="490" y="80" width="462" height="385" rx="12" fill="#21313a"/>
 <text x="508" y="108" font-size="19" font-weight="600">Compact</text>
-<text x="508" y="128" class="muted">120 × 100 m · 8 optional scenes</text>
+<text x="508" y="128" class="muted">120 × 100 m · 12 optional scenes</text>
 <path d="M724.0,400.0 L724.0,305.5" stroke="#3e6563" stroke-width="10"/>
 <path d="M598.0,305.5 L850.0,305.5" stroke="#3e6563" stroke-width="10"/>
 <path d="M724.0,305.5 L724.0,259.3" stroke="#3e6563" stroke-width="10"/>
@@ -411,24 +415,28 @@
 <rect x="846.4300000000001" y="204.0952" width="3.3599999999999883" height="7.559999999999988" fill="#82988b" rx="1"/>
 <rect x="846.4300000000001" y="197.9926" width="3.3599999999999883" height="7.559999999999988" fill="#82988b" rx="1"/>
 <rect x="846.4300000000001" y="191.89" width="3.3599999999999883" height="7.559999999999988" fill="#82988b" rx="1"/>
-<rect x="752.77" y="226.54" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Briefing: 16, 30</title></rect>
-<rect x="676.3299999999999" y="235.15" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -21, 27</title></rect>
-<rect x="618.16" y="271.48" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>Water: -49, 10</title></rect>
-<rect x="770.62" y="370.81" width="7.5600000000000005" height="12.18" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>Stores: 24, -39</title></rect>
-<rect x="688.3" y="347.08" width="8.4" height="9.240000000000002" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>Workshop: -15, -27</title></rect>
-<rect x="808.63" y="336.37" width="7.14" height="5.460000000000001" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Utility: 42, -21</title></rect>
-<rect x="649.03" y="201.54999999999998" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -34, 43</title></rect>
-<rect x="809.26" y="275.68" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>Water: 42, 8</title></rect>
+<rect x="752.77" y="226.54" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>BriefingLit: 16, 30</title></rect>
+<rect x="672.55" y="231.58" width="14.700000000000001" height="13.440000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>KitchenLit: -21, 27</title></rect>
+<rect x="616.48" y="266.86" width="9.240000000000002" height="14.28" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>BulkWater: -49, 10</title></rect>
+<rect x="770.41" y="373.53999999999996" width="7.9799999999999995" height="6.720000000000001" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>StoresCovered: 24, -39</title></rect>
+<rect x="688.3" y="348.96999999999997" width="8.4" height="5.460000000000001" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>WorkshopLit: -15, -27</title></rect>
+<rect x="808.0" y="333.85" width="8.4" height="10.5" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>Power: 42, -21</title></rect>
+<rect x="648.4" y="200.92" width="8.4" height="7.5600000000000005" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Rest: -34, 43</title></rect>
+<rect x="808.0" y="274.0" width="8.4" height="8.4" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Medical: 42, 8</title></rect>
+<rect x="780.6999999999999" y="204.07000000000002" width="8.4" height="5.460000000000001" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Comms: 29, 42</title></rect>
+<rect x="616.0600000000001" y="316.42" width="10.08" height="11.76" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Sanitation: -49, -13</title></rect>
+<rect x="803.8" y="377.53" width="4.2" height="2.94" fill="#b7bcc2" stroke="#f5f2e8" stroke-width=".7"><title>Waste: 39, -40</title></rect>
+<rect x="738.6999999999999" y="380.05" width="8.4" height="6.300000000000001" fill="#fff098" stroke="#f5f2e8" stroke-width=".7"><title>EntranceLight: 9, -42</title></rect>
 <circle cx="724.0" cy="261.4" r="2" fill="#fff"/>
 <circle cx="698.8" cy="370.6" r="2" fill="#fff"/>
 <circle cx="627.4" cy="332.8" r="2" fill="#fff"/>
 <circle cx="820.6" cy="332.8" r="2" fill="#fff"/>
 <circle cx="724.0" cy="213.1" r="2" fill="#fff"/>
 <circle cx="753.4" cy="284.5" r="2" fill="#fff"/>
-<text x="724" y="449" text-anchor="middle" class="muted">↑ Main entrance</text>
+<text x="724" y="457" text-anchor="middle" class="muted">↑ Main entrance</text>
 <rect x="964" y="80" width="462" height="385" rx="12" fill="#21313a"/>
 <text x="982" y="108" font-size="19" font-weight="600">Courtyard</text>
-<text x="982" y="128" class="muted">88 × 76 m · 6 optional scenes</text>
+<text x="982" y="128" class="muted">88 × 76 m · 9 optional scenes</text>
 <path d="M1198.0,374.8 L1198.0,299.2" stroke="#3e6563" stroke-width="10"/>
 <path d="M1105.6,299.2 L1290.4,299.2" stroke="#3e6563" stroke-width="10"/>
 <path d="M1198.0,299.2 L1198.0,274.0" stroke="#3e6563" stroke-width="10"/>
@@ -543,12 +551,15 @@
 <rect x="1286.83" y="229.11669999999998" width="3.3599999999999883" height="7.560000000000003" fill="#82988b" rx="1"/>
 <rect x="1286.83" y="223.1044" width="3.3599999999999883" height="7.559999999999996" fill="#82988b" rx="1"/>
 <rect x="1286.83" y="217.09" width="3.3599999999999883" height="7.559999999999988" fill="#82988b" rx="1"/>
-<rect x="1226.77" y="226.54" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Briefing: 16, 30</title></rect>
-<rect x="1141.93" y="228.85" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -25, 30</title></rect>
-<rect x="1182.46" y="344.98" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>Water: -6, -25</title></rect>
-<rect x="1246.51" y="305.92" width="12.18" height="7.5600000000000005" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>Stores: 26, -7</title></rect>
-<rect x="1276.3300000000002" y="344.77" width="7.14" height="5.460000000000001" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Utility: 39, -25</title></rect>
-<rect x="1246.93" y="228.85" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: 25, 30</title></rect>
+<rect x="1226.77" y="226.54" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>BriefingLit: 16, 30</title></rect>
+<rect x="1138.15" y="223.17999999999998" width="14.700000000000001" height="13.440000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>KitchenLit: -25, 31</title></rect>
+<rect x="1182.46" y="344.98" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>WaterWash: -6, -25</title></rect>
+<rect x="1248.61" y="306.34" width="7.9799999999999995" height="6.720000000000001" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>StoresCovered: 26, -7</title></rect>
+<rect x="1275.7" y="342.25" width="8.4" height="10.5" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>Power: 39, -25</title></rect>
+<rect x="1179.1" y="324.40000000000003" width="8.4" height="8.4" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Medical: -7, -16</title></rect>
+<rect x="1115.26" y="224.01999999999998" width="10.08" height="11.76" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Sanitation: -37, 31</title></rect>
+<rect x="1273.6000000000001" y="230.53" width="4.2" height="2.94" fill="#b7bcc2" stroke="#f5f2e8" stroke-width=".7"><title>Waste: 37, 30</title></rect>
+<rect x="1212.7" y="352.75" width="8.4" height="6.300000000000001" fill="#fff098" stroke="#f5f2e8" stroke-width=".7"><title>EntranceLight: 9, -29</title></rect>
 <circle cx="1198.0" cy="274.0" r="2" fill="#fff"/>
 <circle cx="1198.0" cy="358.0" r="2" fill="#fff"/>
 <circle cx="1122.4" cy="299.2" r="2" fill="#fff"/>
@@ -556,10 +567,10 @@
 <circle cx="1166.5" cy="225.7" r="2" fill="#fff"/>
 <circle cx="1183.3" cy="337.0" r="2" fill="#fff"/>
 <circle cx="1219.0" cy="337.0" r="2" fill="#fff"/>
-<text x="1198" y="449" text-anchor="middle" class="muted">↑ Main entrance</text>
+<text x="1198" y="457" text-anchor="middle" class="muted">↑ Main entrance</text>
 <rect x="16" y="477" width="462" height="385" rx="12" fill="#21313a"/>
 <text x="34" y="505" font-size="19" font-weight="600">Roadside</text>
-<text x="34" y="525" class="muted">60 × 96 m · 5 optional scenes</text>
+<text x="34" y="525" class="muted">60 × 96 m · 9 optional scenes</text>
 <path d="M250.0,792.8 L250.0,713.0" stroke="#3e6563" stroke-width="10"/>
 <path d="M187.0,713.0 L313.0,713.0" stroke="#3e6563" stroke-width="10"/>
 <path d="M250.0,713.0 L250.0,652.1" stroke="#3e6563" stroke-width="10"/>
@@ -669,21 +680,25 @@
 <rect x="309.43" y="605.3204000000001" width="3.360000000000003" height="7.559999999999988" fill="#82988b" rx="1"/>
 <rect x="309.43" y="599.2052" width="3.360000000000003" height="7.559999999999988" fill="#82988b" rx="1"/>
 <rect x="309.43" y="593.09" width="3.360000000000003" height="7.559999999999988" fill="#82988b" rx="1"/>
-<rect x="280.87" y="617.24" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Briefing: 17, 33</title></rect>
+<rect x="280.87" y="617.24" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>BriefingLit: 17, 33</title></rect>
 <rect x="210.73000000000002" y="640.5500000000001" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -17, 23</title></rect>
-<rect x="211.36" y="702.08" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>Water: -17, -6</title></rect>
-<rect x="284.02000000000004" y="639.7099999999999" width="7.5600000000000005" height="12.18" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>Stores: 18, 22</title></rect>
-<rect x="282.13" y="777.47" width="7.14" height="5.460000000000001" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Utility: 17, -42</title></rect>
+<rect x="211.36" y="702.08" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>WaterWash: -17, -6</title></rect>
+<rect x="283.81" y="642.4399999999999" width="7.9799999999999995" height="6.720000000000001" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>StoresCovered: 18, 22</title></rect>
+<rect x="280.45" y="771.8" width="10.5" height="8.4" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>Power: 17, -40</title></rect>
+<rect x="210.10000000000002" y="769.0699999999999" width="8.4" height="5.460000000000001" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>WorkshopLit: -17, -38</title></rect>
+<rect x="198.76000000000002" y="606.32" width="10.08" height="11.76" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Sanitation: -22, 38</title></rect>
+<rect x="289.9" y="703.13" width="4.2" height="2.94" fill="#b7bcc2" stroke="#f5f2e8" stroke-width=".7"><title>Waste: 20, -6</title></rect>
+<rect x="268.90000000000003" y="772.85" width="8.4" height="6.300000000000001" fill="#fff098" stroke="#f5f2e8" stroke-width=".7"><title>EntranceLight: 11, -40</title></rect>
 <circle cx="250.0" cy="652.1" r="2" fill="#fff"/>
 <circle cx="235.3" cy="778.1" r="2" fill="#fff"/>
 <circle cx="264.7" cy="778.1" r="2" fill="#fff"/>
 <circle cx="250.0" cy="742.4" r="2" fill="#fff"/>
 <circle cx="250.0" cy="679.4" r="2" fill="#fff"/>
 <circle cx="250.0" cy="598.13" r="2" fill="#fff"/>
-<text x="250" y="846" text-anchor="middle" class="muted">↑ Main entrance</text>
+<text x="250" y="854" text-anchor="middle" class="muted">↑ Main entrance</text>
 <rect x="490" y="477" width="462" height="385" rx="12" fill="#21313a"/>
 <text x="508" y="505" font-size="19" font-weight="600">Command post</text>
-<text x="508" y="525" class="muted">64 × 56 m · 4 optional scenes</text>
+<text x="508" y="525" class="muted">64 × 56 m · 9 optional scenes</text>
 <path d="M724.0,750.8 L724.0,687.8" stroke="#3e6563" stroke-width="10"/>
 <path d="M656.8,687.8 L791.2,687.8" stroke="#3e6563" stroke-width="10"/>
 <path d="M724.0,687.8 L724.0,692.0" stroke="#3e6563" stroke-width="10"/>
@@ -764,20 +779,25 @@
 <rect x="787.63" y="647.3393" width="3.360000000000003" height="7.560000000000003" fill="#82988b" rx="1"/>
 <rect x="787.63" y="641.2157" width="3.360000000000003" height="7.560000000000003" fill="#82988b" rx="1"/>
 <rect x="787.63" y="635.09" width="3.360000000000003" height="7.560000000000003" fill="#82988b" rx="1"/>
-<rect x="756.9699999999999" y="646.64" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Briefing: 18, 19</title></rect>
+<rect x="756.9699999999999" y="646.64" width="9.66" height="10.920000000000002" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>BriefingLit: 18, 19</title></rect>
 <rect x="680.53" y="672.0500000000001" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -19, 8</title></rect>
-<rect x="706.3599999999999" y="731.48" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>Water: -7, -20</title></rect>
+<rect x="706.3599999999999" y="731.48" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>WaterWash: -7, -20</title></rect>
 <rect x="757.81" y="673.52" width="12.18" height="7.5600000000000005" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>Stores: 19, 7</title></rect>
+<rect x="772.3" y="672.05" width="8.4" height="10.5" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>Power: 25, 7</title></rect>
+<rect x="752.77" y="660.5" width="5.460000000000001" height="8.4" fill="#e6a7d9" stroke="#f5f2e8" stroke-width=".7"><title>Comms: 15, 13</title></rect>
+<rect x="670.6600000000001" y="644.12" width="10.08" height="11.76" fill="#c7c0ee" stroke="#f5f2e8" stroke-width=".7"><title>Sanitation: -23, 20</title></rect>
+<rect x="735.13" y="731.9" width="2.94" height="4.2" fill="#b7bcc2" stroke="#f5f2e8" stroke-width=".7"><title>Waste: 6, -20</title></rect>
+<rect x="709.3" y="722.45" width="8.4" height="6.300000000000001" fill="#fff098" stroke="#f5f2e8" stroke-width=".7"><title>EntranceLight: -5, -16</title></rect>
 <circle cx="724.0" cy="692.0" r="2" fill="#fff"/>
 <circle cx="711.4" cy="740.3" r="2" fill="#fff"/>
 <circle cx="736.6" cy="740.3" r="2" fill="#fff"/>
 <circle cx="682.0" cy="662.6" r="2" fill="#fff"/>
 <circle cx="766.0" cy="662.6" r="2" fill="#fff"/>
 <circle cx="692.5" cy="641.6" r="2" fill="#fff"/>
-<text x="724" y="846" text-anchor="middle" class="muted">↑ Main entrance</text>
+<text x="724" y="854" text-anchor="middle" class="muted">↑ Main entrance</text>
 <rect x="964" y="477" width="462" height="385" rx="12" fill="#21313a"/>
 <text x="982" y="505" font-size="19" font-weight="600">Rally post</text>
-<text x="982" y="525" class="muted">36 × 48 m · 3 optional scenes</text>
+<text x="982" y="525" class="muted">36 × 48 m · 4 optional scenes</text>
 <path d="M1198.0,742.4 L1198.0,713.0" stroke="#3e6563" stroke-width="10"/>
 <path d="M1160.2,713.0 L1235.8,713.0" stroke="#3e6563" stroke-width="10"/>
 <path d="M1198.0,713.0 L1198.0,715.1" stroke="#3e6563" stroke-width="10"/>
@@ -831,27 +851,32 @@
 <rect x="1232.23" y="655.3907" width="3.360000000000003" height="7.560000000000003" fill="#82988b" rx="1"/>
 <rect x="1232.23" y="649.4393" width="3.360000000000003" height="7.560000000000003" fill="#82988b" rx="1"/>
 <rect x="1232.23" y="643.49" width="3.360000000000003" height="7.560000000000003" fill="#82988b" rx="1"/>
-<rect x="1175.53" y="701.45" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>Mess: -9, -6</title></rect>
+<rect x="1175.53" y="701.45" width="7.14" height="6.300000000000001" fill="#9ed5a0" stroke="#f5f2e8" stroke-width=".7"><title>MessLit: -9, -6</title></rect>
 <rect x="1210.8100000000002" y="719.72" width="12.18" height="7.5600000000000005" fill="#e9c579" stroke="#f5f2e8" stroke-width=".7"><title>Stores: 9, -15</title></rect>
-<rect x="1174.06" y="725.1800000000001" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>Water: -10, -17</title></rect>
+<rect x="1174.06" y="725.1800000000001" width="5.88" height="5.04" fill="#83c9e5" stroke="#f5f2e8" stroke-width=".7"><title>WaterWash: -10, -17</title></rect>
+<rect x="1212.7" y="697.25" width="8.4" height="10.5" fill="#f2a77d" stroke="#f5f2e8" stroke-width=".7"><title>Power: 9, -5</title></rect>
 <circle cx="1198.0" cy="706.7" r="2" fill="#fff"/>
 <circle cx="1189.6" cy="729.8" r="2" fill="#fff"/>
 <circle cx="1206.4" cy="729.8" r="2" fill="#fff"/>
 <circle cx="1169.65" cy="675.2" r="2" fill="#fff"/>
 <circle cx="1226.35" cy="675.2" r="2" fill="#fff"/>
-<text x="1198" y="846" text-anchor="middle" class="muted">↑ Main entrance</text>
-<rect x="32" y="894" width="15" height="15" rx="2" fill="#e6a7d9"/>
-<text x="56" y="906" font-size="14">Briefing</text>
-<rect x="262" y="894" width="15" height="15" rx="2" fill="#9ed5a0"/>
-<text x="286" y="906" font-size="14">Mess</text>
-<rect x="492" y="894" width="15" height="15" rx="2" fill="#e9c579"/>
-<text x="516" y="906" font-size="14">Stores</text>
-<rect x="722" y="894" width="15" height="15" rx="2" fill="#83c9e5"/>
-<text x="746" y="906" font-size="14">Water</text>
-<rect x="952" y="894" width="15" height="15" rx="2" fill="#f2a77d"/>
-<text x="976" y="906" font-size="14">Workshop</text>
-<rect x="1182" y="894" width="15" height="15" rx="2" fill="#c7c0ee"/>
-<text x="1206" y="906" font-size="14">Utility</text>
+<text x="1198" y="854" text-anchor="middle" class="muted">↑ Main entrance</text>
+<rect x="32" y="881" width="15" height="15" rx="2" fill="#e6a7d9"/>
+<text x="56" y="893" font-size="14">Command / medical</text>
+<rect x="382" y="881" width="15" height="15" rx="2" fill="#9ed5a0"/>
+<text x="406" y="893" font-size="14">Food / rest</text>
+<rect x="732" y="881" width="15" height="15" rx="2" fill="#e9c579"/>
+<text x="756" y="893" font-size="14">Supply handling</text>
+<rect x="1082" y="881" width="15" height="15" rx="2" fill="#83c9e5"/>
+<text x="1106" y="893" font-size="14">Water / washing</text>
+<rect x="32" y="908" width="15" height="15" rx="2" fill="#f2a77d"/>
+<text x="56" y="920" font-size="14">Power / maintenance</text>
+<rect x="382" y="908" width="15" height="15" rx="2" fill="#c7c0ee"/>
+<text x="406" y="920" font-size="14">Sanitation</text>
+<rect x="732" y="908" width="15" height="15" rx="2" fill="#fff098"/>
+<text x="756" y="920" font-size="14">Entrance lighting</text>
+<rect x="1082" y="908" width="15" height="15" rx="2" fill="#b7bcc2"/>
+<text x="1106" y="920" font-size="14">Waste</text>
 <text x="28" y="942" class="muted">Colored rectangles are measured vignette pads; white dots are guard posts. Paths remain clear.</text>
 <text x="28" y="965" class="muted">Authored plan, not an in-game screenshot. Individual scenes are omitted where terrain or existing objects prevent a clean fit.</text>
 </svg>

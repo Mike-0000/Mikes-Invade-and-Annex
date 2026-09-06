@@ -1,0 +1,26 @@
+GenericEntity {
+ ID "E0C195BDC4495D2D"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{7674DD187C23B4CC}Assets/Props/Military/Generators/GeneratorPortable_USSR_01/GeneratorPortable_USSR_01.xob"
+   LODFactors {
+    1.5 1 0.5 0.3 0.3 0.3 0.3 0.3
+   }
+  }
+  RigidBody {
+   ModelGeometry 1
+   Static 1
+  }
+  Hierarchy "{F892FD8E195B5D10}" {
+   Enabled 1
+  }
+  RplComponent : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  StaticSoundComponent "{54F46129DBCF6FD3}" {
+   Filenames {
+    "{B32068D3B876A98E}Sounds/Props/Military/Generators/Props_PortableGenerator_Soviet.acp"
+   }
+  }
+ }
+ coords 0 0 0
+}

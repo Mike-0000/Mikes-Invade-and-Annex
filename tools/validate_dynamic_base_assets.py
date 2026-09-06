@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import sys
 import json
+import math
 
 REPO = Path(__file__).resolve().parents[1]
 BASE = Path(sys.argv[1])
@@ -44,6 +45,49 @@ for kind, (half_width, half_depth) in scenes['pads'].items():
     bounds = measurements[path]
     for axis, extent in [(0, half_width), (2, half_depth)]:
         assert -extent <= bounds['mins'][axis] <= bounds['maxs'][axis] <= extent, (kind, 'measured bounds exceed pad')
+
+@cache
+def ambience(path):
+    text = source(path)
+    lights = len(re.findall(r'^\s*SCR_BaseLightData ', text, re.M))
+    sounds = text.count('StaticSoundComponent ')
+    for ref in REF.finditer(text):
+        child_lights, child_sounds = ambience(ref[2])
+        lights += child_lights
+        sounds += child_sounds
+    return lights, sounds
+
+limits = dict(Full=6, Compact=4, Courtyard=3, Roadside=3, CommandPost=2, RallyPost=1)
+for name, placements in scenes['scenes'].items():
+    totals = [ambience(f'Prefabs/DynamicBase/IA_Dressing_{scene["kind"]}.et') for scene in placements]
+    assert sum(t[0] for t in totals) <= limits[name], (name, 'light budget')
+    assert sum(t[1] for t in totals) == 1, (name, 'exactly one generator ambience source')
+    for scene in placements:
+        if scene['kind'] == 'EntranceLight':
+            assert scene['yaw'] == 0 and scene['z'] < 0, (name, 'entrance light must face inward')
+        if scene['kind'] not in ('Sanitation', 'Waste'):
+            continue
+        def box(s):
+            w,d = s['half_width'],s['half_depth']
+            if s['yaw'] % 180:
+                w,d = d,w
+            return s['x']-w,s['z']-d,s['x']+w,s['z']+d
+        a = box(scene)
+        for other in placements:
+            if other['kind'] not in ('KitchenLit','Mess','MessLit','WaterWash','BulkWater'):
+                continue
+            b = box(other)
+            assert math.hypot(max(a[0]-b[2],b[0]-a[2],0), max(a[1]-b[3],b[1]-a[3],0)) >= 6, (name, 'hygiene separation')
+    print(f'{name}: {sum(t[0] for t in totals)}/{limits[name]} lights, one ambience source')
+for prefab in (REPO / 'Prefabs/DynamicBase').glob('IA_InfrastructureAsset_*.et'):
+    text = prefab.read_text()
+    assert not re.search(r'ActionsManager|Inventory|Service|SCR_LampComponent|SoundComponent ', text.replace('StaticSoundComponent ', '')), prefab
+    for flag in re.findall(r'm_eLightFlags (\S+)', text):
+        assert flag == '0', (prefab, 'shadow casting enabled')
+    for radius in re.findall(r'm_fRadius ([\d.]+)', text):
+        assert float(radius) <= (20 if 'floodlight' in prefab.name else 6), (prefab, 'light radius')
+    if 'SCR_BaseInteractiveLightComponent' in text:
+        assert 'm_eInitialLightState LIT\n' in text and 'Enabled 0' not in text, (prefab, 'fixed initial illumination')
 prefabs = dict(re.findall(r'(PREFAB_\w+) = "\{[0-9A-F]+\}([^"\n]+)"', layout))
 for key, path in prefabs.items():
     if key != 'PREFAB_TOWER':  # not used by either layout

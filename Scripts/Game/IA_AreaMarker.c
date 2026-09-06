@@ -169,7 +169,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 
         IA_MissionInitializer.PublishCaptureHud("", IA_CaptureHudState.Hidden, 0);
         
-        Print("[IA_AreaMarker] Reset all markers for new zone group", LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA_AreaMarker] Reset all markers for new zone group", LogLevel.NORMAL);
+        }
     }
 
     static void UnregisterMarker(IA_AreaMarker marker)
@@ -375,7 +378,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                 {
                     m_FactionScores.Set("US", 1000);
                     USFactionScore = 1000;
-                    Print("[DEBUG_ZONE_SCORE] Radio Tower " + m_areaName + " - DESTROYED! Score set to 1000", LogLevel.WARNING);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print("[DEBUG_ZONE_SCORE] Radio Tower " + m_areaName + " - DESTROYED! Score set to 1000", LogLevel.NORMAL);
+                    }
                 }
 
                 // Deactivate defense mode now that tower is gone
@@ -430,8 +436,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    
 	    if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
 	    {
-	        Print(string.Format("[CAPTURE_DEBUG] Zone %1 - US: %2, USSR: %3, wasCapturing: %4, isCapturing: %5, Progress: %6", 
-	            m_areaName, usCount, ussrCount, wasCapturing, m_isCapturing, Math.Round(m_captureProgress)), LogLevel.DEBUG);
+	        if (IA_Log.IsDebugEnabled())
+	        {
+	        	Print(string.Format("[CAPTURE_DEBUG] Zone %1 - US: %2, USSR: %3, wasCapturing: %4, isCapturing: %5, Progress: %6", 
+		            m_areaName, usCount, ussrCount, wasCapturing, m_isCapturing, Math.Round(m_captureProgress)), LogLevel.NORMAL);
+	        }
 	    }
 
 	    if (usCount == 0 && ussrCount == 0 && m_iPlayerCountInZone <= 0)
@@ -449,8 +458,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	            m_fHudPublishAcc = 0;
 	            if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
 	            {
-	                Print(string.Format("[CAPTURE] Zone %1 - PAUSED (empty zone) - Progress: %2/%3 seconds", 
-	                    m_areaName, Math.Round(m_captureProgress), CAPTURE_TIME_SECONDS), LogLevel.WARNING);
+	                if (IA_Log.IsDebugEnabled())
+	                {
+	                	Print(string.Format("[CAPTURE] Zone %1 - PAUSED (empty zone) - Progress: %2/%3 seconds", 
+		                    m_areaName, Math.Round(m_captureProgress), CAPTURE_TIME_SECONDS), LogLevel.NORMAL);
+	                }
 	                PublishCaptureHudState(IA_CaptureHudState.Paused);
 	            }
 	            else
@@ -565,12 +577,15 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    if (m_isCapturing)
 	    {
 	        int remainingTime = Math.Ceil((CAPTURE_TIME_SECONDS - m_captureProgress) / CAPTURE_RATE);
-	        Print(string.Format("[CAPTURE] Zone %1 - Progress: %2/%3 seconds (%4%%) - Time remaining: %5s", 
-	            m_areaName, 
-	            Math.Round(m_captureProgress), 
-	            CAPTURE_TIME_SECONDS,
-	            Math.Round((m_captureProgress / CAPTURE_TIME_SECONDS) * 100),
-	            remainingTime), LogLevel.DEBUG);
+	        if (IA_Log.IsDebugEnabled())
+	        {
+	        	Print(string.Format("[CAPTURE] Zone %1 - Progress: %2/%3 seconds (%4%%) - Time remaining: %5s", 
+		            m_areaName, 
+		            Math.Round(m_captureProgress), 
+		            CAPTURE_TIME_SECONDS,
+		            Math.Round((m_captureProgress / CAPTURE_TIME_SECONDS) * 100),
+		            remainingTime), LogLevel.NORMAL);
+	        }
 	    }
 	    
 	    // Check if capture is complete
@@ -580,7 +595,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        m_isCapturing = false; // Stop capturing state
 	        PublishCaptureHudState(IA_CaptureHudState.Complete);
 	        
-	        Print(string.Format("[CAPTURE] Zone %1 - CAPTURED!", m_areaName), LogLevel.NORMAL);
+	        IA_Log.Info(string.Format("[CAPTURE] Zone %1 - CAPTURED!", m_areaName));
 	        
 	        // --- BEGIN MODIFIED: Queue stats for each contributor ---
 	        IA_StatsManager statsManager = IA_StatsManager.GetInstance();
@@ -791,7 +806,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         if (Replication.IsServer() && s_areaMarkers && s_areaMarkers.Find(this) == -1)
             s_areaMarkers.Insert(this);
 
-        Print(string.Format("[IA_AreaMarker] ConfigureRuntime '%1' type %2 group %3 at %4", m_areaName, m_areaType, m_areaGroup, m_origin), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AreaMarker] ConfigureRuntime '%1' type %2 group %3 at %4", m_areaName, m_areaType, m_areaGroup, m_origin), LogLevel.NORMAL);
+        }
     }
 
     int EnsureMortarCount()
@@ -1168,7 +1186,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         GetGame().GetCallqueue().CallLater(RefreshRadioTowerDamageBind, 2000, false);
         GetGame().GetCallqueue().CallLater(RefreshRadioTowerDamageBind, 5000, false);
 
-        Print("[INFO] Radio Tower composition spawned at " + params.Transform[3], LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[INFO] Radio Tower composition spawned at " + params.Transform[3], LogLevel.NORMAL);
+        }
     }
 
     protected ResourceName ResolveDefaultRadioTowerPrefab()
@@ -1194,7 +1215,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         m_towerEntity = tower;
         damageManager.GetOnDamageStateChanged().Insert(OnPrefabDestroyed);
         m_towerDamageBound = true;
-        Print("[INFO] Radio Tower destruction tracking bound at " + m_origin, LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[INFO] Radio Tower destruction tracking bound at " + m_origin, LogLevel.NORMAL);
+        }
     }
 
     static IEntity FindDamageManagerEntityInHierarchy(IEntity root)
@@ -1352,7 +1376,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                 m_mortarGuardPosts.Insert(post);
         }
 
-        Print(string.Format("[IA][MortarPit] Spawned %1 guard posts around %2 (ring %3m)", m_mortarGuardPosts.Count(), m_origin, ringR), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][MortarPit] Spawned %1 guard posts around %2 (ring %3m)", m_mortarGuardPosts.Count(), m_origin, ringR), LogLevel.NORMAL);
+        }
     }
 
     protected IEntity SpawnOrientedPrefab(ResourceName prefab, vector pos, float yawDeg)
@@ -1391,7 +1418,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         if (m_mortarEntities && !m_mortarEntities.IsEmpty())
         {
             m_mortarEntity = m_mortarEntities[0];
-            Print(string.Format("[INFO] Mortar battery at %1 cached %2/%3 STATIC_ARTILLERY guns", m_origin, m_mortarEntities.Count(), m_mortarCount), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[INFO] Mortar battery at %1 cached %2/%3 STATIC_ARTILLERY guns", m_origin, m_mortarEntities.Count(), m_mortarCount), LogLevel.NORMAL);
+            }
         }
     }
 
@@ -1609,7 +1639,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         if (state != EDamageState.DESTROYED || m_isDestroyed)
             return;
             
-        Print("[INFO] Radio Tower prefab has been destroyed!", LogLevel.NORMAL);
+        IA_Log.Info("[INFO] Radio Tower prefab has been destroyed!");
         m_isDestroyed = true;
         
         // --- BEGIN ADDED ---
@@ -1779,7 +1809,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         // Debug logging
         if (playersAwarded > 0)
         {
-            Print(string.Format("[CAPTURE_SCORING] Zone %1 - Awarded points to %2 US players", m_areaName, playersAwarded), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[CAPTURE_SCORING] Zone %1 - Awarded points to %2 US players", m_areaName, playersAwarded), LogLevel.NORMAL);
+            }
         }
     }
     

@@ -1,0 +1,54 @@
+GenericEntity {
+ ID "A49D3AE00A6F52B2"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "AA15CD224BB05076"
+   components {
+    Hierarchy "{D7621EC0D09C5E3B}" {
+     Enabled 1
+    }
+   }
+   coords -0.8 0.000267 0.2
+   angles 0 10 0
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "E4F30E9CC46F5901"
+   components {
+    Hierarchy "{30948B3FB3255A54}" {
+     Enabled 1
+    }
+   }
+   coords 0.1 0.000267 0.2
+   angles 0 -10 0
+  }
+  GenericEntity : "{D8FF66B445235D0F}Prefabs/DynamicBase/IA_InfrastructureAsset_medical.et" {
+   ID "09B05735771C503E"
+   components {
+    Hierarchy "{70B561549E495FE7}" {
+     Enabled 1
+    }
+   }
+   coords 1.2 0.004568 0.3
+   angles 0 0 0
+  }
+  GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+   ID "939FC43659F05CB6"
+   components {
+    Hierarchy "{34898445509C5330}" {
+     Enabled 1
+    }
+   }
+   coords 0.2 0.000000 -1.2
+   angles 0 0 0
+  }
+ }
+}

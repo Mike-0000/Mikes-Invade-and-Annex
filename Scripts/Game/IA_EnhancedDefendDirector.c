@@ -524,8 +524,11 @@ class IA_EnhancedDefendDirector
 		int preferI = 0;
 		if (preferFirst)
 			preferI = 1;
-		Print(string.Format("[IA][Defend] Event plan count=%1 offsetsMs=%2/%3/%4 durationMs=%5 preferFirst=%6",
-			planned, o0, o1, o2, durationMs, preferI), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][Defend] Event plan count=%1 offsetsMs=%2/%3/%4 durationMs=%5 preferFirst=%6",
+				planned, o0, o1, o2, durationMs, preferI), LogLevel.NORMAL);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------

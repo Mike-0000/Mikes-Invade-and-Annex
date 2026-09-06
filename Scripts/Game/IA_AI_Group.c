@@ -542,7 +542,10 @@ class IA_AiGroup
         grp.m_staggeredSpawnFaction = faction;
         grp.m_staggeredAreaFaction = AreaFaction;
         
-        Print(string.Format("[IA_AiGroup.CreateGroupForVehicle] Starting staggered spawning of %1 units for vehicle group faction %2", actualUnitsToSpawn, faction), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AiGroup.CreateGroupForVehicle] Starting staggered spawning of %1 units for vehicle group faction %2", actualUnitsToSpawn, faction), LogLevel.NORMAL);
+        }
         
         grp.SpawnNextUnit();
 
@@ -627,7 +630,10 @@ class IA_AiGroup
                 if (aiWorld && preloadAt != vector.Zero)
                     aiWorld.RequestNavmeshLoad(preloadAt);
 
-                Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] origin miss, retrying budget at %1", searchState.m_initialPos.ToString()), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AiGroup.PerformNextRoadSearch] origin miss, retrying budget at %1", searchState.m_initialPos.ToString()), LogLevel.NORMAL);
+                }
                 GetGame().GetCallqueue().CallLater(PerformNextRoadSearch, 400, false, searchState);
                 return;
             }
@@ -746,7 +752,10 @@ class IA_AiGroup
         grp.m_staggeredSpawnFaction = faction;
         grp.m_staggeredAreaFaction = AreaFaction;
         
-        Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Starting staggered spawning of %1 units for faction %2 at %3", unitCount, faction, finalSpawnPos.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AiGroup.CreateMilitaryGroupAtPosition] Starting staggered spawning of %1 units for faction %2 at %3", unitCount, faction, finalSpawnPos.ToString()), LogLevel.NORMAL);
+        }
 
         if (!keepAltitude)
             grp.SpawnNextUnit();
@@ -950,8 +959,11 @@ class IA_AiGroup
         // --- BEGIN WATER CHECK ---
         if (!preserveAltitude && WaterCheck(origin))
         {
-            Print(string.Format("[IA_AiGroup.AddOrder] Proposed waypoint at %1 for order %2 is in water. Requesting state re-evaluation to find a new target.", 
-                origin.ToString(), typename.EnumToString(IA_AiOrder, order)), LogLevel.WARNING);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup.AddOrder] Proposed waypoint at %1 for order %2 is in water. Requesting state re-evaluation to find a new target.", 
+                    origin.ToString(), typename.EnumToString(IA_AiOrder, order)), LogLevel.NORMAL);
+            }
             
             // Request a neutral state at current group position to trigger re-evaluation by authority or self.
             // This is how the group "requests a new waypoint" - by asking for a new task.
@@ -1003,8 +1015,11 @@ class IA_AiGroup
             // --- END ADDED ---
             
             // --- BEGIN ADDED: Debug logging for defend orders with faction info ---
-            Print(string.Format("[IA_AiGroup.AddOrder] DEFEND ORDER CREATION: Group %1 | Faction: %2 | IsCivilian: %3 | Position: %4", 
-                this, typename.EnumToString(IA_Faction, m_faction), m_isCivilian, origin.ToString()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup.AddOrder] DEFEND ORDER CREATION: Group %1 | Faction: %2 | IsCivilian: %3 | Position: %4", 
+                    this, typename.EnumToString(IA_Faction, m_faction), m_isCivilian, origin.ToString()), LogLevel.NORMAL);
+            }
             // --- END ADDED ---
         }
         else if (order == IA_AiOrder.DefendSmall) // Added condition for SearchAndDestroy
@@ -1032,8 +1047,11 @@ class IA_AiGroup
             // --- END ADDED ---
             
             // --- BEGIN ADDED: Debug logging for defend small orders ---
-            Print(string.Format("[IA_AiGroup.AddOrder] DEFENDSMALL ORDER CREATION: Group %1 | Faction: %2 | Position: %3", 
-                this, typename.EnumToString(IA_Faction, m_faction), origin.ToString()), LogLevel.WARNING);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup.AddOrder] DEFENDSMALL ORDER CREATION: Group %1 | Faction: %2 | Position: %3", 
+                    this, typename.EnumToString(IA_Faction, m_faction), origin.ToString()), LogLevel.NORMAL);
+            }
             // --- END ADDED ---
         }
         else if (order == IA_AiOrder.SearchAndDestroy) // Added condition for SearchAndDestroy
@@ -1068,8 +1086,11 @@ class IA_AiGroup
             if (defendW)
             {
                 // --- BEGIN ADDED: Log successful defend waypoint creation ---
-                Print(string.Format("[IA_AiGroup.AddOrder] SUCCESS: Created SCR_DefendWaypoint for Group %1 | Faction: %2 | Type: %3", 
-                    this, typename.EnumToString(IA_Faction, m_faction), waypointEnt.Type()), LogLevel.DEBUG);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AiGroup.AddOrder] SUCCESS: Created SCR_DefendWaypoint for Group %1 | Faction: %2 | Type: %3", 
+                        this, typename.EnumToString(IA_Faction, m_faction), waypointEnt.Type()), LogLevel.NORMAL);
+                }
                 // --- END ADDED ---
                 
                 if (m_defendWaypointRadiusOverride > 0)
@@ -1141,7 +1162,10 @@ class IA_AiGroup
                         }
                     }
                     
-                    Print(string.Format("[IA_AiGroup.AddOrder] Set HVT waypoint priority to %1 with 4m completion radius", WP_PRIORITY_DEFEND), LogLevel.DEBUG);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[IA_AiGroup.AddOrder] Set HVT waypoint priority to %1 with 4m completion radius", WP_PRIORITY_DEFEND), LogLevel.NORMAL);
+                    }
                 }
                 else
                 {
@@ -1157,7 +1181,10 @@ class IA_AiGroup
                         }
                     }
                     
-                    Print(string.Format("[IA_AiGroup.AddOrder] Set Guard waypoint priority to %1 with 15-40m completion radius", WP_PRIORITY_FIGHT), LogLevel.DEBUG);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[IA_AiGroup.AddOrder] Set Guard waypoint priority to %1 with 15-40m completion radius", WP_PRIORITY_FIGHT), LogLevel.NORMAL);
+                    }
                 }
             }
             else
@@ -1497,7 +1524,10 @@ class IA_AiGroup
                 return false;
             }
 
-            Print(string.Format("[IA_AiGroup.PerformSpawn] Spawned %1 civilians at %2", spawnedCivs, spawnPos.ToString()), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup.PerformSpawn] Spawned %1 civilians at %2", spawnedCivs, spawnPos.ToString()), LogLevel.NORMAL);
+            }
         }
         else // Military group
         {
@@ -2648,7 +2678,10 @@ class IA_AiGroup
             IssuePassengerGetOut();
             GetGame().GetCallqueue().CallLater(this.FinishPassengerDumpAssault, PASSENGER_DUMP_ASSAULT_DELAY_MS, false);
         }
-        Print(string.Format("[IA_AiGroup] Passenger group dumping toward %1", assault.ToString()), LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AiGroup] Passenger group dumping toward %1", assault.ToString()), LogLevel.NORMAL);
+        }
     }
 
     protected void BeginPassengerGetOutAfterGetInClear()
@@ -2694,7 +2727,10 @@ class IA_AiGroup
             // Those already on foot stand at the hull; the crew Move/GetIn
             // also waits. Kick the remainder out and assault with who can.
             int leftover = ForceEjectSeatedMembers();
-            Print(string.Format("[IA][AI] Passenger dump force-eject leftover=%1 after %2 tries", leftover, m_passengerDumpAssaultTries), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA][AI] Passenger dump force-eject leftover=%1 after %2 tries", leftover, m_passengerDumpAssaultTries), LogLevel.NORMAL);
+            }
         }
 
         vector assault = m_passengerAssaultTarget;
@@ -2703,7 +2739,10 @@ class IA_AiGroup
 
         RemoveAllOrders(false);
         AddOrder(assault, IA_AiOrder.SearchAndDestroy, true);
-        Print(string.Format("[IA_AiGroup] Passenger group assaulting %1", assault.ToString()), LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AiGroup] Passenger group assaulting %1", assault.ToString()), LogLevel.NORMAL);
+        }
     }
 
     protected int ForceEjectSeatedMembers()
@@ -3016,7 +3055,10 @@ class IA_AiGroup
                     restore = m_tacticalStateTarget;
                 AddOrder(restore, IA_AiOrder.SearchAndDestroy, true);
                 EnableInboundSimulation(restore);
-                Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Defend mode group lost orders, re-adding SearchAndDestroy at %1", restore.ToString()), LogLevel.WARNING);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AiGroup.EvaluateTacticalState] Defend mode group lost orders, re-adding SearchAndDestroy at %1", restore.ToString()), LogLevel.NORMAL);
+                }
             }
             return; // Don't do any further state evaluation in defend mode
         }
@@ -3544,8 +3586,11 @@ class IA_AiGroup
         // Authority safety check - log a warning when called without authority flag
         if (!fromAuthority)
         {
-            Print(string.Format("[IA_AiGroup.SetTacticalState] WARNING: Called without authority flag. Groups should request state changes instead of setting directly."), 
-                LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup.SetTacticalState] WARNING: Called without authority flag. Groups should request state changes instead of setting directly."), 
+                    LogLevel.NORMAL);
+            }
         }
         
         // Manage the authority flag - can be acquired by authority, or released by non-authority
@@ -3556,8 +3601,11 @@ class IA_AiGroup
         else if (m_isStateManagedByAuthority)
         {
             // If currently under authority control, log that we're getting a non-authority state change
-            Print(string.Format("[IA_AiGroup.SetTacticalState] WARNING: Group %1 state changed from %2 to %3 by non-authority source!", 
-                this, m_tacticalState, newState), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup.SetTacticalState] WARNING: Group %1 state changed from %2 to %3 by non-authority source!", 
+                    this, m_tacticalState, newState), LogLevel.NORMAL);
+            }
             m_isStateManagedByAuthority = false; // Only release authority when explicitly changed by non-authority
         }
 
@@ -3908,7 +3956,10 @@ class IA_AiGroup
         
         if (enable && defendPoint != vector.Zero)
         {
-            Print(string.Format("[IA_AiGroup] Setting defend mode ON for group, target: %1", defendPoint.ToString()), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup] Setting defend mode ON for group, target: %1", defendPoint.ToString()), LogLevel.NORMAL);
+            }
             
             // Force Search & Destroy order on defend point
             RemoveAllOrders(true);
@@ -3920,7 +3971,10 @@ class IA_AiGroup
         }
         else
         {
-            Print("[IA_AiGroup] Setting defend mode OFF for group", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[IA_AiGroup] Setting defend mode OFF for group", LogLevel.NORMAL);
+            }
             m_bDefendHunter = false;
         }
     }
@@ -4081,7 +4135,10 @@ class IA_AiGroup
         SetTacticalState(IA_GroupTacticalState.Approaching, center, null, true);
         EnableInboundSimulation(center);
         IssueNextSweepPoint();
-        Print(string.Format("[IA][SweepPatrol] %1 legs around %2", m_vSweepPoints.Count(), center.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][SweepPatrol] %1 legs around %2", m_vSweepPoints.Count(), center.ToString()), LogLevel.NORMAL);
+        }
     }
 
     protected void IssueNextSweepPoint()
@@ -4101,7 +4158,10 @@ class IA_AiGroup
             {
                 m_bSweepPatrol = false;
                 SetDefendMode(true, m_vSweepCenter);
-                Print(string.Format("[IA][SweepPatrol] circuit done, assaulting %1", m_vSweepCenter.ToString()), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA][SweepPatrol] circuit done, assaulting %1", m_vSweepCenter.ToString()), LogLevel.NORMAL);
+                }
                 return;
             }
         }
@@ -4270,7 +4330,10 @@ class IA_AiGroup
         int hunterFlag = 0;
         if (m_bDefendHunter)
             hunterFlag = 1;
-        Print(string.Format("[IA][Airborne] Fireteam landed, S&D at %1 hunter=%2", m_vAirDropTarget.ToString(), hunterFlag), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][Airborne] Fireteam landed, S&D at %1 hunter=%2", m_vAirDropTarget.ToString(), hunterFlag), LogLevel.NORMAL);
+        }
     }
 
     protected void RegisterAirborneJumper(IEntity charEntity)
@@ -4381,7 +4444,10 @@ class IA_AiGroup
         RequestInboundNavmeshLoad();
         PinInboundAgents();
         ScheduleNextStateEvaluation();
-        Print(string.Format("[IA][InboundSim] pin target=%1", target.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][InboundSim] pin target=%1", target.ToString()), LogLevel.NORMAL);
+        }
     }
 
     protected void RequestInboundNavmeshLoad()
@@ -4441,7 +4507,10 @@ class IA_AiGroup
             }
         }
 
-        Print("[IA][InboundSim] unpin", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA][InboundSim] unpin", LogLevel.NORMAL);
+        }
     }
 
     protected void TickInboundSimulation()
@@ -4646,8 +4715,11 @@ class IA_AiGroup
         // Mark as spawned
         PerformSpawn();
         
-        Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Staggered spawning complete. Spawned %1 units for faction %2", 
-            m_unitsSpawnedCount, m_staggeredSpawnFaction), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Staggered spawning complete. Spawned %1 units for faction %2", 
+                m_unitsSpawnedCount, m_staggeredSpawnFaction), LogLevel.NORMAL);
+        }
         
         // Special handling for hostile civilian groups (marked by having m_groupFaction set)
         if (m_groupFaction && m_groupFaction.GetFactionKey() == "USSR" && !m_referencedEntity)
@@ -4674,7 +4746,10 @@ class IA_AiGroup
         {
             SetTacticalState(IA_GroupTacticalState.InVehicle, m_passengerAssaultTarget, null, true);
             IssuePassengerMountHold();
-            Print("[IA_AiGroup.OnStaggeredSpawningComplete] Passenger group ready for cargo mount", LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[IA_AiGroup.OnStaggeredSpawningComplete] Passenger group ready for cargo mount", LogLevel.NORMAL);
+            }
             ScheduleNextStateEvaluation();
             SetupDeathListener();
         }
@@ -4685,7 +4760,10 @@ class IA_AiGroup
 
             // Stay InVehicle. DefendPatrol here used to spawn a Defend waypoint whose
             // OnDeselected GetOuts every turret occupant.
-            Print("[IA_AiGroup.OnStaggeredSpawningComplete] Vehicle group, skipping infantry DefendPatrol", LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[IA_AiGroup.OnStaggeredSpawningComplete] Vehicle group, skipping infantry DefendPatrol", LogLevel.NORMAL);
+            }
             
             ScheduleNextStateEvaluation();
             SetupDeathListener(); // Ensure CheckDangerEvents is scheduled
@@ -4696,11 +4774,17 @@ class IA_AiGroup
             // Mortar gunners stay Neutral until occupy; a Defend WP dumps them off the tube.
             if (m_isMortarCrew)
             {
-                Print("[IA_AiGroup.OnStaggeredSpawningComplete] Mortar crew, skipping default DefendPatrol", LogLevel.DEBUG);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print("[IA_AiGroup.OnStaggeredSpawningComplete] Mortar crew, skipping default DefendPatrol", LogLevel.NORMAL);
+                }
             }
             else if (m_bAirborneDrop)
             {
-                Print("[IA_AiGroup.OnStaggeredSpawningComplete] Airborne drop, holding orders until land", LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print("[IA_AiGroup.OnStaggeredSpawningComplete] Airborne drop, holding orders until land", LogLevel.NORMAL);
+                }
                 if (m_iAirborneInFlight <= 0)
                     ReleaseAirborneToAttack();
             }
@@ -4710,7 +4794,10 @@ class IA_AiGroup
                 if (holdAt == vector.Zero)
                     holdAt = m_staggeredSpawnPos;
                 SetTacticalState(IA_GroupTacticalState.Holding, holdAt, null, true);
-                Print(string.Format("[IA_AiGroup] Applied pinned post at %1 defend=%2 radius=%3", holdAt.ToString(), m_bDefendPost, m_holdRadius), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AiGroup] Applied pinned post at %1 defend=%2 radius=%3", holdAt.ToString(), m_bDefendPost, m_holdRadius), LogLevel.NORMAL);
+                }
             }
             else if (m_bSweepPatrol)
             {
@@ -4727,7 +4814,10 @@ class IA_AiGroup
                     SetTacticalState(IA_GroupTacticalState.Attacking, m_defendTarget, null, true);
                 }
                 EnableInboundSimulation(m_defendTarget);
-                Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Reasserting defend assault at %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Reasserting defend assault at %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+                }
             }
             else if (!IsInDefendMode() && !m_lastAssignedArea)
             {
@@ -4744,8 +4834,11 @@ class IA_AiGroup
             }
             else
             {
-                Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
-                    IsInDefendMode(), m_lastAssignedArea != null), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AiGroup.OnStaggeredSpawningComplete] Group has defend mode (%1) or assigned area (%2), skipping default state assignment", 
+                        IsInDefendMode(), m_lastAssignedArea != null), LogLevel.NORMAL);
+                }
                 if (m_bInboundSimPinned)
                     PinInboundAgents();
             }
@@ -4941,8 +5034,11 @@ class IA_AiGroup
             return;
         }
 
-        Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 attempting to find its area (m_lastAssignedArea is currently NULL).", 
-            this, m_initialPosition.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 attempting to find its area (m_lastAssignedArea is currently NULL).", 
+                this, m_initialPosition.ToString()), LogLevel.NORMAL);
+        }
 
         IA_AreaMarker foundMarker = null;
         array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
@@ -4955,14 +5051,20 @@ class IA_AiGroup
 
         if (allMarkers && !allMarkers.IsEmpty())
         {
-            Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1: Found %2 total area markers to check.", this, markersSearchedCount), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1: Found %2 total area markers to check.", this, markersSearchedCount), LogLevel.NORMAL);
+            }
             foreach (IA_AreaMarker marker : allMarkers)
             {
                 if (marker && marker.IsPositionInside(m_initialPosition))
                 {
                     foundMarker = marker;
-                    Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 found to be INSIDE marker %3 (Center: %4, Radius: %5)",
-                        this, m_initialPosition.ToString(), marker.ToString(), marker.GetOrigin().ToString(), marker.GetRadius()), LogLevel.NORMAL);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 found to be INSIDE marker %3 (Center: %4, Radius: %5)",
+                            this, m_initialPosition.ToString(), marker.ToString(), marker.GetOrigin().ToString(), marker.GetRadius()), LogLevel.NORMAL);
+                    }
                     break;
                 }
             }
@@ -5130,7 +5232,10 @@ class IA_AiGroup
         // We'll use a special marker to identify hostile civilian groups
         grp.m_groupFaction = GetGame().GetFactionManager().GetFactionByKey("USSR");
         
-        Print(string.Format("[IA_AiGroup.CreateHostileCivilianGroup] Starting staggered spawning of %1 hostile civilians at %2", unitCount, spawnPos.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AiGroup.CreateHostileCivilianGroup] Starting staggered spawning of %1 hostile civilians at %2", unitCount, spawnPos.ToString()), LogLevel.NORMAL);
+        }
         
         // Start spawning the first unit immediately
         grp.SpawnNextHostileCivilianUnit();
@@ -5290,7 +5395,12 @@ class IA_AiGroup
             m_referencedEntity = mortars[0];
 
         if (occupied > 0)
-            Print(string.Format("[IA_AiGroup] AssignMortars: occupied %1 gun at %2", occupied, holdPos), LogLevel.NORMAL);
+            {
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AiGroup] AssignMortars: occupied %1 gun at %2", occupied, holdPos), LogLevel.NORMAL);
+                }
+            }
         return occupied > 0 || (m_assignedMortars && !m_assignedMortars.IsEmpty());
     }
 
@@ -5473,7 +5583,10 @@ class IA_AiGroup
             existing.SetOrigin(targetPos);
             existing.SetActive(true, true);
             GiftMortarMissionAmmo(shotCount);
-            Print(string.Format("[IA_AiGroup] Fire mission moved: %1 rounds at %2", shotCount, targetPos), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AiGroup] Fire mission moved: %1 rounds at %2", shotCount, targetPos), LogLevel.NORMAL);
+            }
             return true;
         }
 
@@ -5508,7 +5621,10 @@ class IA_AiGroup
         m_artilleryFireWaypoint = wp;
         GiftMortarMissionAmmo(shotCount);
 
-        Print(string.Format("[IA_AiGroup] Fire mission issued: %1 rounds at %2", shotCount, targetPos), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AiGroup] Fire mission issued: %1 rounds at %2", shotCount, targetPos), LogLevel.NORMAL);
+        }
         return true;
     }
 
@@ -5600,7 +5716,12 @@ class IA_AiGroup
         }
 
         if (given > 0)
-            Print(string.Format("[IA_AiGroup] Gave gunner %1 HE shells", given), LogLevel.DEBUG);
+            {
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AiGroup] Gave gunner %1 HE shells", given), LogLevel.NORMAL);
+                }
+            }
     }
 
 	void SetOwningAreaInstance(IA_AreaInstance owner)

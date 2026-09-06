@@ -1,0 +1,44 @@
+GenericEntity {
+ ID "C6B1556FDDEC574C"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{C7BE6D1395342D32}Prefabs/Props/Agriculture/WaterTank_01_v1.et" {
+   ID "81A03413A9205B5D"
+   components {
+    Hierarchy "{CA3C16D1F0555B54}" {
+     Enabled 1
+    }
+   }
+   coords 0 0.007783 0
+   angles 0 0 0
+  }
+  GenericEntity : "{97FF4DA84258FBAF}Prefabs/Props/Civilian/TableSink_01.et" {
+   ID "63482F18EA755766"
+   components {
+    Hierarchy "{C019434EEB2B5817}" {
+     Enabled 1
+    }
+   }
+   coords -1.5 0.003056 0
+   angles 0 0 0
+  }
+  GenericEntity : "{BCE07A58672955B9}Prefabs/Props/Civilian/Bucket_01.et" {
+   ID "498495AA65995B73"
+   components {
+    Hierarchy "{9FD5A6AAC2E95779}" {
+     Enabled 1
+    }
+   }
+   coords -1.5 0.000894 -0.65
+   angles 0 0 0
+  }
+ }
+}

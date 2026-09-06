@@ -1,0 +1,44 @@
+GenericEntity {
+ ID "D1156765597F54EA"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+   ID "A80CC2C0E5BD585E"
+   components {
+    Hierarchy "{247705580F455FCF}" {
+     Enabled 1
+    }
+   }
+   coords 0 0.000000 0
+   angles 0 0 0
+  }
+  GenericEntity : "{88A1A9164B53E2E5}Prefabs/Props/Industrial/Pallets/MarsBox_01_green.et" {
+   ID "3816B8EE8A1E5DCA"
+   components {
+    Hierarchy "{7A354B0200415E93}" {
+     Enabled 1
+    }
+   }
+   coords 1.2 -0.000874 0.3
+   angles 0 0 0
+  }
+  GenericEntity : "{0F866B72D473D8C4}Prefabs/Props/Industrial/ToolBox_01/ToolBox_01_grey.et" {
+   ID "CCD5142AB8A0567C"
+   components {
+    Hierarchy "{80770C98F53B51E0}" {
+     Enabled 1
+    }
+   }
+   coords -0.25 0.899073 0
+   angles 0 0 0
+  }
+ }
+}
