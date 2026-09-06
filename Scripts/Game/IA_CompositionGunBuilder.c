@@ -147,9 +147,8 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 				// the vanilla gun; crew access is best-effort behind the bags.
 				if (m_Assembly)
 				{
-					vector parent[4];
 					m_Assembly.GetWorldTransform(parent);
-					vector access = parent[3] - parent[2] * 3.5;
+					access = parent[3] - parent[2] * 3.5;
 					access[1] = GetGame().GetWorld().GetSurfaceY(access[0], access[2]) + 0.05;
 					m_Record.m_bAuthoredAccess = true;
 					m_Record.m_vAccess = access;

@@ -57,6 +57,7 @@ Prefer **`SCR_`** types over thinner native/`GameCode` types — they have the m
 - **`pointer` types cannot be class members.** They are plain C++ pointers with no weak refs and no GC (`Types.c`). `Physics` is `NativeComponent : pointer`, so `protected Physics m_Physics` is `Pointer type 'Physics' can only be used with local variables` and can block the Game script module. Fetch a local with `owner.GetPhysics()`; cache `IEntity` if you need the owner. `global_pointer` is the subtype `Types.c` marks "Safe to store outside local scope". Evidence: `compiler: MHJ_CanopyFlight.c`; `Physics.c`, `NativeComponent.c`, `Types.c`.
 - **Overrides must match inherited parameter names too.** Renaming the parameter of `MeasureHierarchy` in a derived Workbench probe failed with `name differs from prototype`; use the inherited name or a differently named helper. Evidence: `compiler: IA_BaseCompositionProbe.c`, Workbench log `logs_2026-09-06_00-31-39`.
 - **Array indexed reads are temporary values for increment operators.** `values[index]++` fails with `Operator '++' is not supported on temporary values`; write `values[index] = values[index] + 1`. Evidence: `compiler: IA_BaseDesignTest.c`, Workbench log `logs_2026-09-06_01-14-59`.
+- **Locals are function-scoped, not block-scoped.** A later `if` cannot redeclare a name already used above in the same method; that is `Multiple declaration of variable`. Reuse the existing local or pick a new name. Evidence: `compiler: IA_CompositionGunBuilder.c:150` `parent` / `access`.
 - **Subclass constructors must match prototype parameter names** for inherited ctor args. `ScriptedCommand` is `protected void ScriptedCommand(BaseAnimPhysComponent pAnimPhysComponent)`. Renaming that first arg (e.g. `animPhysComponent`) is `SCRIPT (E): … name differs from prototype 'pAnimPhysComponent'` and the Game script module will not compile. Extra parameters after the prototype are fine. Evidence: `compiler: MHJ_HaloCommand.c`; `ScriptedCommand.c`; vanilla `SCR_CharacterCommandSwim` / `SCR_CharacterCommandFly`.
 - **`notnull` in a signature is a contract**, not a runtime gift. Still validate at trust boundaries.
 - **`out` / `inout` / `owned`** are real. `out` = callee writes; `inout` = read then write; `owned` on proto returns = VM must not release the string/array.
@@ -247,6 +248,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-09-06 — Enforce locals are function-scoped; a nested `if` cannot redeclare `parent` / `access` already declared above (`compiler: IA_CompositionGunBuilder.c:150`).
 - 2026-09-06 — Native probes distinguish Preview damage initialization, requested versus resulting inventory lock state, and generated service-area meshes from physical placement bounds.
 - 2026-09-06 — Workbench compiler rejects incrementing an array-index temporary and mismatched inherited override parameter names; assign the increment explicitly and preserve prototype names.
 
