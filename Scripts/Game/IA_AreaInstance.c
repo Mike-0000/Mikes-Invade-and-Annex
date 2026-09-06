@@ -956,37 +956,42 @@ class IA_AreaInstance
 
     void ForceFinish()
     {
-        if (!m_bShutDown)
+        if (m_bShutDown)
         {
-            string areaName = "unknown";
-            if (m_area)
-                areaName = m_area.GetName();
-            Print(string.Format("[IA][Area] ForceFinish shutting down %1 so leftover AI cannot keep spawning.", areaName), LogLevel.WARNING);
-
-            IA_Game gameInst = IA_Game.Instantiate();
-            if (gameInst)
-            {
-                IA_DefendMission defend = gameInst.GetActiveDefendMission();
-                if (defend && defend.IsHostingArea(this))
-                    defend.OnHostAreaForceFinish();
-            }
-
-            m_bShutDown = true;
-            m_canSpawn = false;
-            m_mortarCrewSetupDone = true;
-            m_reinforcements = IA_ReinforcementState.Done;
-            m_vehicleReinforcements = IA_ReinforcementState.Done;
-            m_isRadioTowerDefenseActive = false;
-            m_isSideObjectiveDefenseActive = false;
-            m_attackingFactions.Clear();
-            CancelPendingSpawns();
-            DismissOpenTasks();
-            CleanupObjectiveElitePatrol();
-
-            SetDefendMode(false);
-            SetRadioTowerDefenseActive(false);
-            SetSideObjectiveDefenseActive(false, null);
+            Cleanup();
+            return;
         }
+
+        string areaName = "unknown";
+        if (m_area)
+            areaName = m_area.GetName();
+        Print(string.Format("[IA][Area] ForceFinish shutting down %1 so leftover AI cannot keep spawning.", areaName), LogLevel.WARNING);
+
+        // Latch before OnHostAreaForceFinish. Ending a defend mission re-enters
+        // ForceFinish on this same host while the first call is still open.
+        m_bShutDown = true;
+        m_canSpawn = false;
+        m_mortarCrewSetupDone = true;
+        m_reinforcements = IA_ReinforcementState.Done;
+        m_vehicleReinforcements = IA_ReinforcementState.Done;
+        m_isRadioTowerDefenseActive = false;
+        m_isSideObjectiveDefenseActive = false;
+        m_attackingFactions.Clear();
+        CancelPendingSpawns();
+        DismissOpenTasks();
+        CleanupObjectiveElitePatrol();
+
+        IA_Game gameInst = IA_Game.Instantiate();
+        if (gameInst)
+        {
+            IA_DefendMission defend = gameInst.GetActiveDefendMission();
+            if (defend && defend.IsHostingArea(this))
+                defend.OnHostAreaForceFinish();
+        }
+
+        SetDefendMode(false);
+        SetRadioTowerDefenseActive(false);
+        SetSideObjectiveDefenseActive(false, null);
 
         Cleanup();
     }

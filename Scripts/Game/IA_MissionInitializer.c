@@ -160,6 +160,8 @@ class IA_MissionInitializer : GenericEntity
 	protected bool m_bDynamicFallbackDispatched;
 	protected bool m_bDynamicCompleted;
 	protected bool m_bForceAuthoredOnFallback;
+	protected bool m_bAdminForceCompleting;
+	protected bool m_bAoAdvanceDispatched;
 	protected int m_iLastBaseStatusPublishMs;
 	protected int m_iLastBaseStatusPhase = -1;
 	protected string m_sBaseHudParsedFrom;
@@ -328,6 +330,9 @@ class IA_MissionInitializer : GenericEntity
 	
 	void ProceedToNextZone()
 	{
+		m_bAoAdvanceDispatched = false;
+		m_bAdminForceCompleting = false;
+
 	    if (!groupsArray || groupsArray.IsEmpty())
 	    {
 	        ////Print("[ERROR] IA_MissionInitializer.ProceedToNextZone: groupsArray is null or empty!", LogLevel.ERROR);
@@ -916,6 +921,10 @@ class IA_MissionInitializer : GenericEntity
 	// --- BEGIN ADDED: Extracted success logic for reuse ---
 	void SuccessZoneComplete(int currentGroup, int delayMs = -1)
 	{
+		if (m_bAoAdvanceDispatched)
+			return;
+		m_bAoAdvanceDispatched = true;
+
 		// --- BEGIN ADDED: Trigger RTB notification only when actually proceeding to next zone ---
 		// Only send RTB notification if we're not starting a defend mission
 		TriggerGlobalNotification("AreaGroupCompleted", "Return to base and await further tasking.");
@@ -1131,13 +1140,32 @@ class IA_MissionInitializer : GenericEntity
 			scr.IA_BroadcastGmBuckets();
 	}
 
+	private void SnapshotCurrentAreaInstances(notnull array<ref IA_AreaInstance> dest)
+	{
+		dest.Clear();
+		if (!m_currentAreaInstances)
+			return;
+
+		int count = m_currentAreaInstances.Count();
+		int i;
+		for (i = 0; i < count; i++)
+			dest.Insert(m_currentAreaInstances[i]);
+	}
+
 	private void ForceFinishAllCurrentAreaInstances()
 	{
 		if (!m_currentAreaInstances)
 			return;
 
-		foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
+		// ForceFinish on a defend host ends the mission, which clears this
+		// list. Walk a snapshot so Get() cannot go out of bounds.
+		ref array<ref IA_AreaInstance> toFinish = new array<ref IA_AreaInstance>();
+		SnapshotCurrentAreaInstances(toFinish);
+		int count = toFinish.Count();
+		int i;
+		for (i = 0; i < count; i++)
 		{
+			IA_AreaInstance instance = toFinish[i];
 			if (instance)
 				instance.ForceFinish();
 		}
@@ -1156,8 +1184,13 @@ class IA_MissionInitializer : GenericEntity
 		if (gameInstance)
 			defend = gameInstance.GetActiveDefendMission();
 
-		foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
+		ref array<ref IA_AreaInstance> toFinish = new array<ref IA_AreaInstance>();
+		SnapshotCurrentAreaInstances(toFinish);
+		int count = toFinish.Count();
+		int i;
+		for (i = 0; i < count; i++)
 		{
+			IA_AreaInstance instance = toFinish[i];
 			if (!instance)
 				continue;
 			if (defend && defend.IsHostingArea(instance))
@@ -1488,6 +1521,9 @@ class IA_MissionInitializer : GenericEntity
     {
         if (!Replication.IsServer())
             return;
+
+		m_bAoAdvanceDispatched = false;
+		m_bAdminForceCompleting = false;
 
         IA_GmDirector dir = IA_GmDirector.GetInstance();
         dir.EnsureStarted();
@@ -2169,29 +2205,26 @@ class IA_MissionInitializer : GenericEntity
 	protected void RPC_ForceCompleteZone()
 	{
 		Print("[IA_MissionInitializer] RPC_ForceCompleteZone received. Forcing zone completion.", LogLevel.WARNING);
+
+		// Host ForceFinish ends an authored defend, which used to clear
+		// m_currentAreaInstances while this method still walked it and then
+		// call OnDefendMissionComplete. Snapshot the list and let this RPC
+		// own the 2s admin advance.
+		m_bAdminForceCompleting = true;
 		CancelActiveDynamicObjective(IA_BaseCancelReason.AdminComplete);
-		
-		// Ensure ProceedToNextZone logic can run
-		if (m_currentAreaInstances)
-		{
-			foreach (ref IA_AreaInstance instance : m_currentAreaInstances)
-			{
-				if (instance)
-				{
-					instance.ForceFinish(); 
-				}
-			}
-		}
+		ForceFinishAllCurrentAreaInstances();
+		m_bAdminForceCompleting = false;
+
+		if (m_bAoAdvanceDispatched)
+			return;
 
 		int groupID = -1;
-		
-		// If groupsArray is accessible
 		if (groupsArray && groupsArray.IsIndexValid(m_currentIndex))
 			groupID = groupsArray[m_currentIndex];
-		else 
-			groupID = m_currentIndex; // Fallback
+		else
+			groupID = m_currentIndex;
 
-		SuccessZoneComplete(groupID, 2000); // 2 second delay for forced completion
+		SuccessZoneComplete(groupID, 2000);
 	}
 
 	protected void RPC_ForceCompleteZoneAndDefend()
@@ -3316,6 +3349,12 @@ class IA_MissionInitializer : GenericEntity
 	
 	void OnDefendMissionComplete()
 	{
+		if (m_bAdminForceCompleting)
+			return;
+		if (m_bAoAdvanceDispatched)
+			return;
+		m_bAoAdvanceDispatched = true;
+
 		IA_Log.Info("[IA_MissionInitializer] Defend mission completed, proceeding to next zone");
 		
 		// Trigger RTB notification just like normal area group completion
