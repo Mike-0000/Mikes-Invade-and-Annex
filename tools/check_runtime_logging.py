@@ -51,9 +51,14 @@ def print_calls(source: str):
 
 def violations(source: str) -> list[int]:
     blocks = debug_blocks(source)
-    return [start for start, _, level in print_calls(source)
-            if level in {"NORMAL", "DEBUG", "BARE"}
-            and not any(left < start < right for left, right in blocks)]
+    errors = []
+    for start, _, level in print_calls(source):
+        guarded = any(left < start < right for left, right in blocks)
+        if level in {"NORMAL", "DEBUG", "BARE"} and not guarded:
+            errors.append(start)
+        elif level in {"WARNING", "ERROR", "FATAL"} and guarded:
+            errors.append(start)
+    return errors
 
 
 def main() -> int:
@@ -66,7 +71,8 @@ def main() -> int:
         count += 1
         for start in violations(source):
             line = source.count("\n", 0, start) + 1
-            errors.append(f"{path.relative_to(ROOT)}:{line}: unguarded routine Print")
+            errors.append(f"{path.relative_to(ROOT)}:{line}: logging policy violation "
+                          "(gate traces, not warnings/errors)")
     if errors:
         print("\n".join(errors))
         return 1

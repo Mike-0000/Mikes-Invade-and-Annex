@@ -9,5 +9,5 @@ Engine / Enforce / Enfusion: **`.cursor/rules/enfusion-enforce.mdc`**. Search `D
 
 - Prefix **`IA_`**. File name = class name. Classes/methods PascalCase; fields `m_` + type prefix (`m_s`, `m_v`, `m_i`, `m_b`, `m_f`); constants `UPPER_SNAKE`.
 - New code goes under this addon's `Scripts/` (today mostly `Scripts/Game/`). Do not add I&A screens inside Mike's UI.
-- Logging: `[IA][Subsystem]`. One `Print` per early return. `LogLevel.NORMAL` / `WARNING` / `ERROR`.
+- Logging: `[IA][Subsystem]`. Production is quiet by default. Wrap routine `Print(..., LogLevel.NORMAL)` and any debug-only queries/loops in `if (IA_Log.IsDebugEnabled()) { ... }`; local process opt-in is `-iaDebug 1`. Use `IA_Log.Info(...)` only for infrequent operational milestones and admin/configuration audit. Keep actionable `WARNING` / `ERROR` / `FATAL` prints outside debug guards; expected skips/retries are traces, not warnings. Report persistent missing optional setup once per absence episode, not every tick. Never log raw API request/response bodies or statistics payloads. Do not print merely because a normal early return occurred. Run `python tools/check_runtime_logging.py` and `python -m unittest discover -s tools -p "test_runtime_logging.py"`. See `docs/runtime-logging.md`.
 - UI: `.cursor/rules/mikes-ui.mdc`. Pause menu stays vanilla.

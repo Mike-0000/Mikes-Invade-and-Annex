@@ -324,15 +324,15 @@ class IA_AssassinationObjective : IA_SideObjective
         string areaName = "SideObjective_Assassination_" + Math.RandomInt(0, 100000);
         m_TransientArea = IA_Area.CreateTransient(areaName, IA_AreaType.Assassination, areaCenter, 110);
         
-		if (m_TransientArea)
-             {
-                 if (IA_Log.IsDebugEnabled())
-                 {
-                     Print(string.Format("[IA_AssassinationObjective] Successfully created transient area: %1", m_TransientArea.GetName()), LogLevel.NORMAL);
-                 }
-             }
+        if (m_TransientArea)
+        {
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AssassinationObjective] Successfully created transient area: %1", m_TransientArea.GetName()), LogLevel.NORMAL);
+            }
+        }
         else
-             Print(string.Format("[IA_AssassinationObjective] FAILED to create transient area."), LogLevel.ERROR);
+            Print(string.Format("[IA_AssassinationObjective] FAILED to create transient area."), LogLevel.ERROR);
 			 
         m_ObjectiveAreaInstance = IA_AreaInstance.Create(m_TransientArea, m_EnemyIAFaction, m_EnemyGameFaction, 0, -1);
         

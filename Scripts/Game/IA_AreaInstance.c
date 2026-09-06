@@ -2174,27 +2174,34 @@ class IA_AreaInstance
         // Do not scan all groups solely for diagnostics in production.
         if (IA_Log.IsDebugEnabled())
         {
-        int postReassignmentDefenders = 0;
-        int postReassignmentAttackers = 0;
-        int postReassignmentFlankers = 0;
-        int postReassignmentOther = 0;
-        foreach (IA_AiGroup g_log : m_military)
-        {
-            if (!g_log || g_log.GetAliveCount() == 0 || g_log.ShouldSkipInfantryOrders()) continue;
-            IA_GroupTacticalState finalState = IA_GroupTacticalState.Neutral;
-            if (m_assignedGroupStates.Find(g_log, finalState)) {
-                if (finalState == IA_GroupTacticalState.Defending || finalState == IA_GroupTacticalState.DefendPatrol)
-                    postReassignmentDefenders++;
-                else if (finalState == IA_GroupTacticalState.Attacking)
-                    postReassignmentAttackers++;
-                else if (finalState == IA_GroupTacticalState.Flanking)
-                    postReassignmentFlankers++;
-                else postReassignmentOther++;
-            } else postReassignmentOther++; // Should not happen
-        }
-        Print(string.Format("[AreaInstance.MilitaryTask] Post-Reassignment State Map: Def=%1, Att=%2, Flk=%3, Other=%4 (Targets: Def=%5, Att=%6, Flk=%7)",
-            postReassignmentDefenders, postReassignmentAttackers, postReassignmentFlankers, postReassignmentOther,
-            localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
+            int postReassignmentDefenders = 0;
+            int postReassignmentAttackers = 0;
+            int postReassignmentFlankers = 0;
+            int postReassignmentOther = 0;
+            foreach (IA_AiGroup g_log : m_military)
+            {
+                if (!g_log || g_log.GetAliveCount() == 0 || g_log.ShouldSkipInfantryOrders())
+                    continue;
+                IA_GroupTacticalState finalState = IA_GroupTacticalState.Neutral;
+                if (m_assignedGroupStates.Find(g_log, finalState))
+                {
+                    if (finalState == IA_GroupTacticalState.Defending || finalState == IA_GroupTacticalState.DefendPatrol)
+                        postReassignmentDefenders++;
+                    else if (finalState == IA_GroupTacticalState.Attacking)
+                        postReassignmentAttackers++;
+                    else if (finalState == IA_GroupTacticalState.Flanking)
+                        postReassignmentFlankers++;
+                    else
+                        postReassignmentOther++;
+                }
+                else
+                {
+                    postReassignmentOther++;
+                }
+            }
+            Print(string.Format("[AreaInstance.MilitaryTask] Post-Reassignment State Map: Def=%1, Att=%2, Flk=%3, Other=%4 (Targets: Def=%5, Att=%6, Flk=%7)",
+                postReassignmentDefenders, postReassignmentAttackers, postReassignmentFlankers, postReassignmentOther,
+                localTargetDefenders, localTargetAttackers, localTargetFlankers), LogLevel.NORMAL);
         }
 
         // --- Stage 7: Enforcement & Idle Handling ---
@@ -5173,20 +5180,13 @@ class IA_AreaInstance
                     targetPos = m_defendTarget;
                     initialState = IA_GroupTacticalState.Attacking;
                     grp.SetDefendMode(true, m_defendTarget);
-                    if (defendHunter)
-                        {
-                            if (IA_Log.IsDebugEnabled())
-                            {
-                                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Hunter fireteam, pin %1 leash %2m", m_defendTarget.ToString(), DEFEND_HUNTER_LEASH_M), LogLevel.NORMAL);
-                            }
-                        }
-                    else
-                        {
-                            if (IA_Log.IsDebugEnabled())
-                            {
-                                Print(string.Format("[AreaInstance.SpawnReinforcementWave] Setting reinforcement group to defend mode, target: %1", m_defendTarget.ToString()), LogLevel.NORMAL);
-                            }
-                        }
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        if (defendHunter)
+                            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Hunter fireteam, pin %1 leash %2m", m_defendTarget.ToString(), DEFEND_HUNTER_LEASH_M), LogLevel.NORMAL);
+                        else
+                            Print(string.Format("[AreaInstance.SpawnReinforcementWave] Setting reinforcement group to defend mode, target: %1", m_defendTarget.ToString()), LogLevel.NORMAL);
+                    }
                 }
                 else
                 {

@@ -1249,13 +1249,10 @@ class IA_AreaGroupManager
             bool fired = mortarPit.IssueMortarFireMission(m_artilleryStrikeCenter, shotCount);
             if (!fired)
                 Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
-            else
-                {
-                    if (IA_Log.IsDebugEnabled())
-                    {
-                        Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, m_artilleryStrikeCenter, cooldown), LogLevel.NORMAL);
-                    }
-                }
+            else if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, m_artilleryStrikeCenter, cooldown), LogLevel.NORMAL);
+            }
 
             ClearPendingArtilleryStrike();
             m_lastArtilleryStrikeEndTime = currentTime;

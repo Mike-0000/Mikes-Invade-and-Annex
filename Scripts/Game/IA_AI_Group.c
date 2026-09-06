@@ -5394,13 +5394,11 @@ class IA_AiGroup
         if (!m_referencedEntity)
             m_referencedEntity = mortars[0];
 
-        if (occupied > 0)
-            {
-                if (IA_Log.IsDebugEnabled())
-                {
-                    Print(string.Format("[IA_AiGroup] AssignMortars: occupied %1 gun at %2", occupied, holdPos), LogLevel.NORMAL);
-                }
-            }
+        if (IA_Log.IsDebugEnabled())
+        {
+            if (occupied > 0)
+                Print(string.Format("[IA_AiGroup] AssignMortars: occupied %1 gun at %2", occupied, holdPos), LogLevel.NORMAL);
+        }
         return occupied > 0 || (m_assignedMortars && !m_assignedMortars.IsEmpty());
     }
 
@@ -5715,13 +5713,11 @@ class IA_AiGroup
             break;
         }
 
-        if (given > 0)
-            {
-                if (IA_Log.IsDebugEnabled())
-                {
-                    Print(string.Format("[IA_AiGroup] Gave gunner %1 HE shells", given), LogLevel.NORMAL);
-                }
-            }
+        if (IA_Log.IsDebugEnabled())
+        {
+            if (given > 0)
+                Print(string.Format("[IA_AiGroup] Gave gunner %1 HE shells", given), LogLevel.NORMAL);
+        }
     }
 
 	void SetOwningAreaInstance(IA_AreaInstance owner)

@@ -822,12 +822,12 @@ class IA_DefendMission
 
         bool spawned = qrfManager.SpawnDefendVehicleBeat(targetArea, m_defendPoint, m_defendFaction);
         if (spawned)
+        {
+            if (IA_Log.IsDebugEnabled())
             {
-                if (IA_Log.IsDebugEnabled())
-                {
-                    Print("[IA_DefendMission] Mid-hold vehicle QRF beat spawned", LogLevel.NORMAL);
-                }
+                Print("[IA_DefendMission] Mid-hold vehicle QRF beat spawned", LogLevel.NORMAL);
             }
+        }
         else
             Print("[IA_DefendMission] Mid-hold vehicle QRF beat failed; will retry", LogLevel.WARNING);
 

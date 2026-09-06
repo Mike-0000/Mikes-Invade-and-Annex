@@ -178,7 +178,7 @@ class IA_ApiHandler
         }
         else
         {
-            Print("IA API: Registration response did not contain a valid serverGuid. Response: " + response, LogLevel.ERROR);
+            Print("[IA][API] Registration response did not contain a valid server GUID.", LogLevel.ERROR);
         }
     }
 

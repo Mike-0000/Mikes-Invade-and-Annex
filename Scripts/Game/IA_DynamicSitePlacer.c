@@ -999,13 +999,11 @@ class IA_DynamicSitePlacer
 			if (end > 7)
 				reason += "/" + m_sTerrainDetail.Substring(7, end - 7);
 		}
-		if (!m_Rejections.Contains(reason))
-			{
-				if (IA_Log.IsDebugEnabled())
-				{
-					Print(string.Format("[IA][Base] Rejection example: %1 center=%2 yaw=%3 %4", reason, origin, yaw, m_sTerrainDetail), LogLevel.NORMAL);
-				}
-			}
+		if (IA_Log.IsDebugEnabled())
+		{
+			if (!m_Rejections.Contains(reason))
+				Print(string.Format("[IA][Base] Rejection example: %1 center=%2 yaw=%3 %4", reason, origin, yaw, m_sTerrainDetail), LogLevel.NORMAL);
+		}
 		RecordRejection(reason);
 	}
 
