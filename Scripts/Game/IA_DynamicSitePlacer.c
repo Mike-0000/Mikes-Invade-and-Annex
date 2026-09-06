@@ -406,13 +406,19 @@ class IA_DynamicSitePlacer
 			FailCurrent("guard_post_blocked");
 			return;
 		}
-		float defendRadius = m_ActiveLayout.GetDefendPostRadius(m_Building.WorldToLocalFlat(post));
-		if (defendRadius <= 0)
+		vector localDefendCenter;
+		float defendRadius;
+		if (!IA_BaseGarrisonArea.Resolve(m_ActiveLayout, m_Building.WorldToLocalFlat(post), localDefendCenter, defendRadius))
 		{
-			FailCurrent("guard_post_outside_perimeter");
+			FailCurrent("guard_post_no_defend_room");
 			return;
 		}
-		// Configure a pinned Defend post before starting staggered soldier spawning.
+		vector rootMat[4];
+		m_ActiveLayout.BuildRootTransform(m_Building.GetOrigin(), m_Building.GetYawDeg(), rootMat);
+		vector defendCenter = m_ActiveLayout.LocalOffsetToWorld(rootMat, localDefendCenter);
+		defendCenter[1] = IA_BasePlayerSampler.SampleSupportY(defendCenter);
+		// Each group gets its own waypoint over the same whole-base area.
+		// Preserve dispersed spawn posts; do not spawn everybody at the centre.
 		IA_AiGroup group = IA_AiGroup.CreateMilitaryGroupFromUnits(post, IA_Faction.USSR, size, ResolveEnemyFaction(), false, true, true, false);
 		if (!group)
 		{
@@ -423,8 +429,9 @@ class IA_DynamicSitePlacer
 		IA_AreaInstance host = m_Building.GetHost();
 		if (host && host.GetArea())
 			group.SetAssignedArea(host.GetArea());
-		group.SetDefendPost(post, defendRadius);
-		group.Spawn(IA_AiOrder.Defend, post);
+		group.SetDefendPost(defendCenter, defendRadius);
+		group.Spawn(IA_AiOrder.Defend, defendCenter);
+		Print(string.Format("[IA][Base] Garrison spawn=%1 defendCenter=%2 radius=%3 priority=%4", post, defendCenter, defendRadius, IA_AiGroup.WP_PRIORITY_DEFEND_POST), LogLevel.NORMAL);
 		m_Building.AddGarrisonGroup(group);
 		group.SpawnNextUnit();
 		m_iGarrisonLeft = m_iGarrisonLeft - size;

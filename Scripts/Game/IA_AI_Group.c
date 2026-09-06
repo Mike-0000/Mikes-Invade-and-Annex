@@ -151,6 +151,9 @@ class IA_AiGroup
     static const int WP_PRIORITY_PATROL = 0;
     static const int WP_PRIORITY_FIGHT = 15;
     static const int WP_PRIORITY_DEFEND = 20;
+    // Defend's soldier behavior is already 61. A +20 level makes it beat
+    // ordinary attack initiation (70) and gunfire observation (69).
+    static const int WP_PRIORITY_DEFEND_POST = 0;
     static const int WP_PRIORITY_GET_IN = 20;
     static const int WP_PRIORITY_GET_OUT = 0;
     static const int WP_PRIORITY_DRIVE = 20;
@@ -1181,7 +1184,7 @@ class IA_AiGroup
                 SCR_DefendWaypoint postWaypoint = SCR_DefendWaypoint.Cast(w);
                 if (postWaypoint)
                     postWaypoint.SetCurrentDefendPreset(1); // CoverPost, not loitering.
-                w.SetPriorityLevel(WP_PRIORITY_DEFEND);
+                w.SetPriorityLevel(WP_PRIORITY_DEFEND_POST);
             }
         }
 
@@ -3946,8 +3949,8 @@ class IA_AiGroup
         m_holdRadius = radius;
     }
 
-    // Uses existing pinned-garrison lifecycle but an indefinite Defend waypoint.
-    // Caller supplies a positive radius already clipped to the wall interior.
+    // Preserve the garrison assignment with an indefinite Defend waypoint.
+    // The defended area's centre/radius need not match the soldier spawn post.
     void SetDefendPost(vector pos, float radius)
     {
         SetHoldPost(pos, radius);
