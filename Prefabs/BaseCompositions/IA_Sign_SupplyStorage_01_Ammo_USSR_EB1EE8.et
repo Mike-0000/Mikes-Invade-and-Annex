@@ -1,0 +1,48 @@
+GenericEntity {
+ ID "C6CFC81568835B38"
+ components {
+  RplComponent "{43670F6A290A5977}" {
+  }
+  Hierarchy "{483E762DBCBC5D0D}" {
+   Enabled 1
+  }
+  MeshObject "{54969A6AAAADA251}" {
+   LODFactors {
+    10 5 1 1 1
+   }
+   Object "{A5B43FE12B863CFB}Assets/Structures/Signs/Military/SignRectangle_01_75x45_double.xob"
+   Materials {
+    MaterialAssignClass "{5E7AE023D6D2E639}" {
+     SourceMaterial "SignRectangle_01_75x45_double"
+     AssignedMaterial "{FDCFF4FF6D786909}Assets/Structures/Signs/Military/Data/Sign_AmmoStorage_FIA_01.emat"
+    }
+    MaterialAssignClass "{5E7AE023D6D2E62C}" {
+     SourceMaterial "SignRectangle_01_75x45_double_MLOD"
+     AssignedMaterial "{448BFB41BB3EBA3F}Assets/Structures/Signs/Military/Data/Sign_AmmoStorage_FIA_01_MLOD.emat"
+    }
+    MaterialAssignClass "{5E7AE023AEB9A5A4}" {
+     SourceMaterial "SignRectangle_01_75x45_double"
+     AssignedMaterial "{FDCFF4FF6D786909}Assets/Structures/Signs/Military/Data/Sign_AmmoStorage_FIA_01.emat"
+    }
+    MaterialAssignClass "{5E7AE023AEB9A557}" {
+     SourceMaterial "SignRectangle_01_75x45_double_MLOD"
+     AssignedMaterial "{448BFB41BB3EBA3F}Assets/Structures/Signs/Military/Data/Sign_AmmoStorage_FIA_01_MLOD.emat"
+    }
+    MaterialAssignClass "{5E3298A8D7B27B51}" {
+     SourceMaterial "SignRectangle_01_75x45_double"
+     AssignedMaterial "{D51796CE13488285}Assets/Structures/Signs/Military/Data/Sign_AmmoStorage_USSR_01.emat"
+    }
+    MaterialAssignClass "{5E3298A8D7B27B35}" {
+     SourceMaterial "SignRectangle_01_75x45_double_MLOD"
+     AssignedMaterial "{C6BAC00E9A8B3DF8}Assets/Structures/Signs/Military/Data/Sign_AmmoStorage_USSR_01_MLOD.emat"
+    }
+   }
+  }
+  RigidBody "{54969A6AA8773997}" {
+   ResponseIndex "TinyDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

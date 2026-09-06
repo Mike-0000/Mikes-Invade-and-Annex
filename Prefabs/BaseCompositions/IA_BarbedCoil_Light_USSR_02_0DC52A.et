@@ -1,0 +1,32 @@
+GenericEntity : "{BE7B5BAFE1A16A50}Prefabs/Props/Military/Fortification/BarbedTape_Coil.et" {
+ ID "7D6B6794073756AA"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{F67795E315525B45}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GameEntity : "{2CB0AA2A87842C18}Prefabs/Props/Civilian/LampKerosene_01/LampKerosene_01_military_USSR.et" {
+   ID "5CB0D993388817DF"
+   coords -0.274 0.957 0.003
+   angles 0 -145.508 0
+   components {
+    Hierarchy "{0283DEC9B25F5453}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{64C6B8E8931FB36D}Prefabs/Props/Military/Sandbags/Sandbag_01_empty_burlap.et" {
+   ID "5CB0D993388817E2"
+   coords 0.088 0.861 -0.264
+   components {
+    Hierarchy "{D0B39ED516805102}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

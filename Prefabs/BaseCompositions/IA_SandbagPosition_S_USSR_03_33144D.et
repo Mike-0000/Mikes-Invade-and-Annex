@@ -1,0 +1,120 @@
+GenericEntity {
+ ID "96E75FED6734544A"
+ components {
+  RplComponent "{13986992E3E4576B}" {
+  }
+  Hierarchy "{B5B0D1D6C3A35B6A}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CCCBEEF82F88CC4"
+   coords 2.476 0 1.067
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{4A2510E3EABB5860}Prefabs/BaseCompositions/IA_Sandbag_Corner_Left_USSR_01_8A7AB2.et" {
+   ID "5CCCBEEF82F88EBB"
+   coords -1.906 0.1 0.956
+   components {
+    Hierarchy "{FD3EC28CC163549D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6AD7BFA352A25749}Prefabs/BaseCompositions/IA_Crate_Bottles_01_2708E0.et" {
+   ID "5CCCBEEF82F88CEF"
+   coords 3.051 0 0.922
+   angles 0 39.972 0
+   components {
+    Hierarchy "{A90B0671B17A5E21}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEEF82F88E06"
+   coords -3.123 -0.1 -0.852
+   angles 0 -88.165 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEEF82F88F98"
+   coords 3.293 0 1.877
+   angles 0 3.419 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEEF82F88FBD"
+   coords 2.074 0 1.912
+   angles 0 177.598 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEEF82F88FEF"
+   coords -3.154 -0.1 -1.826
+   angles 0 91.835 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C1576E5555582214}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_short.et" {
+   ID "5CCCBEEF82F88F01"
+   coords 3.151 0 1.781
+   angles 0 8.45 0
+   components {
+    Hierarchy "{C1E5464202905CC5}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C1576E5555582214}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_short.et" {
+   ID "5CCCBEEF82F88F25"
+   coords 0.908 0 1.738
+   components {
+    Hierarchy "{C1E5464202905CC5}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC5453CCC311603B}Prefabs/Props/Military/Sandbags/Sandbag_01_end_burlap.et" {
+   ID "5CCCBEEF82F88FDF"
+   coords 0.697 -0.1 1.852
+   angles 0 -3.699 0
+   components {
+    Hierarchy "{902AC114580051B8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5CCCBEEF82F88F6C"
+   coords -1.814 0 -0.823
+   angles 0 -1.96 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

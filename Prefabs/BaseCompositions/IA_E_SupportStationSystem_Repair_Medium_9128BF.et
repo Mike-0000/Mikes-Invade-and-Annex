@@ -1,0 +1,11 @@
+GenericEntity {
+ ID "1F4974AB275F5975"
+ components {
+  RplComponent "{260A5E0CA35D5372}" {
+  }
+  Hierarchy "{8C5C14E8273A540A}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+}

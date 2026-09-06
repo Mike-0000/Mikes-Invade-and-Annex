@@ -1,0 +1,33 @@
+Turret : "{29F0CC704A582154}Prefabs/Weapons/Tripods/6T7/Tripod_6T7_NSV.et" {
+ ID "A80E963CB15F4002"
+ components {
+  IA_StaticGunComponent "{A80E963CB15F4012}" {
+  }
+  TagComponent "{607E88956EC145FD}" {
+   "Tag categories" 0 0
+  }
+  SCR_TurretControllerComponent "{51ACD09C61C183E4}" {
+   LimitsHoriz -30 30
+   LimitsVert -5 20
+   LimitsHorizProne -25 25
+   LimitsVertProne -5 20
+   TurretUnconsciousPosition 500 20
+  }
+  TurretComponent "{5B10DCF63177AACC}" {
+   LimitsHoriz -30 30
+   LimitsVert -5 20
+  }
+  SCR_DestructionMultiPhaseComponent "{51ACD09C524A7924}" {
+   "Additional hit zones" {
+    SCR_VehicleHitZone Turret {
+     m_pDestructionHandler SCR_DestructionBaseHandler "{5584FE5A9F48BA15}" {
+      m_bDeleteAfterDestroyed 0
+      m_bDetachAfterDestroyed 0
+      m_bAllowHideWreck 0
+     }
+    }
+   }
+  }
+ }
+ coords 0 0 0
+}

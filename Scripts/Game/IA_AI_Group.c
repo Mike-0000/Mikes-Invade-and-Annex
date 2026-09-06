@@ -106,6 +106,7 @@ class IA_AiGroup
     
     private IA_SideObjective m_OwningSideObjective;
     private bool m_isMortarCrew = false;
+    private ref IA_StaticGunAssignment m_StaticGunAssignment;
     private float m_defendWaypointRadiusOverride = 0;
     private ref array<IEntity> m_assignedMortars = new array<IEntity>();
     private ref array<AIAgent> m_claimedMortarGunners = new array<AIAgent>();
@@ -856,6 +857,8 @@ class IA_AiGroup
 
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
+        if (HasStaticGunAssignment())
+            return;
         if (m_isHoldingPost)
         {
             if (m_bDefendPost)
@@ -3014,6 +3017,8 @@ class IA_AiGroup
     // Evaluate and potentially change tactical state based on situation
     void EvaluateTacticalState()
     {
+        if (HasStaticGunAssignment())
+            return;
         if (m_isMortarCrew)
             return;
 
@@ -3531,7 +3536,16 @@ class IA_AiGroup
 
     void Despawn()
     {
+        ReleaseStaticGunAssignment(false);
         CancelPendingUnitSpawns();
+        if (StaticGunGroupHasPlayer())
+        {
+            // GM possession is also player ownership. Retiring an objective must
+            // not garbage-collect the native group with that player still in it.
+            GetGame().GetCallqueue().Remove(this.CheckDangerEvents);
+            UnpinInboundSimulation();
+            return;
+        }
         if (!IsSpawned())
         {
             return;
@@ -3566,6 +3580,8 @@ class IA_AiGroup
     // Add a public SetTacticalState method to replace the one we accidentally removed
     void SetTacticalState(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null, bool fromAuthority = false)
     {
+        if (HasStaticGunAssignment())
+            return;
         if (m_isHoldingPost)
         {
             newState = IA_GroupTacticalState.Holding;
@@ -3945,6 +3961,8 @@ class IA_AiGroup
 	
     void SetDefendMode(bool enable, vector defendPoint = vector.Zero)
     {
+        if (HasStaticGunAssignment())
+            return;
         if (m_isHoldingPost)
             return;
 
@@ -3982,6 +4000,8 @@ class IA_AiGroup
     //! Mark defend-mode tracking without clearing existing vehicle/move orders.
     void EnableDefendModeTracking(bool enable, vector defendPoint = vector.Zero)
     {
+        if (HasStaticGunAssignment())
+            return;
         if (m_isHoldingPost)
             return;
         m_isInDefendMode = enable;
@@ -4024,6 +4044,8 @@ class IA_AiGroup
 
     bool IsPinnedGarrison()
     {
+        if (HasStaticGunAssignment())
+            return true;
         if (m_isHoldingPost)
             return true;
         if (m_isMortarCrew)
@@ -4588,6 +4610,12 @@ class IA_AiGroup
             unitSpawnPos[0] = m_staggeredSpawnPos[0] + offset[0];
             unitSpawnPos[2] = m_staggeredSpawnPos[2] + offset[2];
         }
+        else if (HasStaticGunAssignment())
+        {
+            // The one-person station access point is already standing-checked.
+            // Do not scatter its operator outside that certified spawn envelope.
+            unitSpawnPos = m_staggeredSpawnPos;
+        }
         else if (m_isHoldingPost || m_bKeepAltitude)
         {
             vector offset = IA_Game.rng.GenerateRandomPointInRadius(0.3, 0.9, vector.Zero);
@@ -4721,8 +4749,16 @@ class IA_AiGroup
                 m_unitsSpawnedCount, m_staggeredSpawnFaction), LogLevel.NORMAL);
         }
         
+        // Crew intent is set before Spawn, so no Defend WP is ever deselected
+        // after mounting. Leave stock soldier combat active without group orders.
+        if (HasStaticGunAssignment())
+        {
+            m_StaticGunAssignment.OnSpawnReady();
+            ScheduleNextStateEvaluation();
+            SetupDeathListener();
+        }
         // Special handling for hostile civilian groups (marked by having m_groupFaction set)
-        if (m_groupFaction && m_groupFaction.GetFactionKey() == "USSR" && !m_referencedEntity)
+        else if (m_groupFaction && m_groupFaction.GetFactionKey() == "USSR" && !m_referencedEntity)
         {
             // Ensure the underlying SCR_AIGroup has the correct faction set
             m_group.SetFaction(m_groupFaction);
@@ -5298,6 +5334,77 @@ class IA_AiGroup
                 pendingDefend.SetCompletionRadius(radius);
             }
         }
+    }
+
+    void AssignStaticGun(IA_StaticGunComponent gun, int serial, vector defendCenter, float defendRadius)
+    {
+        if (!gun || m_StaticGunAssignment || m_isMortarCrew)
+            return;
+        m_isHoldingPost = false;
+        m_bDefendPost = false;
+        RemoveAllOrders(true);
+        m_StaticGunAssignment = new IA_StaticGunAssignment();
+        m_StaticGunAssignment.Setup(this, gun, serial, defendCenter, defendRadius);
+    }
+
+    bool HasStaticGunAssignment()
+    {
+        return m_StaticGunAssignment && m_StaticGunAssignment.BlocksOrders();
+    }
+
+    protected bool StaticGunGroupHasPlayer()
+    {
+        if (!m_StaticGunAssignment || !m_group)
+            return false;
+        PlayerManager manager = GetGame().GetPlayerManager();
+        if (!manager)
+            return true;
+        ref array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            if (agent && agent.GetControlledEntity() && manager.GetPlayerIdFromControlledEntity(agent.GetControlledEntity()) > 0)
+                return true;
+        }
+        return false;
+    }
+
+    int GetSpawnedUnitCount()
+    {
+        return m_unitsSpawnedCount;
+    }
+
+    bool IsStaticGunMounted()
+    {
+        return m_StaticGunAssignment && m_StaticGunAssignment.IsMounted();
+    }
+
+    bool IsStaticGunMountPending()
+    {
+        return m_StaticGunAssignment && m_StaticGunAssignment.InitialPending();
+    }
+
+    void TickStaticGunAssignment(bool permitInitialMount, bool siteLive)
+    {
+        if (m_StaticGunAssignment)
+            m_StaticGunAssignment.Tick(permitInitialMount, siteLive);
+    }
+
+    void ReleaseStaticGunAssignment(bool restoreDefense)
+    {
+        if (m_StaticGunAssignment)
+            m_StaticGunAssignment.Release(restoreDefense);
+    }
+
+    void RestoreStaticGunInfantry(vector center, float radius)
+    {
+        m_isInDefendMode = false;
+        m_bDefendHunter = false;
+        m_isHoldingPost = false;
+        m_bDefendPost = false;
+        RemoveAllOrders(true);
+        SetDefendPost(center, radius);
+        AddOrder(center, IA_AiOrder.Defend, true);
     }
 
     void SetMortarCrew(bool value)

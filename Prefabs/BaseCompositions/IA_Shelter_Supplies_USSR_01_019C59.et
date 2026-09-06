@@ -1,0 +1,61 @@
+GenericEntity {
+ ID "9FE19C06BF915BDE"
+ components {
+  RplComponent "{4BB2439174E7558F}" {
+  }
+  Hierarchy "{7E5BB64803AE540D}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{937999008F178E82}Prefabs/Props/Military/Sandbags/Sandbag_01_short_high_burlap.et" {
+   ID "5D088D1AA74ABCAD"
+   coords -0.055 0 -3.472
+   angles 0 180 0
+   components {
+    Hierarchy "{58E15AFCD4F05489}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{E2EA647EDAAA564E}Prefabs/BaseCompositions/IA_Storage_Shelter_USSR_01_358F0E.et" {
+   ID "5D82CDC90053D4D6"
+   coords 0.011 0.1 1.729
+   components {
+    Hierarchy "{7DE45B3A352554A8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5D088D1AA74ABC85"
+   coords 1.173 0 -3.51
+   angles 0 1.41 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5D088D1AA74ABCE2"
+   coords -1.374 0 -3.448
+   angles 0 -178.59 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{CC92DF5FD9330C37}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/ShelterStorage_USSR_01_CompositionDestruction.et" {
+   ID "5D06E95FE833CBBA"
+   coords 0 0 0
+   components {
+    Hierarchy "{5A58883FD62D706E}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

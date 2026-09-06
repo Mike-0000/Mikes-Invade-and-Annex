@@ -1,0 +1,23 @@
+GenericEntity : "{2B1D0128ED660BE9}Prefabs/Props/Crates/BoxWooden_01.et" {
+ ID "75E19A59A30B5976"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{A90B0671B17A5E21}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{5152F05C17652ADB}Prefabs/Props/Civilian/PaintCan_01.et" {
+   ID "5CB0D997B0F68BE2"
+   coords 0.055 0.014 0.034
+   angles 0 58.176 0
+   components {
+    Hierarchy "{3EA4A20A2A345CC3}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

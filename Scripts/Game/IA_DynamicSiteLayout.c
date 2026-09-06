@@ -20,6 +20,8 @@ class IA_DynamicSiteModule
 	float m_fMaxFoundationLiftM;
 	float m_fFloorAboveOriginM;
 	int m_iGroundingPolicy;
+	bool m_bFollowTerrainPlane;
+	float m_fClearanceHeightM = 6;
 	bool m_bRequired = true;
 	int m_iEstimatedExpandedEntities = 8;
 	int m_iRole;
@@ -104,6 +106,8 @@ class IA_DynamicSiteLayout
 	static const ResourceName PREFAB_DRESSING_COMMSLIT = "{D7D10DFBACA05AD0}Prefabs/DynamicBase/IA_Dressing_CommsLit.et";
 
 	int m_iLayoutId;
+	bool m_bComposed;
+	int m_iDesignVariant = -1;
 	string m_sName;
 	float m_fHalfWidthM;
 	float m_fHalfDepthM;
@@ -112,6 +116,17 @@ class IA_DynamicSiteLayout
 	vector m_vCaptureLocal;
 	vector m_vAssemblyLocal;
 	ref array<ref IA_DynamicSiteModule> m_aModules;
+	// Kept outside survey modules. Populate only after the exact site is chosen.
+	ref array<ref IA_DynamicBaseEmplacementSpec> m_aEmplacements = {};
+	protected bool m_bEmplacementsPrepared;
+
+	void PrepareEmplacements()
+	{
+		if (m_bEmplacementsPrepared || m_bComposed)
+			return;
+		m_bEmplacementsPrepared = true;
+		IA_BaseEmplacementManifest.Populate(this);
+	}
 	ref array<vector> m_aEntries;
 	ref array<vector> m_aGuardPosts;
 	ref array<vector> m_aPerimeterStations;

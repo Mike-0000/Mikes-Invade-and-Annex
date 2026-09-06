@@ -1,0 +1,111 @@
+GenericEntity {
+ ID "DF3415B16B1F5607"
+ components {
+  RplComponent "{075B2677D23856DC}" {
+  }
+  Hierarchy "{043A9017937C5A03}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{C1C519312C4B5C48}Prefabs/BaseCompositions/IA_Tent_Barracks_USSR_01_9BB2AD.et" {
+   ID "5D088D34D55C72D0"
+   coords 2.542 0 0.295
+   components {
+    Hierarchy "{BE2A2709906D5F07}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{75A7C06222E6218B}Prefabs/Structures/Military/Camps/TentSmallUSSR_01/TentSmallUSSR_01.et" {
+   ID "5D088D34D55C718E"
+   coords -5.599 0 0.443
+   angles 0 98.524 0
+   components {
+    Hierarchy "{21257D8333AA54FB}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{75A7C06222E6218B}Prefabs/Structures/Military/Camps/TentSmallUSSR_01/TentSmallUSSR_01.et" {
+   ID "5D088D34D55C71BE"
+   coords 2.618 0 -4.864
+   angles 0 -86.517 0
+   components {
+    Hierarchy "{21257D8333AA54FB}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{96EBA9B87F34591A}Prefabs/BaseCompositions/IA_Chair_Light_US_01_1DCB33.et" {
+   ID "5D088D149A244BD2"
+   coords -1.406 0 4.281
+   angles 0 -30.201 0
+   components {
+    Hierarchy "{EF9DD4DE53245C2A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{8088790C2D455045}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Small_Top_Soviet.et" {
+   ID "5D088D34D55C7126"
+   coords -1.906 0.1 1.645
+   angles 0 -18.79 0
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{84FE3EA78D5E5A0D}Prefabs/BaseCompositions/IA_Storage_Supplies_USSR_03_C67C97.et" {
+   ID "5D45393E6E0C1B9D"
+   coords -1.675 0.001 -0.509
+   components {
+    Hierarchy "{9EC45D2696355E5F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D088D34D55C710E"
+   coords -3.228 0 2.091
+   angles 0 -168.882 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D088D34D55C7118"
+   coords -1.535 0 5.542
+   angles 0 -130.47 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D088D34D55C713E"
+   coords 2.084 0 5.769
+   angles 0 -73.72 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{E37B1864E36C5603}Prefabs/BaseCompositions/IA_Sign_SupplyStorage_01_Supplies_USSR_5CF270.et" {
+   ID "5E330D6F784769E6"
+   coords -4.574 0 3.358
+   angles 1.116 12.684 1.699
+   components {
+    Hierarchy "{A58C0983CDB65B69}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

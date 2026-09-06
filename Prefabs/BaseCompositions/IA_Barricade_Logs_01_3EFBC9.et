@@ -1,0 +1,53 @@
+GenericEntity {
+ ID "376C26A5252D5E94"
+ components {
+  RplComponent "{6EB76A3792E9562B}" {
+  }
+  Hierarchy "{C039492BA36A566E}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{2AD330CAD22BE0AC}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/CzechHedgehog_01_painted_CompositionDestruction.et" {
+   ID "5CB0D990A4107520"
+   coords 1.854 0 -0.562
+   angles 0 4.41 0
+   components {
+    Hierarchy "{7ABBC0FAAC085053}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{2AD330CAD22BE0AC}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/CzechHedgehog_01_painted_CompositionDestruction.et" {
+   ID "5CB0D990A4107523"
+   coords -1.272 0 0.315
+   angles 0 -37.18 0
+   components {
+    Hierarchy "{7ABBC0FAAC085053}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{32654927F2657E8A}Prefabs/Props/Forest/WoodPile/WoodLog_01_A.et" {
+   ID "5CB0D990A410751C"
+   coords 0.339 0.989 -0.034
+   angles 0 -77.999 0
+   components {
+    Hierarchy "{049C4DEFFBBE5FF0}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BBAD313E424466CF}Prefabs/Props/Forest/WoodPile/WoodLog_01_C.et" {
+   ID "5CB0D990A4107526"
+   coords 0.342 1.083 -0.314
+   angles 0 102.589 0
+   components {
+    Hierarchy "{49E13264CB8257B7}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

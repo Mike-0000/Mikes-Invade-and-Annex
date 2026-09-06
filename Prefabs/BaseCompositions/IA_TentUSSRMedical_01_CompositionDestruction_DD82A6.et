@@ -1,0 +1,40 @@
+GenericEntity {
+ ID "17CC865EA25D573F"
+ components {
+  RplComponent "{2C445A53F2365448}" {
+  }
+  Hierarchy "{2E1A004692EC50E4}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{9A66B3445C233316}Prefabs/Props/Fabric/RedCrossCloth/RedCrossClothSoviet_01_big.et" {
+   ID "5CC49DC456581BA7"
+   coords 0 0.1 0
+   components {
+    Hierarchy "{5C66A2830C1FD89C}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B3C3E866F3AFFA03}Prefabs/Structures/Military/Camps/Foundations/Foundation_TentUSSR_01.et" {
+   ID "5A5344E1BED63C65"
+   coords 0 0.1 0
+   components {
+    Hierarchy "{612AE78C95E98EEB}" {
+     Enabled 1
+    }
+   }
+  }
+  SCR_DestructibleBuildingEntity : "{05331E110CF95FAE}Prefabs/BaseCompositions/IA_TentUSSRMedical_01_61BA50.et" {
+   coords 0 0.1 0
+   ID "5A5344E1BED63C5B"
+   components {
+    Hierarchy "{6D0A6E83D6215AFF}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

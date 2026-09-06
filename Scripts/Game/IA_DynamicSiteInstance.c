@@ -25,6 +25,13 @@ class IA_DynamicSiteInstance
 	protected ref array<bool> m_aNavRedoRoads;
 	protected ref SCR_MapMarkerBase m_MapMarker;
 	protected Faction m_EnemyFaction;
+	protected ref map<string, IEntity> m_Panels = new map<string, IEntity>();
+	protected ref array<ref IA_StaticGunRecord> m_Emplacements = {};
+	protected bool m_bEmplacementAssignmentsStopped;
+	protected bool m_bEmplacementsRevealed;
+	protected int m_iEmplacementTickMs;
+	protected string m_sEmplacementBuildSummary;
+	protected bool m_bEmplacementSummaryReported;
 
 	//------------------------------------------------------------------------------------------------
 	void IA_DynamicSiteInstance()
@@ -229,8 +236,8 @@ class IA_DynamicSiteInstance
 	//------------------------------------------------------------------------------------------------
 	protected int CountDescendants(IEntity ent)
 	{
-		if (!ent)
-			return 0;
+		if (!ent || ChimeraCharacter.Cast(ent))
+			return 0; // Hardware ceiling: existing crew/players are not new hardware.
 		int total = 1;
 		IEntity child = ent.GetChildren();
 		while (child)
@@ -271,6 +278,135 @@ class IA_DynamicSiteInstance
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void RegisterPanel(string id, IEntity panel)
+	{
+		if (panel)
+			m_Panels.Set(id, panel);
+	}
+
+	IEntity GetPanel(string id) { return m_Panels.Get(id); }
+	Faction GetEnemyFaction() { return m_EnemyFaction; }
+	array<ref IA_StaticGunRecord> GetEmplacements() { return m_Emplacements; }
+
+	void AddEmplacement(IA_StaticGunRecord record)
+	{
+		if (!record || !record.m_Root)
+			return;
+		AddRoot(record.m_Root); // Register before component/inventory verification.
+		m_Emplacements.Insert(record);
+	}
+
+	bool RemoveLastEmplacement()
+	{
+		if (m_bEmplacementsRevealed || m_Emplacements.IsEmpty())
+			return false;
+		int index = m_Emplacements.Count() - 1;
+		ref IA_StaticGunRecord record = m_Emplacements[index];
+		if (record.HasPlayerOccupantOrTransition())
+			return false;
+		if (record.m_Crew)
+			record.m_Crew.ReleaseStaticGunAssignment(true);
+		IEntity root = record.m_Root;
+		m_Emplacements.Remove(index);
+		m_aRoots.RemoveItem(root);
+		if (root)
+			SCR_EntityHelper.DeleteEntityAndChildren(root);
+		return true;
+	}
+
+	bool HasEmplacementPlayerOccupant()
+	{
+		foreach (IA_StaticGunRecord record : m_Emplacements)
+		{
+			if (record && record.HasPlayerOccupantOrTransition())
+				return true;
+		}
+		return false;
+	}
+
+	void TickEmplacements(bool constructing = false)
+	{
+		if (!Replication.IsServer() || m_Emplacements.IsEmpty())
+			return;
+		int now = System.GetTickCount();
+		if (m_iEmplacementTickMs && now - m_iEmplacementTickMs < 1000)
+			return;
+		m_iEmplacementTickMs = now;
+		bool live = IsHostLive() && !m_bCleanupArmed;
+		if (!live)
+			StopEmplacementAssignments(false);
+		foreach (IA_StaticGunRecord record : m_Emplacements)
+		{
+			if (record && record.m_Crew)
+				record.m_Crew.TickStaticGunAssignment(constructing && !m_bEmplacementAssignmentsStopped, live);
+		}
+	}
+
+	bool EmplacementMountsPending()
+	{
+		foreach (IA_StaticGunRecord record : m_Emplacements)
+		{
+			if (record && record.m_Crew && record.m_Crew.IsStaticGunMountPending())
+				return true;
+		}
+		return false;
+	}
+
+	void SetEmplacementBuildSummary(string summary)
+	{
+		m_sEmplacementBuildSummary = summary;
+	}
+
+	void ReportEmplacements()
+	{
+		if (m_bEmplacementSummaryReported)
+			return;
+		if (m_sEmplacementBuildSummary.IsEmpty() && m_Emplacements.IsEmpty())
+			return;
+		if (IA_Log.IsDebugEnabled())
+		{
+			m_bEmplacementSummaryReported = true;
+			int pkm, nsv, scoped, aa, assigned, fallback;
+			foreach (IA_StaticGunRecord record : m_Emplacements)
+			{
+				if (record.m_Profile.m_iKind == 3)
+					aa++;
+				else if (record.m_Profile.m_iKind == 2)
+					scoped++;
+				else if (record.m_Profile.m_iBeltSize == 50)
+					nsv++;
+				else
+					pkm++;
+				if (record.m_Crew)
+				{
+					if (record.m_Crew.IsStaticGunMounted())
+						assigned++;
+					else
+						fallback++;
+				}
+			}
+			Print(string.Format("[IA][Emplacements] site=%1 PKM=%2 NSV=%3 scopedNSV=%4 AA=%5 crew=%6 fallback=%7 %8", m_iSiteId, pkm, nsv, scoped, aa, assigned, fallback, m_sEmplacementBuildSummary), LogLevel.NORMAL);
+		}
+	}
+
+	void RevealEmplacements()
+	{
+		if (!m_bEmplacementsRevealed && m_Layout && m_Layout.m_bComposed)
+			IA_BaseDesignLibrary.Committed(m_Layout.m_iDesignVariant);
+		m_bEmplacementsRevealed = true;
+		ReportEmplacements();
+	}
+
+	void StopEmplacementAssignments(bool restoreDefense)
+	{
+		m_bEmplacementAssignmentsStopped = true;
+		foreach (IA_StaticGunRecord record : m_Emplacements)
+		{
+			if (record && record.m_Crew)
+				record.m_Crew.ReleaseStaticGunAssignment(restoreDefense);
+		}
+	}
+
 	void AddGarrisonGroup(IA_AiGroup group)
 	{
 		if (!group)
@@ -281,6 +417,18 @@ class IA_DynamicSiteInstance
 	}
 
 	//------------------------------------------------------------------------------------------------
+	void RemoveFailedEmplacementCrew(IA_AiGroup group)
+	{
+		if (!group || group.GetSpawnedUnitCount() > 0)
+			return;
+		group.ReleaseStaticGunAssignment(false);
+		group.CancelPendingUnitSpawns();
+		group.Despawn();
+		m_aGarrison.RemoveItem(group);
+		if (m_Host)
+			m_Host.RemoveMilitaryGroup(group);
+	}
+
 	int GetGarrisonBudget()
 	{
 		return m_iGarrisonBudget;
@@ -480,6 +628,8 @@ class IA_DynamicSiteInstance
 		if (m_bCleanupArmed)
 			return;
 		m_bCleanupArmed = true;
+		ReportEmplacements();
+		StopEmplacementAssignments(false);
 		m_iLastCleanupUnix = 0;
 		RemoveMapMarker();
 		CancelOwnedSpawns();
@@ -502,9 +652,12 @@ class IA_DynamicSiteInstance
 		if (PlayersNearbyOrOccupying())
 			return false;
 
-		DeleteRoots();
+		if (!DeleteRoots())
+			return false;
 		RequestSavedNavRebuild();
 		m_aRoots.Clear();
+		m_Panels.Clear();
+		m_Emplacements.Clear();
 		m_aGarrison.Clear();
 		m_Host = null;
 		m_bCleanupArmed = false;
@@ -514,6 +667,8 @@ class IA_DynamicSiteInstance
 	//------------------------------------------------------------------------------------------------
 	bool PlayersNearbyOrOccupying()
 	{
+		if (HasEmplacementPlayerOccupant())
+			return true;
 		ref array<vector> players = new array<vector>();
 		IA_SpawnPlacement.CollectPlayerPositions(players);
 		int count = players.Count();
@@ -527,8 +682,12 @@ class IA_DynamicSiteInstance
 	}
 
 	//------------------------------------------------------------------------------------------------
-	void DeleteRoots()
+	bool DeleteRoots()
 	{
+		// Independent final guard protects direct/abort callers as well as TickCleanup.
+		if (HasEmplacementPlayerOccupant())
+			return false;
+		StopEmplacementAssignments(false);
 		int count = m_aRoots.Count();
 		int i;
 		for (i = 0; i < count; i++)
@@ -537,6 +696,7 @@ class IA_DynamicSiteInstance
 			if (root)
 				SCR_EntityHelper.DeleteEntityAndChildren(root);
 		}
+		return true;
 	}
 
 	//------------------------------------------------------------------------------------------------

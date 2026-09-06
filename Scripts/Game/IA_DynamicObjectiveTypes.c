@@ -77,6 +77,7 @@ enum IA_DynamicSiteModuleRole
 class IA_BaseObjectiveSettings
 {
 	bool m_bEnabled = true;
+	bool m_bEmplacementsEnabled = true;
 	int m_iChancePct = 100;
 	bool m_bInGm;
 	int m_iSizeMode;
@@ -90,6 +91,7 @@ class IA_BaseObjectiveSettings
 	{
 		ref IA_BaseObjectiveSettings settings = new IA_BaseObjectiveSettings();
 		settings.m_bEnabled = cfg.m_bDynamicBaseEnabled;
+		settings.m_bEmplacementsEnabled = cfg.m_bDynamicBaseEmplacementsEnabled;
 		settings.m_iChancePct = cfg.m_iDynamicBaseChancePct;
 		settings.m_bInGm = cfg.m_bDynamicBaseInGm;
 		settings.m_iSizeMode = cfg.m_iDynamicBaseSizeMode;

@@ -1,0 +1,52 @@
+GenericEntity {
+ ID "20C4F648E6DB55A0"
+ components {
+  RplComponent "{C3A1B9BDD5A0524E}" {
+  }
+  Hierarchy "{82CA5B8F9E2E5B6E}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{4039DC6E828C590E}Prefabs/BaseCompositions/IA_BarbedTape_01_Long_A15CA0.et" {
+   ID "5CC6B499BAC8A798"
+   coords -3.458 0 -0.471
+   angles 0 -68.078 0
+   components {
+    Hierarchy "{85A4735664985557}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{4039DC6E828C590E}Prefabs/BaseCompositions/IA_BarbedTape_01_Long_A15CA0.et" {
+   ID "5CC6B499BAC8A7AC"
+   coords 0.415 0 0.058
+   angles 0 -86.076 0
+   components {
+    Hierarchy "{85A4735664985557}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{4DB4BD86C95851F3}Prefabs/BaseCompositions/IA_Barricade_Logs_02_FF1826.et" {
+   ID "5CC6B499BAC8A7E5"
+   coords 0.478 0 0.057
+   components {
+    Hierarchy "{A1E90A36EC4453BB}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CC6B499BAC8A78D"
+   coords -1.963 0 -0.204
+   angles 0 61.582 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

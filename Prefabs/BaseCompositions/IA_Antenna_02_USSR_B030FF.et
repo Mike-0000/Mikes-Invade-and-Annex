@@ -1,0 +1,18 @@
+GenericEntity {
+ ID "80FD398665835DBE"
+ components {
+  RplComponent "{DE53CF2B796251FE}" {
+  }
+  Hierarchy "{4BC9BC4D2CA456BE}" {
+   Enabled 1
+  }
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{1F98F8597D147152}Assets/Props/Military/Antennas/Antenna_USSR_02/Antenna_USSR_02.xob"
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

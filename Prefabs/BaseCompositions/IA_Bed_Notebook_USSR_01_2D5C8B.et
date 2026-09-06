@@ -1,0 +1,23 @@
+GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+ ID "698401813A165973"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{2319C5072EBE5611}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{04EEB10214E177B3}Prefabs/Props/Civilian/Notebook_01_Single_MarbleBlack.et" {
+   ID "5CB0F588F0106DD0"
+   coords -0.833 0.478 -0.098
+   angles 0 30 0
+   components {
+    Hierarchy "{B2E19F25BD565CDB}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

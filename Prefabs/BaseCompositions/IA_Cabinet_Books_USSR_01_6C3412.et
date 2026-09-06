@@ -1,0 +1,63 @@
+GenericEntity : "{C99D1B2E817E12D9}Prefabs/Props/Military/Furniture/TableMilitary_USSR_02_cabinet.et" {
+ ID "0ECB11681D65503F"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{A75835BF8FCA57EE}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{0133284E3BDEAEC4}Prefabs/Props/Civilian/Ashtray_01_Full_yellow.et" {
+   ID "5CB0F58C8E0207A0"
+   coords 0.275 0.901 -0.184
+   angles 0 -41.037 0
+   components {
+    Hierarchy "{C773BE1A81B05E35}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{13891AA1F5833C4A}Prefabs/Props/Civilian/Notebook_01_Double.et" {
+   ID "5CB0F58C8E02065A"
+   coords -0.203 0.902 0.141
+   angles 0 178.185 0
+   components {
+    Hierarchy "{9F2BDEF6DD1452B7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{3800AA04761AE0EC}Prefabs/Props/Civilian/Notebook_01_Single_Blue.et" {
+   ID "5CB0F58C8E020659"
+   coords -0.211 0.939 0.13
+   angles 0 180 0
+   components {
+    Hierarchy "{7B1B694FE9855AC8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{97CB57E67481F871}Prefabs/Props/Civilian/Notebook_01_Single_Orange.et" {
+   ID "5CB0F58C8E020658"
+   coords 0.267 0.902 0.159
+   angles 0 -85.434 0
+   components {
+    Hierarchy "{F3177F3B342F5B8F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C2C1CEA73A4D8779}Prefabs/Props/Civilian/Notebook_01_Stack.et" {
+   ID "5CB0F58C8E0207A5"
+   coords 0.078 0.902 -0.051
+   angles 0 -165 0
+   components {
+    Hierarchy "{7ADA969128A356D7}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

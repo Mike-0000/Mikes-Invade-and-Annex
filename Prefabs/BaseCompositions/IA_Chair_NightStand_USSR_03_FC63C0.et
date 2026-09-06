@@ -1,0 +1,33 @@
+GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+ ID "CF1B0016A276546F"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{CAFB38C0AD945880}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{642101F827FFA52D}Prefabs/Props/Military/Manuals/Manual_Soviet_01.et" {
+   ID "5CB0F587C1D7A0EC"
+   coords -0.127 0.5 0.164
+   angles 0 -36.945 0
+   components {
+    Hierarchy "{9222990D7A095309}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{E56F1B739B9792C4}Prefabs/Props/Civilian/Ashtray_01_Full_green.et" {
+   ID "5CB0F587C1D7A0E9"
+   coords 0.101 0.5 -0.045
+   angles 0 -49.192 0
+   components {
+    Hierarchy "{818323AADD9351E3}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,92 @@
+GenericEntity {
+ ID "BDE199DE0A0053E2"
+ components {
+  RplComponent "{D5AD016BD4DE579D}" {
+  }
+  Hierarchy "{A0B2B8AAB0D8594C}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{CD5858844C1F54F7}Prefabs/BaseCompositions/IA_Sign_SupplyStorage_02_Hospital_USSR_7E27D8.et" {
+   ID "5E3303B30FDBF419"
+   coords 0 0 0
+   components {
+    Hierarchy "{A75FE9C917B05AEB}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C1576E5555582214}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_short.et" {
+   ID "5CB0D9966519644B"
+   coords -0.054 -0.1 -0.13
+   angles 0 -3.456 0
+   components {
+    Hierarchy "{C1E5464202905CC5}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5CB0D99665180011"
+   coords -0.022 -0.028 -0.532
+   angles 0 -89.272 -33.79
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5CB0D9966518B25C"
+   coords 1.099 0.075 -0.283
+   angles -8.585 37.488 43.105
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5CB0D9966518B260"
+   coords -0.658 -0.144 -0.697
+   angles 0 -17.604 0
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5CB0D9966518B261"
+   coords -1.179 -0.1 0.352
+   angles 0 -48.75 0
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5CB0D99665196448"
+   coords 0.294 0.064 0.452
+   angles -36.821 65.596 -29.518
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5CB0D99665196449"
+   coords 0.603 -0.141 0.675
+   angles 0 -174.465 0
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

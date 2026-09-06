@@ -1,0 +1,161 @@
+GenericEntity {
+ ID "7621317D9944569B"
+ components {
+  RplComponent "{0C0549D460CD52C5}" {
+  }
+  Hierarchy "{85D1F2E7044F5310}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{0879933F4FDD2C2B}Prefabs/Props/Civilian/SackUniversal_01_Pile.et" {
+   ID "5CC4A406740B5E5B"
+   coords 2.273 0.19 -0.733
+   scale 0.5
+   components {
+    Hierarchy "{03B8546C41ED53B2}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{698401813A165973}Prefabs/BaseCompositions/IA_Bed_Notebook_USSR_01_2D5C8B.et" {
+   ID "5CC4A406740B5E57"
+   coords 2.285 0.179 0.797
+   angles 0 -90 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CC4A406740B5EAE"
+   coords -0.013 0.195 0.682
+   angles 0 -7.345 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{28DE3A5674CD5705}Prefabs/BaseCompositions/IA_Chair_Stack_USSR_01_9050D7.et" {
+   ID "5CC4A406740B5EAD"
+   coords -2.438 0.177 0.063
+   angles 0 -151.102 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{65A3735E5B635E8F}Prefabs/BaseCompositions/IA_Table_Desk_USSR_05_25ACD5.et" {
+   ID "5CC4A406740B5EA4"
+   coords -0.021 0.193 0.406
+   components {
+    Hierarchy "{62F314506BAF5186}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{9DABCA8CF0EF529F}Prefabs/BaseCompositions/IA_Cabinet_Stack_USSR_01_81C1DC.et" {
+   ID "5CC4A406740B5EB9"
+   coords -0.008 0.19 -2.415
+   angles 0 -2.493 0
+   components {
+    Hierarchy "{A75835BF8FCA57EE}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C8DC4D5192C95E2D}Prefabs/BaseCompositions/IA_CardboardBox_Ashtray_01_84CCF9.et" {
+   ID "5CC4A406740B5EB1"
+   coords 2.405 0.19 -2.478
+   angles 0 176.535 0
+   components {
+    Hierarchy "{0BEFB4AFD75B5AFB}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{9F7211592BE80DC2}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/TentUSSR_01_CompositionDestruction.et" {
+   ID "5CC4A406740B5E72"
+   coords 0 0 0
+   components {
+    Hierarchy "{5A588831BE1DF592}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B7DB4AF3ECC557C4}Prefabs/BaseCompositions/IA_Bed_Blankets_USSR_02_2A5F22.et" {
+   ID "5CC4A406740B5E88"
+   coords -2.121 0.182 1.74
+   angles 0 -79.225 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4A406740B5E90"
+   coords -1.747 0.19 -2.103
+   angles 0 -164.159 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4A406740B5EEA"
+   coords 2.397 1.28 2.7
+   angles 0 -90 -77.101
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4A406740B5EEB"
+   coords -2.098 1.426 -0.89
+   angles 0 4.064 -99.957
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4A406740B5EEE"
+   coords 1.733 0.199 -2.008
+   angles 0 -17.167 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4A406740B5EEF"
+   coords 1.539 1.28 2.126
+   angles 0 -82.775 102.899
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{8C9AE5EF192952C5}Prefabs/BaseCompositions/IA_Chair_NightStand_USSR_02_22E5CE.et" {
+   ID "5CC4A406740B5E42"
+   coords 1.872 0.184 -1.233
+   angles 0 -44.095 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

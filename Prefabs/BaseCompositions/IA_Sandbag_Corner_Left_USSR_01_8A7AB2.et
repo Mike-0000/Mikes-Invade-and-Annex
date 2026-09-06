@@ -1,0 +1,79 @@
+GenericEntity {
+ ID "4A2510E3EABB5860"
+ components {
+  RplComponent "{168DEF7329B157D8}" {
+  }
+  Hierarchy "{FD3EC28CC163549D}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GameEntity : "{2CB0AA2A87842C18}Prefabs/Props/Civilian/LampKerosene_01/LampKerosene_01_military_USSR.et" {
+   ID "5CB0D991CA4DA7F2"
+   coords -0.669 1.188 1.065
+   components {
+    Hierarchy "{0283DEC9B25F5453}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{55A3DA68E58453A1}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v2.et" {
+   ID "5CB0D991CA4DA7EE"
+   coords 0.89 -0.1 1.145
+   components {
+    Hierarchy "{CEBA65441DE7587B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{937999008F178E82}Prefabs/Props/Military/Sandbags/Sandbag_01_short_high_burlap.et" {
+   ID "5CB0D991CA4DA7EA"
+   coords -0.069 -0.1 0.8
+   components {
+    Hierarchy "{58E15AFCD4F05489}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CB0D991CA4DA7E7"
+   coords -1.293 -0.1 0.346
+   angles 0 91.835 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CB0D991CA4DA7E8"
+   coords 1.773 -0.1 0.875
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C1576E5555582214}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_short.et" {
+   ID "5CB0D991CA4DA7E5"
+   coords -1.107 -0.1 -0.498
+   angles 0 90 0
+   components {
+    Hierarchy "{C1E5464202905CC5}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC5453CCC311603B}Prefabs/Props/Military/Sandbags/Sandbag_01_end_burlap.et" {
+   ID "5CB0D991CA4DA7E4"
+   coords -1.289 -0.1 -0.793
+   angles 0 88.623 0
+   components {
+    Hierarchy "{902AC114580051B8}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

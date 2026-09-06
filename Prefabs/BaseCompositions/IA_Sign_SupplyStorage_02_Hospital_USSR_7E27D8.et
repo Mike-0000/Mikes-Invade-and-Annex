@@ -1,0 +1,32 @@
+GenericEntity {
+ ID "CD5858844C1F54F7"
+ components {
+  RplComponent "{71BFC4B2307A5D83}" {
+  }
+  Hierarchy "{A75FE9C917B05AEB}" {
+   Enabled 1
+  }
+  MeshObject "{54969A6AAAADA251}" {
+   LODFactors {
+    10 5 1 1 1
+   }
+   Object "{3C138FBF4F83E7C7}Assets/Structures/Signs/Military/SignRectangle_01_140x100.xob"
+   Materials {
+    MaterialAssignClass "{5E3298A89F756112}" {
+     SourceMaterial "SignRectangle_01_140x100"
+     AssignedMaterial "{85DD1365A0FF7E01}Assets/Structures/Signs/Military/Data/Sign_FieldHospital_USSR_01.emat"
+    }
+    MaterialAssignClass "{5E3298A89F7561E2}" {
+     SourceMaterial "SignRectangle_01_140x100_MLOD"
+     AssignedMaterial "{A601AFE59F2FA9D7}Assets/Structures/Signs/Military/Data/Sign_FieldHospital_USSR_01_MLOD.emat"
+    }
+   }
+  }
+  RigidBody "{54969A6AA8773997}" {
+   ResponseIndex "TinyDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

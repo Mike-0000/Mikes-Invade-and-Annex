@@ -1,0 +1,22 @@
+GenericEntity {
+ ID "E68CD92E6B3F5BB7"
+ components {
+  RplComponent "{25DBF7FCEB4259E6}" {
+  }
+  Hierarchy "{4E2BF0907B2C5F37}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{9CA6742873505B66}Prefabs/BaseCompositions/IA_SandBag_Tower_S_USSR_01_6D2769.et" {
+   ID "65E0A0A838A9097B"
+   coords 0 0 0
+   components {
+    Hierarchy "{2747DF1BEC6458C2}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

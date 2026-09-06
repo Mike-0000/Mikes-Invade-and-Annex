@@ -1,0 +1,40 @@
+GenericEntity {
+ ID "D7D7776C22BA51CC"
+ components {
+  RplComponent "{2B4C5E01DF0357E9}" {
+  }
+  Hierarchy "{C5EAC37A98B15952}" {
+   Enabled 1
+  }
+  MeshObject "{54969A6AAAADA251}" {
+   LODFactors {
+    10 5 1 1 1
+   }
+   Object "{A5B43FE12B863CFB}Assets/Structures/Signs/Military/SignRectangle_01_75x45_double.xob"
+   Materials {
+    MaterialAssignClass "{5E7AE023D6D2E639}" {
+     SourceMaterial "SignRectangle_01_75x45_double"
+     AssignedMaterial "{4DEA2DE4E2D947D5}Assets/Structures/Signs/Military/Data/Sign_VehicleRepair_FIA_01.emat"
+    }
+    MaterialAssignClass "{5E7AE023D6D2E62C}" {
+     SourceMaterial "SignRectangle_01_75x45_double_MLOD"
+     AssignedMaterial "{D6B54250C9212E91}Assets/Structures/Signs/Military/Data/Sign_VehicleRepair_FIA_01_MLOD.emat"
+    }
+    MaterialAssignClass "{5E3298AF6CF076AA}" {
+     SourceMaterial "SignRectangle_01_75x45_double"
+     AssignedMaterial "{AC73E1817E76A479}Assets/Structures/Signs/Military/Data/Sign_VehicleRepair_USSR_01.emat"
+    }
+    MaterialAssignClass "{5E3298AF6CF07684}" {
+     SourceMaterial "SignRectangle_01_75x45_double_MLOD"
+     AssignedMaterial "{ED258F943B180FFC}Assets/Structures/Signs/Military/Data/Sign_VehicleRepair_USSR_01_MLOD.emat"
+    }
+   }
+  }
+  RigidBody "{54969A6AA8773997}" {
+   ResponseIndex "TinyDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

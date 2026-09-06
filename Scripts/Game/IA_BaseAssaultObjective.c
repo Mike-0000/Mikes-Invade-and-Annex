@@ -84,6 +84,8 @@ class IA_BaseAssaultObjective
 			dt = TICK_CLAMP_MS;
 		m_iLastTickMs = nowMs;
 
+		if (m_Site)
+			m_Site.TickEmplacements(false);
 		if (m_ePhase == IA_BaseObjectivePhase.Seize)
 			TickSeize(dt);
 	}
@@ -141,6 +143,8 @@ class IA_BaseAssaultObjective
 		}
 
 		m_ePhase = IA_BaseObjectivePhase.Failed;
+		if (m_Site)
+			m_Site.StopEmplacementAssignments(true);
 		PublishStatus(true);
 		EmitResult(IA_DynamicObjectiveResult.Failed, "defense_abort");
 	}
@@ -186,6 +190,8 @@ class IA_BaseAssaultObjective
 	{
 		if (!m_Site || !m_Site.IsHostLive())
 		{
+			if (m_Site)
+				m_Site.StopEmplacementAssignments(false);
 			m_ePhase = IA_BaseObjectivePhase.Failed;
 			PublishStatus(true);
 			EmitResult(IA_DynamicObjectiveResult.Failed, "site_lost");
@@ -223,6 +229,9 @@ class IA_BaseAssaultObjective
 			return;
 
 		m_bDefenseStarted = true;
+		// Includes admin bypass. Release original hostile crew before the normal
+		// defense host can retask groups; never convert allegiance or refill guns.
+		m_Site.StopEmplacementAssignments(true);
 		DismissTask();
 		IA_Config defenseCfg = null;
 		if (m_Settings)

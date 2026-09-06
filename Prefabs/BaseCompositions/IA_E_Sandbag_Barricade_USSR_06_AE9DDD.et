@@ -1,0 +1,90 @@
+GenericEntity {
+ ID "443A3131090654FD"
+ components {
+  RplComponent "{4B9F0E1CBF2C5735}" {
+  }
+  Hierarchy "{3F3A3C5859785968}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   coords -4.446 0 -2.093
+   ID "68FC71F63029C276"
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   coords 0.261 0 1.546
+   angles 0 -34.19 0
+   ID "68FC71F63029D729"
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   coords -3.72 0 1.302
+   angles 0 10.402 0
+   ID "68FC71F63029D72B"
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   coords 4.251 0 1.176
+   angles 0 -68.21 0
+   ID "68FC71F6302E65E6"
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   coords 5.377 0 -1.795
+   ID "68FC71F6302E65E7"
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   coords 0.373 0 0.141
+   ID "68FC71F6302E65E1"
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BE16EE8FAA315FE2}Prefabs/Props/Military/Sandbags/Sandbag_01_long_high_burlap.et" {
+   coords -2.148 0 0.035
+   angles 0 -1.725 0
+   ID "68FC71F6302E65E2"
+   components {
+    Hierarchy "{983AC77B99D050B6}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BE16EE8FAA315FE2}Prefabs/Props/Military/Sandbags/Sandbag_01_long_high_burlap.et" {
+   coords 2.429 0 0.074
+   angles 0 1.202 0
+   ID "68FC71F6302E65EC"
+   components {
+    Hierarchy "{983AC77B99D050B6}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

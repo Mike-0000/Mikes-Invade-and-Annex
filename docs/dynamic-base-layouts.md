@@ -1,5 +1,7 @@
 # Smaller dynamic bases
 
+> Historical fixed-layout reference. Runtime placement now uses [composition-based recipes](dynamic-base-compositions.md), including revised footprints. The layouts and validators described below remain legacy Workbench fixtures.
+
 Four additional authored designs are available through the existing **Base size** admin dropdown. **Auto** includes them automatically. Existing saved values remain compatible: Auto = 0, Full = 1, Compact = 2; Courtyard = 3, Roadside = 4, Command post = 5, Rally post = 6. A named selection requires that design.
 
 | Layout | Footprint | Facilities | Occupying guard ceiling | Conservative scenery count |

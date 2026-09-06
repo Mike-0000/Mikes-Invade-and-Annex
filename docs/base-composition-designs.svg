@@ -1,0 +1,379 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1150" viewBox="0 0 1200 1150">
+<rect width="1200" height="1150" fill="#101923"/>
+<g font-family="sans-serif" fill="#dce8ef">
+<text x="20" y="28" font-size="19">Composition base recipes - representative Full layouts (not live screenshots)</text>
+<text x="35" y="50" font-size="16">Full / Strongpoint 1</text>
+<rect x="93.00000000000003" y="49.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
+<rect x="277.64" y="72.87" width="44.73" height="44.25" fill="#326f88"/>
+<text x="300.00" y="95.00" text-anchor="middle" font-size="9">Headquarters</text>
+<rect x="176.23" y="169.25" width="48.83" height="39.63" fill="#326f88"/>
+<text x="200.64" y="189.07" text-anchor="middle" font-size="9">LivingSmall</text>
+<rect x="183.33" y="342.84" width="34.63" height="23.56" fill="#718349"/>
+<text x="200.64" y="354.62" text-anchor="middle" font-size="9">PKMNest</text>
+<rect x="382.13" y="345.58" width="34.45" height="20.82" fill="#718349"/>
+<text x="399.36" y="355.99" text-anchor="middle" font-size="9">Position1</text>
+<rect x="486.74" y="110.59" width="15.66" height="21.72" fill="#718349"/>
+<text x="494.57" y="121.45" text-anchor="middle" font-size="9">NSV</text>
+<rect x="97.60" y="110.59" width="15.66" height="21.72" fill="#718349"/>
+<text x="105.43" y="121.45" text-anchor="middle" font-size="9">PKM</text>
+<rect x="289.14" y="53.60" width="21.72" height="15.66" fill="#718349"/>
+<text x="300.00" y="61.43" text-anchor="middle" font-size="9">PKM</text>
+<rect x="180.34" y="53.60" width="24.04" height="38.11" fill="#718349"/>
+<text x="192.36" y="72.66" text-anchor="middle" font-size="9">Tower</text>
+<rect x="395.62" y="53.60" width="24.04" height="38.11" fill="#718349"/>
+<text x="407.64" y="72.66" text-anchor="middle" font-size="9">Tower</text>
+<rect x="478.11" y="295.32" width="24.29" height="32.23" fill="#718349"/>
+<text x="490.26" y="311.43" text-anchor="middle" font-size="9">Position2</text>
+<rect x="97.60" y="295.32" width="24.29" height="32.23" fill="#718349"/>
+<text x="109.74" y="311.43" text-anchor="middle" font-size="9">Position2</text>
+<rect x="350.31" y="256.75" width="77.41" height="67.51" fill="#326f88"/>
+<text x="389.01" y="290.50" text-anchor="middle" font-size="9">Hospital</text>
+<rect x="370.08" y="161.34" width="46.15" height="49.02" fill="#326f88"/>
+<text x="393.15" y="185.85" text-anchor="middle" font-size="9">Ammo</text>
+<rect x="190.33" y="271.36" width="37.17" height="38.28" fill="#326f88"/>
+<text x="208.92" y="290.50" text-anchor="middle" font-size="9">Medical</text>
+<circle cx="300.00" cy="124.03" r="2" fill="#ffcf73"/>
+<circle cx="300.00" cy="343.40" r="2" fill="#ffcf73"/>
+<circle cx="120.60" cy="228.40" r="2" fill="#ffcf73"/>
+<circle cx="479.40" cy="228.40" r="2" fill="#ffcf73"/>
+<circle cx="258.60" cy="101.90" r="2" fill="#ffcf73"/>
+<circle cx="258.60" cy="216.90" r="2" fill="#ffcf73"/>
+<circle cx="201.10" cy="101.90" r="2" fill="#ffcf73"/>
+<circle cx="442.60" cy="262.90" r="2" fill="#ffcf73"/>
+<circle cx="270.10" cy="262.90" r="2" fill="#ffcf73"/>
+<circle cx="166.60" cy="216.90" r="2" fill="#ffcf73"/>
+<circle cx="477.10" cy="136.40" r="2" fill="#ffcf73"/>
+<circle cx="143.60" cy="343.40" r="2" fill="#ffcf73"/>
+<circle cx="304.60" cy="297.40" r="2" fill="#ffcf73"/>
+<circle cx="396.60" cy="239.90" r="2" fill="#ffcf73"/>
+<circle cx="258.60" cy="136.40" r="2" fill="#ffcf73"/>
+<circle cx="362.10" cy="159.40" r="2" fill="#ffcf73"/>
+<circle cx="212.60" cy="262.90" r="2" fill="#ffcf73"/>
+<circle cx="442.60" cy="285.90" r="2" fill="#ffcf73"/>
+<circle cx="166.60" cy="136.40" r="2" fill="#ffcf73"/>
+<circle cx="362.10" cy="216.90" r="2" fill="#ffcf73"/>
+<circle cx="155.10" cy="159.40" r="2" fill="#ffcf73"/>
+<circle cx="477.10" cy="113.40" r="2" fill="#ffcf73"/>
+<circle cx="442.60" cy="101.90" r="2" fill="#ffcf73"/>
+<circle cx="247.10" cy="308.90" r="2" fill="#ffcf73"/>
+<circle cx="224.10" cy="251.40" r="2" fill="#ffcf73"/>
+<circle cx="247.10" cy="78.90" r="2" fill="#ffcf73"/>
+<circle cx="178.10" cy="124.90" r="2" fill="#ffcf73"/>
+<circle cx="143.60" cy="297.40" r="2" fill="#ffcf73"/>
+<circle cx="178.10" cy="101.90" r="2" fill="#ffcf73"/>
+<circle cx="339.10" cy="343.40" r="2" fill="#ffcf73"/>
+<circle cx="339.10" cy="205.40" r="2" fill="#ffcf73"/>
+<circle cx="304.60" cy="251.40" r="2" fill="#ffcf73"/>
+<circle cx="442.60" cy="124.90" r="2" fill="#ffcf73"/>
+<circle cx="143.60" cy="251.40" r="2" fill="#ffcf73"/>
+<circle cx="408.10" cy="124.90" r="2" fill="#ffcf73"/>
+<circle cx="454.10" cy="308.90" r="2" fill="#ffcf73"/>
+<text x="635" y="50" font-size="16">Full / Encampment 1</text>
+<rect x="693.0" y="49.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
+<rect x="877.64" y="72.87" width="44.73" height="44.25" fill="#326f88"/>
+<text x="900.00" y="95.00" text-anchor="middle" font-size="9">Headquarters</text>
+<rect x="742.45" y="103.15" width="116.39" height="104.22" fill="#326f88"/>
+<text x="800.64" y="155.26" text-anchor="middle" font-size="9">LivingLarge</text>
+<rect x="783.33" y="342.84" width="34.63" height="23.56" fill="#718349"/>
+<text x="800.64" y="354.62" text-anchor="middle" font-size="9">PKMNest</text>
+<rect x="988.50" y="350.74" width="21.72" height="15.66" fill="#718349"/>
+<text x="999.36" y="358.57" text-anchor="middle" font-size="9">PKM</text>
+<rect x="1067.64" y="101.90" width="34.76" height="39.10" fill="#718349"/>
+<text x="1085.02" y="121.45" text-anchor="middle" font-size="9">AA</text>
+<rect x="697.60" y="104.22" width="20.82" height="34.45" fill="#718349"/>
+<text x="708.01" y="121.45" text-anchor="middle" font-size="9">Position1</text>
+<rect x="889.14" y="53.60" width="21.72" height="15.66" fill="#718349"/>
+<text x="900.00" y="61.43" text-anchor="middle" font-size="9">PKM</text>
+<rect x="776.25" y="53.60" width="32.23" height="24.29" fill="#718349"/>
+<text x="792.36" y="65.74" text-anchor="middle" font-size="9">Position2</text>
+<rect x="991.53" y="53.60" width="32.23" height="24.29" fill="#718349"/>
+<text x="1007.64" y="65.74" text-anchor="middle" font-size="9">Position2</text>
+<circle cx="900.00" cy="124.03" r="2" fill="#ffcf73"/>
+<circle cx="900.00" cy="343.40" r="2" fill="#ffcf73"/>
+<circle cx="720.60" cy="228.40" r="2" fill="#ffcf73"/>
+<circle cx="1079.40" cy="228.40" r="2" fill="#ffcf73"/>
+<circle cx="950.60" cy="239.90" r="2" fill="#ffcf73"/>
+<circle cx="1031.10" cy="147.90" r="2" fill="#ffcf73"/>
+<circle cx="824.10" cy="239.90" r="2" fill="#ffcf73"/>
+<circle cx="893.10" cy="262.90" r="2" fill="#ffcf73"/>
+<circle cx="996.60" cy="147.90" r="2" fill="#ffcf73"/>
+<circle cx="1019.60" cy="216.90" r="2" fill="#ffcf73"/>
+<circle cx="755.10" cy="343.40" r="2" fill="#ffcf73"/>
+<circle cx="1077.10" cy="251.40" r="2" fill="#ffcf73"/>
+<circle cx="973.60" cy="216.90" r="2" fill="#ffcf73"/>
+<circle cx="1031.10" cy="320.40" r="2" fill="#ffcf73"/>
+<circle cx="950.60" cy="343.40" r="2" fill="#ffcf73"/>
+<circle cx="732.10" cy="285.90" r="2" fill="#ffcf73"/>
+<circle cx="720.60" cy="320.40" r="2" fill="#ffcf73"/>
+<circle cx="1008.10" cy="343.40" r="2" fill="#ffcf73"/>
+<circle cx="904.60" cy="193.90" r="2" fill="#ffcf73"/>
+<circle cx="778.10" cy="239.90" r="2" fill="#ffcf73"/>
+<circle cx="916.10" cy="274.40" r="2" fill="#ffcf73"/>
+<circle cx="1065.60" cy="216.90" r="2" fill="#ffcf73"/>
+<circle cx="962.10" cy="228.40" r="2" fill="#ffcf73"/>
+<circle cx="904.60" cy="147.90" r="2" fill="#ffcf73"/>
+<circle cx="720.60" cy="205.40" r="2" fill="#ffcf73"/>
+<circle cx="847.10" cy="228.40" r="2" fill="#ffcf73"/>
+<circle cx="1054.10" cy="251.40" r="2" fill="#ffcf73"/>
+<circle cx="778.10" cy="216.90" r="2" fill="#ffcf73"/>
+<circle cx="1042.60" cy="297.40" r="2" fill="#ffcf73"/>
+<circle cx="1054.10" cy="159.40" r="2" fill="#ffcf73"/>
+<circle cx="847.10" cy="331.90" r="2" fill="#ffcf73"/>
+<circle cx="916.10" cy="205.40" r="2" fill="#ffcf73"/>
+<circle cx="973.60" cy="147.90" r="2" fill="#ffcf73"/>
+<circle cx="1065.60" cy="297.40" r="2" fill="#ffcf73"/>
+<circle cx="1019.60" cy="170.90" r="2" fill="#ffcf73"/>
+<circle cx="801.10" cy="285.90" r="2" fill="#ffcf73"/>
+<text x="35" y="405" font-size="16">Full / RoadControl 1</text>
+<rect x="93.00000000000003" y="404.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
+<rect x="277.64" y="427.87" width="44.73" height="44.25" fill="#326f88"/>
+<text x="300.00" y="450.00" text-anchor="middle" font-size="9">Headquarters</text>
+<rect x="176.23" y="524.25" width="48.83" height="39.63" fill="#326f88"/>
+<text x="200.64" y="544.07" text-anchor="middle" font-size="9">LivingSmall</text>
+<rect x="189.78" y="705.74" width="21.72" height="15.66" fill="#718349"/>
+<text x="200.64" y="713.57" text-anchor="middle" font-size="9">PKM</text>
+<rect x="380.12" y="705.14" width="38.48" height="16.26" fill="#718349"/>
+<text x="399.36" y="713.27" text-anchor="middle" font-size="9">BarricadeL</text>
+<rect x="471.06" y="454.79" width="31.34" height="43.31" fill="#718349"/>
+<text x="486.73" y="476.45" text-anchor="middle" font-size="9">ScopedNest</text>
+<rect x="97.60" y="457.21" width="16.26" height="38.48" fill="#718349"/>
+<text x="105.73" y="476.45" text-anchor="middle" font-size="9">BarricadeL</text>
+<rect x="285.56" y="408.60" width="28.88" height="12.69" fill="#718349"/>
+<text x="300.00" y="414.94" text-anchor="middle" font-size="9">BarricadeM</text>
+<rect x="175.05" y="408.60" width="34.63" height="23.56" fill="#718349"/>
+<text x="192.36" y="420.38" text-anchor="middle" font-size="9">PKMNest</text>
+<rect x="390.47" y="408.60" width="34.33" height="31.92" fill="#718349"/>
+<text x="407.64" y="424.56" text-anchor="middle" font-size="9">CheckpointM</text>
+<rect x="478.11" y="650.32" width="24.29" height="32.23" fill="#718349"/>
+<text x="490.26" y="666.43" text-anchor="middle" font-size="9">Position2</text>
+<rect x="97.60" y="649.20" width="20.82" height="34.45" fill="#718349"/>
+<text x="108.01" y="666.43" text-anchor="middle" font-size="9">Position1</text>
+<rect x="381.28" y="523.79" width="23.73" height="34.13" fill="#326f88"/>
+<text x="393.15" y="540.85" text-anchor="middle" font-size="9">MaintenanceSmall</text>
+<rect x="369.80" y="626.65" width="38.41" height="37.70" fill="#326f88"/>
+<text x="389.01" y="645.50" text-anchor="middle" font-size="9">Supply</text>
+<rect x="190.33" y="626.36" width="37.17" height="38.28" fill="#326f88"/>
+<text x="208.92" y="645.50" text-anchor="middle" font-size="9">Medical</text>
+<circle cx="300.00" cy="479.03" r="2" fill="#ffcf73"/>
+<circle cx="300.00" cy="698.40" r="2" fill="#ffcf73"/>
+<circle cx="120.60" cy="583.40" r="2" fill="#ffcf73"/>
+<circle cx="479.40" cy="583.40" r="2" fill="#ffcf73"/>
+<circle cx="362.10" cy="686.90" r="2" fill="#ffcf73"/>
+<circle cx="224.10" cy="479.90" r="2" fill="#ffcf73"/>
+<circle cx="327.60" cy="514.40" r="2" fill="#ffcf73"/>
+<circle cx="408.10" cy="479.90" r="2" fill="#ffcf73"/>
+<circle cx="350.60" cy="502.90" r="2" fill="#ffcf73"/>
+<circle cx="270.10" cy="548.90" r="2" fill="#ffcf73"/>
+<circle cx="247.10" cy="571.90" r="2" fill="#ffcf73"/>
+<circle cx="339.10" cy="652.40" r="2" fill="#ffcf73"/>
+<circle cx="442.60" cy="445.40" r="2" fill="#ffcf73"/>
+<circle cx="408.10" cy="698.40" r="2" fill="#ffcf73"/>
+<circle cx="327.60" cy="583.40" r="2" fill="#ffcf73"/>
+<circle cx="132.10" cy="663.90" r="2" fill="#ffcf73"/>
+<circle cx="258.60" cy="433.90" r="2" fill="#ffcf73"/>
+<circle cx="120.60" cy="491.40" r="2" fill="#ffcf73"/>
+<circle cx="419.60" cy="675.40" r="2" fill="#ffcf73"/>
+<circle cx="143.60" cy="525.90" r="2" fill="#ffcf73"/>
+<circle cx="465.60" cy="537.40" r="2" fill="#ffcf73"/>
+<circle cx="189.60" cy="502.90" r="2" fill="#ffcf73"/>
+<circle cx="442.60" cy="468.40" r="2" fill="#ffcf73"/>
+<circle cx="132.10" cy="502.90" r="2" fill="#ffcf73"/>
+<circle cx="143.60" cy="698.40" r="2" fill="#ffcf73"/>
+<circle cx="396.60" cy="468.40" r="2" fill="#ffcf73"/>
+<circle cx="212.60" cy="594.90" r="2" fill="#ffcf73"/>
+<circle cx="235.60" cy="514.40" r="2" fill="#ffcf73"/>
+<circle cx="189.60" cy="675.40" r="2" fill="#ffcf73"/>
+<circle cx="189.60" cy="445.40" r="2" fill="#ffcf73"/>
+<circle cx="166.60" cy="571.90" r="2" fill="#ffcf73"/>
+<circle cx="120.60" cy="617.90" r="2" fill="#ffcf73"/>
+<circle cx="120.60" cy="468.40" r="2" fill="#ffcf73"/>
+<circle cx="132.10" cy="629.40" r="2" fill="#ffcf73"/>
+<circle cx="235.60" cy="640.90" r="2" fill="#ffcf73"/>
+<circle cx="235.60" cy="686.90" r="2" fill="#ffcf73"/>
+<text x="635" y="405" font-size="16">Full / Logistics 1</text>
+<rect x="693.0" y="404.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
+<rect x="877.64" y="427.87" width="44.73" height="44.25" fill="#326f88"/>
+<text x="900.00" y="450.00" text-anchor="middle" font-size="9">Headquarters</text>
+<rect x="776.23" y="524.25" width="48.83" height="39.63" fill="#326f88"/>
+<text x="800.64" y="544.07" text-anchor="middle" font-size="9">LivingSmall</text>
+<rect x="783.33" y="697.84" width="34.63" height="23.56" fill="#718349"/>
+<text x="800.64" y="709.62" text-anchor="middle" font-size="9">PKMNest</text>
+<rect x="988.50" y="705.74" width="21.72" height="15.66" fill="#718349"/>
+<text x="999.36" y="713.57" text-anchor="middle" font-size="9">PKM</text>
+<rect x="1058.50" y="454.32" width="43.90" height="44.27" fill="#718349"/>
+<text x="1080.45" y="476.45" text-anchor="middle" font-size="9">CheckpointL</text>
+<rect x="697.60" y="466.89" width="13.48" height="19.11" fill="#718349"/>
+<text x="704.34" y="476.45" text-anchor="middle" font-size="9">BarricadeS</text>
+<rect x="889.14" y="408.60" width="21.72" height="15.66" fill="#718349"/>
+<text x="900.00" y="416.43" text-anchor="middle" font-size="9">PKM</text>
+<rect x="775.13" y="408.60" width="34.45" height="20.82" fill="#718349"/>
+<text x="792.36" y="419.01" text-anchor="middle" font-size="9">Position1</text>
+<rect x="991.89" y="408.60" width="31.50" height="23.47" fill="#718349"/>
+<text x="1007.64" y="420.33" text-anchor="middle" font-size="9">Position3</text>
+<rect x="1081.58" y="649.20" width="20.82" height="34.45" fill="#718349"/>
+<text x="1091.99" y="666.43" text-anchor="middle" font-size="9">Position1</text>
+<rect x="697.60" y="654.41" width="38.11" height="24.04" fill="#718349"/>
+<text x="716.66" y="666.43" text-anchor="middle" font-size="9">Tower</text>
+<rect x="954.45" y="611.21" width="69.12" height="68.59" fill="#326f88"/>
+<text x="989.01" y="645.50" text-anchor="middle" font-size="9">MaintenanceLarge</text>
+<rect x="973.94" y="522.00" width="38.41" height="37.70" fill="#326f88"/>
+<text x="993.15" y="540.85" text-anchor="middle" font-size="9">Supply</text>
+<rect x="792.30" y="631.22" width="33.24" height="28.57" fill="#326f88"/>
+<text x="808.92" y="645.50" text-anchor="middle" font-size="9">Fuel</text>
+<circle cx="900.00" cy="479.03" r="2" fill="#ffcf73"/>
+<circle cx="900.00" cy="698.40" r="2" fill="#ffcf73"/>
+<circle cx="720.60" cy="583.40" r="2" fill="#ffcf73"/>
+<circle cx="1079.40" cy="583.40" r="2" fill="#ffcf73"/>
+<circle cx="755.10" cy="698.40" r="2" fill="#ffcf73"/>
+<circle cx="893.10" cy="663.90" r="2" fill="#ffcf73"/>
+<circle cx="778.10" cy="468.40" r="2" fill="#ffcf73"/>
+<circle cx="1031.10" cy="445.40" r="2" fill="#ffcf73"/>
+<circle cx="858.60" cy="652.40" r="2" fill="#ffcf73"/>
+<circle cx="789.60" cy="606.40" r="2" fill="#ffcf73"/>
+<circle cx="847.10" cy="456.90" r="2" fill="#ffcf73"/>
+<circle cx="801.10" cy="491.40" r="2" fill="#ffcf73"/>
+<circle cx="950.60" cy="560.40" r="2" fill="#ffcf73"/>
+<circle cx="1077.10" cy="433.90" r="2" fill="#ffcf73"/>
+<circle cx="732.10" cy="594.90" r="2" fill="#ffcf73"/>
+<circle cx="858.60" cy="548.90" r="2" fill="#ffcf73"/>
+<circle cx="1077.10" cy="640.90" r="2" fill="#ffcf73"/>
+<circle cx="1019.60" cy="456.90" r="2" fill="#ffcf73"/>
+<circle cx="939.10" cy="652.40" r="2" fill="#ffcf73"/>
+<circle cx="720.60" cy="606.40" r="2" fill="#ffcf73"/>
+<circle cx="1019.60" cy="548.90" r="2" fill="#ffcf73"/>
+<circle cx="858.60" cy="525.90" r="2" fill="#ffcf73"/>
+<circle cx="962.10" cy="548.90" r="2" fill="#ffcf73"/>
+<circle cx="939.10" cy="606.40" r="2" fill="#ffcf73"/>
+<circle cx="881.60" cy="560.40" r="2" fill="#ffcf73"/>
+<circle cx="1019.60" cy="571.90" r="2" fill="#ffcf73"/>
+<circle cx="881.60" cy="686.90" r="2" fill="#ffcf73"/>
+<circle cx="789.60" cy="571.90" r="2" fill="#ffcf73"/>
+<circle cx="996.60" cy="479.90" r="2" fill="#ffcf73"/>
+<circle cx="870.10" cy="675.40" r="2" fill="#ffcf73"/>
+<circle cx="1031.10" cy="479.90" r="2" fill="#ffcf73"/>
+<circle cx="824.10" cy="617.90" r="2" fill="#ffcf73"/>
+<circle cx="973.60" cy="571.90" r="2" fill="#ffcf73"/>
+<circle cx="801.10" cy="456.90" r="2" fill="#ffcf73"/>
+<circle cx="939.10" cy="479.90" r="2" fill="#ffcf73"/>
+<circle cx="766.60" cy="583.40" r="2" fill="#ffcf73"/>
+<text x="35" y="760" font-size="16">Full / Camouflaged 1</text>
+<rect x="93.00000000000003" y="759.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
+<rect x="277.64" y="782.87" width="44.73" height="44.25" fill="#326f88"/>
+<text x="300.00" y="805.00" text-anchor="middle" font-size="9">Headquarters</text>
+<rect x="176.23" y="879.25" width="48.83" height="39.63" fill="#326f88"/>
+<text x="200.64" y="899.07" text-anchor="middle" font-size="9">LivingSmall</text>
+<rect x="183.33" y="1052.84" width="34.63" height="23.56" fill="#718349"/>
+<text x="200.64" y="1064.62" text-anchor="middle" font-size="9">PKMNest</text>
+<rect x="383.61" y="1052.94" width="31.50" height="23.47" fill="#718349"/>
+<text x="399.36" y="1064.67" text-anchor="middle" font-size="9">Position3</text>
+<rect x="471.06" y="809.79" width="31.34" height="43.31" fill="#718349"/>
+<text x="486.73" y="831.45" text-anchor="middle" font-size="9">NSVNest</text>
+<rect x="97.60" y="815.34" width="24.29" height="32.23" fill="#718349"/>
+<text x="109.74" y="831.45" text-anchor="middle" font-size="9">Position2</text>
+<rect x="289.14" y="763.60" width="21.72" height="15.66" fill="#718349"/>
+<text x="300.00" y="771.43" text-anchor="middle" font-size="9">PKM</text>
+<rect x="176.25" y="763.60" width="32.23" height="24.29" fill="#718349"/>
+<text x="192.36" y="775.74" text-anchor="middle" font-size="9">Position2</text>
+<rect x="391.89" y="763.60" width="31.50" height="23.47" fill="#718349"/>
+<text x="407.64" y="775.33" text-anchor="middle" font-size="9">Position3</text>
+<rect x="464.29" y="1009.41" width="38.11" height="24.04" fill="#718349"/>
+<text x="483.34" y="1021.43" text-anchor="middle" font-size="9">Tower</text>
+<rect x="97.60" y="1004.12" width="23.56" height="34.63" fill="#718349"/>
+<text x="109.38" y="1021.43" text-anchor="middle" font-size="9">PKMNest</text>
+<rect x="374.56" y="876.71" width="37.17" height="38.28" fill="#326f88"/>
+<text x="393.15" y="895.85" text-anchor="middle" font-size="9">Medical</text>
+<rect x="365.94" y="975.99" width="46.15" height="49.02" fill="#326f88"/>
+<text x="389.01" y="1000.50" text-anchor="middle" font-size="9">Ammo</text>
+<rect x="189.71" y="981.65" width="38.41" height="37.70" fill="#326f88"/>
+<text x="208.92" y="1000.50" text-anchor="middle" font-size="9">Supply</text>
+<circle cx="300.00" cy="834.03" r="2" fill="#ffcf73"/>
+<circle cx="300.00" cy="1053.40" r="2" fill="#ffcf73"/>
+<circle cx="120.60" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="479.40" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="454.10" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="373.60" cy="857.90" r="2" fill="#ffcf73"/>
+<circle cx="293.10" cy="961.40" r="2" fill="#ffcf73"/>
+<circle cx="235.60" cy="800.40" r="2" fill="#ffcf73"/>
+<circle cx="362.10" cy="903.90" r="2" fill="#ffcf73"/>
+<circle cx="431.10" cy="834.90" r="2" fill="#ffcf73"/>
+<circle cx="362.10" cy="949.90" r="2" fill="#ffcf73"/>
+<circle cx="201.10" cy="846.40" r="2" fill="#ffcf73"/>
+<circle cx="385.10" cy="926.90" r="2" fill="#ffcf73"/>
+<circle cx="327.60" cy="1041.90" r="2" fill="#ffcf73"/>
+<circle cx="189.60" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="224.10" cy="834.90" r="2" fill="#ffcf73"/>
+<circle cx="327.60" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="166.60" cy="823.40" r="2" fill="#ffcf73"/>
+<circle cx="281.60" cy="926.90" r="2" fill="#ffcf73"/>
+<circle cx="385.10" cy="949.90" r="2" fill="#ffcf73"/>
+<circle cx="396.60" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="304.60" cy="857.90" r="2" fill="#ffcf73"/>
+<circle cx="339.10" cy="972.90" r="2" fill="#ffcf73"/>
+<circle cx="120.60" cy="903.90" r="2" fill="#ffcf73"/>
+<circle cx="316.10" cy="972.90" r="2" fill="#ffcf73"/>
+<circle cx="454.10" cy="823.40" r="2" fill="#ffcf73"/>
+<circle cx="189.60" cy="1041.90" r="2" fill="#ffcf73"/>
+<circle cx="431.10" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="408.10" cy="926.90" r="2" fill="#ffcf73"/>
+<circle cx="465.60" cy="995.90" r="2" fill="#ffcf73"/>
+<circle cx="212.60" cy="926.90" r="2" fill="#ffcf73"/>
+<circle cx="212.60" cy="949.90" r="2" fill="#ffcf73"/>
+<circle cx="155.10" cy="869.40" r="2" fill="#ffcf73"/>
+<circle cx="293.10" cy="892.40" r="2" fill="#ffcf73"/>
+<circle cx="419.60" cy="800.40" r="2" fill="#ffcf73"/>
+<circle cx="385.10" cy="1041.90" r="2" fill="#ffcf73"/>
+<text x="635" y="760" font-size="16">Full / Encampment 2</text>
+<rect x="693.0" y="759.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
+<rect x="877.64" y="782.87" width="44.73" height="44.25" fill="#326f88"/>
+<text x="900.00" y="805.00" text-anchor="middle" font-size="9">Headquarters</text>
+<rect x="941.17" y="813.15" width="116.39" height="104.22" fill="#326f88"/>
+<text x="999.36" y="865.26" text-anchor="middle" font-size="9">LivingLarge</text>
+<rect x="783.33" y="1052.84" width="34.63" height="23.56" fill="#718349"/>
+<text x="800.64" y="1064.62" text-anchor="middle" font-size="9">PKMNest</text>
+<rect x="982.13" y="1055.58" width="34.45" height="20.82" fill="#718349"/>
+<text x="999.36" y="1065.99" text-anchor="middle" font-size="9">Position1</text>
+<rect x="1071.06" y="809.79" width="31.34" height="43.31" fill="#718349"/>
+<text x="1086.73" y="831.45" text-anchor="middle" font-size="9">ScopedNest</text>
+<rect x="697.60" y="820.59" width="15.66" height="21.72" fill="#718349"/>
+<text x="705.43" y="831.45" text-anchor="middle" font-size="9">PKM</text>
+<rect x="889.14" y="763.60" width="21.72" height="15.66" fill="#718349"/>
+<text x="900.00" y="771.43" text-anchor="middle" font-size="9">PKM</text>
+<rect x="776.13" y="763.60" width="32.46" height="27.13" fill="#718349"/>
+<text x="792.36" y="777.16" text-anchor="middle" font-size="9">Position4</text>
+<circle cx="900.00" cy="834.03" r="2" fill="#ffcf73"/>
+<circle cx="900.00" cy="1053.40" r="2" fill="#ffcf73"/>
+<circle cx="720.60" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="1079.40" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="1077.10" cy="869.40" r="2" fill="#ffcf73"/>
+<circle cx="893.10" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="778.10" cy="1041.90" r="2" fill="#ffcf73"/>
+<circle cx="766.60" cy="961.40" r="2" fill="#ffcf73"/>
+<circle cx="824.10" cy="926.90" r="2" fill="#ffcf73"/>
+<circle cx="835.60" cy="869.40" r="2" fill="#ffcf73"/>
+<circle cx="835.60" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="801.10" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="1065.60" cy="892.40" r="2" fill="#ffcf73"/>
+<circle cx="916.10" cy="1007.40" r="2" fill="#ffcf73"/>
+<circle cx="870.10" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="743.60" cy="1018.90" r="2" fill="#ffcf73"/>
+<circle cx="720.60" cy="995.90" r="2" fill="#ffcf73"/>
+<circle cx="743.60" cy="995.90" r="2" fill="#ffcf73"/>
+<circle cx="755.10" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="847.10" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="950.60" cy="995.90" r="2" fill="#ffcf73"/>
+<circle cx="916.10" cy="961.40" r="2" fill="#ffcf73"/>
+<circle cx="732.10" cy="800.40" r="2" fill="#ffcf73"/>
+<circle cx="1031.10" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="1065.60" cy="800.40" r="2" fill="#ffcf73"/>
+<circle cx="1019.60" cy="1007.40" r="2" fill="#ffcf73"/>
+<circle cx="904.60" cy="972.90" r="2" fill="#ffcf73"/>
+<circle cx="847.10" cy="834.90" r="2" fill="#ffcf73"/>
+<circle cx="755.10" cy="949.90" r="2" fill="#ffcf73"/>
+<circle cx="720.60" cy="857.90" r="2" fill="#ffcf73"/>
+<circle cx="1077.10" cy="915.40" r="2" fill="#ffcf73"/>
+<circle cx="812.60" cy="1018.90" r="2" fill="#ffcf73"/>
+<circle cx="950.60" cy="926.90" r="2" fill="#ffcf73"/>
+<circle cx="985.10" cy="1018.90" r="2" fill="#ffcf73"/>
+<circle cx="916.10" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="766.60" cy="800.40" r="2" fill="#ffcf73"/>
+</g></svg>

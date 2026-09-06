@@ -1,0 +1,441 @@
+GenericEntity {
+ ID "D42EF810E81F5AB3"
+ components {
+  RplComponent "{20C5454E920C5F7E}" {
+  }
+  Hierarchy "{6E06AD2F99F65B63}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{14DDB40171F949A9}Prefabs/Props/Military/Camps/ConstructionMaterialPacked_WoodPlanks_01_USSR.et" {
+   ID "570705C23F45830A"
+   coords 5.633 0 2.849
+   angles 0 75 0
+   components {
+    Hierarchy "{F7F541E0B96A550A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6C10ED01DCC45FFF}Prefabs/BaseCompositions/IA_CanvasCover_Cluttered_USSR_02_631956.et" {
+   ID "5704E2027BFC83BC"
+   coords -1.792 0.05 -3.006
+   angles 0 30 0
+   components {
+    Hierarchy "{C7FDDC27D9875CC2}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5704E200E96B1F5A"
+   coords -6.471 0 -2.694
+   angles 0 -140.325 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{180803173F1C2EF6}Prefabs/Structures/Signs/Military/Sign_MaterialDepot_USSR_01.et" {
+   ID "5618D54039B36AE2"
+   coords -1.692 0.03 0.752
+   angles 0.995 16.755 0.35
+   components {
+    Hierarchy "{6DF2B7EEBFF456D6}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{18982CB5D0D29247}Prefabs/Props/Civilian/BeerBottle_01_empty_brown.et" {
+   ID "5704E2008722B618"
+   coords -5.788 0.049 -2.984
+   angles 90 0 83.621
+   components {
+    Hierarchy "{66AA72680C91AD08}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{1DE88E6E3B4FEC8D}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V3_covered.et" {
+   ID "5704E202456EB28C"
+   coords 0.371 0 -5.091
+   angles 0 -150 0
+   components {
+    Hierarchy "{570283C36646E030}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{344ABEB98BB96721}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V4_covered.et" {
+   ID "5704E202456EB273"
+   coords 1.145 0 -3.927
+   angles 0 30 0
+   components {
+    Hierarchy "{211F8FAA3B6E5785}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{4CF66B5FBFD0C6EB}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Folded_Soviet.et" {
+   ID "58F2E42DA87CD814"
+   coords -3.135 0 -1.034
+   angles 0 27.44 0
+   components {
+    Hierarchy "{D7496177BE3E5C17}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{4CF66B5FBFD0C6EB}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Folded_Soviet.et" {
+   ID "58F2E42DA87CD82A"
+   coords -3.785 0 -2.046
+   angles 0 -149.367 0
+   components {
+    Hierarchy "{D7496177BE3E5C17}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{4CF66B5FBFD0C6EB}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Folded_Soviet.et" {
+   ID "58F2E42DA87CE7FA"
+   coords -4.5 0 -3.189
+   angles 0 20.722 0
+   components {
+    Hierarchy "{D7496177BE3E5C17}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{5F76887813B86AD4}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V6_covered.et" {
+   ID "5704E202456EB231"
+   coords 1.898 0 -2.715
+   angles 0 20.445 0
+   components {
+    Hierarchy "{570283C37A70C38C}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{5F76887813B86AD4}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V6_covered.et" {
+   ID "5704E202456EB2EA"
+   coords -0.126 0 -5.77
+   angles 0 34.409 0
+   components {
+    Hierarchy "{570283C37A70C38C}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{64C6B8E8931FB36D}Prefabs/Props/Military/Sandbags/Sandbag_01_empty_burlap.et" {
+   ID "5704E201AB779DEB"
+   coords 3.613 0 -5.413
+   angles 0 119.065 0
+   components {
+    Hierarchy "{D0B39ED516805102}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{1067D8502B8E56EF}Prefabs/BaseCompositions/IA_AmmoBoxArsenal_Equipment_USSR_Gadgets_D83EEB.et" {
+   ID "58C28EA171B30DC1"
+   coords 1.656 0.001 -1.786
+   angles 0 7.752 0
+   components {
+    Hierarchy "{C4B24DC252EC55E7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6C640BA44F7DB12E}Prefabs/Props/Military/Camps/ConstructionMaterialPacked_MetalSheets_01_USSR.et" {
+   ID "570705C23F4583B2"
+   coords 4.393 0 2.538
+   angles 0 75 0
+   components {
+    Hierarchy "{0082E073883E589C}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{82B378151A9AEF2F}Prefabs/Structures/Military/Fortifications/DirtPile_01/DirtPile_01_large.et" {
+   ID "5704E201AC6F594C"
+   coords 2.974 0.25 -4.736
+   components {
+    Hierarchy "{E91BCDB55F385358}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{82B378151A9AEF2F}Prefabs/Structures/Military/Fortifications/DirtPile_01/DirtPile_01_large.et" {
+   ID "5704E201AC6F5A98"
+   coords 2.166 0.383 -5.309
+   angles 0 -63.977 0
+   components {
+    Hierarchy "{E91BCDB55F385358}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{890EE5FB23BA713E}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V2_covered.et" {
+   ID "5704E2011511D39E"
+   coords 6.163 0 0.958
+   angles 0 -17.793 0
+   components {
+    Hierarchy "{570283C360AB7EA8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{890EE5FB23BA713E}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V2_covered.et" {
+   ID "58B8CD48DC445440"
+   coords 4.829 0 1.007
+   angles 0 162.032 0
+   components {
+    Hierarchy "{570283C360AB7EA8}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "5618D542B42525C2"
+   coords 3.271 0 -3.025
+   angles 0 -66.812 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "5618D542B42525E3"
+   coords -6.155 0 -1.434
+   angles 0 34.954 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "5704E200A0D2FE7E"
+   coords -5.289 0 -0.266
+   angles 0 121.794 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5618D542B425247C"
+   coords 5.467 0 -3.739
+   angles 0 -62.021 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{1A61386698B65784}Prefabs/BaseCompositions/IA_BarbedTape_01_Stake_45A6B7.et" {
+   ID "5618D5456668E991"
+   coords 1.089 0.1 -2.25
+   angles 11.052 -60.001 6.315
+   components {
+    Hierarchy "{8D418F73AC9F5E61}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{1A61386698B65784}Prefabs/BaseCompositions/IA_BarbedTape_01_Stake_45A6B7.et" {
+   ID "5618D5456668E9B5"
+   coords 1.089 0.1 -2.33
+   angles 11.052 -60.001 6.315
+   components {
+    Hierarchy "{8D418F73AC9F5E61}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{1A61386698B65784}Prefabs/BaseCompositions/IA_BarbedTape_01_Stake_45A6B7.et" {
+   ID "5618D5456668E9E1"
+   coords 1.089 0.1 -2.381
+   angles 11.052 -60.001 6.315
+   components {
+    Hierarchy "{8D418F73AC9F5E61}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{1A61386698B65784}Prefabs/BaseCompositions/IA_BarbedTape_01_Stake_45A6B7.et" {
+   ID "5618D5456668E9EA"
+   coords 1.089 0.1 -2.144
+   angles 11.052 -60.001 6.315
+   components {
+    Hierarchy "{8D418F73AC9F5E61}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{1A61386698B65784}Prefabs/BaseCompositions/IA_BarbedTape_01_Stake_45A6B7.et" {
+   ID "5618D5456668E9F7"
+   coords 1.089 0.1 -2.427
+   angles 11.052 -60.001 6.315
+   components {
+    Hierarchy "{8D418F73AC9F5E61}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{BE7B5BAFE1A16A50}Prefabs/Props/Military/Fortification/BarbedTape_Coil.et" {
+   ID "5618D5407402B75C"
+   coords -4.141 -0.001 -0.949
+   angles 0 -35.39 0
+   components {
+    Hierarchy "{F67795E315525B45}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{BE7B5BAFE1A16A50}Prefabs/Props/Military/Fortification/BarbedTape_Coil.et" {
+   ID "5618D5407402B79A"
+   coords -3.463 -0.001 0.217
+   angles 0 -133.439 0
+   components {
+    Hierarchy "{F67795E315525B45}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{BE7B5BAFE1A16A50}Prefabs/Props/Military/Fortification/BarbedTape_Coil.et" {
+   ID "5618D5407402B7BA"
+   coords -4.898 -0.001 -2.088
+   angles 0 -133.221 0
+   components {
+    Hierarchy "{F67795E315525B45}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{BE7B5BAFE1A16A50}Prefabs/Props/Military/Fortification/BarbedTape_Coil.et" {
+   ID "5704E200DDB2DA36"
+   coords -5.541 -0.001 -3.544
+   angles 0 4.676 0
+   components {
+    Hierarchy "{F67795E315525B45}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5704E2005D7BC7CC"
+   coords 5.426 0 -2.24
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5704E2005D7BC7F0"
+   coords 5.973 0 -2.369
+   angles 0 -105 0
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C7A49C5B54C86903}Prefabs/Props/Military/Sandbags/Sandbag_01_single_burlap.et" {
+   ID "5704E201AB779D9A"
+   coords 3.092 0 -5.774
+   angles 0 -2.531 0
+   components {
+    Hierarchy "{A95A2DDC39935C93}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5618D540C23AB022"
+   coords 0.561 0 0.227
+   angles 0 6.58 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CFFEB23FBEA00322}Prefabs/Props/Military/Sandbags/Sandbag_01_short_burlap.et" {
+   ID "5704E2005D7BC792"
+   coords 4.712 0 -4.497
+   angles 0 25.109 0
+   components {
+    Hierarchy "{4CD5E27E8A5F56B0}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{DA1B42FB9AEC02BE}Prefabs/Structures/Military/Fortifications/Dragontooth_01/Dragontooth_01_V3.et" {
+   ID "5618D542F96E9EED"
+   coords -4.169 0 -4.553
+   angles 0 -107.872 0
+   components {
+    Hierarchy "{61A4D5A6AD036F70}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{DDF59362051B28BC}Prefabs/Props/Military/Fortification/BarbedTape_KnifeRest.et" {
+   ID "5618D542F96E9EFD"
+   coords 1.755 0 -5.416
+   angles 0 40.266 0
+   components {
+    Hierarchy "{12BFD527A0725D79}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{DF649B29EC7635F3}Prefabs/Structures/Military/Fortifications/DirtPile_01/DirtPile_01_small.et" {
+   ID "5618D542B4252424"
+   coords -1.722 0.03 0.726
+   angles -0.005 -9.005 -0.166
+   components {
+    Hierarchy "{6D2B575F5AC85AD1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{E7A4AA1C549E2371}Prefabs/Structures/Military/Camps/Canvas_Covers/Soviet/CanvasCover_Folded_Soviet.et" {
+   ID "570705C23F4583E7"
+   coords 3.678 0 1.73
+   angles 0 -37.174 0
+   components {
+    Hierarchy "{A15E788B95935A38}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{A90831D651A65545}Prefabs/BaseCompositions/IA_Sandbag_end_high_Cluttered_USSR_01_BD7517.et" {
+   ID "5704E2014F9A306D"
+   coords 4.639 0 -3.359
+   angles 0 -61.871 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{F975184532BE50DD}Prefabs/BaseCompositions/IA_TableMilitary_Cluttered_USSR_02_DF2948.et" {
+   ID "5704E20CB9551058"
+   coords -1.03 0 -0.254
+   angles 0 28.724 0
+   components {
+    Hierarchy "{62F314506BAF5186}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

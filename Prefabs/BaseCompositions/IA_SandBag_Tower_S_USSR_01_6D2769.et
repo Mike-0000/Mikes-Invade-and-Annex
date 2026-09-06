@@ -1,0 +1,233 @@
+GenericEntity {
+ ID "9CA6742873505B66"
+ components {
+  RplComponent "{54D662D213665382}" {
+  }
+  Hierarchy "{2747DF1BEC6458C2}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{27B3CECB6489D952}Prefabs/Props/Military/Sandbags/Sandbag_01_foundation_burlap.et" {
+   ID "65E0A0A9C6121C36"
+   coords -0.041 0.328 3.251
+   components {
+    Hierarchy "{1A5D5AC820175C1F}" {
+     Enabled 1
+    }
+   }
+  }
+  GameEntity : "{554AC4820EE44EB6}Prefabs/Structures/BuildingParts/Ladders/Ladder_Wooden_456_B_2.et" {
+   ID "65E0A0A9C612C63C"
+   coords -0.731 2.663 1.12
+   angles 24.799 -179.983 0
+   components {
+    Hierarchy "{557E8CF8B87AB6F6}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{55A3DA68E58453A1}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v2.et" {
+   ID "65E0A0A9C6128B80"
+   coords 2.106 -0.348 1.191
+   angles 0 -91.274 0
+   components {
+    Hierarchy "{CEBA65441DE7587B}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{55A3DA68E58453A1}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v2.et" {
+   ID "65E0A0A9C6128B84"
+   coords 2.384 -0.348 3.927
+   angles 0 -91.274 0
+   components {
+    Hierarchy "{CEBA65441DE7587B}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{55A3DA68E58453A1}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v2.et" {
+   ID "65E0A0A9C612C621"
+   coords -2.059 -0.348 2.363
+   angles 0 85.532 0
+   components {
+    Hierarchy "{CEBA65441DE7587B}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{55A3DA68E58453A1}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v2.et" {
+   ID "65E0A0A9C612C622"
+   coords -0.896 -0.348 4.989
+   angles 0 176.004 0
+   components {
+    Hierarchy "{CEBA65441DE7587B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{937999008F178E82}Prefabs/Props/Military/Sandbags/Sandbag_01_short_high_burlap.et" {
+   ID "65E0A0A9C612C638"
+   coords 1.575 1.187 4.918
+   components {
+    Hierarchy "{58E15AFCD4F05489}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{937999008F178E82}Prefabs/Props/Military/Sandbags/Sandbag_01_short_high_burlap.et" {
+   ID "65E0A0A9C612C639"
+   coords 1.575 0.14 4.918
+   components {
+    Hierarchy "{58E15AFCD4F05489}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{937999008F178E82}Prefabs/Props/Military/Sandbags/Sandbag_01_short_high_burlap.et" {
+   ID "65E0A0A9C612C63A"
+   coords -1.445 0.14 4.918
+   components {
+    Hierarchy "{58E15AFCD4F05489}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{937999008F178E82}Prefabs/Props/Military/Sandbags/Sandbag_01_short_high_burlap.et" {
+   ID "65E0A0A9C612C63B"
+   coords -1.445 1.187 4.918
+   components {
+    Hierarchy "{58E15AFCD4F05489}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et" {
+   ID "65E0A0A9C611B613"
+   coords -1.143 0.279 1.486
+   angles 0 0.864 0
+   components {
+    Hierarchy "{62C605633F07553B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et" {
+   ID "65E0A0A9C611B6EC"
+   coords 2.041 0.244 1.068
+   angles 0 88.123 0
+   components {
+    Hierarchy "{62C605633F07553B}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B03F9691E961C4CA}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v3.et" {
+   ID "65E0A0A9C6121C37"
+   coords -0.026 -0.314 0.767
+   components {
+    Hierarchy "{F019C4CC5EDB5206}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BE16EE8FAA315FE2}Prefabs/Props/Military/Sandbags/Sandbag_01_long_high_burlap.et" {
+   ID "65E0A0A9C612C63F"
+   coords 2.086 -0.38 1.132
+   angles 0 89.082 0
+   components {
+    Hierarchy "{983AC77B99D050B6}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C1576E5555582214}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_short.et" {
+   ID "65E0A0A9C611C197"
+   coords 1.428 -0.352 5.34
+   angles 0 179.047 0
+   components {
+    Hierarchy "{C1E5464202905CC5}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC5453CCC311603B}Prefabs/Props/Military/Sandbags/Sandbag_01_end_burlap.et" {
+   ID "65E0A0A9C6128B81"
+   coords 1.05 -0.359 0.888
+   angles 0 88.793 0
+   components {
+    Hierarchy "{902AC114580051B8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "65E0A0A9C611B612"
+   coords 0.263 0.314 3.07
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "65E0A0A9C611C191"
+   coords -0.97 0.314 3.07
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "65E0A0A9C611C192"
+   coords 1.484 0.314 3.07
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CD67070EFAFC28C7}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_burlap.et" {
+   ID "65E0A0A9C6124170"
+   coords 2.003 0.318 3.142
+   angles 0 -90.383 0
+   components {
+    Hierarchy "{CD7FB03930C35D11}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CD67070EFAFC28C7}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_burlap.et" {
+   ID "65E0A0A9C6124173"
+   coords -1.963 0.318 3.264
+   angles 0 -90.383 0
+   components {
+    Hierarchy "{CD7FB03930C35D11}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CD67070EFAFC28C7}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_burlap.et" {
+   ID "65E0A0A9C6128B8F"
+   coords -0.122 0.318 4.894
+   angles 0 -0.117 0
+   components {
+    Hierarchy "{CD7FB03930C35D11}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{F0EC223F2A1094C0}Prefabs/Props/Military/Sandbags/Sandbag_01_bunker_burlap.et" {
+   ID "65E0A0A9C612C63E"
+   coords 0 2.472 3.067
+   components {
+    Hierarchy "{30E481FB5FAB5A7B}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

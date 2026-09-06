@@ -1,0 +1,74 @@
+GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+ ID "65A3735E5B635E8F"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{62F314506BAF5186}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{03DE957D8161212B}Prefabs/Props/Civilian/Notebook_01_Open.et" {
+   ID "5CB0F58FB2B49354"
+   coords -0.324 0.899 -0.03
+   angles 0 -151.322 0
+   scale 0.5
+   components {
+    Hierarchy "{D50950B989DB5AD7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{03DE957D8161212B}Prefabs/Props/Civilian/Notebook_01_Open.et" {
+   ID "5CB0F58FB2B49355"
+   coords 0.013 0.899 0.207
+   angles 0 172.802 0
+   components {
+    Hierarchy "{D50950B989DB5AD7}" {
+     Enabled 1
+    }
+   }
+  }
+  GameEntity : "{2CB0AA2A87842C18}Prefabs/Props/Civilian/LampKerosene_01/LampKerosene_01_military_USSR.et" {
+   ID "5CB0F58FB2B49356"
+   coords 0.37 0.899 -0.24
+   angles 0 -1.298 0
+   components {
+    Hierarchy "{0283DEC9B25F5453}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{3800AA04761AE0EC}Prefabs/Props/Civilian/Notebook_01_Single_Blue.et" {
+   ID "5CB0F58FB2B4934A"
+   coords 0.441 0.899 0.1
+   angles 0 145.314 0
+   components {
+    Hierarchy "{7B1B694FE9855AC8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C2C1CEA73A4D8779}Prefabs/Props/Civilian/Notebook_01_Stack.et" {
+   ID "5CB0F58FB2B49349"
+   coords 0.394 0 -0.096
+   angles 0 158.696 0
+   components {
+    Hierarchy "{7ADA969128A356D7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{E56F1B739B9792C4}Prefabs/Props/Civilian/Ashtray_01_Full_green.et" {
+   ID "5CB0F58FB2B49352"
+   coords -0.238 0.899 -0.275
+   angles 0 -49.539 0
+   components {
+    Hierarchy "{818323AADD9351E3}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

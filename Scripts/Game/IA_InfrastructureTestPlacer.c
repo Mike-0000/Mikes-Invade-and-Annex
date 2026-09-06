@@ -44,7 +44,7 @@ class IA_InfrastructureTestPlacer : IA_DynamicSitePlacer
 					Check(spawned == (mode != 2), "flat/gentle/steep support " + mod.m_sId);
 					if (spawned)
 						Check(site.CountExpandedEntities() <= mod.m_iEstimatedExpandedEntities, "complete prefab budget " + mod.m_sId);
-					site.DeleteRoots();
+					Check(site.DeleteRoots(), "preview site cleanup accepted");
 					attempts++;
 				}
 			}
@@ -69,7 +69,7 @@ class IA_InfrastructureTestPlacer : IA_DynamicSitePlacer
 		}
 		Check(m_Building && m_Building.GetRootCount() == 2 && m_iWorkStep == 2, "blocked optional module continues construction");
 		if (m_Building)
-			m_Building.DeleteRoots();
+			Check(m_Building.DeleteRoots(), "preview construction cleanup accepted");
 		m_Building = null;
 		m_sBlockedId = "";
 		m_iRemaining = 0;

@@ -1,0 +1,620 @@
+{
+  "version": 1,
+  "status": "bounded candidates; live collision approval required",
+  "stock_measurement": "Workbench preview 2026-09-05; IA_BaseEmplacementProbe",
+  "hardware": {
+    "PKM": {
+      "bounds": [
+        [
+          -0.385083,
+          -0.013929,
+          -0.696341
+        ],
+        [
+          0.385083,
+          0.428489,
+          0.797949
+        ]
+      ],
+      "preview_entities": 6,
+      "loaded": 99,
+      "chambered": 1,
+      "reserve": 300,
+      "reload_seconds": 7.5,
+      "feet_status": "conservative footprint samples; not contact-mesh certification"
+    },
+    "NSV": {
+      "bounds": [
+        [
+          -0.362114,
+          -0.012922,
+          -0.979337
+        ],
+        [
+          0.444671,
+          0.692434,
+          0.962849
+        ]
+      ],
+      "preview_entities": 7,
+      "loaded": 49,
+      "chambered": 1,
+      "reserve": 150,
+      "reload_seconds": 15,
+      "feet_status": "stock leg IK target positions"
+    }
+  },
+  "scenes": {
+    "Full": [
+      {
+        "id": "mg_wall_eastN_01",
+        "panel": "wall_eastN_01",
+        "side": 1,
+        "yaw": 90,
+        "heavy": true,
+        "position": [
+          87.6,
+          0,
+          0.696
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_eastS_18",
+        "panel": "wall_eastS_18",
+        "side": 1,
+        "yaw": 90,
+        "heavy": true,
+        "position": [
+          87.6,
+          0,
+          -13.8
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontE_00",
+        "panel": "wall_frontE_00",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          7.8,
+          0,
+          -67.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontW_27",
+        "panel": "wall_frontW_27",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          -7.8,
+          0,
+          -67.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_01",
+        "panel": "wall_westN_01",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -87.6,
+          0,
+          0.696
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westS_18",
+        "panel": "wall_westS_18",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -87.6,
+          0,
+          -13.8
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_29",
+        "panel": "wall_rear_29",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          -1.48,
+          0,
+          67.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_35",
+        "panel": "wall_rear_35",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          16.276,
+          0,
+          67.6
+        ],
+        "setback": 1.5
+      }
+    ],
+    "Compact": [
+      {
+        "id": "mg_wall_eastN_00",
+        "panel": "wall_eastN_00",
+        "side": 1,
+        "yaw": 90,
+        "heavy": true,
+        "position": [
+          57.6,
+          0,
+          0.8
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_eastN_05",
+        "panel": "wall_eastN_05",
+        "side": 1,
+        "yaw": 90,
+        "heavy": true,
+        "position": [
+          57.6,
+          0,
+          15.331
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontE_00",
+        "panel": "wall_frontE_00",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          7.8,
+          0,
+          -47.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontW_17",
+        "panel": "wall_frontW_17",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          -7.8,
+          0,
+          -47.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_00",
+        "panel": "wall_westN_00",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -57.6,
+          0,
+          0.8
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_05",
+        "panel": "wall_westN_05",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -57.6,
+          0,
+          15.331
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_19",
+        "panel": "wall_rear_19",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          -1.469,
+          0,
+          47.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_25",
+        "panel": "wall_rear_25",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          16.162,
+          0,
+          47.6
+        ],
+        "setback": 1.5
+      }
+    ],
+    "Courtyard": [
+      {
+        "id": "mg_wall_eastN_00",
+        "panel": "wall_eastN_00",
+        "side": 1,
+        "yaw": 90,
+        "heavy": false,
+        "position": [
+          41.6,
+          0,
+          3.8
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_eastS_09",
+        "panel": "wall_eastS_09",
+        "side": 1,
+        "yaw": 90,
+        "heavy": false,
+        "position": [
+          41.6,
+          0,
+          -10.55
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontE_00",
+        "panel": "wall_frontE_00",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          5.8,
+          0,
+          -35.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontE_11",
+        "panel": "wall_frontE_11",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          38.342,
+          0,
+          -35.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_00",
+        "panel": "wall_westN_00",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -41.6,
+          0,
+          3.8
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_05",
+        "panel": "wall_westN_05",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -41.6,
+          0,
+          18.118
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_19",
+        "panel": "wall_rear_19",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          14.75,
+          0,
+          35.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_07",
+        "panel": "wall_rear_07",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          -20.65,
+          0,
+          35.6
+        ],
+        "setback": 1.5
+      }
+    ],
+    "Roadside": [
+      {
+        "id": "mg_wall_eastN_09",
+        "panel": "wall_eastN_09",
+        "side": 1,
+        "yaw": 90,
+        "heavy": false,
+        "position": [
+          27.6,
+          0,
+          22.006
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_eastN_15",
+        "panel": "wall_eastN_15",
+        "side": 1,
+        "yaw": 90,
+        "heavy": false,
+        "position": [
+          27.6,
+          0,
+          39.476
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontE_03",
+        "panel": "wall_frontE_03",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          13.863,
+          0,
+          -45.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontW_05",
+        "panel": "wall_frontW_05",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          -13.863,
+          0,
+          -45.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_00",
+        "panel": "wall_westN_00",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -27.6,
+          0,
+          -4.2
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_09",
+        "panel": "wall_westN_09",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -27.6,
+          0,
+          22.006
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_15",
+        "panel": "wall_rear_15",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          15.805,
+          0,
+          45.6
+        ],
+        "setback": 1.5
+      }
+    ],
+    "CommandPost": [
+      {
+        "id": "mg_wall_eastN_00",
+        "panel": "wall_eastN_00",
+        "side": 1,
+        "yaw": 90,
+        "heavy": false,
+        "position": [
+          29.6,
+          0,
+          7.8
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_eastN_05",
+        "panel": "wall_eastN_05",
+        "side": 1,
+        "yaw": 90,
+        "heavy": false,
+        "position": [
+          29.6,
+          0,
+          22.383
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontW_05",
+        "panel": "wall_frontW_05",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          -14.613,
+          0,
+          -25.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontW_00",
+        "panel": "wall_frontW_00",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          -29.3,
+          0,
+          -25.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_00",
+        "panel": "wall_westN_00",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -29.6,
+          0,
+          7.8
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_15",
+        "panel": "wall_rear_15",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          14.65,
+          0,
+          25.6
+        ],
+        "setback": 1.5
+      }
+    ],
+    "RallyPost": [
+      {
+        "id": "mg_wall_eastN_00",
+        "panel": "wall_eastN_00",
+        "side": 1,
+        "yaw": 90,
+        "heavy": false,
+        "position": [
+          15.6,
+          0,
+          -4.2
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_eastS_01",
+        "panel": "wall_eastS_01",
+        "side": 1,
+        "yaw": 90,
+        "heavy": false,
+        "position": [
+          15.6,
+          0,
+          -18.55
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_frontW_03",
+        "panel": "wall_frontW_03",
+        "side": 2,
+        "yaw": 180,
+        "heavy": false,
+        "position": [
+          -8.175,
+          0,
+          -21.6
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_00",
+        "panel": "wall_westN_00",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -15.6,
+          0,
+          -4.2
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_westN_09",
+        "panel": "wall_westN_09",
+        "side": 3,
+        "yaw": 270,
+        "heavy": false,
+        "position": [
+          -15.6,
+          0,
+          21.3
+        ],
+        "setback": 1.5
+      },
+      {
+        "id": "mg_wall_rear_11",
+        "panel": "wall_rear_11",
+        "side": 0,
+        "yaw": 0,
+        "heavy": false,
+        "position": [
+          15.3,
+          0,
+          21.6
+        ],
+        "setback": 1.5
+      }
+    ]
+  }
+}

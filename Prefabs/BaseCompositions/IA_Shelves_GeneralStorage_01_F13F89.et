@@ -1,0 +1,113 @@
+GenericEntity : "{1CA1A9D19D7C8445}Prefabs/Props/Furniture/Rack_01_Short.et" {
+ ID "F6D7FDDAA2C55394"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{654F366E940E56B8}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{2F2BBFDA3A2C73D4}Prefabs/Props/Civilian/RadioSmall_01_black.et" {
+   ID "5CB0F58EB691FBBD"
+   coords -0.712 0.886 0.377
+   angles 0 9.941 0
+   components {
+    Hierarchy "{943122F836FF5B4D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{3800AA04761AE0EC}Prefabs/Props/Civilian/Notebook_01_Single_Blue.et" {
+   ID "5CB0F58EB691FBB5"
+   coords -0.295 1.514 0.429
+   angles 0 -177.445 0
+   components {
+    Hierarchy "{7B1B694FE9855AC8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6AD7BFA352A25749}Prefabs/BaseCompositions/IA_Crate_Bottles_01_2708E0.et" {
+   ID "5CB0F58EB691FB86"
+   coords -1.259 1.371 0.372
+   angles 0 -3.91 0
+   components {
+    Hierarchy "{A90B0671B17A5E21}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6AD7BFA352A25749}Prefabs/BaseCompositions/IA_Crate_Bottles_01_2708E0.et" {
+   ID "5CB0F58EB691FBA9"
+   coords -0.477 0.418 0.373
+   angles 0 -177.21 0
+   components {
+    Hierarchy "{A90B0671B17A5E21}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6FC9E85153AE41B1}Prefabs/Props/Civilian/WoodKindling_Crate_01.et" {
+   ID "5CB0F58EB691FBAB"
+   coords -1.307 0.412 0.37
+   angles 0 -5.604 0
+   components {
+    Hierarchy "{4ED1E500E9765221}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{A7BF5BFDD21FD360}Prefabs/Props/Crates/Crate_01_ivory.et" {
+   ID "5CB0F58EB691FB83"
+   coords -1.308 1.85 0.369
+   angles 0 0.069 0
+   components {
+    Hierarchy "{EC07D3326BF759BE}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{ABA40158860E5B6B}Prefabs/Props/Crates/Crate_01_brown.et" {
+   ID "5CB0F58EB691FB8E"
+   coords -0.59 1.85 0.364
+   angles 0 -6.513 0
+   components {
+    Hierarchy "{F96DCC1644E059B4}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C2C1CEA73A4D8779}Prefabs/Props/Civilian/Notebook_01_Stack.et" {
+   ID "5CB0F58EB691FBB1"
+   coords -0.302 1.442 0.434
+   angles 0 178.916 0
+   components {
+    Hierarchy "{7ADA969128A356D7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C2C1CEA73A4D8779}Prefabs/Props/Civilian/Notebook_01_Stack.et" {
+   ID "5CB0F58EB691FBB2"
+   coords -0.302 1.376 0.434
+   angles 0 173.975 0
+   components {
+    Hierarchy "{7ADA969128A356D7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C2C1CEA73A4D8779}Prefabs/Props/Civilian/Notebook_01_Stack.et" {
+   ID "5CB0F58EB691FBB3"
+   coords -0.565 1.376 0.426
+   angles 0 177.458 0
+   components {
+    Hierarchy "{7ADA969128A356D7}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

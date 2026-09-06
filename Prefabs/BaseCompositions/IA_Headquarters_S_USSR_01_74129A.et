@@ -1,0 +1,89 @@
+GenericEntity {
+ ID "9F26A65608BE5088"
+ components {
+  RplComponent "{89310E08660E5B5D}" {
+  }
+  Hierarchy "{17021E9EA20857F4}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{D00933FEBDBE5A95}Prefabs/BaseCompositions/IA_Tent_CommandPost_USSR_01_465C0D.et" {
+   ID "5D088D2CCDECC6CB"
+   coords -1.642 0 -1.122
+   components {
+    Hierarchy "{AE28A02DA1EC523D}" {
+     Enabled 1
+    }
+   }
+  }
+  SCR_SpawnPoint : "{1DD27F540C7F5918}Prefabs/BaseCompositions/IA_E_SpawnPoint_USSR_Supplies_C023F5.et" {
+   ID "5D8AF9E42529A7DE"
+   coords -4 0 2.5
+   components {
+    Hierarchy "{B3E00C789932545B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{80FD398665835DBE}Prefabs/BaseCompositions/IA_Antenna_02_USSR_B030FF.et" {
+   ID "5D3706BDCF10AB62"
+   coords 1.628 0 -4.821
+   angles 0 3.224 0
+   components {
+    Hierarchy "{4BC9BC4D2CA456BE}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{4CA22D669B5854D7}Prefabs/BaseCompositions/IA_Storage_Supplies_USSR_02_572DD4.et" {
+   ID "5D45393F2BC051F7"
+   coords 4.156 0.001 -0.87
+   components {
+    Hierarchy "{2B0B5BC7EA7B50F3}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{443A3131090654FD}Prefabs/BaseCompositions/IA_E_Sandbag_Barricade_USSR_06_AE9DDD.et" {
+   ID "68FC71F47E5922C6"
+   coords -2.254 -0.001 5.913
+   components {
+    Hierarchy "{3F3A3C5859785968}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9B7F08BF4C938AD2}Prefabs/Structures/Military/Camps/Canvas_Covers/Soviet/CanvasCover_Medium_Soviet.et" {
+   ID "5D088D2CCDECC75C"
+   coords 4.156 0 -0.513
+   angles 0 -90 0
+   components {
+    Hierarchy "{F1D4CBA33CD35777}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D088D2CCDECC7AA"
+   coords -0.911 0 4.471
+   angles 0 -104.646 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{1A38093DA21E57A4}Prefabs/BaseCompositions/IA_Sign_SupplyStorage_01_ConstructionMat_USSR_0403A8.et" {
+   ID "5E3E8ACD57F04DB8"
+   coords 5.95 0 1.194
+   angles 1.085 -2.05 2.392
+   components {
+    Hierarchy "{69C889884C7E5002}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

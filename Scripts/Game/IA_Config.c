@@ -186,6 +186,9 @@ class IA_Config{
 	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Dynamic Base", desc: "After required AO objectives, attempt a seize-and-defend base using the normal defense settings.")]
 	bool m_bDynamicBaseEnabled = true;
 
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Dynamic Base", desc: "Install optional finite-ammunition PKM/NSV stations in newly constructed bases. Active sites are unchanged.")]
+	bool m_bDynamicBaseEmplacementsEnabled = true;
+
 	[Attribute(defvalue: "100", UIWidgets.EditBox, category: "Dynamic Base", desc: "Chance (0-100) to select a dynamic base after required objectives.")]
 	int m_iDynamicBaseChancePct = 100;
 
@@ -397,7 +400,10 @@ class IA_Config{
 		if (cfg.m_bDynamicBaseInGm)
 			gmI = 1;
 
-		string packed = "1";
+		int emplacementsI = 0;
+		if (cfg.m_bDynamicBaseEmplacementsEnabled)
+			emplacementsI = 1;
+		string packed = "2";
 		packed = packed + "," + enabledI.ToString();
 		packed = packed + "," + cfg.m_iDynamicBaseChancePct.ToString();
 		packed = packed + "," + gmI.ToString();
@@ -407,6 +413,7 @@ class IA_Config{
 		packed = packed + "," + cfg.m_iDynamicBaseRegroupMaxSec.ToString();
 		packed = packed + "," + cfg.m_fDynamicBaseRegroupFraction.ToString();
 		packed = packed + "," + cfg.m_fDynamicBaseGarrisonMultiplier.ToString();
+		packed = packed + "," + emplacementsI.ToString();
 		return packed;
 	}
 
@@ -418,7 +425,7 @@ class IA_Config{
 
 		ref array<string> parts = new array<string>();
 		packed.Split(",", parts, false);
-		if (parts.Count() != 10)
+		if (parts.Count() != 10 && parts.Count() != 11)
 			return;
 
 		int version;
@@ -433,8 +440,16 @@ class IA_Config{
 		float garrisonMult;
 		if (!IA_DynamicParse.TryParseIntToken(parts[0], version))
 			return;
-		if (version != 1)
+		if ((version != 1 || parts.Count() != 10) && (version != 2 || parts.Count() != 11))
 			return;
+		int emplacementsI = 1; // old snapshots retain the new-setting default
+		if (version == 2)
+		{
+			if (!IA_DynamicParse.TryParseIntToken(parts[10], emplacementsI))
+				return;
+			if (emplacementsI != 0 && emplacementsI != 1)
+				return;
+		}
 		if (!IA_DynamicParse.TryParseIntToken(parts[1], enabledI))
 			return;
 		if (!IA_DynamicParse.TryParseIntToken(parts[2], chancePct))
@@ -455,6 +470,7 @@ class IA_Config{
 			return;
 
 		cfg.m_bDynamicBaseEnabled = enabledI != 0;
+		cfg.m_bDynamicBaseEmplacementsEnabled = emplacementsI != 0;
 		cfg.m_iDynamicBaseChancePct = chancePct;
 		cfg.m_bDynamicBaseInGm = gmI != 0;
 		cfg.m_iDynamicBaseSizeMode = sizeMode;

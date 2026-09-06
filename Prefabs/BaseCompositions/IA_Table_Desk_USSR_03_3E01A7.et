@@ -1,0 +1,104 @@
+GenericEntity {
+ ID "AA786DD0A7D05069"
+ components {
+  RplComponent "{CECFBBF046175B1F}" {
+  }
+  Hierarchy "{63E297D8CD4D5B25}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{03DE957D8161212B}Prefabs/Props/Civilian/Notebook_01_Open.et" {
+   ID "5CB0F58852E1A9CD"
+   coords -0.26 0.899 -0.032
+   angles 0 -165 0
+   scale 0.64
+   components {
+    Hierarchy "{D50950B989DB5AD7}" {
+     Enabled 1
+    }
+   }
+  }
+  GameEntity : "{2CB0AA2A87842C18}Prefabs/Props/Civilian/LampKerosene_01/LampKerosene_01_military_USSR.et" {
+   ID "5CB0F58852E1A9D1"
+   coords -0.926 0.901 -0.24
+   angles 0 6.988 0
+   components {
+    Hierarchy "{0283DEC9B25F5453}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{34C2F623958FCACE}Prefabs/Props/Civilian/Ashtray_01_Full_clear.et" {
+   ID "5CB0F58852E1A9D4"
+   coords -0.482 0.899 -0.314
+   angles 0 -15.084 0
+   components {
+    Hierarchy "{9513A12F70B55709}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{642101F827FFA52D}Prefabs/Props/Military/Manuals/Manual_Soviet_01.et" {
+   ID "5CB0F58852E1A9C1"
+   coords -0.005 0.899 0.267
+   angles 0 -7.261 0
+   components {
+    Hierarchy "{9222990D7A095309}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{764414C0E2EF983E}Prefabs/Props/Military/Furniture/TableMilitary_USSR_02.et" {
+   ID "5CB0F58852E1A9DB"
+   coords 0.259 0 0
+   angles 0 0 0
+   components {
+    Hierarchy "{6E18721B60455A99}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{97CB57E67481F871}Prefabs/Props/Civilian/Notebook_01_Single_Orange.et" {
+   ID "5CB0F58852E1A9CF"
+   coords 0.15 0.97 -0.184
+   angles 0 175.774 0
+   components {
+    Hierarchy "{F3177F3B342F5B8F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C2C1CEA73A4D8779}Prefabs/Props/Civilian/Notebook_01_Stack.et" {
+   ID "5CB0F58852E1A9CA"
+   coords 0.117 0.899 -0.18
+   angles 0 157.764 0
+   components {
+    Hierarchy "{7ADA969128A356D7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C99D1B2E817E12D9}Prefabs/Props/Military/Furniture/TableMilitary_USSR_02_cabinet.et" {
+   ID "5CB0F58852E1A9D8"
+   coords -1.009 0 -0.084
+   angles 0 0 0
+   components {
+    Hierarchy "{A75835BF8FCA57EE}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{F76340CCD79DCC5A}Prefabs/Props/Civilian/RadioSmall_01_red.et" {
+   ID "5CB0F58852E1A9DD"
+   coords 0.897 0.902 -0.213
+   angles 0 -39.285 0
+   components {
+    Hierarchy "{3A3675ED34725365}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

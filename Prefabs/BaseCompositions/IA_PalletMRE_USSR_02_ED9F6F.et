@@ -1,0 +1,183 @@
+GenericEntity : "{D7F69BF7D2DCA0A8}Prefabs/Props/Industrial/Pallets/Pallet_01.et" {
+ ID "E2EDA3E2C45C56B5"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{C752BB51591B5F68}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{21D14DE0F7A142C0}Prefabs/Props/Military/Camps/CamoNet_PalletMRE_Soviet.et" {
+   ID "5704E202860305D1"
+   coords 0 0.076 -0.008
+   scale 0.72
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE798E90"
+   coords -0.232 0.419 0.287
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE798E98"
+   coords 0.201 0.593 -0.278
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE798E9A"
+   coords -0.232 0.593 0.287
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE798E9B"
+   coords 0.201 0.593 0.296
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE798E9C"
+   coords -0.232 0.593 -0.285
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE798E9D"
+   coords 0.201 0.419 0.296
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE798E9E"
+   coords -0.232 0.419 -0.285
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE798E9F"
+   coords 0.201 0.419 -0.278
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE79F50B"
+   coords -0.232 0.233 -0.285
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE79F570"
+   coords 0.201 0.775 -0.278
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE79F571"
+   coords -0.232 0.775 0.287
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE79F573"
+   coords -0.232 0.233 0.287
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE79F574"
+   coords 0.201 0.233 0.296
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE79F575"
+   coords 0.201 0.233 -0.278
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE79F576"
+   coords -0.232 0.775 -0.285
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "5704E202CE79F577"
+   coords 0.201 0.775 0.296
+   angles 0 -90 0
+   components {
+    Hierarchy "{B96806CAC41A57B1}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

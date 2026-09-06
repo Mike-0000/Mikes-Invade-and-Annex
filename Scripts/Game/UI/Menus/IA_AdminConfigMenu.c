@@ -91,6 +91,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Slider m_DefendHotDropSlider;
 	protected ref MUI_Label m_DefendHotDropLabel;
 	protected ref MUI_Toggle m_DynamicBaseEnabledToggle;
+	protected ref MUI_Toggle m_DynamicBaseEmplacementsToggle;
 	protected ref MUI_NumericField m_DynamicBaseChanceField;
 	protected ref MUI_Toggle m_DynamicBaseInGmToggle;
 	protected ref MUI_Dropdown m_DynamicBaseSizeDrop;
@@ -530,6 +531,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_DynamicBaseEnabledToggle = runtime.CreateToggle("Dynamic field base after required objectives", "dynBaseOn");
 		m_PageDefense.AddChild(m_DynamicBaseEnabledToggle);
 		m_Hints.AddHint(m_DynamicBaseEnabledToggle, "Dynamic field base", "After required objectives, try to place a USSR field base to seize and immediately defend using the same defense settings, doctrines and phases as an authored position. Off uses the existing authored-defense roll.");
+
+		m_DynamicBaseEmplacementsToggle = runtime.CreateToggle("Optional finite-ammunition base emplacements", "dynBaseGuns");
+		m_PageDefense.AddChild(m_DynamicBaseEmplacementsToggle);
+		m_Hints.AddHint(m_DynamicBaseEmplacementsToggle, "Base emplacements", "Allow PKM, NSV and AA positions in newly constructed bases. Crews come from the existing defender budget. Off leaves the fortifications unarmed; it does not alter an active base.");
 
 		m_DynamicBaseChanceField = runtime.CreateNumericField("Dynamic base chance (0 disables automatic selection)", "dynBaseChance");
 		m_DynamicBaseChanceField.SetRange(0, 100);
@@ -1046,6 +1051,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 
 		if (m_DynamicBaseEnabledToggle)
 			m_DynamicBaseEnabledToggle.SetChecked(cfg.m_bDynamicBaseEnabled);
+		if (m_DynamicBaseEmplacementsToggle)
+			m_DynamicBaseEmplacementsToggle.SetChecked(cfg.m_bDynamicBaseEmplacementsEnabled);
 		if (m_DynamicBaseChanceField)
 			m_DynamicBaseChanceField.SetValue(cfg.m_iDynamicBaseChancePct);
 		if (m_DynamicBaseInGmToggle)
@@ -1353,6 +1360,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			IA_Config.UnpackDynamicBaseExtras(basePack, IA_Config.PackDynamicBaseExtras(live));
 		if (m_DynamicBaseEnabledToggle)
 			basePack.m_bDynamicBaseEnabled = m_DynamicBaseEnabledToggle.IsChecked();
+		if (m_DynamicBaseEmplacementsToggle)
+			basePack.m_bDynamicBaseEmplacementsEnabled = m_DynamicBaseEmplacementsToggle.IsChecked();
 		if (m_DynamicBaseChanceField)
 			basePack.m_iDynamicBaseChancePct = Math.Round(m_DynamicBaseChanceField.GetValue());
 		if (m_DynamicBaseInGmToggle)

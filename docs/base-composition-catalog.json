@@ -1,0 +1,346 @@
+{
+  "Headquarters": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/Headquarters_S_USSR_01.et",
+    "prefab": "{9F26A65608BE5088}Prefabs/BaseCompositions/IA_Headquarters_S_USSR_01_74129A.et",
+    "sockets": []
+  },
+  "LivingSmall": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/LivingArea_S_USSR_01.et",
+    "prefab": "{DF3415B16B1F5607}Prefabs/BaseCompositions/IA_LivingArea_S_USSR_01_45BA64.et",
+    "sockets": []
+  },
+  "LivingLarge": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatLarge/LivingArea_L_USSR_01.et",
+    "prefab": "{16407BA1F9AF5182}Prefabs/BaseCompositions/IA_LivingArea_L_USSR_01_F66A47.et",
+    "sockets": []
+  },
+  "Hospital": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatMedium/FieldHospital_M_USSR_01.et",
+    "prefab": "{1ECDF45BB482580B}Prefabs/BaseCompositions/IA_FieldHospital_M_USSR_01_BCA14D.et",
+    "sockets": []
+  },
+  "Medical": {
+    "source": "Prefabs/Compositions/Misc/SubCompositions/Tents/Tent_Medical_USSR_01.et",
+    "prefab": "{D3EA457771595E7B}Prefabs/BaseCompositions/IA_Tent_Medical_USSR_01_58D343.et",
+    "sockets": []
+  },
+  "MaintenanceSmall": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/VehicleMaintenance_S_USSR_01.et",
+    "prefab": "{F0CBB1DE31B15682}Prefabs/BaseCompositions/IA_VehicleMaintenance_S_USSR_01_00D05F.et",
+    "sockets": []
+  },
+  "MaintenanceLarge": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatMedium/VehicleMaintenance_M_USSR_01.et",
+    "prefab": "{63A6B86A997F5EE5}Prefabs/BaseCompositions/IA_VehicleMaintenance_M_USSR_01_87AC7A.et",
+    "sockets": []
+  },
+  "Supply": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/SupplyStorage_S_USSR_01.et",
+    "prefab": "{D42EF810E81F5AB3}Prefabs/BaseCompositions/IA_SupplyStorage_S_USSR_01_67A6AF.et",
+    "sockets": []
+  },
+  "Ammo": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/AmmoStorage_S_USSR_01.et",
+    "prefab": "{1B1871A8701256D2}Prefabs/BaseCompositions/IA_AmmoStorage_S_USSR_01_969D27.et",
+    "sockets": []
+  },
+  "Fuel": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/FuelStorage_S_USSR_01.et",
+    "prefab": "{0EB772A28DC757AD}Prefabs/BaseCompositions/IA_FuelStorage_S_USSR_01_F1FAA1.et",
+    "sockets": []
+  },
+  "Tower": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/GuardTower_S_USSR_01.et",
+    "prefab": "{E68CD92E6B3F5BB7}Prefabs/BaseCompositions/IA_GuardTower_S_USSR_01_BE89D1.et",
+    "sockets": []
+  },
+  "Bunker": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/Bunker_S_USSR_01.et",
+    "prefab": "{8E177CEEC1405D64}Prefabs/BaseCompositions/IA_Bunker_S_USSR_01_8981CB.et",
+    "sockets": []
+  },
+  "PKMNest": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/MachineGunNest_S_USSR_01.et",
+    "prefab": "{B5BC555A3CCD5D91}Prefabs/BaseCompositions/IA_MachineGunNest_S_USSR_01_62738B.et",
+    "sockets": [
+      {
+        "kind": 0,
+        "chain": [
+          {
+            "position": [
+              0.0,
+              0.0,
+              2.0
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "position": [
+              0.004,
+              0.656,
+              -0.754
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "NSVNest": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/MachineGunNest_S_USSR_02.et",
+    "prefab": "{973D959E8D1355BC}Prefabs/BaseCompositions/IA_MachineGunNest_S_USSR_02_25717C.et",
+    "sockets": [
+      {
+        "kind": 1,
+        "chain": [
+          {
+            "position": [
+              0.0,
+              0.0,
+              2.0
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "position": [
+              0.016,
+              0.656,
+              -0.677
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "ScopedNest": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/MachineGunNest_Scoped_S_USSR_01.et",
+    "prefab": "{C77FCAADCA805516}Prefabs/BaseCompositions/IA_MachineGunNest_Scoped_S_USSR_01_BC7EF0.et",
+    "sockets": [
+      {
+        "kind": 2,
+        "chain": [
+          {
+            "position": [
+              0.0,
+              0.0,
+              2.0
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "position": [
+              0.016,
+              0.656,
+              -0.677
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "PKM": {
+    "source": "Prefabs/Compositions/Misc/SubCompositions/Fortifications/Sandbag_MG_USSR_01_PKM.et",
+    "prefab": "{F13C6D41C1685FA5}Prefabs/BaseCompositions/IA_Sandbag_MG_USSR_01_PKM_FD76E0.et",
+    "sockets": [
+      {
+        "kind": 0,
+        "chain": [
+          {
+            "position": [
+              0.004,
+              0.656,
+              -0.754
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "NSV": {
+    "source": "Prefabs/Compositions/Misc/SubCompositions/Fortifications/Sandbag_MG_USSR_01_NSV.et",
+    "prefab": "{BE5F59ACE497533B}Prefabs/BaseCompositions/IA_Sandbag_MG_USSR_01_NSV_951220.et",
+    "sockets": [
+      {
+        "kind": 1,
+        "chain": [
+          {
+            "position": [
+              0.016,
+              0.656,
+              -0.677
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "AA": {
+    "source": "Prefabs/Compositions/Misc/FreeRoamBuilding/Emplacement_AA_MG_USSR_NSV_SPP.et",
+    "prefab": "{D42DCBAB697A5CA2}Prefabs/BaseCompositions/IA_Emplacement_AA_MG_USSR_NSV_SPP_67B951.et",
+    "sockets": [
+      {
+        "kind": 3,
+        "chain": [
+          {
+            "position": [
+              0.626,
+              0.946,
+              1.264
+            ],
+            "angles": [
+              18.622,
+              8.065,
+              2.257
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "Position1": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/SandbagPosition_S_USSR_01.et",
+    "prefab": "{B1B49A98EA0A5572}Prefabs/BaseCompositions/IA_SandbagPosition_S_USSR_01_8046BE.et",
+    "sockets": []
+  },
+  "Position2": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/SandbagPosition_S_USSR_02.et",
+    "prefab": "{C4668B3A410D51DB}Prefabs/BaseCompositions/IA_SandbagPosition_S_USSR_02_2FF0A8.et",
+    "sockets": []
+  },
+  "Position3": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/SandbagPosition_S_USSR_03.et",
+    "prefab": "{96E75FED6734544A}Prefabs/BaseCompositions/IA_SandbagPosition_S_USSR_03_33144D.et",
+    "sockets": []
+  },
+  "Position4": {
+    "source": "Prefabs/Compositions/Slotted/SlotFlatSmall/SandbagPosition_S_USSR_04.et",
+    "prefab": "{B4CD0903EE755E2F}Prefabs/BaseCompositions/IA_SandbagPosition_S_USSR_04_5B6E67.et",
+    "sockets": []
+  },
+  "CheckpointS": {
+    "source": "Prefabs/Compositions/Slotted/SlotRoadSmall/Checkpoint_S_USSR_01.et",
+    "prefab": "{6942FC8914085E7E}Prefabs/BaseCompositions/IA_Checkpoint_S_USSR_01_94B65A.et",
+    "sockets": []
+  },
+  "CheckpointM": {
+    "source": "Prefabs/Compositions/Slotted/SlotRoadMedium/Checkpoint_M_USSR_01.et",
+    "prefab": "{55D5F6702807516A}Prefabs/BaseCompositions/IA_Checkpoint_M_USSR_01_7F0F9A.et",
+    "sockets": [
+      {
+        "kind": 0,
+        "chain": [
+          {
+            "position": [
+              -2.666,
+              0.0,
+              3.804
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "position": [
+              0.004,
+              0.656,
+              -0.754
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "CheckpointL": {
+    "source": "Prefabs/Compositions/Slotted/SlotRoadLarge/Checkpoint_L_USSR_01.et",
+    "prefab": "{EB1B0129075C5272}Prefabs/BaseCompositions/IA_Checkpoint_L_USSR_01_0278AA.et",
+    "sockets": [
+      {
+        "kind": 1,
+        "chain": [
+          {
+            "position": [
+              -3.817,
+              0.0,
+              5.397
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "position": [
+              0.016,
+              0.656,
+              -0.677
+            ],
+            "angles": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "BarricadeS": {
+    "source": "Prefabs/Compositions/Slotted/SlotRoadSmall/Barricade_S_USSR_01.et",
+    "prefab": "{2A955684F6465615}Prefabs/BaseCompositions/IA_Barricade_S_USSR_01_9F62D2.et",
+    "sockets": []
+  },
+  "BarricadeM": {
+    "source": "Prefabs/Compositions/Slotted/SlotRoadMedium/Barricade_M_USSR_01.et",
+    "prefab": "{20C4F648E6DB55A0}Prefabs/BaseCompositions/IA_Barricade_M_USSR_01_E8D4B0.et",
+    "sockets": []
+  },
+  "BarricadeL": {
+    "source": "Prefabs/Compositions/Slotted/SlotRoadLarge/Barricade_L_USSR_01.et",
+    "prefab": "{79F99BEC3EF8508B}Prefabs/BaseCompositions/IA_Barricade_L_USSR_01_8B3DE7.et",
+    "sockets": []
+  }
+}

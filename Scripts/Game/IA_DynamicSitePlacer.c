@@ -27,6 +27,7 @@ class IA_DynamicSitePlacer
 	protected ref IA_BaseObjectiveSettings m_Settings;
 	protected ref RandomGenerator m_Rng;
 	protected int m_iSeed;
+	protected int m_iDesignVariant = -1;
 	protected ref array<ref IA_DynamicSiteCandidate> m_aShortlist;
 	protected ref IA_DynamicSiteResult m_Result;
 	protected ref IA_DynamicSiteInstance m_Building;
@@ -64,6 +65,10 @@ class IA_DynamicSitePlacer
 	protected int m_iRefinementSample;
 	protected bool m_bSurveyRefining;
 	protected int m_iTerrainModulesPassed;
+	protected ref IA_EmplacementBuilder m_EmplacementBuilder;
+	protected bool m_bEmplacementPhaseDone;
+	protected int m_iCrewLeft;
+	protected int m_iCrewIndex;
 
 	//------------------------------------------------------------------------------------------------
 	void IA_DynamicSitePlacer()
@@ -105,6 +110,7 @@ class IA_DynamicSitePlacer
 		m_iSerial = serial;
 		m_iGroupId = groupId;
 		m_iSeed = serial * 7919 + groupId * 104729 + System.GetUnixTime();
+		m_iDesignVariant = IA_BaseDesignLibrary.Select(m_iSeed);
 		m_Rng.SetSeed(m_iSeed);
 		m_aShortlist.Clear();
 		m_bComplete = false;
@@ -220,6 +226,8 @@ class IA_DynamicSitePlacer
 			StepGarrison();
 		else if (m_iWorkStep == 5)
 			StepRevealAssert();
+		else if (m_iWorkStep == 6)
+			StepEmplacements();
 
 		if (!m_bComplete)
 			QueueWork();
@@ -232,7 +240,7 @@ class IA_DynamicSitePlacer
 			return;
 		m_bWorkQueued = true;
 		int delay = 200;
-		if (m_bPrecomputeOnly || m_iWorkStep == 1 || m_iWorkStep == 2)
+		if (m_bPrecomputeOnly || m_iWorkStep == 1 || m_iWorkStep == 2 || m_iWorkStep == 6)
 			delay = 16; // Survey and construction yield under their work budgets.
 		GetGame().GetCallqueue().CallLater(this.ProcessWork, delay, false);
 	}
@@ -280,6 +288,10 @@ class IA_DynamicSitePlacer
 			m_iConstructionStartMs = System.GetTickCount();
 		m_iModuleIndex = 0;
 		m_aPlacedPerimeter = {0, 0, 0, 0};
+		m_EmplacementBuilder = null;
+		m_bEmplacementPhaseDone = !m_Settings || !m_Settings.m_bEmplacementsEnabled;
+		m_iCrewLeft = 0;
+		m_iCrewIndex = 0;
 		m_iWorkStep = 2;
 	}
 
@@ -306,6 +318,11 @@ class IA_DynamicSitePlacer
 			if (System.GetTickCount() - started >= SURVEY_SLICE_MS)
 				return;
 			IA_DynamicSiteModule mod = m_ActiveLayout.m_aModules[m_iModuleIndex];
+			if (mod && mod.m_iRole == IA_DynamicSiteModuleRole.Dressing && !m_bEmplacementPhaseDone)
+			{
+				BeginEmplacementPhase();
+				return;
+			}
 			m_iModuleIndex = m_iModuleIndex + 1;
 			if (!mod)
 				continue;
@@ -340,6 +357,11 @@ class IA_DynamicSitePlacer
 				FailCurrent("perimeter_coverage_changed");
 				return;
 			}
+			if (!m_bEmplacementPhaseDone)
+			{
+				BeginEmplacementPhase();
+				return;
+			}
 			m_Building.RequestNavRebuild();
 			m_iNavWaitStartMs = System.GetTickCount();
 			m_iWorkStep = 3;
@@ -363,7 +385,17 @@ class IA_DynamicSitePlacer
 				m_iGarrisonLeft = m_Settings.ComputeInitialGarrison(m_ActiveLayout.m_iMaxGarrison);
 			else
 				m_iGarrisonLeft = Math.Round(Math.Min(36, m_ActiveLayout.m_iMaxGarrison) * 1.75);
+			// Optional access must be navigable after the normal nav rebuild.
+			if (!ValidateEmplacementAccess())
+			{
+				m_Building.RemoveLastEmplacement();
+				m_Building.RequestNavRebuild();
+				m_iWorkStep = 3;
+				return;
+			}
 			m_Building.SetGarrisonBudget(m_iGarrisonLeft);
+			m_iCrewLeft = IA_EmplacementProfile.CrewBudget(m_Building.GetEmplacements().Count(), m_iGarrisonLeft);
+			m_iCrewIndex = 0;
 			m_iGuardSlot = 0;
 			if (IA_Log.IsDebugEnabled())
 			{
@@ -372,6 +404,11 @@ class IA_DynamicSitePlacer
 			return;
 		}
 
+		if (System.GetTickCount() - m_iNavWaitStartMs > 1000 && m_Building.RemoveLastEmplacement())
+		{
+			m_Building.RequestNavRebuild();
+			return; // rollback weapons on this exact site before the ordinary fail path
+		}
 		if ((System.GetTickCount() - m_iNavWaitStartMs) > NAV_RECHECK_MS)
 			FailCurrent("nav_invalid");
 	}
@@ -391,6 +428,15 @@ class IA_DynamicSitePlacer
 			return;
 		}
 
+		m_Building.TickEmplacements(true);
+		if (SettleEmplacementCrewSpawns())
+			return;
+		if (m_iCrewLeft > 0)
+		{
+			SpawnEmplacementCrew();
+			return;
+		}
+
 		if (m_iGarrisonLeft <= 0)
 		{
 			m_iWorkStep = 5;
@@ -406,6 +452,8 @@ class IA_DynamicSitePlacer
 		vector post = ResolveNextGuardPost();
 		if (!IA_SpawnPlacement.IsOutdoorStandPose(post))
 		{
+			// Crew spawn locations were independently validated; do not move an
+			// original guard post to make room for a new emplacement.
 			FailCurrent("guard_post_blocked");
 			return;
 		}
@@ -452,6 +500,9 @@ class IA_DynamicSitePlacer
 			FailCurrent("host_lost");
 			return;
 		}
+		m_Building.TickEmplacements(true);
+		if (m_Building.EmplacementMountsPending())
+			return;
 		if (!m_Building.IsGarrisonReady())
 		{
 			if (m_Building.CountLivingGarrison() < m_Building.GetGarrisonBudget() && m_Building.CountPendingGarrison() == 0)
@@ -467,17 +518,165 @@ class IA_DynamicSitePlacer
 			return;
 		}
 
+		m_Building.RevealEmplacements();
 		FinishSuccess();
+	}
+
+	protected void BeginEmplacementPhase()
+	{
+		if (m_ActiveLayout.m_bComposed)
+			m_EmplacementBuilder = new IA_CompositionGunBuilder();
+		else
+			m_EmplacementBuilder = new IA_EmplacementBuilder();
+		m_EmplacementBuilder.Begin(m_Building);
+		m_iWorkStep = 6;
+	}
+
+	protected void StepEmplacements()
+	{
+		if (!m_Building || !m_EmplacementBuilder)
+		{
+			m_bEmplacementPhaseDone = true;
+			m_iWorkStep = 2;
+			return;
+		}
+		if (!ValidatePlayerClearance(m_Building.GetOrigin(), m_Building.GetYawDeg(), m_ActiveLayout, m_Building))
+		{
+			FailCurrent("player_approached");
+			return;
+		}
+		// Keep the optional phase away from the site's global deadline.
+		if (System.GetTickCount() - m_iConstructionStartMs > PLACE_DEADLINE_MS - 25000)
+			m_EmplacementBuilder.Finish();
+		else
+			m_EmplacementBuilder.Step();
+		if (m_EmplacementBuilder.IsDone())
+		{
+			m_bEmplacementPhaseDone = true;
+			m_EmplacementBuilder = null;
+			m_iWorkStep = 2;
+		}
+	}
+
+	protected bool ValidateEmplacementAccess()
+	{
+		if (m_Building.GetEmplacements().IsEmpty())
+			return true;
+		foreach (IA_StaticGunRecord record : m_Building.GetEmplacements())
+		{
+			if (record.m_bAuthoredAccess)
+			{
+				if (!HasLocalNavmesh(record.m_vAccess) || !IA_CompositionGunBuilder.StandingClear(record.m_vAccess))
+					return false;
+				continue; // an elevated seat does not need a ground navmesh polygon
+			}
+			vector mat[4];
+			Math3D.AnglesToMatrix(Vector(record.m_fYaw, 0, 0), mat);
+			vector inside = record.m_vOrigin - mat[2] * 3.5;
+			vector operator = record.m_vOrigin + mat[0] * record.m_Profile.m_vSeat[0] + mat[2] * record.m_Profile.m_vSeat[2];
+			if (!HasLocalNavmesh(inside) || !HasLocalNavmesh(operator))
+				return false;
+		}
+		int guardGroups = 2 + Math.Ceil(Math.Max(0, m_iGarrisonLeft - 4) / 4.0);
+		for (int i = 0; i < guardGroups; i++)
+		{
+			vector guard = ResolveGuardPostIndex(i);
+			foreach (IA_StaticGunRecord record : m_Building.GetEmplacements())
+			{
+				if (record.ContainsReservedPoint(guard, 1.3))
+					return false;
+			}
+			if (!IA_SpawnPlacement.IsOutdoorStandPose(guard))
+				return false;
+		}
+		return true;
+	}
+
+	protected bool SettleEmplacementCrewSpawns()
+	{
+		foreach (IA_StaticGunRecord record : m_Building.GetEmplacements())
+		{
+			if (!record.m_Crew || record.m_bCrewSpawnSettled)
+				continue;
+			if (record.m_Crew.GetSpawnedUnitCount() > 0)
+			{
+				record.m_bCrewSpawnSettled = true;
+				continue;
+			}
+			if (System.GetTickCount() - record.m_iCrewSpawnMs < 1000)
+				return true;
+			// Refund only an initial spawn that never produced an assigned unit.
+			// A soldier who spawned and died is NEVER replaced by this path.
+			m_Building.RemoveFailedEmplacementCrew(record.m_Crew);
+			record.m_Crew = null;
+			record.m_bCrewSpawnSettled = true;
+			m_iGarrisonLeft++;
+		}
+		return false;
+	}
+
+	protected void SpawnEmplacementCrew()
+	{
+		array<ref IA_StaticGunRecord> guns = m_Building.GetEmplacements();
+		if (m_iCrewIndex >= guns.Count())
+		{
+			m_iCrewLeft = 0;
+			return;
+		}
+		IA_StaticGunRecord record = guns[m_iCrewIndex];
+		m_iCrewIndex++;
+		m_iCrewLeft--;
+		if (!record.m_Gun || !record.m_Gun.IsUsable())
+			return; // no budget consumed: ordinary infantry receives the slot
+		vector mat[4];
+		Math3D.AnglesToMatrix(Vector(record.m_fYaw, 0, 0), mat);
+		vector post = record.m_vOrigin - mat[2] * 3;
+		if (record.m_bAuthoredAccess)
+		{
+			post = record.m_vAccess;
+			if (!IA_CompositionGunBuilder.StandingClear(post))
+				return;
+		}
+		else
+		{
+			post[1] = IA_BasePlayerSampler.SampleSupportY(post);
+			if (!IA_SpawnPlacement.IsOutdoorStandPose(post))
+				return;
+		}
+		vector localCenter;
+		float radius;
+		if (!IA_BaseGarrisonArea.Resolve(m_ActiveLayout, m_Building.WorldToLocalFlat(post), localCenter, radius))
+			return;
+		vector root[4];
+		m_ActiveLayout.BuildRootTransform(m_Building.GetOrigin(), m_Building.GetYawDeg(), root);
+		vector center = m_ActiveLayout.LocalOffsetToWorld(root, localCenter);
+		center[1] = IA_BasePlayerSampler.SampleSupportY(center);
+		IA_AiGroup group = IA_AiGroup.CreateMilitaryGroupFromUnits(post, IA_Faction.USSR, 1, ResolveEnemyFaction(), false, true, true, false);
+		if (!group)
+			return;
+		group.SetAssignedArea(m_Building.GetHost().GetArea());
+		group.AssignStaticGun(record.m_Gun, m_iSerial, center, radius);
+		group.Spawn(IA_AiOrder.Defend, center); // intent suppresses Defend while assigned
+		m_Building.AddGarrisonGroup(group);
+		record.m_Crew = group;
+		record.m_iCrewSpawnMs = System.GetTickCount();
+		group.SpawnNextUnit();
+		m_iGarrisonLeft--;
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected vector ResolveNextGuardPost()
 	{
-		int posts = m_Building.GetGuardPostCount();
-		if (m_iGuardSlot < posts)
-			return m_Building.GetGuardPostWorld(m_iGuardSlot);
+		return ResolveGuardPostIndex(m_iGuardSlot);
+	}
 
-		int extra = m_iGuardSlot - posts;
+	protected vector ResolveGuardPostIndex(int slotIndex)
+	{
+		int posts = m_Building.GetGuardPostCount();
+		if (slotIndex < posts)
+			return m_Building.GetGuardPostWorld(slotIndex);
+
+		int extra = slotIndex - posts;
 		int stations = m_Building.GetPerimeterStationCount();
 		if (stations > 0)
 		{
@@ -570,7 +769,9 @@ class IA_DynamicSitePlacer
 		IA_DynamicSiteLayout.GetAllowedLayoutIds(sizeMode, layoutIds);
 		foreach (int layoutId : layoutIds)
 		{
-			IA_DynamicSiteLayout layout = IA_DynamicSiteLayout.CreateById(layoutId);
+			if (m_iDesignVariant < 0)
+				m_iDesignVariant = IA_BaseDesignLibrary.Select(m_iSeed);
+			ref IA_DynamicSiteLayout layout = IA_BaseDesignRecipes.Create(layoutId, m_iDesignVariant);
 			if (PreflightResources(layout))
 				m_aLayouts.Insert(layout);
 			else
@@ -931,7 +1132,7 @@ class IA_DynamicSitePlacer
 			if (layout.m_iLayoutId == layoutId)
 				return layout;
 		}
-		return IA_DynamicSiteLayout.CreateById(layoutId);
+		return IA_BaseDesignRecipes.Create(layoutId, m_iDesignVariant);
 	}
 
 	protected bool ValidateCandidate(notnull IA_DynamicSiteCandidate cand)
@@ -1151,14 +1352,30 @@ class IA_DynamicSitePlacer
 		Math3D.AnglesToMatrix(Vector(mod.m_fLocalYawDeg + mod.m_fPrefabYawCorrectionDeg, 0, 0), localMat);
 		localMat[3] = mod.m_vLocalPosition;
 		Math3D.MatrixMultiply4(rootMat, localMat, worldMat);
+		AlignComposition(worldMat, mod);
 		float originY;
 		if (!SampleModuleSupport(worldMat, mod, originY))
 			return false;
 		return IsModuleVolumeClear(worldMat, mod);
 	}
 
+	protected void AlignComposition(inout vector worldMat[4], IA_DynamicSiteModule mod)
+	{
+		if (!mod.m_bFollowTerrainPlane)
+			return;
+		ref TraceParam terrain = new TraceParam();
+		terrain.Flags = TraceFlags.WORLD;
+		SCR_TerrainHelper.SnapAndOrientToTerrain(worldMat, GetPlacementWorld(), false, terrain);
+	}
+
 	protected bool SampleModuleSupport(vector worldMat[4], notnull IA_DynamicSiteModule mod, out float originY)
 	{
+		if (mod.m_bFollowTerrainPlane && worldMat[1][1] < 0.9961947)
+		{
+			m_sTerrainRejection = "composition_slope";
+			m_sTerrainDetail = "module=" + mod.m_sId;
+			return false;
+		}
 		float centerY = GetPlacementWorld().GetSurfaceY(worldMat[3][0], worldMat[3][2]);
 		originY = centerY;
 		float minY = 99999;
@@ -1175,6 +1392,11 @@ class IA_DynamicSitePlacer
 				m_sTerrainRejection = "pad_water";
 				m_sTerrainDetail = string.Format("module=%1 sample=%2", mod.m_sId, p);
 				return false;
+			}
+			if (mod.m_bFollowTerrainPlane)
+			{
+				vector expected = worldMat[0]*local[0] + worldMat[2]*local[2];
+				p[1] = p[1] - expected[1];
 			}
 			if (p[1] < minY)
 				minY = p[1];
@@ -1224,7 +1446,7 @@ class IA_DynamicSitePlacer
 		clearance.Start = Vector(center[0], minY + 0.1, center[2]);
 		clearance.End = clearance.Start + Vector(0, 0.05, 0);
 		clearance.Mins = Vector(-mod.m_fHalfWidthM, 0, -mod.m_fHalfDepthM);
-		clearance.Maxs = Vector(mod.m_fHalfWidthM, maxY - minY + 6, mod.m_fHalfDepthM);
+		clearance.Maxs = Vector(mod.m_fHalfWidthM, maxY - minY + mod.m_fClearanceHeightM, mod.m_fHalfDepthM);
 		// Terrain is checked separately. Starting above a height-span allowance
 		// misses low obstructions; including WORLD here rejects the slope itself.
 		clearance.Flags = TraceFlags.ENTS;
@@ -1445,10 +1667,23 @@ class IA_DynamicSitePlacer
 		if (!res)
 			return false;
 
+		if (mod.m_iRole == IA_DynamicSiteModuleRole.Dressing)
+		{
+			vector siteMat[4];
+			site.GetLayout().BuildRootTransform(site.GetOrigin(), site.GetYawDeg(), siteMat);
+			vector dressingCenter = site.GetLayout().LocalOffsetToWorld(siteMat, mod.m_vLocalPosition);
+			foreach (IA_StaticGunRecord gun : site.GetEmplacements())
+			{
+				if (gun.ContainsReservedPoint(dressingCenter, Math.Sqrt(mod.m_fHalfWidthM * mod.m_fHalfWidthM + mod.m_fHalfDepthM * mod.m_fHalfDepthM)))
+					return false;
+			}
+		}
+
 		vector rootMat[4];
 		site.GetLayout().BuildRootTransform(site.GetOrigin(), site.GetYawDeg(), rootMat);
 		vector worldMat[4];
 		site.GetLayout().LocalToWorld(rootMat, mod.m_vLocalPosition, mod.m_fLocalYawDeg, mod.m_fPrefabYawCorrectionDeg, worldMat);
+		AlignComposition(worldMat, mod);
 		float supportY;
 		if (!SampleModuleSupport(worldMat, mod, supportY))
 			return false;
@@ -1474,6 +1709,8 @@ class IA_DynamicSitePlacer
 		if (!ent)
 			return false;
 		site.AddRoot(ent);
+		if (mod.m_iPerimeterSide >= 0)
+			site.RegisterPanel(mod.m_sId, ent);
 		return true;
 	}
 

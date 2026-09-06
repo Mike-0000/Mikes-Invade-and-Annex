@@ -64,6 +64,7 @@ class IA_AdminOverrides
 	float m_fAiPerceptionElite = 1.5;
 	bool m_bHasDynamicBaseOverride;
 	bool m_bDynamicBaseEnabled = true;
+	bool m_bDynamicBaseEmplacementsEnabled = true;
 	int m_iDynamicBaseChancePct = 100;
 	bool m_bDynamicBaseInGm;
 	int m_iDynamicBaseSizeMode;
@@ -204,6 +205,7 @@ class IA_AdminOverrides
 		m_bHasDynamicBaseOverride = true;
 		config.ClampDynamicBaseSettings();
 		m_bDynamicBaseEnabled = config.m_bDynamicBaseEnabled;
+		m_bDynamicBaseEmplacementsEnabled = config.m_bDynamicBaseEmplacementsEnabled;
 		m_iDynamicBaseChancePct = config.m_iDynamicBaseChancePct;
 		m_bDynamicBaseInGm = config.m_bDynamicBaseInGm;
 		m_iDynamicBaseSizeMode = config.m_iDynamicBaseSizeMode;
@@ -297,6 +299,7 @@ class IA_AdminOverrides
 		if (m_bHasDynamicBaseOverride)
 		{
 			config.m_bDynamicBaseEnabled = m_bDynamicBaseEnabled;
+			config.m_bDynamicBaseEmplacementsEnabled = m_bDynamicBaseEmplacementsEnabled;
 			config.m_iDynamicBaseChancePct = m_iDynamicBaseChancePct;
 			config.m_bDynamicBaseInGm = m_bDynamicBaseInGm;
 			config.m_iDynamicBaseSizeMode = m_iDynamicBaseSizeMode;
@@ -414,9 +417,10 @@ class IA_AdminOverrides
 		json = json + ",\"aiFireE\":" + m_fAiFireRateElite.ToString();
 		json = json + ",\"aiPercN\":" + m_fAiPerceptionNormal.ToString();
 		json = json + ",\"aiPercE\":" + m_fAiPerceptionElite.ToString();
-		json = json + ",\"dynamicBaseVersion\":1";
+		json = json + ",\"dynamicBaseVersion\":2";
 		ref IA_Config extrasCfg = new IA_Config();
 		extrasCfg.m_bDynamicBaseEnabled = m_bDynamicBaseEnabled;
+		extrasCfg.m_bDynamicBaseEmplacementsEnabled = m_bDynamicBaseEmplacementsEnabled;
 		extrasCfg.m_iDynamicBaseChancePct = m_iDynamicBaseChancePct;
 		extrasCfg.m_bDynamicBaseInGm = m_bDynamicBaseInGm;
 		extrasCfg.m_iDynamicBaseSizeMode = m_iDynamicBaseSizeMode;
@@ -554,12 +558,12 @@ class IA_AdminOverrides
 		if (HasKey(json, "dynamicBaseVersion"))
 		{
 			int dbVersion = ExtractValue(json, "dynamicBaseVersion").ToInt();
-			if (dbVersion == 1 && HasKey(json, "dynamicBaseExtras"))
+			if ((dbVersion == 1 || dbVersion == 2) && HasKey(json, "dynamicBaseExtras"))
 			{
 				string extras = ExtractValue(json, "dynamicBaseExtras");
 				ref array<string> extraParts = new array<string>();
 				extras.Split(",", extraParts, false);
-				if (extraParts.Count() != 10)
+				if ((dbVersion == 1 && extraParts.Count() != 10) || (dbVersion == 2 && extraParts.Count() != 11))
 					Print("[IA][AdminOverrides] dynamicBaseExtras malformed — keeping script defaults.", LogLevel.WARNING);
 				else
 				{
@@ -567,6 +571,7 @@ class IA_AdminOverrides
 					IA_Config.UnpackDynamicBaseExtras(parsed, extras);
 					m_bHasDynamicBaseOverride = true;
 					m_bDynamicBaseEnabled = parsed.m_bDynamicBaseEnabled;
+					m_bDynamicBaseEmplacementsEnabled = parsed.m_bDynamicBaseEmplacementsEnabled;
 					m_iDynamicBaseChancePct = parsed.m_iDynamicBaseChancePct;
 					m_bDynamicBaseInGm = parsed.m_bDynamicBaseInGm;
 					m_iDynamicBaseSizeMode = parsed.m_iDynamicBaseSizeMode;

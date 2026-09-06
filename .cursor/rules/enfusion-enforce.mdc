@@ -55,6 +55,8 @@ Prefer **`SCR_`** types over thinner native/`GameCode` types — they have the m
 - **`Class` is the super-root. `Managed` is GC'd.** Downcast with `T.Cast(obj)`, then null-check. `IsInherited(typename)`.
 - **`null` is not an enum value.** Enums are ints. `ShouldDefer(null, waypoint)` when the first arg is `IA_AiOrder` is `Cannot convert 'Class' to 'int'`. Split the overload or pass a real enum. Evidence: `compiler: IA_AI_Group.c` `ShouldDeferForTypedWaypointTree`.
 - **`pointer` types cannot be class members.** They are plain C++ pointers with no weak refs and no GC (`Types.c`). `Physics` is `NativeComponent : pointer`, so `protected Physics m_Physics` is `Pointer type 'Physics' can only be used with local variables` and can block the Game script module. Fetch a local with `owner.GetPhysics()`; cache `IEntity` if you need the owner. `global_pointer` is the subtype `Types.c` marks "Safe to store outside local scope". Evidence: `compiler: MHJ_CanopyFlight.c`; `Physics.c`, `NativeComponent.c`, `Types.c`.
+- **Overrides must match inherited parameter names too.** Renaming the parameter of `MeasureHierarchy` in a derived Workbench probe failed with `name differs from prototype`; use the inherited name or a differently named helper. Evidence: `compiler: IA_BaseCompositionProbe.c`, Workbench log `logs_2026-09-06_00-31-39`.
+- **Array indexed reads are temporary values for increment operators.** `values[index]++` fails with `Operator '++' is not supported on temporary values`; write `values[index] = values[index] + 1`. Evidence: `compiler: IA_BaseDesignTest.c`, Workbench log `logs_2026-09-06_01-14-59`.
 - **Subclass constructors must match prototype parameter names** for inherited ctor args. `ScriptedCommand` is `protected void ScriptedCommand(BaseAnimPhysComponent pAnimPhysComponent)`. Renaming that first arg (e.g. `animPhysComponent`) is `SCRIPT (E): … name differs from prototype 'pAnimPhysComponent'` and the Game script module will not compile. Extra parameters after the prototype are fine. Evidence: `compiler: MHJ_HaloCommand.c`; `ScriptedCommand.c`; vanilla `SCR_CharacterCommandSwim` / `SCR_CharacterCommandFly`.
 - **`notnull` in a signature is a contract**, not a runtime gift. Still validate at trust boundaries.
 - **`out` / `inout` / `owned`** are real. `out` = callee writes; `inout` = read then write; `owned` on proto returns = VM must not release the string/array.
@@ -204,6 +206,10 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 
 ## Prefabs, configs, resources
 
+- **Preview-world damage can be uninitialized even on stock turrets.** PKM/NSV stock and addon variants reported destroyed state with health 0/0 in a bare `Preview` world. Keep real gameplay usability checks; do not diagnose a broken live damage setup from that preview alone. Evidence: native `IA_BaseEmplacementProbe`, `logs_2026-09-05_23-33-30` and `logs_2026-09-06_01-18-44`.
+- **Verify inventory user-lock state rather than assuming the request return value is the resulting state.** `RequestUserLock(null, true)` reported false while `IsUserLocked()` became true in the authority Preview test. Evidence: native emplacement probe, `logs_2026-09-05_23-30-12`; mounted item remained locked and belt locks untouched in `logs_2026-09-06_01-18-44`. Live removal/reload behavior is a separate test.
+- **A VObject can be a generated service-area mesh, not physical scenery.** Medical-tent descendants with `SCR_SupportStationAreaMeshComponent` inflated isolated mesh bounds to roughly 200 m. Inspect inherited service components/children before using `GetBounds` for placement; isolating the VObject alone does not distinguish that generated mesh. Evidence: `Prefabs/Structures/Military/Camps/TentUSSR_01/TentUSSRMedical_01.et`; native composition measurements `logs_2026-09-06_00-33-45` versus service-free variants `logs_2026-09-06_00-47-37`.
+
 - Assets are **`ResourceName`**, usually `{GUID}path/to/file.et`. Do not hardcode raw filesystem paths.
 - **A hand-authored `.meta` GUID that Workbench has not imported is not a resource.** `Resource.Load` can still spawn by path (`Wrong GUID/name for resource`) but `RplComponent` then fails `Attempting to insert an entity with invalid prefab resource GUID`. Script-spawn `GenericEntity` / `SpawnEntity(typename)` or reuse a GUID Workbench already registered. Evidence: `runtime:` `MHJ_AiDropStick.et` `{C4E8A27B1F906E01}` and `MHJ_AiCanopyVisual.et` `{C4E8A27B1F906E02}`.
 - **`SetObject` `$remap` source names must exist on that VObject.** Prefab `MeshObject` `SourceMaterial "01__Default"` is not a slot on the raw `ParachuteMK3.xob` (Chute/Line only). Remapping it is `Source material do not exist`. Build the remap from `VObject.GetMaterials`. Evidence: `runtime:` AI drop visuals; `VObject.c`; player canopy remaps after the prefab already assigned that slot.
@@ -240,6 +246,9 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 - Do not leave `TODO` stubs. Implement or omit.
 
 ## Changelog
+
+- 2026-09-06 — Native probes distinguish Preview damage initialization, requested versus resulting inventory lock state, and generated service-area meshes from physical placement bounds.
+- 2026-09-06 — Workbench compiler rejects incrementing an array-index temporary and mismatched inherited override parameter names; assign the increment explicitly and preserve prototype names.
 
 - 2026-09-05 — Native utility regression proves Defend waypoint level 20 propagates to soldier score 81, overriding normal attack initiation (70) and gunfire observation (69); normal level 0 restores score 61.
 - 2026-09-05 — `PerceptionManager` is not included in vanilla AIWorld or GameMode_Base prefabs; missing manager silently skips group gunshot reporting. Confirm runtime presence with the AIScript perception panel before attributing non-reactive AI to it.

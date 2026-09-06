@@ -1,0 +1,23 @@
+GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+ ID "F6C167A06A035E13"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{CAFB38C0AD945880}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{F76340CCD79DCC5A}Prefabs/Props/Civilian/RadioSmall_01_red.et" {
+   ID "5CB0F58B876CCD44"
+   coords -0.112 0.5 0.005
+   angles 0 73.591 0
+   components {
+    Hierarchy "{3A3675ED34725365}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

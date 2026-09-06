@@ -1,0 +1,148 @@
+GenericEntity {
+ ID "B5BC555A3CCD5D91"
+ components {
+  RplComponent "{057356A19EEA53BC}" {
+  }
+  Hierarchy "{CEBC8EB319545704}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{036A2332E131AE05}Prefabs/Props/Military/AmmoBoxes/AmmoBox_762x54_440rnd.et" {
+   ID "5CCCBEDC9EB80064"
+   coords -0.824 0 0.59
+   angles 0 169.324 0
+   components {
+    Hierarchy "{467C810CDB4E574A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{036A2332E131AE05}Prefabs/Props/Military/AmmoBoxes/AmmoBox_762x54_440rnd.et" {
+   ID "5CCCBEDC9EB80071"
+   coords -1.082 0 0.438
+   angles 0 -124.886 0
+   components {
+    Hierarchy "{467C810CDB4E574A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{036A2332E131AE05}Prefabs/Props/Military/AmmoBoxes/AmmoBox_762x54_440rnd.et" {
+   ID "5CCCBEDC9EB80099"
+   coords -0.648 0 0.719
+   angles 0 -21.683 0
+   components {
+    Hierarchy "{467C810CDB4E574A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CCCBEDC9EB80042"
+   coords 2.512 0 -0.109
+   angles 0 13.729 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{F13C6D41C1685FA5}Prefabs/BaseCompositions/IA_Sandbag_MG_USSR_01_PKM_FD76E0.et" {
+   ID "5CCCBEDC9EB8023A"
+   coords 0 0 2
+   angles 0 0 0
+   components {
+    Hierarchy "{1BFFD485DB46502E}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{55A3DA68E58453A1}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v2.et" {
+   ID "5CCCBEDC9EB803A9"
+   coords -3.539 0 0.685
+   components {
+    Hierarchy "{CEBA65441DE7587B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEDC9EB8021A"
+   coords 2.328 0 0.655
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C1576E5555582214}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_short.et" {
+   ID "5CCCBEDC9EB803BA"
+   coords 3.251 0 0.666
+   components {
+    Hierarchy "{C1E5464202905CC5}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC5453CCC311603B}Prefabs/Props/Military/Sandbags/Sandbag_01_end_burlap.et" {
+   ID "5CCCBEDC9EB803CC"
+   coords -4.532 0 0.676
+   angles 0 -180 0
+   components {
+    Hierarchy "{902AC114580051B8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC5453CCC311603B}Prefabs/Props/Military/Sandbags/Sandbag_01_end_burlap.et" {
+   ID "5CCCBEDC9EB803E8"
+   coords 3.539 0 0.676
+   components {
+    Hierarchy "{902AC114580051B8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC5453CCC311603B}Prefabs/Props/Military/Sandbags/Sandbag_01_end_burlap.et" {
+   ID "5CCCBEDC9EB803F4"
+   coords -3.33 0 0.676
+   components {
+    Hierarchy "{902AC114580051B8}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CCCBEDC9EB80306"
+   coords 3.411 0 1.666
+   angles 0 92.267 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CCCBEDC9EB80325"
+   coords -2.121 0 2.45
+   angles 0 60.203 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CCCBEDC9EB80334"
+   coords -3.667 0 1.831
+   angles 0 92.267 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

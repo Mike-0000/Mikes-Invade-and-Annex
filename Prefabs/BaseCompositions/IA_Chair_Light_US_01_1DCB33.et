@@ -1,0 +1,23 @@
+GenericEntity : "{55973C5B0950D4AB}Prefabs/Props/Military/Furniture/ChairMilitary_US_01.et" {
+ ID "96EBA9B87F34591A"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{EF9DD4DE53245C2A}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GameEntity : "{50E6A3845C9F20FD}Prefabs/Props/Military/Camps/LanternMilitary_US_01.et" {
+   ID "5CB0D99099663927"
+   coords -0.024 0.5 -0.047
+   angles 0 -28.191 0
+   components {
+    Hierarchy "{D443B62AD1035D38}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

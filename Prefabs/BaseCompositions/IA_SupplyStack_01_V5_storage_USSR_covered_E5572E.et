@@ -1,0 +1,56 @@
+GenericEntity {
+ ID "1B3E7498C6D55BCE"
+ components {
+  RplComponent "{187015331B0A5F1A}" {
+  }
+  Hierarchy "{D4BFD50AE0F155B4}" {
+   Enabled 1
+  }
+  MeshObject "{5872F0EB7FA40561}" {
+   LODFactors {
+    5 2 1.5 1 1 1
+   }
+   Materials {
+    MaterialAssignClass "{5D7495945CE7EA8D}" {
+     SourceMaterial "Color_Palette"
+     AssignedMaterial "{3AC33AF76AE6D370}Common/Materials/ColorPalette/Color_palette_02_HONEY_08_S1_R0.emat"
+    }
+    MaterialAssignClass "{5D7495945CE7EB6B}" {
+     SourceMaterial "Default_Transparent"
+     AssignedMaterial "{C5AC5B15BAB1F9B3}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Decal.emat"
+    }
+    MaterialAssignClass "{5D7495945CE7EB65}" {
+     SourceMaterial "EquipmentBoxWooden_Explosives_01"
+     AssignedMaterial "{8BB3B94F7F3FBD15}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Explosives.emat"
+    }
+    MaterialAssignClass "{5D7495945CE7EB7C}" {
+     SourceMaterial "EquipmentBoxWooden_Launcher_01"
+     AssignedMaterial "{B32DAFCE14A90676}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Launcher.emat"
+    }
+    MaterialAssignClass "{5D7495945CE7EB73}" {
+     SourceMaterial "EquipmentBoxWooden_Weapon_01"
+     AssignedMaterial "{97100C6233B2CC2A}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Weapon.emat"
+    }
+   }
+   Object "{CFABE5292A62A945}Assets/Props/Military/AmmoBox/EquipmentBoxStack/EquipmentBoxStack_01_V5.xob"
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   Mass 10
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{E98B1DE2DBE52D2C}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V5_cover.et" {
+   ID "5D30E783ED0374DE"
+   coords 0 0 0
+   components {
+    Hierarchy "{56B68717E713A191}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}
