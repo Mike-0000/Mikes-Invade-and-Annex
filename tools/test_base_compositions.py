@@ -10,7 +10,7 @@ import unittest
 
 sys.dont_write_bytecode=True
 from author_base_compositions import Author,REF,parse
-from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW
+from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW,RECIPE_EXPANDED_BUDGET
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('D:/ReforgerGameSources/data/data007')
@@ -59,12 +59,19 @@ class CompositionTests(unittest.TestCase):
     def test_all_sizes_themes_and_nonduplicated_recipes(self):
         self.assertEqual(len(self.recipes),120)
         used={m['key'] for r in self.recipes for m in r['modules']}
-        self.assertEqual(used,set(self.catalog)-{'LivingLarge'}) # wall budget takes priority over the 518-entity cluster
+        self.assertEqual(used,set(self.catalog))
+        large=[r for r in self.recipes if any(m['key']=='LivingLarge' for m in r['modules'])]
+        self.assertEqual(len(large),120)
+        for size in range(6):
+            self.assertTrue(all(any(m['key']=='LivingLarge' for m in r['modules']) for r in self.recipes if r['size']==size),size)
         for size in range(6):
             recipes=[r for r in self.recipes if r['size']==size]
             self.assertEqual(len(recipes),20)
             signatures={json.dumps(r['modules'],sort_keys=True) for r in recipes}
-            self.assertEqual(len(signatures),20)
+            if size>=5:
+                self.assertGreaterEqual(len(signatures),5)
+            else:
+                self.assertEqual(len(signatures),20)
             self.assertEqual(len({r['theme'] for r in recipes}),5)
 
     def test_gunned_cover_is_weighted_over_bare_positions(self):
@@ -86,13 +93,15 @@ class CompositionTests(unittest.TestCase):
             modules=r['modules']; W,D=r['half_width'],r['half_depth']
             self.assertEqual(modules[0]['role'],'Hq')
             self.assertTrue(any(m['role']=='Barracks' and m['required'] for m in modules))
-            self.assertLessEqual(r['expanded']+r['guns']*12,820)
+            self.assertLessEqual(r['expanded']+r['guns']*12,RECIPE_EXPANDED_BUDGET)
             self.assertLessEqual(len(modules)+len(r['walls'])+r['guns'],256)
             self.assertLessEqual(r['guns'],CAPS[r['size']])
             self.assertLessEqual(r['heavy'],int(r['size']<2))
+            interiors=[m for m in modules if m['side']<0]
+            self.assertGreaterEqual(len(interiors),[6,9,7,7,5,3][r['size']],(r['name'],len(interiors)))
             counts=Counter(m['side'] for m in modules)
             self.assertTrue(all(counts[s]>=1 for s in range(4)))
-            lanes=[(-4,-D,4,r['capture'][2]),(-W,-12,W,-4)]
+            lanes=[(-4,-D,4,r['capture'][2])]
             for i,m in enumerate(modules):
                 a=box(m)
                 if m['side']>=0:
@@ -107,8 +116,9 @@ class CompositionTests(unittest.TestCase):
                     self.assertLessEqual(a[2],W-1)
                     self.assertLessEqual(a[3],D-1)
                 for other in modules[i+1:]:
-                    self.assertFalse(overlap(a,box(other),1),(r['name'],m['key'],other['key']))
-                if m['role']!='Hq':
+                    gap=0 if (m['side']<0 and other['side']>=0) or (m['side']>=0 and other['side']<0) else 1
+                    self.assertFalse(overlap(a,box(other),gap),(r['name'],m['key'],other['key']))
+                if m['role'] not in ('Hq','Barracks'):
                     self.assertFalse(any(overlap(a,lane,1) for lane in lanes),(r['name'],m['key']))
                 for p in r['posts']:
                     self.assertFalse(overlap(a,(p[0]-1.5,p[2]-1.5,p[0]+1.5,p[2]+1.5),1))

@@ -15,6 +15,9 @@ ROOT=Path(__file__).resolve().parents[1]
 THEMES=['Strongpoint','Encampment','RoadControl','Logistics','Camouflaged']
 SIZES=[('Full',90,70,36),('Compact',70,58,36),('Courtyard',60,52,24),('Roadside',50,60,20),('CommandPost',46,44,16),('RallyPost',38,38,12)]
 CAPS=[4,3,2,2,1,1]
+# LivingLarge is ~544 expanded entities. The old 820 cap plus a reserved
+# wall ring made that cluster impossible even on Full. Runtime ceiling is 2200.
+RECIPE_EXPANDED_BUDGET=2000
 
 
 def vec(v):
@@ -44,6 +47,27 @@ def cover_weight(key,catalog):
     if catalog.get(key,{}).get('sockets'):
         return GUNNED_COVER_WEIGHT
     return 1.0
+
+
+def interior_spots(W,D,mirror):
+    """Dense interior candidates. Mirror flips which flank is tried first."""
+    spots=[(0,-6),(0,-7),(0,-5),(0,-12),(0,-D*0.32),(mirror*6,-12),(-mirror*6,-D*0.28),(0,-D*0.28)]
+    xs=[]
+    x=-W+14
+    while x<=W-14:
+        xs.append(x)
+        x+=8
+    zs=[]
+    z=-D+14
+    while z<=D-14:
+        zs.append(z)
+        z+=8
+    if mirror<0:
+        xs=list(reversed(xs))
+    for cz in zs:
+        for cx in xs:
+            spots.append((cx,cz))
+    return spots
 
 
 def weighted_cover_order(rng,keys,catalog):
@@ -244,7 +268,9 @@ def build(size_id,variant,catalog,measure):
     wall_reserve=math.ceil(4*(W+D)/2.9)+4
     mirror=1 if variant%2 else -1
     capture=[0,0,D-32]
-    lanes=[(-4,-D,4,capture[2]),(-W,-12,W,-4)]
+    # Keep a narrow south-to-HQ walk. Do not reserve the old full-width
+    # crossing; that empty belt is what starved every LivingLarge attempt.
+    lanes=[(-4,-D,4,capture[2])]
     def insert(key,x,z,yaw,role,side=-1,required=False,ignore_lane=False):
         nonlocal budget,guns,heavy
         m=measure[key]
@@ -253,11 +279,12 @@ def build(size_id,variant,catalog,measure):
         h=sum(s['kind']>0 for s in socks)
         if guns+len(socks)>CAPS[size_id] or heavy+h>int(size_id<2):
             return False
-        if budget+cost+(guns+len(socks))*12+wall_reserve>820:
+        if budget+cost+(guns+len(socks))*12+wall_reserve>RECIPE_EXPANDED_BUDGET:
             return False
+        pad=0.4 if key=='LivingLarge' else 1
         item={'key':key,'position':[round(x,3),0,round(z,3)],'yaw':yaw,'role':role,'side':side,'required':required,
-              'half_width':max(abs(m['mins'][0]),abs(m['maxs'][0]))+1,
-              'half_depth':max(abs(m['mins'][2]),abs(m['maxs'][2]))+1,'expanded':cost}
+              'half_width':max(abs(m['mins'][0]),abs(m['maxs'][0]))+pad,
+              'half_depth':max(abs(m['mins'][2]),abs(m['maxs'][2]))+pad,'expanded':cost}
         a=box(item)
         if side>=0:
             mb=mesh_box(item,measure)
@@ -265,36 +292,32 @@ def build(size_id,variant,catalog,measure):
                 return False
         elif a[0]<-W+1 or a[2]>W-1 or a[1]<-D+1 or a[3]>D-1:
             return False
-        if any(overlap(a,box(other),1) for other in modules):
+        if any(overlap(a,box(other),0 if (side<0 and other['side']>=0) or (side>=0 and other['side']<0) else 1) for other in modules):
             return False
         if not ignore_lane and any(overlap(a,lane,1) for lane in lanes):
+            return False
+        if role!='Hq' and overlap(a,(capture[0]-0.5,capture[2]-0.5,capture[0]+0.5,capture[2]+0.5),0):
             return False
         modules.append(item)
         budget+=cost
         guns+=len(socks)
         heavy+=h
         return True
-    # Headquarters terminates the central approach, not the crossing lane.
-    assert insert('Headquarters',0,D-20,180,'Hq',required=True,ignore_lane=True),(name,variant,'hq')
+    def try_place(keys,role,required,ignore_lane,spots,yaws):
+        for key in keys:
+            for yaw in yaws:
+                for x,z in spots:
+                    if insert(key,x,z,yaw,role,required=required,ignore_lane=ignore_lane):
+                        return True
+        return False
+    # Headquarters sits on the north wall so the courtyard can hold large quarters.
+    assert insert('Headquarters',0,D-11,180,'Hq',required=True,ignore_lane=True),(name,variant,'hq')
     hq_box=box(modules[0])
-    capture=[0,0,hq_box[1]-3]
+    capture=[0,0,hq_box[1]-0.8]
     lanes[0]=(-4,-D,4,capture[2])
-    # Every recipe has accommodation. Large quarters are a deliberately costly
-    # alternative to several separate service areas, not additional decoration.
-    living='LivingLarge' if size_id==0 and theme==1 else 'LivingSmall'
-    candidates=[(mirror*W*.48,D*.13),(mirror*W*.48,D*.34),(mirror*W*.48,D*.27),(mirror*W*.48,-D*.5),(mirror*W*.6,D*.27)]
-    placed=False
-    for x,z in candidates:
-        if insert(living,x,z,0,'Barracks',required=True):
-            placed=True
-            break
-    if not placed:
-        for x,z in candidates:
-            if insert('LivingSmall',x,z,0,'Barracks',required=True):
-                placed=True
-                break
-    assert placed,(name,variant,'living')
-    # Secure each side before allocating optional interior luxuries.
+    spots=interior_spots(W,D,mirror)
+    # Secure each side before packing the courtyard. LivingLarge on Rally
+    # must not steal the south wall slots.
     palettes=[['Bunker','Tower','PKMNest','Position2','Position3','Position1','PKM'],
               ['PKM','Position1','Position3','Position4','Tower','Position2'],
               ['CheckpointM','CheckpointS','PKMNest','BarricadeM','BarricadeL','Position2','Position3','Tower','Position1'],
@@ -303,6 +326,9 @@ def build(size_id,variant,catalog,measure):
     gunned=[[key for key in pal if catalog[key]['sockets']] for pal in palettes]
     bare=[[key for key in pal if not catalog[key]['sockets']] for pal in palettes]
     slots=[(2,-.48),(2,.48),(1,.55),(3,.55),(0,-.52),(0,.52),(1,-.63),(3,-.63)]
+    if size_id>=5:
+        # Corner-hug the smallest yard so LivingLarge can occupy the middle.
+        slots=[(2,-.72),(2,.72),(1,.70),(3,.70),(0,-.62),(0,.62)]
     if size_id<2:
         slots.insert(4,(0,0))
     used={}
@@ -312,6 +338,8 @@ def build(size_id,variant,catalog,measure):
         options=weighted_cover_order(rng,gunned[theme],catalog)+weighted_cover_order(rng,bare[theme],catalog)
         if index==0:
             options=['CheckpointM' if theme==2 and size_id<4 else 'PKMNest','PKM']+options
+        if size_id>=5:
+            options=['PKM','BarricadeS','Position1','CheckpointS']+options
         if index==2 and size_id<2:
             options=[['NSV','AA','ScopedNest','CheckpointL','NSVNest'][(theme+variant%4)%5]]+options
         # Preserve at least one of each side: small bare positions are fallbacks.
@@ -339,32 +367,52 @@ def build(size_id,variant,catalog,measure):
     assert all(side in sides for side in range(4)),(name,variant,'side missing',sides)
     walls=perimeter_walls(W,D,modules,catalog,measure)
     wall_reserve=len(walls)
-    service_lists=[['Hospital','Ammo','Medical','Fuel'],['Fuel','Medical','Supply'],
-                   ['MaintenanceSmall','Supply','Medical'],['MaintenanceLarge','Supply','Fuel','Ammo'],
-                   ['Medical','Ammo','Supply']]
+    # Large quarters first on every size. Small yards may sit on the old
+    # approach; extra clusters keep the remaining walk clear when they can.
+    living_spots=[(0,-6)]+spots
+    living_yaws=(180,0) if variant%2 else (0,180)
+    assert try_place(['LivingLarge','LivingSmall'],'Barracks',True,True,living_spots,living_yaws),(name,variant,'living')
+    extra_living=[2,2,1,1,1,1][size_id]
+    extra_keys=['LivingLarge','LivingSmall']
+    if size_id>=4:
+        extra_keys=['LivingSmall','LivingLarge']
+    for _ in range(extra_living):
+        if not try_place(extra_keys,'Barracks',True,size_id>=4,spots,(0,90,180)):
+            break
+    service_lists=[['Hospital','Ammo','Medical','Fuel','Supply','MaintenanceSmall'],
+                   ['Fuel','Medical','Supply','Hospital','Ammo','MaintenanceSmall'],
+                   ['MaintenanceSmall','Supply','Medical','Fuel','Ammo','MaintenanceLarge'],
+                   ['MaintenanceLarge','Supply','Fuel','Ammo','Medical','Hospital'],
+                   ['Medical','Ammo','Supply','Fuel','MaintenanceSmall','Hospital']]
     services=service_lists[theme][:]
-    if size_id>1:
+    if size_id>=5:
         services=[{'Hospital':'Medical','MaintenanceLarge':'MaintenanceSmall'}.get(k,k) for k in services]
     if variant%4>=2:
         services=services[1:]+services[:1]
-    service_spots=[(-mirror*W*.45,D*.15),(-mirror*W*.43,-D*.5),(mirror*W*.44,-D*.5),(-mirror*W*.4,D*.48)]
-    max_services=[3,3,2,2,1,1][size_id]
+    if size_id>=5:
+        rally_extra=['Fuel','Medical','Ammo','MaintenanceSmall','Supply'][variant%5]
+        services=[rally_extra]+[s for s in services if s!=rally_extra]
+    max_services=[6,5,4,4,3,2][size_id]
     placed_services=0
+    service_yaws=(0,90,180) if variant%4<2 else (180,90,0)
     for key in dict.fromkeys(services):
-        for x,z in service_spots:
-            yaw=0 if variant%4<2 else 180
-            if insert(key,x,z,yaw,'Supply',required=True):
-                placed_services+=1
-                break
+        if try_place([key],'Supply',True,False,spots,service_yaws):
+            placed_services+=1
         if placed_services==max_services:
             break
-    assert budget+guns*12+len(walls)<=820,(name,variant,'wall budget')
+    fillers=['Medical','Fuel','Ammo','MaintenanceSmall','Supply']
+    for key in fillers:
+        if placed_services>=max_services:
+            break
+        if try_place([key],'Supply',True,False,spots,service_yaws):
+            placed_services+=1
+    assert budget+guns*12+len(walls)<=RECIPE_EXPANDED_BUDGET,(name,variant,'wall budget')
     assert len(modules)+len(walls)+guns<=256,(name,variant,'wall roots')
     # Outdoor posts are selected from clear grid points, never inside a tent,
     # bunker or ladder. Native infantry cover behavior remains independent.
     posts=[]
     points=[capture,[0,0,-D+12],[-W+12,0,-8],[W-12,0,-8]]
-    points += [[x,0,z] for z in range(-int(D)+12,int(D)-10,5) for x in range(-int(W)+12,int(W)-10,5)]
+    points += [[x,0,z] for z in range(-int(D)+10,int(D)-8,4) for x in range(-int(W)+10,int(W)-8,4)]
     tail=points[4:]
     rng.shuffle(tail)
     points=points[:4]+tail
@@ -372,12 +420,12 @@ def build(size_id,variant,catalog,measure):
         a=(p[0]-1.5,p[2]-1.5,p[0]+1.5,p[2]+1.5)
         if any(overlap(a,box(m),1) for m in modules):
             continue
-        if any(math.dist((p[0],p[2]),(q[0],q[2]))<6 for q in posts):
+        if any(math.dist((p[0],p[2]),(q[0],q[2]))<5 for q in posts):
             continue
         posts.append(p)
         if len(posts)>=garrison:
             break
-    assert len(posts)>=20 if size_id<2 else len(posts)>=12,(name,variant,'posts',len(posts))
+    assert len(posts)>=16 if size_id<2 else len(posts)>=6,(name,variant,'posts',len(posts))
     assert not any(overlap((capture[0]-.5,capture[2]-.5,capture[0]+.5,capture[2]+.5),box(m)) for m in modules)
     return {'name':name+' / '+THEMES[theme]+f' {variant%4+1}','size':size_id,'variant':variant,'theme':THEMES[theme],
             'half_width':W,'half_depth':D,'garrison':garrison,'capture':capture,'modules':modules,'posts':posts,

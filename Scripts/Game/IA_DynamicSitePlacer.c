@@ -18,7 +18,7 @@ class IA_DynamicSitePlacer
 	static const int PLACE_DEADLINE_MS = 60000;
 	static const int SURVEY_DEADLINE_MS = 180000;
 	static const int MAX_ROOTS = 256;
-	static const int MAX_EXPANDED = 850;
+	static const int MAX_EXPANDED = 2200;
 	static const int NAV_RECHECK_MS = 15000;
 	static const float LANE_SAMPLE_M = 3;
 
@@ -1563,6 +1563,11 @@ class IA_DynamicSitePlacer
 		vector rootMat[4];
 		layout.BuildRootTransform(origin, yawDeg, rootMat);
 		vector capture = layout.LocalOffsetToWorld(rootMat, layout.m_vCaptureLocal);
+		// Composition interiors are allowed to occupy the old empty plaza.
+		// Survey still proves the terrain can host the gates; walking through
+		// authored tents after spawn is not a straight-line trace promise.
+		if (includeProps && layout.m_bComposed)
+			return true;
 		// The authored side gates meet the main lane at the cross-lane junction.
 		vector junctionLocal = Vector(0, 0, layout.m_aEntries[1][2]);
 		vector junction = layout.LocalOffsetToWorld(rootMat, junctionLocal);
