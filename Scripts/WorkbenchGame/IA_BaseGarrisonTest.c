@@ -73,8 +73,10 @@ class IA_BaseGarrisonTest : WorkbenchPlugin
 		Check(center == vector.Zero, "every group shares the base centre");
 		float halfWidth = layout.m_fHalfWidthM;
 		float halfDepth = layout.m_fHalfDepthM;
-		Check(Math.AbsFloat(radius * radius - halfWidth * halfWidth - halfDepth * halfDepth) < 0.01, "area reaches the whole footprint without extra radius inflation");
-		Check(vector.Distance(center, post) < radius, "spawn post lies inside shared area");
+		float halfDiagonal = Math.Sqrt(halfWidth * halfWidth + halfDepth * halfDepth);
+		Check(Math.AbsFloat(radius - halfDiagonal * 0.85) < 0.001, "defense radius is trimmed by 15 percent");
+		Check(radius > 0 && radius < halfDiagonal, "shared area deliberately excludes footprint corners");
+		// Authored edge posts remain valid spawns even outside the smaller circle.
 		for (int heading = 0; heading < 24; heading++)
 		{
 			vector origin = Vector(1000, 100, 1000);
