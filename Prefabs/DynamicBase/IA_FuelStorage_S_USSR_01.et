@@ -1,0 +1,145 @@
+GenericEntity {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E55165E7A8}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{6096089D97076F43}Prefabs/Structures/Signs/Military/Sign_FuelStorage_USSR_01.et" {
+   ID "5D088D218BF60B84"
+   components {
+    Hierarchy "{5D6477365DBC4694}" {
+     Enabled 1
+    }
+   }
+   coords -0.946 0 -0.635
+   angles 0.126 3.277 1.206
+  }
+  $grp StaticModelEntity : "{8F35193420ED2085}Prefabs/Structures/Infrastructure/Piping/DieselPipe_01_hose_V1.et" {
+   {
+    ID "5D088D218BF60C5A"
+    components {
+     Hierarchy "{5D6477365DB62DCB}" {
+      Enabled 1
+     }
+    }
+    coords 4.963 0 -2.588
+    angles 0 -163.994 0
+   }
+   {
+    ID "5D088D218BF60CAF"
+    components {
+     Hierarchy "{5D6477365DB3FCD9}" {
+      Enabled 1
+     }
+    }
+    coords -5.258 0 -3.032
+    angles 0 0.23 0
+   }
+  }
+  $grp GenericEntity : "{92BE346D5E0BD792}Prefabs/Props/Military/Fuel/MobileWaterTank_USSR_01_fuel.et" {
+   {
+    ID "5D088D218BF60B6D"
+    components {
+     Hierarchy "{5D6477365DADC8F5}" {
+      Enabled 1
+     }
+    }
+    coords -4.234 0 -2.68
+    angles 0 174.952 0
+   }
+   {
+    ID "5D088D218BF60D15"
+    components {
+     Hierarchy "{5D6477365DA79A5B}" {
+      Enabled 1
+     }
+    }
+    coords 4.608 0 -2.731
+    angles 0 -174.714 0
+   }
+  }
+  $grp GenericEntity : "{BCE07A58672955B9}Prefabs/Props/Civilian/Bucket_01.et" {
+   {
+    ID "5D088D218BF60C62"
+    components {
+     SCR_DestructionMultiPhaseComponent "{5624A88D86EFE8BA}" {
+      Enabled 1
+     }
+     RplComponent "{5624A88DC2D9928D}" {
+      Enabled 1
+     }
+     Hierarchy "{5D6477365DA15759}" {
+      Enabled 1
+     }
+    }
+    coords 4.804 0 -0.693
+    angles 0 -65.13 0
+   }
+   {
+    ID "5D088D218BF60C72"
+    components {
+     Hierarchy "{5D6477365DDB17A3}" {
+      Enabled 1
+     }
+    }
+    coords -4.048 0.091 -0.431
+    angles 0 -65.13 -75
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D088D218BF60BAB"
+   components {
+    Hierarchy "{5D6477365DD4E8B7}" {
+     Enabled 1
+    }
+   }
+   coords 0.062 0 0.34
+   angles 0 -94.152 0
+  }
+  StaticModelEntity : "{4B4DC983479552E7}Prefabs/DynamicBase/IA_Chair_Light_USSR_01.et" {
+   ID "5D088D14D5453C9B"
+   components {
+    SCR_DestructionMultiPhaseComponent "{5624A88D86EFE8BA}" {
+     Enabled 1
+    }
+   }
+   coords 1.093 0 -0.445
+   angles 0 166.401 0
+  }
+  GenericEntity : "{DB4F61D5F37432F7}Prefabs/Props/Military/Camps/PalletFuel_01.et" {
+   ID "5D088D218BF60B5B"
+   components {
+    Hierarchy "{5D6477365DCEB556}" {
+     Enabled 1
+    }
+   }
+   coords 0.008 0 -4.316
+   angles 0 -98.941 0
+  }
+  StaticModelEntity : "{DF649B29EC7635F3}Prefabs/Structures/Military/Fortifications/DirtPile_01/DirtPile_01_small.et" {
+   ID "5D088D215E0C7796"
+   components {
+    Hierarchy "{5D6477365DC878B3}" {
+     Enabled 1
+    }
+   }
+   coords -0.976 0 -0.64
+  }
+  StaticModelEntity : "{E3612DD49C29AFAB}Prefabs/Structures/Infrastructure/Piping/DieselPipe_01_hose_V2.et" {
+   ID "5D088D218BF60C55"
+   components {
+    Hierarchy "{5D6477365DF3848B}" {
+     Enabled 1
+    }
+   }
+   coords -0.721 0 -1.572
+   angles 0 -123.459 0
+  }
+ }
+}

@@ -551,9 +551,13 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_DynamicBaseSizeDrop.AddItem("Auto");
 		m_DynamicBaseSizeDrop.AddItem("Full");
 		m_DynamicBaseSizeDrop.AddItem("Compact");
+		m_DynamicBaseSizeDrop.AddItem("Courtyard (88 x 76 m)");
+		m_DynamicBaseSizeDrop.AddItem("Roadside (60 x 96 m)");
+		m_DynamicBaseSizeDrop.AddItem("Command post (64 x 56 m)");
+		m_DynamicBaseSizeDrop.AddItem("Rally post (36 x 48 m)");
 		m_DynamicBaseSizeDrop.SetIndex(0);
 		m_PageDefense.AddChild(m_DynamicBaseSizeDrop);
-		m_Hints.AddHint(m_DynamicBaseSizeDrop, "Base size", "Auto tries the full 180×140 m layout first, then compact. Full and Compact lock that footprint.");
+		m_Hints.AddHint(m_DynamicBaseSizeDrop, "Base size", "Auto tries six layouts, from the full operating base down to a 36 x 48 m fortified rally post. Choose a named layout to require that design. Smaller bases have fewer occupying guards; capture, regroup and defense still take place at the same base.");
 
 		m_DefendLegacyToggle = runtime.CreateToggle("Use legacy defense (12-16 min, no events)", "defLegacy");
 		m_PageDefense.AddChild(m_DefendLegacyToggle);
@@ -1051,7 +1055,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			int sizeIdx = cfg.m_iDynamicBaseSizeMode;
 			if (sizeIdx < 0)
 				sizeIdx = 0;
-			if (sizeIdx > 2)
+			if (sizeIdx > IA_DynamicSiteSizeMode.RallyPost)
 				sizeIdx = 0;
 			m_DynamicBaseSizeDrop.SetIndex(sizeIdx);
 		}

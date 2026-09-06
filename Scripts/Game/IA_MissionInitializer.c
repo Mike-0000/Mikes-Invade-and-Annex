@@ -2804,6 +2804,7 @@ class IA_MissionInitializer : GenericEntity
 		if (!m_DynamicObjectives)
 			m_DynamicObjectives = new IA_DynamicObjectiveDirector();
 		m_DynamicObjectives.BeginAo(m_iAoActivationSerial, groupId);
+		PublishBaseObjectiveStatus(true, m_iAoActivationSerial, groupId, IA_BaseObjectivePhase.None, "0", vector.Zero, vector.Zero, 0, 0, 0, 0, 0, 0, IA_BaseStatusReason.None);
 		Print(string.Format("[IA_MissionInitializer] Dynamic-base AO serial %1 for group %2.", m_iAoActivationSerial, groupId), LogLevel.NORMAL);
 	}
 
@@ -2911,6 +2912,8 @@ class IA_MissionInitializer : GenericEntity
 	void PublishBaseObjectiveStatus(bool force, int serial, int groupId, int phase, string siteId, vector sitePos, vector capPos, float capR, int capturePermille, int eligiblePresent, int target, int allPresent, int remain, int reason)
 	{
 		if (!Replication.IsServer())
+			return;
+		if (serial != m_iAoActivationSerial)
 			return;
 
 		int now = System.GetTickCount();

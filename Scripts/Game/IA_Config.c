@@ -192,7 +192,7 @@ class IA_Config{
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Dynamic Base", desc: "Automatically start a dynamic base in Game Master mode.")]
 	bool m_bDynamicBaseInGm = false;
 
-	[Attribute(defvalue: "0", UIWidgets.EditBox, category: "Dynamic Base", desc: "0 Auto, 1 Full, 2 Compact.")]
+	[Attribute(defvalue: "0", UIWidgets.EditBox, category: "Dynamic Base", desc: "0 Auto, 1 Full, 2 Compact, 3 Courtyard, 4 Roadside, 5 Command post, 6 Rally post.")]
 	int m_iDynamicBaseSizeMode = 0;
 
 	[Attribute(defvalue: "90", UIWidgets.EditBox, category: "Dynamic Base", desc: "Uncontested command-zone capture seconds.")]
@@ -357,7 +357,7 @@ class IA_Config{
 		if (m_iDynamicBaseChancePct > 100)
 			m_iDynamicBaseChancePct = 100;
 
-		if (m_iDynamicBaseSizeMode < 0 || m_iDynamicBaseSizeMode > 2)
+		if (m_iDynamicBaseSizeMode < 0 || m_iDynamicBaseSizeMode > IA_DynamicSiteSizeMode.RallyPost)
 			m_iDynamicBaseSizeMode = 0;
 
 		if (m_iDynamicBaseCaptureSec < 30)

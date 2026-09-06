@@ -40,7 +40,7 @@ class IA_BaseAssaultObjective
 	}
 
 	//------------------------------------------------------------------------------------------------
-	void Begin(int serial, int groupId, IA_BaseObjectiveSettings settings)
+	void Begin(int serial, int groupId, IA_BaseObjectiveSettings settings, IA_BasePlayerSampler sampler)
 	{
 		m_iSerial = serial;
 		m_iGroupId = groupId;
@@ -54,7 +54,7 @@ class IA_BaseAssaultObjective
 		m_bTaskPublished = false;
 		m_bDefenseStarted = false;
 		m_bResultSent = false;
-		m_Sampler.BeginAo(groupId);
+		m_Sampler = sampler;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -92,9 +92,13 @@ class IA_BaseAssaultObjective
 		m_iLastTickMs = nowMs;
 
 		vector assembly = vector.Zero;
+		float assemblyRadius = 0;
 		if (m_Site)
+		{
 			assembly = m_Site.GetAssemblyPoint();
-		m_Sampler.TickRecord(System.GetUnixTime(), assembly, IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
+			assemblyRadius = IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M;
+		}
+		m_Sampler.TickRecord(System.GetUnixTime(), assembly, assemblyRadius);
 
 		if (m_ePhase == IA_BaseObjectivePhase.Seize)
 			TickSeize(dt);
@@ -129,15 +133,17 @@ class IA_BaseAssaultObjective
 	//------------------------------------------------------------------------------------------------
 	void OnSiteFailed(int serial, string reason)
 	{
-		if (serial != m_iSerial)
+		if (serial != m_iSerial || m_ePhase != IA_BaseObjectivePhase.Placing)
 			return;
+		m_ePhase = IA_BaseObjectivePhase.Cancelled;
+		PublishStatus(true);
 		EmitResult(IA_DynamicObjectiveResult.Fallback, reason);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void OnDefenseEnded(int serial, bool completed)
 	{
-		if (serial != m_iSerial)
+		if (serial != m_iSerial || m_ePhase != IA_BaseObjectivePhase.Defend || m_bResultSent)
 			return;
 		if (completed)
 		{
@@ -236,7 +242,7 @@ class IA_BaseAssaultObjective
 		AwardCaptureOnce();
 		m_ePhase = IA_BaseObjectivePhase.Regroup;
 		m_iRegroupStartMs = System.GetTickCount();
-		m_Sampler.FreezeAtCapture(m_Site.GetAssemblyPoint(), IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
+		m_Sampler.FreezeAtCapture(m_Site.GetAssemblyPoint(), IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M, m_Settings.m_fRegroupFraction);
 		m_iInitialTarget = m_Sampler.GetInitialTarget();
 		PublishRegroupTask();
 		PublishStatus(true);
@@ -271,7 +277,7 @@ class IA_BaseAssaultObjective
 
 		int eligiblePresent = m_Sampler.CountEligiblePresent(m_Site.GetAssemblyPoint(), IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
 		int allPresent = m_Sampler.CountAllGroundedPresent(m_Site.GetAssemblyPoint(), IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
-		int target = m_iInitialTarget;
+		int target = m_Sampler.GetCurrentTarget(System.GetUnixTime());
 		if (target < 1)
 			target = 1;
 
@@ -407,12 +413,9 @@ class IA_BaseAssaultObjective
 		m_bCaptureAwarded = true;
 
 		IA_StatsManager stats = IA_StatsManager.GetInstance();
-		if (!stats)
-			return;
-
 		foreach (string guid, int score : m_CaptureLedger)
 		{
-			if (score <= 0)
+			if (!stats || score <= 0)
 				continue;
 			string name = IA_AreaMarker.GetPlayerNameFromGuid(guid);
 			stats.QueueCaptureContribution(guid, name, score);
@@ -431,9 +434,6 @@ class IA_BaseAssaultObjective
 		m_Site.GetHost().DismissOpenTasks();
 		m_Site.GetHost().QueueTask("Seize the enemy operating base", "Clear and secure the command area. Counterattack preparations begin after capture.", m_Site.GetCapturePoint());
 		m_bTaskPublished = true;
-		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
-		if (init)
-			init.TriggerGlobalNotification("TaskCreated", "Seize the enemy operating base");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -443,9 +443,6 @@ class IA_BaseAssaultObjective
 			return;
 		m_Site.GetHost().DismissOpenTasks();
 		m_Site.GetHost().QueueTask("Regroup at the captured base", "Assemble and prepare for the counterattack.", m_Site.GetAssemblyPoint());
-		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
-		if (init)
-			init.TriggerGlobalNotification("TaskCompleted", "Base secured — regroup and prepare");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -467,7 +464,7 @@ class IA_BaseAssaultObjective
 		int capturePermille = 0;
 		int eligiblePresent = 0;
 		int allPresent = 0;
-		int target = m_iInitialTarget;
+		int target = m_Sampler.GetCurrentTarget(System.GetUnixTime());
 		vector sitePos = vector.Zero;
 		vector capPos = vector.Zero;
 		float capR = 0;
@@ -492,7 +489,7 @@ class IA_BaseAssaultObjective
 		if (m_Settings)
 			need = m_Settings.GetCaptureMs();
 		if (need > 0)
-			capturePermille = Math.Round((m_iCaptureAccMs / need) * 1000);
+			capturePermille = Math.Round((1000.0 * m_iCaptureAccMs) / need);
 		if (capturePermille > 1000)
 			capturePermille = 1000;
 

@@ -1,0 +1,74 @@
+GenericEntity {
+ ID "7C79FB80CF4B5FFD"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{A419F4547954DA05}Prefabs/Props/Construction/CableReel/CableReelWooden_01.et" {
+   ID "BF3B5BB411E8510B"
+   components {
+    Hierarchy "{C1DD963AD49656F3}" {
+     Enabled 1
+    }
+   }
+   coords -0.95 0.011512 0.15
+   angles 0 10 0
+  }
+  GenericEntity : "{B3D9BC5688598B6E}Prefabs/Props/VehicleParts/Tires/Wheel_Ural4320.et" {
+   ID "8BADE3EEF6FE5A99"
+   components {
+    Hierarchy "{81095C4599815141}" {
+     Enabled 1
+    }
+   }
+   coords 0.75 0.015546 0.2
+   angles 0 0 0
+  }
+  GenericEntity : "{B3D9BC5688598B6E}Prefabs/Props/VehicleParts/Tires/Wheel_Ural4320.et" {
+   ID "BF66CD0795BA54F2"
+   components {
+    Hierarchy "{6A1C490917E15917}" {
+     Enabled 1
+    }
+   }
+   coords 0.75 0.481621 0.2
+   angles 0 8 0
+  }
+  GenericEntity : "{0F866B72D473D8C4}Prefabs/Props/Industrial/ToolBox_01/ToolBox_01_grey.et" {
+   ID "E8061AEB86B15B03"
+   components {
+    Hierarchy "{AC62147538C95B7E}" {
+     Enabled 1
+    }
+   }
+   coords 0.75 0.932150 0.2
+   angles 0 12 0
+  }
+  GenericEntity : "{E4416C4C6938BEEE}Prefabs/Props/Crates/CrateWooden_02/CrateWooden_02_1x1x1.et" {
+   ID "5F482F8AEA255EAA"
+   components {
+    Hierarchy "{51114D1CB1C05D58}" {
+     Enabled 1
+    }
+   }
+   coords 0.15 -0.000173 -1.25
+   angles 0 -8 0
+  }
+  GenericEntity : "{62B2ADC4243454F9}Prefabs/Props/Civilian/Jerrycan_01.et" {
+   ID "40D69AB3CFAF5776"
+   components {
+    Hierarchy "{423CA8FE99305896}" {
+     Enabled 1
+    }
+   }
+   coords -1.05 -0.000225 -0.95
+   angles 0 5 0
+  }
+ }
+}

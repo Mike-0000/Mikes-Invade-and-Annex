@@ -14,6 +14,7 @@ class IA_BasePlayerSampler
 	protected ref map<int, ref IA_BaseRosterEntry> m_Seen;
 	protected ref array<ref IA_BaseRosterEntry> m_Frozen;
 	protected int m_iInitialTarget;
+	protected float m_fRegroupFraction = 0.60;
 
 	//------------------------------------------------------------------------------------------------
 	void IA_BasePlayerSampler()
@@ -66,7 +67,8 @@ class IA_BasePlayerSampler
 				continue;
 
 			IA_BaseRosterEntry entry = m_Seen.Get(playerId);
-			if (!entry)
+			string identity = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerId);
+			if (!entry || entry.m_sIdentity != identity)
 			{
 				ref IA_BaseRosterEntry created = new IA_BaseRosterEntry();
 				created.m_iPlayerId = playerId;
@@ -80,9 +82,10 @@ class IA_BasePlayerSampler
 	}
 
 	//------------------------------------------------------------------------------------------------
-	void FreezeAtCapture(vector assemblyCenter, float assemblyRadius)
+	void FreezeAtCapture(vector assemblyCenter, float assemblyRadius, float regroupFraction)
 	{
 		m_Frozen.Clear();
+		m_fRegroupFraction = regroupFraction;
 		int nowUnix = System.GetUnixTime();
 
 		PlayerManager pm = GetGame().GetPlayerManager();
@@ -97,20 +100,19 @@ class IA_BasePlayerSampler
 		{
 			int playerId = ids[i];
 			IEntity pawn = pm.GetPlayerControlledEntity(playerId);
-			if (!pawn)
-				continue;
-			if (!IsFriendlyPlayerPawn(pawn))
+			// Recently deployed casualties remain in the roster during their grace period.
+			if (pawn && !IsFriendlyPlayerPawn(pawn))
 				continue;
 
 			string identity = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerId);
 			IA_BaseRosterEntry seen = m_Seen.Get(playerId);
 			bool recent = false;
-			if (seen && (nowUnix - seen.m_iLastSeenUnix) <= DEPLOY_WINDOW_SEC)
+			if (seen && seen.m_sIdentity == identity && (nowUnix - seen.m_iLastSeenUnix) <= DEPLOY_WINDOW_SEC)
 				recent = true;
 
 			vector pos;
 			bool atBase = false;
-			if (IA_AreaMarker.TryGetPawnWorldPos(pawn, pos))
+			if (pawn && IA_AreaMarker.TryGetPawnWorldPos(pawn, pos))
 				atBase = HorizontalInside(pos, assemblyCenter, assemblyRadius);
 
 			if (!recent && !atBase)
@@ -124,15 +126,15 @@ class IA_BasePlayerSampler
 			m_Frozen.Insert(frozen);
 		}
 
-		int eligible = CountEligibleNow(nowUnix);
-		float frac = 0.60;
-		IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
-		if (cfg)
-			frac = cfg.m_fDynamicBaseRegroupFraction;
-		int target = Math.Ceil(eligible * frac);
-		if (target < 1)
-			target = 1;
-		m_iInitialTarget = target;
+		m_iInitialTarget = Math.Max(1, Math.Ceil(CountEligibleNow(nowUnix) * m_fRegroupFraction));
+	}
+
+	// Never increase the frozen target when casualties recover, but allow departures
+	// and expired casualty grace to reduce it. Late joiners cannot inflate the roster.
+	int GetCurrentTarget(int nowUnix)
+	{
+		int target = Math.Max(1, Math.Ceil(CountEligibleNow(nowUnix) * m_fRegroupFraction));
+		return Math.Min(Math.Max(1, m_iInitialTarget), target);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -162,6 +164,7 @@ class IA_BasePlayerSampler
 	//------------------------------------------------------------------------------------------------
 	int CountEligiblePresent(vector center, float radius)
 	{
+		CountEligibleNow(System.GetUnixTime());
 		int present = 0;
 		int count = m_Frozen.Count();
 		int i;
@@ -262,6 +265,11 @@ class IA_BasePlayerSampler
 		}
 
 		IEntity pawn = pm.GetPlayerControlledEntity(entry.m_iPlayerId);
+		if (pawn && !IsFriendlyPlayerPawn(pawn))
+		{
+			entry.m_bEligible = false;
+			return;
+		}
 		if (IsLivingConsciousPawn(pawn))
 		{
 			entry.m_iGraceStartUnix = 0;
@@ -297,7 +305,7 @@ class IA_BasePlayerSampler
 			return false;
 
 		float supportY = SampleSupportY(pos);
-		if ((pos[1] - supportY) > GROUND_SLACK_M)
+		if (Math.AbsFloat(pos[1] - supportY) > GROUND_SLACK_M)
 			return false;
 		return true;
 	}
@@ -319,18 +327,10 @@ class IA_BasePlayerSampler
 		if (!world)
 			return pos[1];
 
-		float surface = world.GetSurfaceY(pos[0], pos[2]);
-		ref TraceParam p = new TraceParam();
-		p.Start = Vector(pos[0], pos[1] + 8, pos[2]);
-		p.End = Vector(pos[0], surface - 4, pos[2]);
-		p.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
-		float hit = world.TraceMove(p, null);
-		if (hit < 1)
-		{
-			vector hitPos = p.Start + ((p.End - p.Start) * hit);
-			return hitPos[1];
-		}
-		return surface;
+		// Dynamic bases are validated on terrain. Tracing from above would hit the
+		// pawn itself, a parachute or a tent roof, accepting airborne occupants and
+		// moving capture/guard anchors onto scenery after it spawns.
+		return world.GetSurfaceY(pos[0], pos[2]);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -416,11 +416,7 @@ class IA_BasePlayerSampler
 		if (!IsLivingConsciousPawn(character))
 			return false;
 
-		int playerId = 0;
-		PlayerManager pm = GetGame().GetPlayerManager();
-		if (pm)
-			playerId = pm.GetPlayerIdFromControlledEntity(character);
-		if (playerId > 0)
+		if (IsInAircraft(character))
 			return false;
 
 		FactionAffiliationComponent fac = FactionAffiliationComponent.Cast(character.FindComponent(FactionAffiliationComponent));
@@ -441,6 +437,8 @@ class IA_BasePlayerSampler
 
 		vector pos;
 		if (!IA_AreaMarker.TryGetPawnWorldPos(character, pos))
+			return false;
+		if (Math.AbsFloat(pos[1] - SampleSupportY(pos)) > GROUND_SLACK_M)
 			return false;
 		return HorizontalInside(pos, center, radius);
 	}

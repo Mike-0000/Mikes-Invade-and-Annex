@@ -1,0 +1,33 @@
+GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5CB0D99620A1B1AB}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GameEntity : "{2CB0AA2A87842C18}Prefabs/Props/Civilian/LampKerosene_01/LampKerosene_01_military_USSR.et" {
+   ID "5CB0D99620A1B1BA"
+   components {
+    Hierarchy "{5CB0D99620A1B198}" {
+    }
+   }
+   coords 0.529 0.899 -0.159
+   angles 0 -23.925 0
+  }
+  GenericEntity : "{64C6B8E8931FB36D}Prefabs/Props/Military/Sandbags/Sandbag_01_empty_burlap.et" {
+   ID "5CB0D99620A1B1BE"
+   components {
+    Hierarchy "{5CB0D99620A1B183}" {
+     Enabled 1
+    }
+   }
+   coords 0.159 0.899 0.175
+   angles 0 22.664 0
+  }
+ }
+}

@@ -86,6 +86,11 @@ class IA_AreaGroupManager
         }
     }
 
+    bool ContainsLiveArea(IA_AreaInstance area)
+    {
+        return !m_bShutDown && area && !area.IsShutDown() && m_areaInstances.Find(area) != -1;
+    }
+
     void QRFTask()
     {
         if (m_bShutDown)
@@ -1304,4 +1309,4 @@ class IA_AreaGroupManager
         }
         return null;
     }
-}; 
+};

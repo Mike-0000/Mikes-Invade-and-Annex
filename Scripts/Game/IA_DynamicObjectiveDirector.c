@@ -12,6 +12,7 @@ class IA_DynamicObjectiveDirector
 	protected ref IA_BaseObjectiveSettings m_Settings;
 	protected ref IA_BaseAssaultObjective m_Objective;
 	protected ref IA_DynamicSitePlacer m_Placer;
+	protected ref IA_BasePlayerSampler m_Sampler;
 	protected ref array<ref IA_DynamicSiteInstance> m_Retired;
 	protected int m_eLastResult = -1;
 
@@ -19,12 +20,15 @@ class IA_DynamicObjectiveDirector
 	void IA_DynamicObjectiveDirector()
 	{
 		m_Placer = new IA_DynamicSitePlacer();
+		m_Placer.SetDirector(this);
+		m_Sampler = new IA_BasePlayerSampler();
 		m_Retired = new array<ref IA_DynamicSiteInstance>();
 	}
 
 	//------------------------------------------------------------------------------------------------
 	void BeginAo(int serial, int groupId)
 	{
+		m_Placer.Cancel(0);
 		if (m_Objective && m_Objective.GetSerial() != serial)
 			m_Objective.Cancel(IA_BaseCancelReason.AoReplaced);
 
@@ -36,6 +40,7 @@ class IA_DynamicObjectiveDirector
 		m_Settings = null;
 		m_Objective = null;
 		m_eLastResult = -1;
+		m_Sampler.BeginAo(groupId);
 		m_Placer.BeginPrecompute(serial, groupId);
 		EnsureTick();
 	}
@@ -43,7 +48,7 @@ class IA_DynamicObjectiveDirector
 	//------------------------------------------------------------------------------------------------
 	bool OwnsActivation(int serial)
 	{
-		return serial == m_iSerial;
+		return serial > 0 && serial == m_iSerial;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -64,6 +69,8 @@ class IA_DynamicObjectiveDirector
 	//------------------------------------------------------------------------------------------------
 	bool BlocksAutomaticPressure()
 	{
+		if (!m_bAccepted)
+			return false;
 		if (!m_Objective)
 			return m_bAccepted;
 		int phase = m_Objective.GetPhase();
@@ -103,6 +110,8 @@ class IA_DynamicObjectiveDirector
 		}
 
 		IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+		if (!cfg)
+			return false;
 		if (!forceBase)
 		{
 			if (!cfg || !cfg.m_bDynamicBaseEnabled)
@@ -139,8 +148,9 @@ class IA_DynamicObjectiveDirector
 
 		ref IA_BaseAssaultObjective objective = new IA_BaseAssaultObjective();
 		objective.SetDirector(this);
-		objective.Begin(m_iSerial, m_iGroupId, m_Settings);
+		objective.Begin(m_iSerial, m_iGroupId, m_Settings, m_Sampler);
 		m_Objective = objective;
+		objective.PublishStatus(true);
 		m_Placer.BeginPlacement(m_iSerial, m_Settings);
 		EnsureTick();
 		return true;
@@ -149,6 +159,9 @@ class IA_DynamicObjectiveDirector
 	//------------------------------------------------------------------------------------------------
 	void Tick()
 	{
+		// Record deployment throughout the ordinary AO, before a base is selected.
+		if (!m_Objective)
+			m_Sampler.TickRecord(System.GetUnixTime(), vector.Zero, 0);
 		if (m_Placer && m_Placer.IsComplete() && m_Objective && m_Objective.GetPhase() == IA_BaseObjectivePhase.Placing)
 		{
 			IA_DynamicSiteResult result = m_Placer.TakeResult();
@@ -196,6 +209,8 @@ class IA_DynamicObjectiveDirector
 		if (serial != m_iSerial)
 			return;
 		m_eLastResult = result;
+		if (result == IA_DynamicObjectiveResult.Fallback || result == IA_DynamicObjectiveResult.Aborted || result == IA_DynamicObjectiveResult.Completed)
+			m_bAccepted = false;
 		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
 		if (init)
 			init.HandleDynamicObjectiveResult(serial, result, reason);
@@ -204,10 +219,11 @@ class IA_DynamicObjectiveDirector
 	//------------------------------------------------------------------------------------------------
 	void RetireSite(IA_DynamicSiteInstance site)
 	{
-		if (!site)
+		if (!site || m_Retired.Find(site) != -1)
 			return;
 		site.BeginDeferredCleanup();
-		m_Retired.Insert(site);
+		if (!site.TickCleanup())
+			m_Retired.Insert(site);
 	}
 
 	//------------------------------------------------------------------------------------------------

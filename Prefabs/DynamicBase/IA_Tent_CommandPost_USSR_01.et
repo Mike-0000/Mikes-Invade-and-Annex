@@ -1,0 +1,122 @@
+GenericEntity {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD223AE023E9}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  $grp GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   {
+    ID "5CB6B281C4F9940C"
+    components {
+     Hierarchy "{5CCCBEF33884DA41}" {
+      Enabled 1
+     }
+    }
+    coords -0.822 0.373 0.445
+    angles 89.98 -73.301 -12.473
+   }
+   {
+    ID "5CB6B281C4F9C4AD"
+    components {
+     Hierarchy "{5CCCBEF338877ED4}" {
+      Enabled 1
+     }
+    }
+    coords 0.833 0.181 0.285
+    angles 0 -106.465 0
+   }
+   {
+    ID "5CB6B281C4F9C4AE"
+    components {
+     Hierarchy "{5CCCBEF3388BF421}" {
+      Enabled 1
+     }
+    }
+    coords -2.798 0.369 -1.595
+    angles -89.98 59.53 0
+   }
+   {
+    ID "5CB6B281C4F9C4AF"
+    components {
+     Hierarchy "{5CCCBEF3388E6325}" {
+      Enabled 1
+     }
+    }
+    coords -2.082 0.175 -1.995
+    angles 0 44.267 0
+   }
+  }
+  StaticModelEntity : "{30A4B799263D5F75}Prefabs/DynamicBase/IA_Table_Desk_USSR_01.et" {
+   ID "5CB6B281C4F9C485"
+   coords -0.458 0.185 0.395
+   angles 0 95.717 0
+   {
+    StaticModelEntity {
+     ID "5CB0F5862ABFA511"
+     coords 0 0 0
+     angles 0 -0.378 0
+    }
+   }
+  }
+  StaticModelEntity : "{D0D252CF70AF5319}Prefabs/DynamicBase/IA_Table_Typewriter_USSR_01.et" {
+   ID "5CB6B281C4F9C4B9"
+   coords 0.479 0.181 0.353
+   angles 0 83.139 0
+  }
+  GenericEntity : "{473DB1C66CAD5088}Prefabs/Props/Military/Compositions/USSR/BuildingService_USSR.et" {
+   ID "5D371AC8B78FAAE5"
+   components {
+    Hierarchy "{5D6477379748D003}" {
+     Enabled 1
+    }
+   }
+   coords 2.063 0.192 -2.055
+   angles 0 -44.046 0
+  }
+  StaticModelEntity : "{BE6CC2C6C3EC506F}Prefabs/DynamicBase/IA_Table_Desk_USSR_05.et" {
+   ID "5CB6B281C4F9C48F"
+   coords -0.495 0.18 -2.356
+   angles 0 -3.707 0
+  }
+  StaticModelEntity : "{92927876AE855D66}Prefabs/DynamicBase/IA_Cabinet_Stack_USSR_01.et" {
+   ID "5CB6B281C4F9C493"
+   coords 0.769 0.169 -2.466
+   angles 0 -2.493 0
+  }
+  StaticModelEntity : "{1A4E2CD109EB5AB5}Prefabs/DynamicBase/IA_Table_RadioStation_USSR_01.et" {
+   ID "5CB6B281C4F9C49D"
+   coords -2.168 0.173 -2.394
+   angles 0 1.799 0
+  }
+  StaticModelEntity : "{6FB9007CD34350C4}Prefabs/DynamicBase/IA_Table_Desk_USSR_04.et" {
+   ID "5CB6B281C4F9CB6A"
+   coords -2.429 0.188 2.058
+   angles 0 90 0
+  }
+  GenericEntity : "{D8317C57F2B05465}Prefabs/DynamicBase/IA_CardboardBox_Ashtray_01.et" {
+   ID "5CB6B281C4F9C4B5"
+   coords -2.447 0.162 2.441
+   angles 0 100.637 0
+  }
+  GenericEntity : "{C76C3AF337109066}Prefabs/Props/Crates/CardboardBoxStack_01.et" {
+   ID "5CB6B281C4F99402"
+   components {
+    Hierarchy "{5CCCBEF33899BE97}" {
+     Enabled 1
+    }
+   }
+   coords 2.328 0.162 2.407
+   angles 0 -60.166 0
+  }
+  StaticModelEntity : "{9F7211592BE80DC2}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/TentUSSR_01_CompositionDestruction.et" {
+   ID "5CB6B281C4F9CB49"
+   coords 0 0 0
+  }
+ }
+}

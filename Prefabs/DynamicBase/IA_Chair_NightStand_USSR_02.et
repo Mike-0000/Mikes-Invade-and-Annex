@@ -1,0 +1,24 @@
+GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD2292864621}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{3800AA04761AE0EC}Prefabs/Props/Civilian/Notebook_01_Single_Blue.et" {
+   ID "5CB0F5869BB37310"
+   components {
+    Hierarchy "{5CCCBEF37413E96E}" {
+     Enabled 1
+    }
+   }
+   coords -0.083 0.5 0.011
+   angles 0 145.158 0
+  }
+ }
+}

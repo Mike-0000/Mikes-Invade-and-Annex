@@ -231,6 +231,7 @@ class IA_AiGroup
     private bool m_bAirborneDrop = false;
     private bool m_bKeepAltitude = false;
     private bool m_isHoldingPost = false;
+    private bool m_bDefendPost = false;
     private vector m_holdPost = vector.Zero;
     private float m_holdRadius = 0;
     private int m_iAirborneInFlight = 0;
@@ -843,8 +844,20 @@ class IA_AiGroup
 
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
-        if (m_isHoldingPost && order != IA_AiOrder.Hold)
-            return;
+        if (m_isHoldingPost)
+        {
+            if (m_bDefendPost)
+            {
+                if (order != IA_AiOrder.Hold && order != IA_AiOrder.Defend && order != IA_AiOrder.DefendSmall)
+                    return;
+                // Hold recovery paths must restore a typed Defend waypoint at
+                // the pinned post, before the typed-tree compatibility check.
+                origin = m_holdPost;
+                order = IA_AiOrder.DefendSmall;
+            }
+            else if (order != IA_AiOrder.Hold)
+                return;
+        }
 
         // Store last order data
         m_lastOrderPosition = origin;
@@ -891,7 +904,7 @@ class IA_AiGroup
         else if (m_bKeepAltitude)
             preserveAltitude = true;
 
-        if (!m_isDriving && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.Hold)
+        if (!m_isDriving && !m_isHoldingPost && order != IA_AiOrder.GetInVehicle && order != IA_AiOrder.Hold)
         {
             // Get the current group number from VehicleManager's active group
             int currentGroupNumber = IA_VehicleManager.GetActiveGroup();
@@ -1152,16 +1165,23 @@ class IA_AiGroup
             // --- END MODIFIED ---
         }
 
-        if (order == IA_AiOrder.Hold)
+        if (order == IA_AiOrder.Hold || m_bDefendPost)
         {
             SCR_TimedWaypoint waitWp = SCR_TimedWaypoint.Cast(w);
             if (waitWp)
             {
                 waitWp.SetHoldingTime(-1);
                 float holdR = m_holdRadius;
-                if (holdR < 3)
+                if (!m_bDefendPost && holdR < 3)
                     holdR = 5;
                 waitWp.SetCompletionRadius(holdR);
+            }
+            if (m_bDefendPost)
+            {
+                SCR_DefendWaypoint postWaypoint = SCR_DefendWaypoint.Cast(w);
+                if (postWaypoint)
+                    postWaypoint.SetCurrentDefendPreset(1); // CoverPost, not loitering.
+                w.SetPriorityLevel(WP_PRIORITY_DEFEND);
             }
         }
 
@@ -1225,6 +1245,8 @@ class IA_AiGroup
             if (!wp)
                 continue;
             if (SCR_BoardingTimedWaypoint.Cast(wp))
+                continue;
+            if (m_bDefendPost && !SCR_DefendWaypoint.Cast(wp))
                 continue;
             if (SCR_TimedWaypoint.Cast(wp))
                 return true;
@@ -3449,13 +3471,22 @@ class IA_AiGroup
         return m_pendingUnitsToSpawn;
     }
 
-    void Despawn()
+    // Stop deferred creation without deleting soldiers who are still near players.
+    void CancelPendingUnitSpawns()
     {
         m_bSpawnAborted = true;
         m_pendingUnitsToSpawn = 0;
         ScriptCallQueue queue = GetGame().GetCallqueue();
         if (queue)
+        {
             queue.Remove(this.SpawnNextUnit);
+            queue.Remove(this.SpawnNextHostileCivilianUnit);
+        }
+    }
+
+    void Despawn()
+    {
+        CancelPendingUnitSpawns();
         if (!IsSpawned())
         {
             return;
@@ -3894,6 +3925,8 @@ class IA_AiGroup
     //! Mark defend-mode tracking without clearing existing vehicle/move orders.
     void EnableDefendModeTracking(bool enable, vector defendPoint = vector.Zero)
     {
+        if (m_isHoldingPost)
+            return;
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
     }
@@ -3907,9 +3940,19 @@ class IA_AiGroup
     void SetHoldPost(vector pos, float radius = 0)
     {
         m_isHoldingPost = true;
+        m_bDefendPost = false;
         m_holdPost = pos;
         m_bKeepAltitude = true;
         m_holdRadius = radius;
+    }
+
+    // Uses existing pinned-garrison lifecycle but an indefinite Defend waypoint.
+    // Caller supplies a positive radius already clipped to the wall interior.
+    void SetDefendPost(vector pos, float radius)
+    {
+        SetHoldPost(pos, radius);
+        m_bDefendPost = true;
+        SetDefendWaypointRadiusOverride(radius);
     }
 
     bool IsHoldingPost()
@@ -4558,7 +4601,7 @@ class IA_AiGroup
         if (!charEntity)
             return;
 
-        if (!m_group)
+        if (m_bSpawnAborted || !m_group)
         {
             IA_Game.AddEntityToGc(charEntity);
             return;
@@ -4664,7 +4707,7 @@ class IA_AiGroup
                 if (holdAt == vector.Zero)
                     holdAt = m_staggeredSpawnPos;
                 SetTacticalState(IA_GroupTacticalState.Holding, holdAt, null, true);
-                Print(string.Format("[IA_AiGroup] Applied Hold Wait at %1", holdAt.ToString()), LogLevel.NORMAL);
+                Print(string.Format("[IA_AiGroup] Applied pinned post at %1 defend=%2 radius=%3", holdAt.ToString(), m_bDefendPost, m_holdRadius), LogLevel.NORMAL);
             }
             else if (m_bSweepPatrol)
             {
@@ -5109,6 +5152,8 @@ class IA_AiGroup
 
     void SetDefendWaypointRadiusOverride(float radius)
     {
+        if (m_bDefendPost)
+            radius = m_holdRadius;
         if (radius < 0)
             radius = 0;
         m_defendWaypointRadiusOverride = radius;
@@ -5117,6 +5162,8 @@ class IA_AiGroup
 
     void ApplyDefendWaypointRadius(float radius)
     {
+        if (m_bDefendPost)
+            radius = m_holdRadius;
         if (radius <= 0)
             return;
 

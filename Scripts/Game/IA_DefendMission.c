@@ -242,10 +242,12 @@ class IA_DefendMission
         }
         
         m_affectedAreas.Clear();
+        if (m_ownedQrfManager)
+            m_ownedQrfManager.Shutdown();
         m_ownedQrfManager = null;
         
         IA_Game gameInstance = IA_Game.Instantiate();
-        if (gameInstance)
+        if (gameInstance && gameInstance.GetActiveDefendMission() == this)
             gameInstance.SetActiveDefendMission(null);
 
         if (m_bDynamicBase)
@@ -285,6 +287,8 @@ class IA_DefendMission
                 area.SetDefendMode(false);
         }
         m_affectedAreas.Clear();
+        if (m_ownedQrfManager)
+            m_ownedQrfManager.Shutdown();
         m_ownedQrfManager = null;
 
         IA_Game gameInstance = IA_Game.Instantiate();
@@ -501,9 +505,10 @@ class IA_DefendMission
     
     private void CollectAffectedAreas()
     {
-        if (m_ExplicitHost)
+        if (m_bDynamicBase)
         {
-            if (m_ExplicitHost.IsShutDown() || m_ExplicitHost.GetAreaGroup() != m_groupID)
+            m_affectedAreas.Clear();
+            if (!m_ExplicitHost || m_ExplicitHost.IsShutDown() || m_ExplicitHost.GetAreaGroup() != m_groupID)
             {
                 Print("[IA_DefendMission] Explicit dynamic-base host is not live for this group.", LogLevel.ERROR);
                 return;
@@ -1100,9 +1105,9 @@ class IA_DefendMission
     {
         IA_AreaGroupManager qrfManager = null;
         IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
-        if (init && !m_bDynamicBase)
+        if (init)
             qrfManager = init.GetCurrentAreaGroupManager();
-        if (qrfManager)
+        if (qrfManager && qrfManager.ContainsLiveArea(targetArea))
             return qrfManager;
 
         if (!m_ownedQrfManager && targetArea)

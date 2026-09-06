@@ -1,0 +1,64 @@
+GenericEntity {
+ ID "8373A6C7A795529D"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{E4416C4C6938BEEE}Prefabs/Props/Crates/CrateWooden_02/CrateWooden_02_1x1x1.et" {
+   ID "EA162756487956FC"
+   components {
+    Hierarchy "{353AACAB3FD55A6A}" {
+     Enabled 1
+    }
+   }
+   coords -0.75 -0.000173 0.1
+   angles 0 0 0
+  }
+  GenericEntity : "{E4416C4C6938BEEE}Prefabs/Props/Crates/CrateWooden_02/CrateWooden_02_1x1x1.et" {
+   ID "6A8058FDA40A59D1"
+   components {
+    Hierarchy "{51F933085DDC585E}" {
+     Enabled 1
+    }
+   }
+   coords 0.65 -0.000173 0.35
+   angles 0 12 0
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "089FE29B4CFD5612"
+   components {
+    Hierarchy "{7666D92069EE56F5}" {
+     Enabled 1
+    }
+   }
+   coords -0.75 1.097690 0.1
+   angles 0 5 0
+  }
+  GenericEntity : "{0879933F4FDD2C2B}Prefabs/Props/Civilian/SackUniversal_01_Pile.et" {
+   ID "459818CA57D658D7"
+   components {
+    Hierarchy "{6B1A0D11A7EB5CDC}" {
+     Enabled 1
+    }
+   }
+   coords -0.15 0.030332 -1.6
+   angles 0 15 0
+  }
+  GenericEntity : "{62B2ADC4243454F9}Prefabs/Props/Civilian/Jerrycan_01.et" {
+   ID "B8F04E0885C8563E"
+   components {
+    Hierarchy "{A8E25A5EFA5A5A3B}" {
+     Enabled 1
+    }
+   }
+   coords 1.35 -0.000225 -0.7
+   angles 0 8 0
+  }
+ }
+}

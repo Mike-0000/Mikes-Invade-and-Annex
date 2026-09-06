@@ -1,0 +1,64 @@
+GenericEntity : "{764414C0E2EF983E}Prefabs/Props/Military/Furniture/TableMilitary_USSR_02.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD229F2B53A5}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{03DE957D8161212B}Prefabs/Props/Civilian/Notebook_01_Open.et" {
+   ID "5CB0F589903FBFB4"
+   components {
+    Hierarchy "{5CCCBEF35117166D}" {
+     Enabled 1
+    }
+   }
+   coords -0.386 0.899 0.088
+   angles 0 -171.888 0
+  }
+  GameEntity : "{2CB0AA2A87842C18}Prefabs/Props/Civilian/LampKerosene_01/LampKerosene_01_military_USSR.et" {
+   ID "5CB0F589903FBFBF"
+   components {
+    Hierarchy "{5CCCBEF3511A235F}" {
+     Enabled 1
+    }
+   }
+   coords 0.279 0.901 -0.251
+   angles 0 11.569 0
+  }
+  GenericEntity : "{642101F827FFA52D}Prefabs/Props/Military/Manuals/Manual_Soviet_01.et" {
+   ID "5CB0F589903FBFB0"
+   components {
+    Hierarchy "{5CCCBEF3511D4379}" {
+     Enabled 1
+    }
+   }
+   coords 0.465 0.974 0.073
+   angles 0 -69.385 0
+  }
+  GenericEntity : "{C2C1CEA73A4D8779}Prefabs/Props/Civilian/Notebook_01_Stack.et" {
+   ID "5CB0F589903FBFBC"
+   components {
+    Hierarchy "{5CCCBEF351636185}" {
+     Enabled 1
+    }
+   }
+   coords 0.518 0.902 0.033
+   angles 0 165 0
+  }
+  GenericEntity : "{E56F1B739B9792C4}Prefabs/Props/Civilian/Ashtray_01_Full_green.et" {
+   ID "5CB0F589903FBFB6"
+   components {
+    Hierarchy "{5CCCBEF351666699}" {
+     Enabled 1
+    }
+   }
+   coords 0.039 0.899 -0.179
+   angles 0 -40.737 0
+  }
+ }
+}

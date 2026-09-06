@@ -1,0 +1,56 @@
+GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD2296724B2C}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  $grp GenericEntity : "{E7A4AA1C549E2371}Prefabs/Structures/Military/Camps/Canvas_Covers/Soviet/CanvasCover_Folded_Soviet.et" {
+   {
+    ID "5CB0F585380C48B0"
+    components {
+     Hierarchy "{5CCCBEF36FC45F4F}" {
+      Enabled 1
+     }
+    }
+    coords -0.467 0.487 0.027
+    angles 0 -90 0
+   }
+   {
+    ID "5CB0F585380C48B1"
+    components {
+     Hierarchy "{5CCCBEF36FC72B91}" {
+      Enabled 1
+     }
+    }
+    coords -0.467 0.564 0.027
+    angles 0 -90 0
+   }
+   {
+    ID "5CB0F585380C48B2"
+    components {
+     Hierarchy "{5CCCBEF36FCAE416}" {
+      Enabled 1
+     }
+    }
+    coords 0.366 0.564 0.027
+    angles 0 90 0
+   }
+   {
+    ID "5CB0F585380C48B3"
+    components {
+     Hierarchy "{5CCCBEF36FCD979D}" {
+      Enabled 1
+     }
+    }
+    coords 0.366 0.487 0.027
+    angles 0 90 0
+   }
+  }
+ }
+}

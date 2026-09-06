@@ -1,0 +1,54 @@
+GenericEntity {
+ ID "E36745EA5408524F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{A419F4547954DA05}Prefabs/Props/Construction/CableReel/CableReelWooden_01.et" {
+   ID "1268F13D60095A96"
+   components {
+    Hierarchy "{AF703734274E55B0}" {
+     Enabled 1
+    }
+   }
+   coords -0.55 0.011512 0.2
+   angles 0 20 0
+  }
+  GenericEntity : "{0F866B72D473D8C4}Prefabs/Props/Industrial/ToolBox_01/ToolBox_01_grey.et" {
+   ID "9E3105C1C88D5EEA"
+   components {
+    Hierarchy "{9AF4121BC10C526E}" {
+     Enabled 1
+    }
+   }
+   coords 0.55 0.000000 -0.4
+   angles 0 -12 0
+  }
+  GenericEntity : "{62B2ADC4243454F9}Prefabs/Props/Civilian/Jerrycan_01.et" {
+   ID "F9EE9393246C5DB0"
+   components {
+    Hierarchy "{4A5A387E52735DC5}" {
+     Enabled 1
+    }
+   }
+   coords 0.6 -0.000225 0.4
+   angles 0 8 0
+  }
+  GenericEntity : "{62B2ADC4243454F9}Prefabs/Props/Civilian/Jerrycan_01.et" {
+   ID "270636E03C875E23"
+   components {
+    Hierarchy "{259BF92F8A535B5B}" {
+     Enabled 1
+    }
+   }
+   coords 0.95 -0.000225 0.4
+   angles 0 -5 0
+  }
+ }
+}

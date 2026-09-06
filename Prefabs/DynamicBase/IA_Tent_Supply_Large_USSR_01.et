@@ -1,0 +1,26 @@
+GenericEntity {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DD8F4F21A3F9348}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{CD3237BB59C05A15}Prefabs/DynamicBase/IA_Storage_CanvasCover_Large_USSR_01.et" {
+   ID "5DB6D4045311E2D7"
+   coords -0.243 0 -1.119
+   angles 0.461 -5 0.768
+  }
+  GenericEntity : "{FCCB91AC2A242FE5}Prefabs/Structures/Military/Camps/Canvas_Covers/Soviet/CanvasCover_Large_Soviet.et" {
+   ID "5DB6D4045311E2CD"
+   components {
+    Hierarchy "{5DD8F4F21A30A6AA}" {
+    }
+   }
+  }
+ }
+}

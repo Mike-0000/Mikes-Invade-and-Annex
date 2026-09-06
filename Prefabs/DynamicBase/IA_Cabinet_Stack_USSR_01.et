@@ -1,0 +1,24 @@
+GenericEntity : "{C99D1B2E817E12D9}Prefabs/Props/Military/Furniture/TableMilitary_USSR_02_cabinet.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD2292C70C0A}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{C99D1B2E817E12D9}Prefabs/Props/Military/Furniture/TableMilitary_USSR_02_cabinet.et" {
+   ID "5CB6B2A936834DF0"
+   components {
+    Hierarchy "{5CCCBEF377650712}" {
+     Enabled 1
+    }
+   }
+   coords -0.006 0.901 -0.005
+   angles 0 -2.443 0
+  }
+ }
+}

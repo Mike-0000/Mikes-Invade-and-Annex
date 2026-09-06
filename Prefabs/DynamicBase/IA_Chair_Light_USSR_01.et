@@ -1,0 +1,23 @@
+GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5CB0D99064F1F816}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GameEntity : "{2CB0AA2A87842C18}Prefabs/Props/Civilian/LampKerosene_01/LampKerosene_01_military_USSR.et" {
+   ID "5CB0D99064F1F86F"
+   components {
+    Hierarchy "{5CB0D99064F1F81D}" {
+    }
+   }
+   coords 0.108 0.5 -0.059
+   angles 0 -5.53 0
+  }
+ }
+}

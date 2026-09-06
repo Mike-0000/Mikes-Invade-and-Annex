@@ -1,0 +1,24 @@
+GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD22957EDF03}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{04EEB10214E177B3}Prefabs/Props/Civilian/Notebook_01_Single_MarbleBlack.et" {
+   ID "5CB0F588F0106DD0"
+   components {
+    Hierarchy "{5CCCBEF36E948514}" {
+     Enabled 1
+    }
+   }
+   coords -0.833 0.478 -0.098
+   angles 0 30 0
+  }
+ }
+}

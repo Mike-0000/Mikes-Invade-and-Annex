@@ -1,0 +1,384 @@
+{
+  "pads": {
+    "Briefing": [
+      2.3,
+      2.6
+    ],
+    "Mess": [
+      1.7,
+      1.5
+    ],
+    "Stores": [
+      1.8,
+      2.9
+    ],
+    "Water": [
+      1.4,
+      1.2
+    ],
+    "Workshop": [
+      2.0,
+      2.2
+    ],
+    "Utility": [
+      1.7,
+      1.3
+    ]
+  },
+  "scenes": {
+    "Full": [
+      {
+        "id": "dressing_briefing_0",
+        "kind": "Briefing",
+        "x": 14,
+        "z": 49,
+        "yaw": 0,
+        "half_width": 2.3,
+        "half_depth": 2.6
+      },
+      {
+        "id": "dressing_mess_1",
+        "kind": "Mess",
+        "x": -47,
+        "z": 53,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      },
+      {
+        "id": "dressing_mess_2",
+        "kind": "Mess",
+        "x": -46,
+        "z": -2,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      },
+      {
+        "id": "dressing_water_3",
+        "kind": "Water",
+        "x": -78,
+        "z": 32,
+        "yaw": 0,
+        "half_width": 1.4,
+        "half_depth": 1.2
+      },
+      {
+        "id": "dressing_stores_4",
+        "kind": "Stores",
+        "x": 45,
+        "z": -26,
+        "yaw": 0,
+        "half_width": 1.8,
+        "half_depth": 2.9
+      },
+      {
+        "id": "dressing_stores_5",
+        "kind": "Stores",
+        "x": 30,
+        "z": -48,
+        "yaw": 0,
+        "half_width": 1.8,
+        "half_depth": 2.9
+      },
+      {
+        "id": "dressing_workshop_6",
+        "kind": "Workshop",
+        "x": -67,
+        "z": -22,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 2.2
+      },
+      {
+        "id": "dressing_utility_7",
+        "kind": "Utility",
+        "x": 28,
+        "z": 57,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.3
+      },
+      {
+        "id": "dressing_water_8",
+        "kind": "Water",
+        "x": 78,
+        "z": 33,
+        "yaw": 0,
+        "half_width": 1.4,
+        "half_depth": 1.2
+      },
+      {
+        "id": "dressing_utility_9",
+        "kind": "Utility",
+        "x": 72,
+        "z": -32,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.3
+      },
+      {
+        "id": "dressing_stores_10",
+        "kind": "Stores",
+        "x": -30,
+        "z": -58,
+        "yaw": 0,
+        "half_width": 1.8,
+        "half_depth": 2.9
+      },
+      {
+        "id": "dressing_mess_11",
+        "kind": "Mess",
+        "x": -15,
+        "z": 43,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      }
+    ],
+    "Compact": [
+      {
+        "id": "dressing_briefing_0",
+        "kind": "Briefing",
+        "x": 16,
+        "z": 30,
+        "yaw": 0,
+        "half_width": 2.3,
+        "half_depth": 2.6
+      },
+      {
+        "id": "dressing_mess_1",
+        "kind": "Mess",
+        "x": -21,
+        "z": 27,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      },
+      {
+        "id": "dressing_water_2",
+        "kind": "Water",
+        "x": -49,
+        "z": 10,
+        "yaw": 0,
+        "half_width": 1.4,
+        "half_depth": 1.2
+      },
+      {
+        "id": "dressing_stores_3",
+        "kind": "Stores",
+        "x": 24,
+        "z": -39,
+        "yaw": 0,
+        "half_width": 1.8,
+        "half_depth": 2.9
+      },
+      {
+        "id": "dressing_workshop_4",
+        "kind": "Workshop",
+        "x": -15,
+        "z": -27,
+        "yaw": 0,
+        "half_width": 2.0,
+        "half_depth": 2.2
+      },
+      {
+        "id": "dressing_utility_5",
+        "kind": "Utility",
+        "x": 42,
+        "z": -21,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.3
+      },
+      {
+        "id": "dressing_mess_6",
+        "kind": "Mess",
+        "x": -34,
+        "z": 43,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      },
+      {
+        "id": "dressing_water_7",
+        "kind": "Water",
+        "x": 42,
+        "z": 8,
+        "yaw": 0,
+        "half_width": 1.4,
+        "half_depth": 1.2
+      }
+    ],
+    "Courtyard": [
+      {
+        "id": "dressing_briefing_0",
+        "kind": "Briefing",
+        "x": 16,
+        "z": 30,
+        "yaw": 0,
+        "half_width": 2.3,
+        "half_depth": 2.6
+      },
+      {
+        "id": "dressing_mess_1",
+        "kind": "Mess",
+        "x": -25,
+        "z": 30,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      },
+      {
+        "id": "dressing_water_2",
+        "kind": "Water",
+        "x": -6,
+        "z": -25,
+        "yaw": 0,
+        "half_width": 1.4,
+        "half_depth": 1.2
+      },
+      {
+        "id": "dressing_stores_3",
+        "kind": "Stores",
+        "x": 26,
+        "z": -7,
+        "yaw": 90,
+        "half_width": 1.8,
+        "half_depth": 2.9
+      },
+      {
+        "id": "dressing_utility_4",
+        "kind": "Utility",
+        "x": 39,
+        "z": -25,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.3
+      },
+      {
+        "id": "dressing_mess_5",
+        "kind": "Mess",
+        "x": 25,
+        "z": 30,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      }
+    ],
+    "Roadside": [
+      {
+        "id": "dressing_briefing_0",
+        "kind": "Briefing",
+        "x": 17,
+        "z": 33,
+        "yaw": 0,
+        "half_width": 2.3,
+        "half_depth": 2.6
+      },
+      {
+        "id": "dressing_mess_1",
+        "kind": "Mess",
+        "x": -17,
+        "z": 23,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      },
+      {
+        "id": "dressing_water_2",
+        "kind": "Water",
+        "x": -17,
+        "z": -6,
+        "yaw": 0,
+        "half_width": 1.4,
+        "half_depth": 1.2
+      },
+      {
+        "id": "dressing_stores_3",
+        "kind": "Stores",
+        "x": 18,
+        "z": 22,
+        "yaw": 0,
+        "half_width": 1.8,
+        "half_depth": 2.9
+      },
+      {
+        "id": "dressing_utility_4",
+        "kind": "Utility",
+        "x": 17,
+        "z": -42,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.3
+      }
+    ],
+    "CommandPost": [
+      {
+        "id": "dressing_briefing_0",
+        "kind": "Briefing",
+        "x": 18,
+        "z": 19,
+        "yaw": 0,
+        "half_width": 2.3,
+        "half_depth": 2.6
+      },
+      {
+        "id": "dressing_mess_1",
+        "kind": "Mess",
+        "x": -19,
+        "z": 8,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      },
+      {
+        "id": "dressing_water_2",
+        "kind": "Water",
+        "x": -7,
+        "z": -20,
+        "yaw": 0,
+        "half_width": 1.4,
+        "half_depth": 1.2
+      },
+      {
+        "id": "dressing_stores_3",
+        "kind": "Stores",
+        "x": 19,
+        "z": 7,
+        "yaw": 90,
+        "half_width": 1.8,
+        "half_depth": 2.9
+      }
+    ],
+    "RallyPost": [
+      {
+        "id": "dressing_mess_0",
+        "kind": "Mess",
+        "x": -9,
+        "z": -6,
+        "yaw": 0,
+        "half_width": 1.7,
+        "half_depth": 1.5
+      },
+      {
+        "id": "dressing_stores_1",
+        "kind": "Stores",
+        "x": 9,
+        "z": -15,
+        "yaw": 90,
+        "half_width": 1.8,
+        "half_depth": 2.9
+      },
+      {
+        "id": "dressing_water_2",
+        "kind": "Water",
+        "x": -10,
+        "z": -17,
+        "yaw": 0,
+        "half_width": 1.4,
+        "half_depth": 1.2
+      }
+    ]
+  }
+}

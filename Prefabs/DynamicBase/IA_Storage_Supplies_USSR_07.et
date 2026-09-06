@@ -1,0 +1,82 @@
+GenericEntity {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  $grp GenericEntity : "{0457BBAF5262EECE}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/SupplyStack_Large_01_storage_USSR_covered.et" {
+   {
+    ID "5D45393C6E9B22B4"
+    coords 1.55 -0.001 3.079
+    angles 0 8.257 0
+   }
+   {
+    ID "5D45393C6E9B74F8"
+    coords 2.746 -0.001 0.371
+    angles 0 7.748 0
+   }
+   {
+    ID "5D45393C6E9B74FD"
+    coords 2.787 -0.001 1.71
+    angles 0 -87.395 0
+   }
+  }
+  $grp GenericEntity : "{3FD3F403025BBDF5}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/SupplyStack_Large_01_storage.et" {
+   {
+    ID "5D45393C6E9B22B6"
+    coords 1.134 -0.001 0.457
+    angles 0 -88.279 0
+   }
+   {
+    ID "5D45393C6E9B22B7"
+    coords 1.331 -0.001 1.768
+    angles 0 5.315 0
+   }
+  }
+  $grp GenericEntity : "{677917B581F03974}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V2_storage.et" {
+   {
+    ID "5D45393C6E9B22AF"
+    coords 0.082 -0.001 1.732
+    angles 0 92.697 0
+   }
+   {
+    ID "5D45393C6E9B22B9"
+    coords 4.181 -0.001 2.881
+    angles 0 -86.377 0
+   }
+  }
+  $grp GenericEntity : "{98A34AE10104A932}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V1_storage.et" {
+   {
+    ID "5D45393C6E9B22B8"
+    coords 4.075 -0.001 1.547
+    angles 0 -87.358 0
+   }
+   {
+    ID "5D45393C6E9B22BA"
+    coords 2.942 -0.001 3.184
+    angles 0 3.535 0
+   }
+   {
+    ID "5D45393C6E9B74C4"
+    coords -0.01 -0.001 0.348
+    angles 0 90.92 0
+   }
+  }
+  GenericEntity : "{AFD2667DB2F5A048}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V5_storage_USSR_covered.et" {
+   ID "5D45393C6E9B74C6"
+   coords 4.026 -0.001 0.273
+   angles 0 96.56 0
+  }
+  GenericEntity : "{B14D3FBE92E47277}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V1_storage_USSR_covered.et" {
+   ID "5D45393C6E9B22B3"
+   coords 0.241 -0.001 3.116
+   angles 0 93.077 0
+  }
+ }
+}

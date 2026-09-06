@@ -1,0 +1,149 @@
+GenericEntity {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD227FCA473B}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  StaticModelEntity : "{08FEA407038C51C7}Prefabs/DynamicBase/IA_Chair_NightStand_USSR_03.et" {
+   ID "5CB6B2865DEFD4D8"
+   coords 2.633 0.158 2.602
+   angles 0 -97.48 0
+  }
+  StaticModelEntity : "{C480E4C2FF4958BC}Prefabs/DynamicBase/IA_Bed_Notebook_USSR_01.et" {
+   ID "5CB6B2865DEFD4CA"
+   coords 1.651 0.173 -2.353
+   angles 0 -3.358 0
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CB6B2865DEFD723"
+   components {
+    Hierarchy "{5CCCBEF335FFBFD6}" {
+     Enabled 1
+    }
+   }
+   coords -2.069 0.18 0.063
+   angles 0 -76.456 0
+  }
+  $grp GenericEntity : "{18982CB5D0D29247}Prefabs/Props/Civilian/BeerBottle_01_empty_brown.et" {
+   {
+    ID "5CB6B2865DEFD730"
+    coords -0.504 0.208 0.356
+    angles 0 -70.35 -87.409
+   }
+   {
+    ID "5CB6B2865DEFD732"
+    coords -1.568 0.208 2.737
+    angles 0 -153.092 -87.409
+   }
+   {
+    ID "5CB6B2865DEFD733"
+    coords 1.99 0.208 0.156
+    angles 0 50.619 -87.409
+   }
+  }
+  GenericEntity : "{1BE2B6FF4806EB3E}Prefabs/Props/Civilian/Guitar_01/Guitar_01.et" {
+   ID "5CB6B2865DEFD70B"
+   components {
+    Hierarchy "{5CCCBEF335CD987F}" {
+     Enabled 1
+    }
+   }
+   coords 0.045 0.731 0.113
+   angles 75 -168.176 0
+  }
+  StaticModelEntity : "{96A2487CECCF5CAF}Prefabs/DynamicBase/IA_Table_Food_USSR_01.et" {
+   ID "5CB6B2865DEFD72E"
+   coords 2.378 0.185 -0.265
+   angles 0 -90.702 0
+  }
+  $grp GenericEntity : "{E7ABE0E4A0985D4A}Prefabs/DynamicBase/IA_Crate_Bottles_01.et" {
+   {
+    ID "5CB6B2865DEFD73D"
+    coords 0.224 0.182 -0.155
+    angles 0 -73.456 0
+   }
+   {
+    ID "5CB6B2865DEFD73E"
+    coords -0.251 0.182 -0.031
+    angles 0 80.909 0
+   }
+  }
+  StaticModelEntity : "{92927876AE855D66}Prefabs/DynamicBase/IA_Cabinet_Stack_USSR_01.et" {
+   ID "5CB6B2865DEFD4DF"
+   coords -0.006 0.177 -2.42
+   angles 0 -2.493 0
+  }
+  GenericEntity : "{82D96F1B6EC3AD44}Prefabs/Props/Decorations/Paintings/PaintingSmall_01_V11.et" {
+   ID "5CB6B2865DEFD705"
+   components {
+    Hierarchy "{5CCCBEF335D01B7C}" {
+     Enabled 1
+    }
+   }
+   coords 2.842 0.458 1.989
+   angles 6.643 -85.952 0.469
+  }
+  StaticModelEntity : "{6FB9007CD34350C4}Prefabs/DynamicBase/IA_Table_Desk_USSR_04.et" {
+   ID "5CB6B2865DEFD72A"
+   coords -2.317 0.169 -0.321
+   angles 0 94.802 0
+  }
+  StaticModelEntity : "{1842233E96EE5509}Prefabs/DynamicBase/IA_Chair_NightStand_USSR_01.et" {
+   ID "5CB6B2865DEFD4D0"
+   coords -2.458 0.169 -1.577
+   angles 0 64.503 0
+  }
+  GenericEntity : "{8FE6D62204173656}Prefabs/Props/Civilian/BeerBottle_01_group.et" {
+   ID "5CB6B2865DEFD70C"
+   coords 2.643 0.173 -0.592
+   angles 0 -27.719 0
+  }
+  StaticModelEntity : "{9F7211592BE80DC2}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/TentUSSR_01_CompositionDestruction.et" {
+   ID "5CB6B2865DEFD4F5"
+   coords 0 0 0
+  }
+  $grp GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   {
+    ID "5CB6B2865DEFD4C3"
+    components {
+     Hierarchy "{5CCCBEF3342173C4}" {
+      Enabled 1
+     }
+    }
+    coords 2.167 0.192 1.809
+    angles 0 -105.951 0
+   }
+   {
+    ID "5CB6B2865DEFD4CE"
+    components {
+     Hierarchy "{5CCCBEF33425EEC7}" {
+      Enabled 1
+     }
+    }
+    coords -1.653 0.192 -2.387
+    angles 0 -176.051 0
+   }
+  }
+  StaticModelEntity : "{E771D2E3D06F50A1}Prefabs/DynamicBase/IA_Bed_Blankets_USSR_01.et" {
+   ID "5CB6B2865DEFD4C6"
+   coords -2.144 0.171 1.759
+   angles 0 -78.728 0
+  }
+  StaticModelEntity : "{51E0CF358BB85A30}Prefabs/DynamicBase/IA_Chair_NightStand_USSR_05.et" {
+   ID "5CB6B2865DEFD4D5"
+   coords 2.489 0.16 -1.497
+   angles 0 -39.171 0
+  }
+  StaticModelEntity : "{EC7AA02D0123570C}Prefabs/DynamicBase/IA_Chair_NightStand_USSR_02.et" {
+   ID "5CB6B2865DEFD4D2"
+   coords -2.641 0.16 2.547
+   angles 0 96.612 0
+  }
+ }
+}
