@@ -21,6 +21,11 @@ class IA_DynamicSitePlacer
 	static const int MAX_EXPANDED = 2200;
 	static const int NAV_RECHECK_MS = 15000;
 	static const float LANE_SAMPLE_M = 3;
+	// Whole-base bowl. 4 m rejected RallyPosts on ordinary Everon rolls.
+	static const float FOOTPRINT_HEIGHT_SPAN_M = 6;
+	// cos(10 deg). The old 5 deg (0.9961947) vetoed almost every Montignac
+	// field once HQ and LivingLarge both followed the terrain plane.
+	static const float COMPOSITION_MIN_UP_Y = 0.9848078;
 
 	protected int m_iSerial;
 	protected int m_iGroupId;
@@ -1297,10 +1302,10 @@ class IA_DynamicSitePlacer
 					maxY = p[1];
 				// Fail as soon as the sampled range exceeds the limit. Surveying
 				// more anchors must not require full scans of obviously steep sites.
-				if ((maxY - minY) > 4)
+				if ((maxY - minY) > FOOTPRINT_HEIGHT_SPAN_M)
 				{
 					m_sTerrainRejection = "footprint_height_span";
-					m_sTerrainDetail = string.Format("height_delta=%1 limit=4", maxY - minY);
+					m_sTerrainDetail = string.Format("height_delta=%1 limit=%2", maxY - minY, FOOTPRINT_HEIGHT_SPAN_M);
 					return false;
 				}
 				z = z + GRID_M;
@@ -1370,7 +1375,7 @@ class IA_DynamicSitePlacer
 
 	protected bool SampleModuleSupport(vector worldMat[4], notnull IA_DynamicSiteModule mod, out float originY)
 	{
-		if (mod.m_bFollowTerrainPlane && worldMat[1][1] < 0.9961947)
+		if (mod.m_bFollowTerrainPlane && worldMat[1][1] < COMPOSITION_MIN_UP_Y)
 		{
 			m_sTerrainRejection = "composition_slope";
 			m_sTerrainDetail = "module=" + mod.m_sId;

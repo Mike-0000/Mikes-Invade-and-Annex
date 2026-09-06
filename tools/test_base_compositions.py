@@ -203,8 +203,11 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('if (!DeleteRoots())',site)
         composed=read('Scripts/Game/IA_ComposedSiteLayout.c')
         self.assertIn('maxDelta = 0.8',composed)
+        self.assertIn('InteriorSupportDelta',composed)
         self.assertIn('required = true',composed)
         self.assertIn('module.m_bFollowTerrainPlane = side < 0',composed)
+        self.assertIn('COMPOSITION_MIN_UP_Y',placer)
+        self.assertIn('FOOTPRINT_HEIGHT_SPAN_M',placer)
 
     def test_aa_retains_vanilla_limits_without_campaign_disassembly(self):
         aa=read('Prefabs/Emplacements/IA_Emplacement_AA.et')
