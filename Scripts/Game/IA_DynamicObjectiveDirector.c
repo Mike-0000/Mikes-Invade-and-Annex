@@ -78,10 +78,6 @@ class IA_DynamicObjectiveDirector
 			return true;
 		if (phase == IA_BaseObjectivePhase.Seize)
 			return true;
-		if (phase == IA_BaseObjectivePhase.Regroup)
-			return true;
-		if (phase == IA_BaseObjectivePhase.Warning)
-			return true;
 		return false;
 	}
 
@@ -159,9 +155,6 @@ class IA_DynamicObjectiveDirector
 	//------------------------------------------------------------------------------------------------
 	void Tick()
 	{
-		// Record deployment throughout the ordinary AO, before a base is selected.
-		if (!m_Objective)
-			m_Sampler.TickRecord(System.GetUnixTime(), vector.Zero, 0);
 		if (m_Placer && m_Placer.IsComplete() && m_Objective && m_Objective.GetPhase() == IA_BaseObjectivePhase.Placing)
 		{
 			IA_DynamicSiteResult result = m_Placer.TakeResult();

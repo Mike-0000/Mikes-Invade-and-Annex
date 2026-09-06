@@ -57,7 +57,8 @@ class IA_EnhancedDefendDirector
 	//------------------------------------------------------------------------------------------------
 	static IA_EnhancedDefendDirector Create(notnull IA_DefendMission mission)
 	{
-		return new IA_EnhancedDefendDirector(mission);
+		ref IA_EnhancedDefendDirector director = new IA_EnhancedDefendDirector(mission);
+		return director;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -76,36 +77,20 @@ class IA_EnhancedDefendDirector
 		ApplyDuration();
 		ApplyPrepareWindow();
 		BuildEventPlan();
-		if (m_Mission.IsPreparedDynamicBase())
-			ShiftOffsiteEventsForPreparedBase();
 
 		m_Mission.BeginEnhancedHold();
 		string doctrineName = DoctrineName();
 		string site = m_Mission.GetMarkerName();
 
-		if (m_Mission.IsPreparedDynamicBase())
-		{
-			m_ePhase = IA_DefendPhase.Probe;
-			m_iPrepareStart = System.GetTickCount();
-			m_iPrepareStartUnix = System.GetUnixTime();
-			m_bFirstBeat = false;
-			m_Mission.NotifyPlayers("DefendMissionStarted", "Counterattack — " + doctrineName + " at " + site);
-			m_Mission.NotifyPlayers("TaskCreated", "Defend the captured base");
-			StartClock(System.GetTickCount());
-			FireFirstBeat();
-			m_bFirstBeat = true;
-		}
-		else
-		{
-			m_ePhase = IA_DefendPhase.Prepare;
-			m_iPrepareStart = System.GetTickCount();
-			m_iPrepareStartUnix = System.GetUnixTime();
-			m_bFirstBeat = false;
-			m_Mission.NotifyPlayers("DefendMissionStarted", doctrineName + " — defend " + site);
-			m_Mission.NotifyPlayers("TaskCreated", "PREPARE: " + doctrineName);
-			FireFirstBeat();
-			m_bFirstBeat = true;
-		}
+		// Authored positions and captured bases share the entire defense flow.
+		m_ePhase = IA_DefendPhase.Prepare;
+		m_iPrepareStart = System.GetTickCount();
+		m_iPrepareStartUnix = System.GetUnixTime();
+		m_bFirstBeat = false;
+		m_Mission.NotifyPlayers("DefendMissionStarted", doctrineName + " — defend " + site);
+		m_Mission.NotifyPlayers("TaskCreated", "PREPARE: " + doctrineName);
+		FireFirstBeat();
+		m_bFirstBeat = true;
 
 		Publish();
 		GetGame().GetCallqueue().Remove(this.Update);
@@ -260,8 +245,7 @@ class IA_EnhancedDefendDirector
 		m_iClockStart = now;
 		m_Mission.StartEnhancedClock();
 		m_ePhase = IA_DefendPhase.Probe;
-		if (!m_Mission.IsPreparedDynamicBase())
-			Notify("ReinforcementsCalled", "Contact — " + DoctrineName() + " clock started.");
+		Notify("ReinforcementsCalled", "Contact — " + DoctrineName() + " clock started.");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -529,21 +513,6 @@ class IA_EnhancedDefendDirector
 			Print(string.Format("[IA][Defend] Event plan count=%1 offsetsMs=%2/%3/%4 durationMs=%5 preferFirst=%6",
 				planned, o0, o1, o2, durationMs, preferI), LogLevel.NORMAL);
 		}
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void ShiftOffsiteEventsForPreparedBase()
-	{
-		if (m_EventStartOffsets.IsEmpty())
-			return;
-		int first = m_EventStartOffsets[0];
-		if (first >= 120000)
-			return;
-		int shift = 120000 - first;
-		int count = m_EventStartOffsets.Count();
-		int i;
-		for (i = 0; i < count; i++)
-			m_EventStartOffsets[i] = m_EventStartOffsets[i] + shift;
 	}
 
 	protected int ScaleEventOffset(int durationMs, float frac)

@@ -13,7 +13,38 @@ Four additional authored designs are available through the existing **Base size*
 
 The four new layouts use full-size prefab buildings at explicit positions. Facilities are omitted to reduce the footprint; buildings are not scaled down. Each layout has three entrances, a central approach, a cross lane and dedicated guard posts. Roadside describes a narrow floor plan and does not require or permit building on an occupied road.
 
-The command post uses about 70% less land than the previous smallest layout. The capture radii are 22, 20, 18 and 9 metres respectively. The 150 metre assembly zone and existing capture/regroup/defense sequence are unchanged. Guard ceilings affect the initial occupying garrison, not counterattack difficulty.
+The command post uses about 70% less land than the previous smallest layout. The capture radii are 22, 20, 18 and 9 metres respectively. Capturing the command zone now starts the normal defense immediately at the base; there is no separate assembly gate or counterattack countdown. Guard ceilings affect the initial occupying garrison, not counterattack difficulty.
+
+## Capture-to-defense flow and HUD
+
+Capture now hands directly to `IA_DefendMission` at the same base. There is no
+regroup roster gate or separate 30-second counterattack warning. Legacy defense
+uses the normal legacy hold; Enhanced uses the normal doctrine selection,
+PREPARE/PROBE/ASSAULT/CRISIS/SECURE phases, mini-objective scheduling, durations,
+notifications and `IA_DefendHud`. The normal defense timers remain; only the
+extra base-stage countdowns were removed. Defense settings are snapshotted when
+the base objective is selected, as before.
+
+`IA_BaseObjectiveHud` now inherits the existing capture tile's beveled frosted
+body, tracked status tab, ring, edge glow and slide/fade timings. Capture adds a
+smoothed progress rail; placement uses an indeterminate sweep. Contested capture
+pauses rather than predicting loss or resetting progress. Narrow docks omit the
+ring to reserve room for copy and percentage. Defense takes over via the existing
+shared HUD, not a second base-specific defense display.
+
+The `defense_create` failure after the constructor's "Created defend mission"
+message had an ownership gap: the base objective held only a weak mission
+reference before registering it with `IA_Game`. The objective and factory locals
+now retain `ref IA_DefendMission` through that handoff. Old regroup config fields
+and enum/status slots remain reserved for compatibility but no longer gate play.
+
+Validation: Workbench script validation passed WORKBENCH, PC, XBOX, PS4 and PS5.
+`python -m unittest discover -s tools -p "test_dynamic_base_flow.py"` checks the
+handoff, ownership declarations, defense parity and HUD/protocol contracts. These
+are compile/source checks, not a live defense simulation. Playtest capture into
+both legacy and Enhanced defense, each enabled doctrine (where terrain permits),
+JIP during seize/defense, contested capture, narrow multi-tile docks, cancellation
+and completion. Confirm there is no base warning/regroup pause or false failure.
 
 ## Placement changes
 
@@ -57,14 +88,14 @@ Run the measurement/regression plugin through a separate Workbench process using
 
 `tools/validate_dynamic_base_assets.py <extracted-data-directory>` checks all six layouts against the 750 entity ceiling, verifies prefab references and checks generated metadata.
 
-These checks cover authored geometry and source assets. They do not establish a placement success rate on live terrain or replace a multiplayer playtest. After recompiling/restarting the scenario, test each named design on a suitable clearing, then test Auto on an AO that previously failed. Confirm that guards spawn in clear areas, capture completes, the group assembles, defense begins at the same site, and cancellation cleans up after players leave. If placement still falls back, the `[IA][Base] Rejections:` lines identify the limiting checks.
+These checks cover authored geometry and source assets. They do not establish a placement success rate on live terrain or replace a multiplayer playtest. After recompiling/restarting the scenario, test each named design on a suitable clearing, then test Auto on an AO that previously failed. Confirm that guards spawn in clear areas, capture completes, defense begins immediately at the same site, and cancellation cleans up after players leave. If placement still falls back, the `[IA][Base] Rejections:` lines identify the limiting checks.
 
 The floor-plan illustration is in `dynamic-base-layouts.svg`. It shows reserved pads rather than exact building silhouettes.
 
 
 ## Rally post and on-map audit (2026-09-05)
 
-The smaller fallback is a 36 × 48 m authored fortification: one full-size HQ tent on its stock foundation, 48 tall sandbag sections, three entrances, a nine-metre capture circle and up to 12 initial occupying guards. It omits the separate barracks and supply shelter. Existing settings retain their numbers; Rally post is appended as admin value 6 and Auto's last layout at each surveyed anchor. Capture, regroup and defense use the existing objective implementation.
+The smaller fallback is a 36 × 48 m authored fortification: one full-size HQ tent on its stock foundation, 48 tall sandbag sections, three entrances, a nine-metre capture circle and up to 12 initial occupying guards. It omits the separate barracks and supply shelter. Existing settings retain their numbers; Rally post is appended as admin value 6 and Auto's last layout at each surveyed anchor. Capture hands directly to the shared defense implementation.
 
 A repeatable World Editor audit loaded the actual IA_Kolguyev world and ran the production terrain, obstruction and AO-boundary checks against group 0 with seed 12345 and 2,048 sampled anchors. The original five layouts produced **2** shortlisted fits. Including Rally post produced **27**. Terrain tolerances, foundation lift limits, reserved HQ clearance and AO bounds were identical between these runs. This is a static map audit, not a measurement of live mission success rate: player visibility/distance, access routes, constructed geometry and navigation still have to pass during gameplay.
 

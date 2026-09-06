@@ -1,97 +1,50 @@
 //------------------------------------------------------------------------------------------------
-//! Global seize/regroup/warning tile. Hidden once the existing defend HUD owns
-//! the hold. Server remaining seconds are authoritative.
+//! Dynamic-base capture tile using the existing capture chrome, body-only blur,
+//! tracked tab, ring and 0.38s/0.28s slide-fades. No base-only countdowns: capture
+//! hands directly to IA_DefendHud. Progress eases authoritative samples, never
+//! predicts with the ordinary sector's different/configuration-independent rate.
 //------------------------------------------------------------------------------------------------
-class IA_BaseObjectiveHud : MUI_Surface
+class IA_BaseObjectiveHud : IA_CaptureHud
 {
-	protected static const float HUD_W = 288;
-	protected static const float HUD_H = 66;
-	protected static const float PAD_X = 16;
-	protected static const int FONT_TITLE = 13;
-	protected static const int FONT_BODY = 11;
+	protected static const float RAIL_H = 3;
+	protected static const int FONT_COPY = 13;
+	protected static const int FONT_HINT = 10;
+	protected static const float COMPACT_W = 240;
 
 	protected int m_iPhase;
 	protected int m_iReason;
-	protected int m_iRemain;
-	protected int m_iPresent;
-	protected int m_iTarget;
-	protected int m_iCapturePermille;
+	protected int m_iSerial;
+	protected int m_iGroupId;
+	protected float m_fPhasePulse;
 	protected string m_sTitle;
 	protected string m_sBody;
-	protected ref Color m_HudBg;
-	protected ref Color m_HudAmber;
-	protected ref Color m_HudWhite;
-	protected ref Color m_HudGreen;
-	protected ref Color m_HudFail;
-	protected ref array<float> m_aBodyPoly;
 
 	//------------------------------------------------------------------------------------------------
-	void IA_BaseObjectiveHud()
-	{
-		m_Style.m_WidthMode = MUI_SizeMode.Exact;
-		m_Style.m_HeightMode = MUI_SizeMode.Exact;
-		m_Style.m_fWidth = HUD_W;
-		m_Style.m_fHeight = HUD_H;
-		m_Style.m_fMinWidth = HUD_W;
-		m_Style.m_fMinHeight = HUD_H;
-		m_Style.m_Fill = Color.FromInt(0);
-		m_Style.m_bBlockHit = false;
-		m_Style.m_bInteractive = false;
-		m_bBlurEnabled = true;
-		m_fBlurIntensity = 0.90;
-		m_HudBg = Color.FromSRGBA(13, 20, 18, 230);
-		m_HudAmber = Color.FromSRGBA(240, 180, 70, 255);
-		m_HudWhite = Color.FromSRGBA(255, 255, 255, 255);
-		m_HudGreen = Color.FromSRGBA(94, 251, 131, 255);
-		m_HudFail = Color.FromSRGBA(240, 90, 70, 255);
-		m_aBodyPoly = new array<float>();
-		m_sTitle = "";
-		m_sBody = "";
-	}
-
-	//------------------------------------------------------------------------------------------------
-	static IA_BaseObjectiveHud Create(notnull MUI_Runtime runtime)
+	static IA_BaseObjectiveHud CreateBase(notnull MUI_Runtime runtime)
 	{
 		ref IA_BaseObjectiveHud hud = new IA_BaseObjectiveHud();
 		runtime.Adopt(hud);
 		hud.SetName("baseObjective");
-		hud.SetWidth(HUD_W);
-		hud.SetHeight(HUD_H);
 		hud.SetVisible(false);
 		return hud;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	static float GetHudWidth()
+	override void Abort()
 	{
-		return HUD_W;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	void SetDockWidth(float w)
-	{
-		if (w < 180)
-			w = 180;
-		if (Math.AbsFloat(m_Style.m_fWidth - w) < 0.5)
-			return;
-		SetWidth(w);
-		SetMinWidth(w);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	void Abort()
-	{
+		super.Abort();
 		m_iPhase = IA_BaseObjectivePhase.None;
-		m_sTitle = "";
-		m_sBody = "";
-		SetVisible(false);
+		m_iReason = IA_BaseStatusReason.None;
+		m_fPhasePulse = 0;
 	}
 
 	//------------------------------------------------------------------------------------------------
 	override void OnTick(float dt)
 	{
-		super.OnTick(dt);
 		PullServer();
+		super.OnTick(dt);
+		if (!IsIdle())
+			m_fPhasePulse = MUI_Ease.Approach(m_fPhasePulse, 0, dt, 6);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -101,49 +54,47 @@ class IA_BaseObjectiveHud : MUI_Surface
 		IA_BaseHudStatus status = null;
 		if (init)
 			status = init.GetBaseObjectiveStatus();
-
-		int phase = IA_BaseObjectivePhase.None;
-		if (status)
-			phase = status.m_iPhase;
-
-		bool show = false;
-		if (phase == IA_BaseObjectivePhase.Seize)
-			show = true;
-		else if (phase == IA_BaseObjectivePhase.Regroup)
-			show = true;
-		else if (phase == IA_BaseObjectivePhase.Warning)
-			show = true;
-		else if (phase == IA_BaseObjectivePhase.Failed)
-			show = true;
-		else if (phase == IA_BaseObjectivePhase.Placing)
-			show = true;
-
-		if (!show)
+		if (!status || !ShowsPhase(status.m_iPhase))
 		{
-			if (IsVisible())
-				SetVisible(false);
+			// Retain the last copy and progress throughout the inherited outro.
+			ApplyServer("", IA_CaptureHudState.Hidden, m_fServerProgress);
 			return;
 		}
 
-		m_iPhase = phase;
-		m_iReason = 0;
-		m_iRemain = 0;
-		m_iPresent = 0;
-		m_iTarget = 0;
-		m_iCapturePermille = 0;
-		if (status)
-		{
-			m_iReason = status.m_iReason;
-			m_iRemain = status.m_iRemainingSec;
-			m_iPresent = status.m_iEligiblePresent;
-			m_iTarget = status.m_iTarget;
-			m_iCapturePermille = status.m_iCapturePermille;
-		}
+		bool newObjective = m_iSerial != status.m_iSerial || m_iGroupId != status.m_iGroupId;
+		bool phaseChanged = newObjective || m_iPhase != status.m_iPhase;
+		bool changed = phaseChanged || m_iReason != status.m_iReason;
+		m_iSerial = status.m_iSerial;
+		m_iGroupId = status.m_iGroupId;
+		m_iPhase = status.m_iPhase;
+		m_iReason = status.m_iReason;
 
-		BuildCopy();
-		if (!IsVisible())
-			SetVisible(true);
-		InvalidatePaint();
+		float progress = MUI_Ease.Clamp01(status.m_iCapturePermille / 1000.0);
+		// Capture states drive shared chrome only, not base gameplay semantics.
+		IA_CaptureHudState state = IA_CaptureHudState.Capturing;
+		if (IsBlocked())
+			state = IA_CaptureHudState.Blocked;
+
+		if (phaseChanged || IsIdle())
+			m_fDisplay = progress;
+		if (changed || IsIdle())
+		{
+			m_fPhasePulse = 1;
+			BuildCopy();
+		}
+		ApplyServer("Dynamic base", state, progress);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool ShowsPhase(int phase)
+	{
+		return phase == IA_BaseObjectivePhase.Placing || phase == IA_BaseObjectivePhase.Seize || phase == IA_BaseObjectivePhase.Failed;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool IsBlocked()
+	{
+		return m_iPhase == IA_BaseObjectivePhase.Failed || m_iReason == IA_BaseStatusReason.ClearCommand || m_iReason == IA_BaseStatusReason.Contested;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -151,77 +102,131 @@ class IA_BaseObjectiveHud : MUI_Surface
 	{
 		if (m_iPhase == IA_BaseObjectivePhase.Placing)
 		{
-			m_sTitle = "LOCATING BASE";
-			m_sBody = "Stand by. We're locating the enemy base.";
-			return;
+			m_sTitle = "Locating base";
+			m_sBody = "Stand by for coordinates";
 		}
-		if (m_iPhase == IA_BaseObjectivePhase.Failed)
+		else if (m_iPhase == IA_BaseObjectivePhase.Failed)
 		{
-			m_sTitle = "BASE UNAVAILABLE";
-			m_sBody = "Objective unavailable — admin action needed.";
-			return;
+			m_sTitle = "Base unavailable";
+			m_sBody = "Admin action needed";
 		}
-		if (m_iReason == IA_BaseStatusReason.ClearCommand)
-		{
-			m_sTitle = "COMMAND CONTESTED";
-			m_sBody = "Clear the command area.";
-			return;
-		}
-		if (m_iPhase == IA_BaseObjectivePhase.Seize)
-		{
-			m_sTitle = "SEIZE BASE";
-			int pct = Math.Round(m_iCapturePermille / 10.0);
-			m_sBody = "Secure the command area  " + pct.ToString() + "%";
-			return;
-		}
-		if (m_iPhase == IA_BaseObjectivePhase.Warning)
-		{
-			m_sTitle = "COUNTERATTACK";
-			m_sBody = "Inbound in " + m_iRemain.ToString() + "s";
-			return;
-		}
-
-		m_sTitle = "REGROUP";
-		if (m_iReason == IA_BaseStatusReason.AwaitingForces)
-			m_sBody = "Awaiting friendly forces";
 		else
 		{
-			m_sBody = m_iPresent.ToString() + "/" + m_iTarget.ToString() + " assembled";
-			if (m_iRemain > 0)
-				m_sBody = m_sBody + "  " + m_iRemain.ToString() + "s";
+			m_sTitle = "Seize base";
+			m_sBody = "Secure command area";
+			if (IsBlocked())
+				m_sBody = "Clear command area";
 		}
 	}
 
 	//------------------------------------------------------------------------------------------------
-	override void PaintForeground(MUI_RenderSurface surface)
+	override protected void TickProgress(float dt)
 	{
-		if (!IsVisible())
+		if (IsIdle() || m_eAnim == IA_CaptureHudAnim.Outro)
 			return;
+		// Base capture duration is configurable; contested capture pauses rather
+		// than resetting to zero or losing progress like an ordinary sector.
+		m_fDisplay = MUI_Ease.Approach(m_fDisplay, m_fServerProgress, dt, 9);
+	}
 
-		float x = DrawX();
-		float y = DrawY();
-		float w = m_Style.m_fWidth;
-		float h = m_Style.m_fHeight;
-		float op = GetDrawOpacity();
+	//------------------------------------------------------------------------------------------------
+	override protected void TickSpin(float dt)
+	{
+		if (IsIdle() || m_eAnim == IA_CaptureHudAnim.Outro || IsBlocked())
+			return;
+		float speed = 180;
+		if (m_iPhase == IA_BaseObjectivePhase.Seize)
+			speed = 360;
+		m_fSpin = MUI_Ease.Fract((m_fSpin + dt * speed) / 360.0) * 360;
+	}
 
-		m_aBodyPoly.Clear();
-		m_aBodyPoly.Insert(x);
-		m_aBodyPoly.Insert(y);
-		m_aBodyPoly.Insert(x + w);
-		m_aBodyPoly.Insert(y);
-		m_aBodyPoly.Insert(x + w);
-		m_aBodyPoly.Insert(y + h);
-		m_aBodyPoly.Insert(x);
-		m_aBodyPoly.Insert(y + h);
-		surface.FillPolygon(m_aBodyPoly, MUI_ColorUtil.Fade(m_HudBg, op));
+	//------------------------------------------------------------------------------------------------
+	override protected Color ResolveTone(notnull MUI_ThemeData theme)
+	{
+		if (IsBlocked())
+			return theme.Danger;
+		if (m_iPhase == IA_BaseObjectivePhase.Seize)
+			return m_HudGreen;
+		return m_HudAmber;
+	}
 
-		Color titleCol = m_HudAmber;
+	//------------------------------------------------------------------------------------------------
+	override protected Color ResolveTabFill()
+	{
+		if (IsBlocked())
+			return m_HudTabLose;
+		if (m_iPhase == IA_BaseObjectivePhase.Seize)
+			return m_HudTab;
+		return m_HudTabHold;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	override protected string ResolveTab()
+	{
 		if (m_iPhase == IA_BaseObjectivePhase.Failed)
-			titleCol = m_HudFail;
-		else if (m_iPhase == IA_BaseObjectivePhase.Warning)
-			titleCol = m_HudGreen;
+			return "OFFLINE";
+		if (IsBlocked())
+			return "CONTESTED";
+		if (m_iPhase == IA_BaseObjectivePhase.Placing)
+			return "LOCATING";
+		return "SECURING";
+	}
 
-		surface.DrawText(x + PAD_X, y + 8, w - (PAD_X * 2), 22, m_sTitle, FONT_TITLE, MUI_ColorUtil.Fade(titleCol, op), true, false, true, false, true);
-		surface.DrawText(x + PAD_X, y + 34, w - (PAD_X * 2), 22, m_sBody, FONT_BODY, MUI_ColorUtil.Fade(m_HudWhite, op), false, false, true, false, true);
+	//------------------------------------------------------------------------------------------------
+	override protected void DrawBody(MUI_RenderSurface surface, float x, float y, float w, float op, Color tone)
+	{
+		super.DrawBody(surface, x, y, w, op, tone);
+		surface.DrawLine(x, y, x + w, y, MUI_ColorUtil.Fade(tone, op * m_fPhasePulse * 0.65), 1);
+
+		float railX = x + PAD_X;
+		float railY = y + BODY_H - RAIL_H - 3;
+		float railW = w - PAD_X * 2;
+		surface.FillRect(railX, railY, railW, RAIL_H, MUI_ColorUtil.Fade(ResolveTabFill(), op), 0);
+		if (m_iPhase == IA_BaseObjectivePhase.Seize)
+		{
+			if (m_fDisplay > 0)
+				surface.FillRect(railX, railY, railW * m_fDisplay, RAIL_H, MUI_ColorUtil.Fade(tone, op * 0.90), 0);
+		}
+		else if (m_iPhase == IA_BaseObjectivePhase.Placing)
+		{
+			// Indeterminate sweep, not an invented placement percentage/countdown.
+			float scan = MUI_Ease.Pulse(GetTime(), 0.65);
+			float scanW = railW * 0.22;
+			surface.FillRect(railX + (railW - scanW) * scan, railY, scanW, RAIL_H, MUI_ColorUtil.Fade(tone, op * 0.85), 0);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	override protected void DrawContent(MUI_RenderSurface surface, float x, float y, float w, float op, Color tone)
+	{
+		float copyX = x + PAD_X;
+		if (w >= COMPACT_W)
+		{
+			DrawSpinner(surface, copyX + SPIN_R, y + 21, op, tone);
+			copyX = copyX + SPIN_R * 2 + GAP_ICON;
+		}
+
+		float copyRight = x + w - PAD_X;
+		if (m_iPhase == IA_BaseObjectivePhase.Seize)
+		{
+			int pct = Math.Round(m_fDisplay * 100);
+			string metric = pct.ToString() + "%";
+			float metricW = 48;
+			float metricH = 16;
+			if (m_Runtime)
+				m_Runtime.MeasureText(metric, FONT_PCT, true, 0, metricW, metricH);
+			metricW = Math.Max(metricW, 48);
+			float divX = copyRight - DIV_W;
+			float metricX = divX - GAP_PCT - metricW;
+			surface.DrawText(metricX, y + 5, metricW, 18, metric, FONT_PCT, MUI_ColorUtil.Fade(m_HudWhite, op), true, false, true, false, true);
+			surface.DrawText(metricX, y + 25, metricW, 12, "CAPTURE", FONT_HINT, MUI_ColorUtil.Fade(tone, op * 0.85), true, false, true, false, true);
+			surface.FillRect(divX, y + 9, DIV_W, DIV_H, MUI_ColorUtil.Fade(tone, op * 0.20), 0);
+			copyRight = metricX - 8;
+		}
+
+		// Narrow multi-objective docks drop the icon and reserve the metric first.
+		float copyW = Math.Max(1, copyRight - copyX);
+		surface.DrawText(copyX, y + 5, copyW, 18, m_sTitle, FONT_COPY, MUI_ColorUtil.Fade(m_HudWhite, op), true, false, true, false, true);
+		surface.DrawText(copyX, y + 25, copyW, 12, m_sBody, FONT_HINT, MUI_ColorUtil.Fade(tone, op * 0.80), false, false, true, false, true);
 	}
 }

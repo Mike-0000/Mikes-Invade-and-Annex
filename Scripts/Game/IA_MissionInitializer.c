@@ -2240,7 +2240,7 @@ class IA_MissionInitializer : GenericEntity
 		if (m_DynamicObjectives && m_DynamicObjectives.GetObjective())
 		{
 			int phase = m_DynamicObjectives.GetObjective().GetPhase();
-			if (phase == IA_BaseObjectivePhase.Placing || phase == IA_BaseObjectivePhase.Seize || phase == IA_BaseObjectivePhase.Regroup || phase == IA_BaseObjectivePhase.Warning || phase == IA_BaseObjectivePhase.Defend)
+			if (phase == IA_BaseObjectivePhase.Placing || phase == IA_BaseObjectivePhase.Seize || phase == IA_BaseObjectivePhase.Defend)
 			{
 				Print("[IA_MissionInitializer] Seize-base force ignored: a base job is already active.", LogLevel.WARNING);
 				return;
@@ -3300,7 +3300,7 @@ class IA_MissionInitializer : GenericEntity
 			selectedMarker.GetAreaName(), defendPoint.ToString(), completedGroup));
 		
 		// Create and start defend mission
-		IA_DefendMission defendMission = IA_DefendMission.Create(defendPoint, completedGroup, selectedMarker.GetAreaName());
+		ref IA_DefendMission defendMission = IA_DefendMission.Create(defendPoint, completedGroup, selectedMarker.GetAreaName());
 		if (defendMission)
 		{
 			RetireGroupObjectivesForDefend(completedGroup);

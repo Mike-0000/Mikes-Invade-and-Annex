@@ -68,7 +68,7 @@ class IA_ObjectiveHudStrip : MUI_Row
 
 		m_Defend = IA_DefendHud.Create(runtime);
 		AddChild(m_Defend);
-		m_Base = IA_BaseObjectiveHud.Create(runtime);
+		m_Base = IA_BaseObjectiveHud.CreateBase(runtime);
 		AddChild(m_Base);
 	}
 

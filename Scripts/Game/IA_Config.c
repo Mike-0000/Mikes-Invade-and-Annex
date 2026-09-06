@@ -183,7 +183,7 @@ class IA_Config{
 	[Attribute(defvalue: "0.20", UIWidgets.Slider, category: "Defense", desc: "Air Assault hot-drop chance (0-1). Remainder uses a 150-300 m perimeter LZ.", params: "0 1 0.01")]
 	float m_fDefendHotDropChance = 0.20;
 
-	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Dynamic Base", desc: "After required AO objectives, attempt a seize-regroup-defend base.")]
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "Dynamic Base", desc: "After required AO objectives, attempt a seize-and-defend base using the normal defense settings.")]
 	bool m_bDynamicBaseEnabled = true;
 
 	[Attribute(defvalue: "100", UIWidgets.EditBox, category: "Dynamic Base", desc: "Chance (0-100) to select a dynamic base after required objectives.")]
@@ -198,13 +198,13 @@ class IA_Config{
 	[Attribute(defvalue: "90", UIWidgets.EditBox, category: "Dynamic Base", desc: "Uncontested command-zone capture seconds.")]
 	int m_iDynamicBaseCaptureSec = 90;
 
-	[Attribute(defvalue: "90", UIWidgets.EditBox, category: "Dynamic Base", desc: "Minimum regroup seconds before the counterattack warning.")]
+	[Attribute(defvalue: "90", UIWidgets.EditBox, category: "Dynamic Base", desc: "Deprecated: retained for saved-config compatibility; capture starts normal defense immediately.")]
 	int m_iDynamicBaseRegroupMinSec = 90;
 
-	[Attribute(defvalue: "240", UIWidgets.EditBox, category: "Dynamic Base", desc: "Maximum regroup seconds before the warning if anyone is present.")]
+	[Attribute(defvalue: "240", UIWidgets.EditBox, category: "Dynamic Base", desc: "Deprecated: ignored. There is no separate base regroup or warning stage.")]
 	int m_iDynamicBaseRegroupMaxSec = 240;
 
-	[Attribute(defvalue: "0.60", UIWidgets.Slider, category: "Dynamic Base", desc: "Eligible-force fraction required to leave regroup after the minimum wait.", params: "0.1 1 0.01")]
+	[Attribute(defvalue: "0.60", UIWidgets.Slider, category: "Dynamic Base", desc: "Deprecated: ignored. Capturing the base completes assembly.", params: "0.1 1 0.01")]
 	float m_fDynamicBaseRegroupFraction = 0.60;
 
 	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "Dynamic Base", desc: "Garrison size multiplier (0.25-2.0).")]

@@ -488,7 +488,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		actionRow2.SetGap(12);
 		actionRow2.AddChild(completeDefendBtn);
 		actionRow2.AddChild(seizeBaseBtn);
-		m_Hints.AddHint(completeDefendBtn, "Complete and start field-base assault", "Finishes remaining required objectives and starts one field-base attempt. You still seize the command area, regroup, then defend that same site. If a base job is already running, this leaves it alone. If placement fails, an authored defense is forced when a Defend marker remains.");
+		m_Hints.AddHint(completeDefendBtn, "Complete and start field-base assault", "Finishes remaining required objectives and starts one field-base attempt. Seize the command area, then start the normal defense at that same site without an extra regroup or warning countdown. If a base job is already running, this leaves it alone. If placement fails, an authored defense is forced when a Defend marker remains.");
 		m_Hints.AddHint(seizeBaseBtn, "Complete objectives and seize a base", "Finishes remaining required objectives and starts one validated field-base attempt. Geometry and AI limits still apply. If placement fails, an authored defense is forced when a Defend marker remains.");
 
 		footerBtns.AddChild(persistRow);
@@ -529,7 +529,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 
 		m_DynamicBaseEnabledToggle = runtime.CreateToggle("Dynamic field base after required objectives", "dynBaseOn");
 		m_PageDefense.AddChild(m_DynamicBaseEnabledToggle);
-		m_Hints.AddHint(m_DynamicBaseEnabledToggle, "Dynamic field base", "After required objectives, try to place a USSR field base to seize, regroup, and defend. Off uses the existing authored-defense roll.");
+		m_Hints.AddHint(m_DynamicBaseEnabledToggle, "Dynamic field base", "After required objectives, try to place a USSR field base to seize and immediately defend using the same defense settings, doctrines and phases as an authored position. Off uses the existing authored-defense roll.");
 
 		m_DynamicBaseChanceField = runtime.CreateNumericField("Dynamic base chance (0 disables automatic selection)", "dynBaseChance");
 		m_DynamicBaseChanceField.SetRange(0, 100);
@@ -557,7 +557,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_DynamicBaseSizeDrop.AddItem("Rally post (36 x 48 m)");
 		m_DynamicBaseSizeDrop.SetIndex(0);
 		m_PageDefense.AddChild(m_DynamicBaseSizeDrop);
-		m_Hints.AddHint(m_DynamicBaseSizeDrop, "Base size", "Auto tries six layouts, from the full operating base down to a 36 x 48 m fortified rally post. Choose a named layout to require that design. Smaller bases have fewer occupying guards; capture, regroup and defense still take place at the same base.");
+		m_Hints.AddHint(m_DynamicBaseSizeDrop, "Base size", "Auto tries six layouts, from the full operating base down to a 36 x 48 m fortified rally post. Choose a named layout to require that design. Smaller bases have fewer occupying guards; capture and the normal defense take place at the same base.");
 
 		m_DefendLegacyToggle = runtime.CreateToggle("Use legacy defense (12-16 min, no events)", "defLegacy");
 		m_PageDefense.AddChild(m_DefendLegacyToggle);

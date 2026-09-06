@@ -28,7 +28,6 @@ class IA_DefendMission
     private bool m_bEnhancedClockOn;
     private IA_AreaInstance m_ExplicitHost;
     private int m_iActivationSerial;
-    private bool m_bPreparationAlreadyComplete;
     private bool m_bDynamicBase;
     private ref IA_Config m_DefenseConfig;
 
@@ -61,7 +60,7 @@ class IA_DefendMission
     
     static IA_DefendMission Create(vector defendPoint, int groupID, string markerName = "")
     {
-        IA_DefendMission mission = new IA_DefendMission(defendPoint, groupID, markerName);
+        ref IA_DefendMission mission = new IA_DefendMission(defendPoint, groupID, markerName);
         IA_Config cfg = mission.GetDefenseConfig();
         if (cfg && !cfg.UseLegacyDefense())
             mission.m_Enhanced = IA_EnhancedDefendDirector.Create(mission);
@@ -70,11 +69,10 @@ class IA_DefendMission
 
     static IA_DefendMission CreateForDynamicBase(vector defendPoint, int groupId, string displayName, IA_AreaInstance host, Faction enemyFaction, int activationSerial, IA_Config defenseConfigSnapshot)
     {
-        IA_DefendMission mission = new IA_DefendMission(defendPoint, groupId, displayName);
+        ref IA_DefendMission mission = new IA_DefendMission(defendPoint, groupId, displayName);
         mission.m_ExplicitHost = host;
         mission.m_defendFaction = enemyFaction;
         mission.m_iActivationSerial = activationSerial;
-        mission.m_bPreparationAlreadyComplete = true;
         mission.m_bDynamicBase = true;
         mission.m_DefenseConfig = defenseConfigSnapshot;
         IA_Config cfg = mission.GetDefenseConfig();
@@ -88,11 +86,6 @@ class IA_DefendMission
         if (m_DefenseConfig)
             return m_DefenseConfig;
         return IA_MissionInitializer.GetGlobalConfig();
-    }
-
-    bool IsPreparedDynamicBase()
-    {
-        return m_bPreparationAlreadyComplete;
     }
 
     int GetActivationSerial()

@@ -8,8 +8,8 @@ enum IA_BaseObjectivePhase
 	None,
 	Placing,
 	Seize,
-	Regroup,
-	Warning,
+	Regroup, // Retired wire value; capture now hands directly to defense.
+	Warning, // Retired wire value; no base-only counterattack countdown.
 	Defend,
 	Completed,
 	Cancelled,
@@ -81,9 +81,6 @@ class IA_BaseObjectiveSettings
 	bool m_bInGm;
 	int m_iSizeMode;
 	int m_iCaptureSec = 90;
-	int m_iRegroupMinSec = 90;
-	int m_iRegroupMaxSec = 240;
-	float m_fRegroupFraction = 0.60;
 	float m_fGarrisonMultiplier = 1.0;
 	Faction m_EnemyFaction;
 	ref IA_Config m_DefenseSnapshot;
@@ -97,9 +94,6 @@ class IA_BaseObjectiveSettings
 		settings.m_bInGm = cfg.m_bDynamicBaseInGm;
 		settings.m_iSizeMode = cfg.m_iDynamicBaseSizeMode;
 		settings.m_iCaptureSec = cfg.m_iDynamicBaseCaptureSec;
-		settings.m_iRegroupMinSec = cfg.m_iDynamicBaseRegroupMinSec;
-		settings.m_iRegroupMaxSec = cfg.m_iDynamicBaseRegroupMaxSec;
-		settings.m_fRegroupFraction = cfg.m_fDynamicBaseRegroupFraction;
 		settings.m_fGarrisonMultiplier = cfg.m_fDynamicBaseGarrisonMultiplier;
 		settings.m_EnemyFaction = enemyFaction;
 		ref IA_Config defense = new IA_Config();
@@ -114,24 +108,6 @@ class IA_BaseObjectiveSettings
 		int sec = m_iCaptureSec;
 		if (sec < 30)
 			sec = 30;
-		return sec * 1000;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	int GetRegroupMinMs()
-	{
-		int sec = m_iRegroupMinSec;
-		if (sec < 0)
-			sec = 0;
-		return sec * 1000;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	int GetRegroupMaxMs()
-	{
-		int sec = m_iRegroupMaxSec;
-		if (sec < m_iRegroupMinSec)
-			sec = m_iRegroupMinSec;
 		return sec * 1000;
 	}
 

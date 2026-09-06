@@ -1,9 +1,9 @@
 //------------------------------------------------------------------------------------------------
-//! Seize → Regroup → Warning → Defend at one physical site.
+//! Seize -> standard defense at one physical site. Capture completes assembly;
+//! no separate regroup gate or counterattack countdown precedes the defense.
 //------------------------------------------------------------------------------------------------
 class IA_BaseAssaultObjective
 {
-	static const int WARNING_MS = 30000;
 	static const int TICK_CLAMP_MS = 2000;
 
 	protected int m_iSerial;
@@ -13,16 +13,12 @@ class IA_BaseAssaultObjective
 	protected ref IA_BasePlayerSampler m_Sampler;
 	protected int m_ePhase;
 	protected int m_iCaptureAccMs;
-	protected int m_iRegroupStartMs;
-	protected int m_iWarningStartMs;
 	protected int m_iLastTickMs;
-	protected int m_iInitialTarget;
 	protected bool m_bCaptureAwarded;
-	protected bool m_bTaskPublished;
 	protected bool m_bDefenseStarted;
 	protected bool m_bResultSent;
 	protected ref map<string, int> m_CaptureLedger;
-	protected IA_DefendMission m_Defend;
+	protected ref IA_DefendMission m_Defend;
 	protected IA_DynamicObjectiveDirector m_Director;
 
 	//------------------------------------------------------------------------------------------------
@@ -47,11 +43,8 @@ class IA_BaseAssaultObjective
 		m_Settings = settings;
 		m_ePhase = IA_BaseObjectivePhase.Placing;
 		m_iCaptureAccMs = 0;
-		m_iRegroupStartMs = 0;
-		m_iWarningStartMs = 0;
 		m_iLastTickMs = System.GetTickCount();
 		m_bCaptureAwarded = false;
-		m_bTaskPublished = false;
 		m_bDefenseStarted = false;
 		m_bResultSent = false;
 		m_Sampler = sampler;
@@ -91,21 +84,8 @@ class IA_BaseAssaultObjective
 			dt = TICK_CLAMP_MS;
 		m_iLastTickMs = nowMs;
 
-		vector assembly = vector.Zero;
-		float assemblyRadius = 0;
-		if (m_Site)
-		{
-			assembly = m_Site.GetAssemblyPoint();
-			assemblyRadius = IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M;
-		}
-		m_Sampler.TickRecord(System.GetUnixTime(), assembly, assemblyRadius);
-
 		if (m_ePhase == IA_BaseObjectivePhase.Seize)
 			TickSeize(dt);
-		else if (m_ePhase == IA_BaseObjectivePhase.Regroup)
-			TickRegroup(nowMs);
-		else if (m_ePhase == IA_BaseObjectivePhase.Warning)
-			TickWarning(nowMs);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -194,12 +174,10 @@ class IA_BaseAssaultObjective
 	//------------------------------------------------------------------------------------------------
 	bool AdminBypassToDefend()
 	{
-		if (m_ePhase != IA_BaseObjectivePhase.Seize && m_ePhase != IA_BaseObjectivePhase.Regroup && m_ePhase != IA_BaseObjectivePhase.Warning)
+		if (m_ePhase != IA_BaseObjectivePhase.Seize || !m_Site)
 			return false;
-		if (!m_Site)
-			return false;
-		Print("[IA][Base] Admin bypass into prepared defense at the live base.", LogLevel.WARNING);
-		StartPreparedDefense();
+		IA_Log.Info("[IA][Base] Admin bypass into standard defense at the live base.");
+		StartBaseDefense();
 		return true;
 	}
 
@@ -228,116 +206,16 @@ class IA_BaseAssaultObjective
 		if (m_Settings)
 			need = m_Settings.GetCaptureMs();
 		if (m_iCaptureAccMs >= need)
-			EnterRegroup();
+		{
+			AwardCaptureOnce();
+			StartBaseDefense();
+		}
 
 		PublishStatus(false);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void EnterRegroup()
-	{
-		if (m_ePhase != IA_BaseObjectivePhase.Seize)
-			return;
-
-		AwardCaptureOnce();
-		m_ePhase = IA_BaseObjectivePhase.Regroup;
-		m_iRegroupStartMs = System.GetTickCount();
-		m_Sampler.FreezeAtCapture(m_Site.GetAssemblyPoint(), IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M, m_Settings.m_fRegroupFraction);
-		m_iInitialTarget = m_Sampler.GetInitialTarget();
-		PublishRegroupTask();
-		PublishStatus(true);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void TickRegroup(int nowMs)
-	{
-		if (!m_Site || !m_Site.IsHostLive())
-		{
-			m_ePhase = IA_BaseObjectivePhase.Failed;
-			PublishStatus(true);
-			EmitResult(IA_DynamicObjectiveResult.Failed, "site_lost");
-			return;
-		}
-
-		vector cap = m_Site.GetCapturePoint();
-		if (m_Sampler.HasHostileInZone(cap, m_Site.GetCaptureRadius()))
-		{
-			PublishStatus(false);
-			return;
-		}
-
-		int elapsed = nowMs - m_iRegroupStartMs;
-		int minMs = 90000;
-		int maxMs = 240000;
-		if (m_Settings)
-		{
-			minMs = m_Settings.GetRegroupMinMs();
-			maxMs = m_Settings.GetRegroupMaxMs();
-		}
-
-		int eligiblePresent = m_Sampler.CountEligiblePresent(m_Site.GetAssemblyPoint(), IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
-		int allPresent = m_Sampler.CountAllGroundedPresent(m_Site.GetAssemblyPoint(), IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
-		int target = m_Sampler.GetCurrentTarget(System.GetUnixTime());
-		if (target < 1)
-			target = 1;
-
-		bool ready = false;
-		if (elapsed >= minMs && eligiblePresent >= target)
-			ready = true;
-		else if (elapsed >= maxMs && allPresent >= 1)
-			ready = true;
-
-		if (ready)
-			EnterWarning(nowMs);
-
-		PublishStatus(false);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void EnterWarning(int nowMs)
-	{
-		m_ePhase = IA_BaseObjectivePhase.Warning;
-		m_iWarningStartMs = nowMs;
-		PublishStatus(true);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void TickWarning(int nowMs)
-	{
-		if (!m_Site || !m_Site.IsHostLive())
-		{
-			m_ePhase = IA_BaseObjectivePhase.Failed;
-			PublishStatus(true);
-			EmitResult(IA_DynamicObjectiveResult.Failed, "site_lost");
-			return;
-		}
-
-		vector cap = m_Site.GetCapturePoint();
-		if (m_Sampler.HasHostileInZone(cap, m_Site.GetCaptureRadius()))
-		{
-			m_ePhase = IA_BaseObjectivePhase.Regroup;
-			m_iWarningStartMs = 0;
-			PublishStatus(true);
-			return;
-		}
-
-		int allPresent = m_Sampler.CountAllGroundedPresent(m_Site.GetAssemblyPoint(), IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
-		if (allPresent < 1)
-		{
-			m_ePhase = IA_BaseObjectivePhase.Regroup;
-			m_iWarningStartMs = 0;
-			PublishStatus(true);
-			return;
-		}
-
-		if ((nowMs - m_iWarningStartMs) >= WARNING_MS)
-			StartPreparedDefense();
-
-		PublishStatus(false);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void StartPreparedDefense()
+	protected void StartBaseDefense()
 	{
 		if (m_bDefenseStarted)
 			return;
@@ -432,17 +310,7 @@ class IA_BaseAssaultObjective
 		if (!m_Site || !m_Site.GetHost())
 			return;
 		m_Site.GetHost().DismissOpenTasks();
-		m_Site.GetHost().QueueTask("Seize the enemy operating base", "Clear and secure the command area. Counterattack preparations begin after capture.", m_Site.GetCapturePoint());
-		m_bTaskPublished = true;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void PublishRegroupTask()
-	{
-		if (!m_Site || !m_Site.GetHost())
-			return;
-		m_Site.GetHost().DismissOpenTasks();
-		m_Site.GetHost().QueueTask("Regroup at the captured base", "Assemble and prepare for the counterattack.", m_Site.GetAssemblyPoint());
+		m_Site.GetHost().QueueTask("Seize the enemy operating base", "Clear and secure the command area, then defend the captured base.", m_Site.GetCapturePoint());
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -460,11 +328,7 @@ class IA_BaseAssaultObjective
 			return;
 
 		int reason = IA_BaseStatusReason.None;
-		int remain = 0;
 		int capturePermille = 0;
-		int eligiblePresent = 0;
-		int allPresent = 0;
-		int target = m_Sampler.GetCurrentTarget(System.GetUnixTime());
 		vector sitePos = vector.Zero;
 		vector capPos = vector.Zero;
 		float capR = 0;
@@ -476,13 +340,8 @@ class IA_BaseAssaultObjective
 			capPos = m_Site.GetCapturePoint();
 			capR = m_Site.GetCaptureRadius();
 			siteId = m_Site.GetSiteId().ToString();
-			eligiblePresent = m_Sampler.CountEligiblePresent(sitePos, IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
-			allPresent = m_Sampler.CountAllGroundedPresent(sitePos, IA_DynamicSiteInstance.ASSEMBLY_RADIUS_M);
-			if (m_ePhase == IA_BaseObjectivePhase.Seize || m_ePhase == IA_BaseObjectivePhase.Regroup || m_ePhase == IA_BaseObjectivePhase.Warning)
-			{
-				if (m_Sampler.HasHostileInZone(capPos, capR))
-					reason = IA_BaseStatusReason.ClearCommand;
-			}
+			if (m_ePhase == IA_BaseObjectivePhase.Seize && m_Sampler.HasHostileInZone(capPos, capR))
+				reason = IA_BaseStatusReason.ClearCommand;
 		}
 
 		int need = 90000;
@@ -492,39 +351,11 @@ class IA_BaseAssaultObjective
 			capturePermille = Math.Round((1000.0 * m_iCaptureAccMs) / need);
 		if (capturePermille > 1000)
 			capturePermille = 1000;
-
-		if (m_ePhase == IA_BaseObjectivePhase.Regroup)
-		{
-			int minMs = 90000;
-			int maxMs = 240000;
-			if (m_Settings)
-			{
-				minMs = m_Settings.GetRegroupMinMs();
-				maxMs = m_Settings.GetRegroupMaxMs();
-			}
-			int elapsed = System.GetTickCount() - m_iRegroupStartMs;
-			int waitMs = minMs - elapsed;
-			if (waitMs < 0)
-				waitMs = maxMs - elapsed;
-			if (waitMs < 0)
-				waitMs = 0;
-			remain = Math.Ceil(waitMs / 1000.0);
-			if (allPresent < 1)
-				reason = IA_BaseStatusReason.AwaitingForces;
-		}
-		else if (m_ePhase == IA_BaseObjectivePhase.Warning)
-		{
-			int left = WARNING_MS - (System.GetTickCount() - m_iWarningStartMs);
-			if (left < 0)
-				left = 0;
-			remain = Math.Ceil(left / 1000.0);
-		}
-		else if (m_ePhase == IA_BaseObjectivePhase.Failed)
-		{
+		if (m_ePhase == IA_BaseObjectivePhase.Failed)
 			reason = IA_BaseStatusReason.Failed;
-		}
 
-		init.PublishBaseObjectiveStatus(force, m_iSerial, m_iGroupId, m_ePhase, siteId, sitePos, capPos, capR, capturePermille, eligiblePresent, target, allPresent, remain, reason);
+		// Preserve the packed protocol; retired roster/countdown fields stay zero.
+		init.PublishBaseObjectiveStatus(force, m_iSerial, m_iGroupId, m_ePhase, siteId, sitePos, capPos, capR, capturePermille, 0, 0, 0, 0, reason);
 	}
 
 	//------------------------------------------------------------------------------------------------
