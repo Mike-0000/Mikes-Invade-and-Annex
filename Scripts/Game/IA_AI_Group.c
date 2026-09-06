@@ -208,6 +208,7 @@ class IA_AiGroup
     private vector m_originalThreatPosition = vector.Zero; // The original position that triggered the flanking maneuver
     private bool m_typedClearScheduled = false;
     private bool m_flushingTypedClear = false;
+    private bool m_pendingDriveAfterTypedClear = false;
     private ref array<vector> m_pendingOrderOrigins = {};
     private ref array<IA_AiOrder> m_pendingOrderTypes = {};
     private ref array<bool> m_pendingOrderTopPriority = {};
@@ -2180,10 +2181,10 @@ class IA_AiGroup
             // complete. Drive with who is already seated.
             if (!IA_VehicleManager.VehicleHasEmptyAccessibleSeat(vehicle))
             {
-                if (IsCurrentWaypointGetInNearest())
-                    RemoveAllOrders(false);
                 if (m_drivingTarget != vector.Zero)
-                    IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
+                    DriveAfterGetInClear(vehicle, m_drivingTarget);
+                else if (IsCurrentWaypointGetInNearest())
+                    RemoveAllOrders(false);
                 return;
             }
 
@@ -2197,12 +2198,13 @@ class IA_AiGroup
         }
 
         // Teleport-seat / remount leftover GetInNearest stays current (Autocomplete 0)
-        // and blocks the drive Move. Drop it once everyone is actually seated.
+        // and blocks the drive Move. Wait out ActivityGetIn before planting Move.
         if (IsCurrentWaypointGetInNearest())
         {
-            RemoveAllOrders(false);
             if (m_drivingTarget != vector.Zero)
-                IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, m_drivingTarget);
+                DriveAfterGetInClear(vehicle, m_drivingTarget);
+            else
+                RemoveAllOrders(false);
             return;
         }
         
@@ -2437,31 +2439,34 @@ class IA_AiGroup
         if (!m_group)
             return IA_TypedWpTree.None;
 
+        // Still-running activity wins. A just-planted Defend/Move can already
+        // be GetCurrentWaypoint while ActivityGetIn is still the Group.bt
+        // subtree (DecideActivity idles 0.3s, GetIn may be non-interruptable).
+        SCR_AIGroupUtilityComponent utility = SCR_AIGroupUtilityComponent.Cast(m_group.FindComponent(SCR_AIGroupUtilityComponent));
+        if (utility)
+        {
+            AIActionBase action = utility.GetCurrentAction();
+            if (SCR_AIGetInActivity.Cast(action))
+                return IA_TypedWpTree.GetInNearest;
+            if (SCR_AIDefendActivity.Cast(action))
+                return IA_TypedWpTree.Defend;
+        }
+
         AIWaypoint current = m_group.GetCurrentWaypoint();
-        if (SCR_DefendWaypoint.Cast(current))
-            return IA_TypedWpTree.Defend;
         if (SCR_BoardingTimedWaypoint.Cast(current))
             return IA_TypedWpTree.GetInNearest;
+        if (SCR_DefendWaypoint.Cast(current))
+            return IA_TypedWpTree.Defend;
 
         array<AIWaypoint> wps = {};
         m_group.GetWaypoints(wps);
         foreach (AIWaypoint wp : wps)
         {
-            if (SCR_DefendWaypoint.Cast(wp))
-                return IA_TypedWpTree.Defend;
             if (SCR_BoardingTimedWaypoint.Cast(wp))
                 return IA_TypedWpTree.GetInNearest;
+            if (SCR_DefendWaypoint.Cast(wp))
+                return IA_TypedWpTree.Defend;
         }
-
-        SCR_AIGroupUtilityComponent utility = SCR_AIGroupUtilityComponent.Cast(m_group.FindComponent(SCR_AIGroupUtilityComponent));
-        if (!utility)
-            return IA_TypedWpTree.None;
-
-        AIActionBase action = utility.GetCurrentAction();
-        if (SCR_AIDefendActivity.Cast(action))
-            return IA_TypedWpTree.Defend;
-        if (SCR_AIGetInActivity.Cast(action))
-            return IA_TypedWpTree.GetInNearest;
 
         return IA_TypedWpTree.None;
     }
@@ -2537,6 +2542,7 @@ class IA_AiGroup
         m_pendingOrderOrigins.Clear();
         m_pendingOrderTypes.Clear();
         m_pendingOrderTopPriority.Clear();
+        m_pendingDriveAfterTypedClear = false;
     }
 
     protected void PrepareTypedWaypointTreeClear()
@@ -2561,32 +2567,74 @@ class IA_AiGroup
             m_pendingOrderOrigins.Clear();
             m_pendingOrderTypes.Clear();
             m_pendingOrderTopPriority.Clear();
+            m_pendingDriveAfterTypedClear = false;
             return;
         }
 
-        m_flushingTypedClear = true;
-
         int orderCount = m_pendingOrderOrigins.Count();
         int i;
-        for (i = 0; i < orderCount; i++)
+        if (orderCount > 0)
         {
-            AddOrder(m_pendingOrderOrigins[i], m_pendingOrderTypes[i], m_pendingOrderTopPriority[i]);
+            // First order plants the replacement tree. Later orders keep the
+            // deferral check so a queued GetIn+Defend pair does not stack.
+            m_flushingTypedClear = true;
+            AddOrder(m_pendingOrderOrigins[0], m_pendingOrderTypes[0], m_pendingOrderTopPriority[0]);
+            m_flushingTypedClear = false;
+            for (i = 1; i < orderCount; i++)
+            {
+                AddOrder(m_pendingOrderOrigins[i], m_pendingOrderTypes[i], m_pendingOrderTopPriority[i]);
+            }
         }
         m_pendingOrderOrigins.Clear();
         m_pendingOrderTypes.Clear();
         m_pendingOrderTopPriority.Clear();
 
         int wpCount = m_pendingWaypoints.Count();
-        for (i = 0; i < wpCount; i++)
+        if (wpCount > 0)
         {
-            SCR_AIWaypoint pendingWp = m_pendingWaypoints[i];
-            if (!pendingWp)
-                continue;
-            AddWaypoint(pendingWp);
+            SCR_AIWaypoint firstWp = m_pendingWaypoints[0];
+            m_flushingTypedClear = true;
+            if (firstWp)
+                AddWaypoint(firstWp);
+            m_flushingTypedClear = false;
+            for (i = 1; i < wpCount; i++)
+            {
+                SCR_AIWaypoint pendingWp = m_pendingWaypoints[i];
+                if (!pendingWp)
+                    continue;
+                AddWaypoint(pendingWp);
+            }
         }
         m_pendingWaypoints.Clear();
 
-        m_flushingTypedClear = false;
+        if (m_pendingDriveAfterTypedClear)
+        {
+            m_pendingDriveAfterTypedClear = false;
+            Vehicle driveVeh = Vehicle.Cast(m_referencedEntity);
+            if (driveVeh && m_drivingTarget != vector.Zero)
+                IA_VehicleManager.UpdateVehicleWaypoint(driveVeh, this, m_drivingTarget);
+        }
+    }
+
+    void DriveAfterGetInClear(Vehicle vehicle, vector destination)
+    {
+        if (!vehicle)
+            return;
+
+        m_referencedEntity = vehicle;
+        m_drivingTarget = destination;
+        m_isDriving = true;
+
+        IA_TypedWpTree tree = GetActiveTypedWaypointTree();
+        if (tree == IA_TypedWpTree.GetInNearest || IsCurrentWaypointGetInNearest())
+        {
+            RemoveAllOrders(false);
+            m_pendingDriveAfterTypedClear = true;
+            PrepareTypedWaypointTreeClear();
+            return;
+        }
+
+        IA_VehicleManager.UpdateVehicleWaypoint(vehicle, this, destination);
     }
 
     protected void DiscardPendingWaypoints()
@@ -3752,7 +3800,7 @@ class IA_AiGroup
                     // or is the vehicle itself.
                     if (veh) // && (targetEntity == null || targetEntity == veh))
                     {
-                        IA_VehicleManager.UpdateVehicleWaypoint(veh, this, targetPos); 
+                        DriveAfterGetInClear(veh, targetPos);
                     }
                 }
                 break;
