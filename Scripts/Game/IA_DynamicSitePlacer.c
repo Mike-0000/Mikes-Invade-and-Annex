@@ -4,14 +4,21 @@
 //------------------------------------------------------------------------------------------------
 class IA_DynamicSitePlacer
 {
-	static const float AO_MARGIN_M = 350;
-	static const float PLAYER_CLEAR_M = 250;
+	static const float AO_MARGIN_M = 600;
+	static const float PLAYER_CLEAR_M = 350;
 	static const float GRID_M = 10;
-	static const int MAX_SAMPLE_CENTERS = 96;
-	static const int MAX_SHORTLIST = 12;
-	static const int PLACE_DEADLINE_MS = 45000;
-	static const int MAX_ROOTS = 96;
-	static const int MAX_EXPANDED = 600;
+	static const int MAX_SAMPLE_CENTERS = 2048;
+	static const int MAX_REFINEMENT_CENTERS = 32;
+	static const float REFINEMENT_STEP_M = 7.5;
+	static const int REFINEMENT_OFFSETS = 9;
+	static const int FINE_HEADINGS = 24;
+	static const int MAX_SHORTLIST = 64;
+	static const int SURVEY_POSES_PER_TICK = 64;
+	static const int SURVEY_SLICE_MS = 4;
+	static const int PLACE_DEADLINE_MS = 60000;
+	static const int SURVEY_DEADLINE_MS = 180000;
+	static const int MAX_ROOTS = 256;
+	static const int MAX_EXPANDED = 850;
 	static const int NAV_RECHECK_MS = 15000;
 	static const float LANE_SAMPLE_M = 3;
 
@@ -23,23 +30,73 @@ class IA_DynamicSitePlacer
 	protected ref array<ref IA_DynamicSiteCandidate> m_aShortlist;
 	protected ref IA_DynamicSiteResult m_Result;
 	protected ref IA_DynamicSiteInstance m_Building;
+	protected IA_DynamicObjectiveDirector m_Director;
 	protected ref IA_DynamicSiteLayout m_ActiveLayout;
 	protected int m_iWorkStep;
 	protected int m_iCandidateIndex;
+	protected ref array<ref IA_DynamicSiteLayout> m_aLayouts;
+	protected ref map<string, int> m_Rejections;
+	protected string m_sTerrainRejection;
+	protected string m_sTerrainDetail;
+	protected int m_iHeadingIndex;
+	protected bool m_bCandidateSearchPending;
 	protected int m_iModuleIndex;
+	protected ref array<int> m_aPlacedPerimeter;
 	protected int m_iGarrisonLeft;
 	protected int m_iGuardSlot;
 	protected int m_iPlaceStartMs;
+	protected int m_iConstructionStartMs;
 	protected int m_iNavWaitStartMs;
 	protected bool m_bComplete;
 	protected bool m_bWorkQueued;
 	protected bool m_bPrecomputeOnly;
+	protected ref array<vector> m_aSearchCenters;
+	protected ref array<float> m_aSearchRadii;
+	protected int m_iSearchSizeMode;
+	protected int m_iSampleCount;
+	protected int m_iSurveyLayout;
+	protected int m_iSurveyHeading;
+	protected vector m_vSurveyAnchor;
+	protected bool m_bSurveyAnchorActive;
+	protected bool m_bSurveyDone;
+	protected ref array<vector> m_aRefinementCenters = {};
+	protected ref array<int> m_aRefinementScores = {};
+	protected int m_iRefinementSample;
+	protected bool m_bSurveyRefining;
+	protected int m_iTerrainModulesPassed;
 
 	//------------------------------------------------------------------------------------------------
 	void IA_DynamicSitePlacer()
 	{
 		m_aShortlist = new array<ref IA_DynamicSiteCandidate>();
 		m_Rng = new RandomGenerator();
+	}
+
+#ifdef WORKBENCH
+	protected BaseWorld m_AuditWorld;
+	void SetAuditWorld(BaseWorld world)
+	{
+		m_AuditWorld = world;
+	}
+#endif
+
+	protected BaseWorld GetPlacementWorld()
+	{
+#ifdef WORKBENCH
+		if (m_AuditWorld)
+			return m_AuditWorld;
+#endif
+		return GetGame().GetWorld();
+	}
+
+	protected bool IsOcean(vector point)
+	{
+		return point[1] <= GetPlacementWorld().GetOceanHeight(point[0], point[2]);
+	}
+
+	void SetDirector(IA_DynamicObjectiveDirector director)
+	{
+		m_Director = director;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -54,7 +111,12 @@ class IA_DynamicSitePlacer
 		m_bPrecomputeOnly = true;
 		m_Result = null;
 		m_Building = null;
-		BuildShortlist();
+		IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+		int sizeMode = IA_DynamicSiteSizeMode.Auto;
+		if (cfg)
+			sizeMode = cfg.m_iDynamicBaseSizeMode;
+		InitializeSurvey(sizeMode);
+		QueueWork();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -70,11 +132,17 @@ class IA_DynamicSitePlacer
 		m_Building = null;
 		m_iWorkStep = 1;
 		m_iCandidateIndex = 0;
+		m_iHeadingIndex = 0;
+		// Admin settings can change while the ordinary objectives are running.
+		if (settings.m_iSizeMode != m_iSearchSizeMode)
+			InitializeSurvey(settings.m_iSizeMode);
 		m_iModuleIndex = 0;
 		m_iGarrisonLeft = 0;
 		m_iGuardSlot = 0;
 		m_iPlaceStartMs = System.GetTickCount();
+		m_iConstructionStartMs = 0;
 		m_iNavWaitStartMs = 0;
+		RefreshShortlistScores();
 		QueueWork();
 	}
 
@@ -88,9 +156,13 @@ class IA_DynamicSitePlacer
 		ScriptCallQueue queue = GetGame().GetCallqueue();
 		if (queue)
 			queue.Remove(this.ProcessWork);
-		if (m_Building)
-			m_Building.ImmediateRollback();
+		if (m_Building && m_Director)
+			m_Director.RetireSite(m_Building);
 		m_Building = null;
+		// Success can be queued for delivery when an admin replaces the AO.
+		if (m_Result && m_Result.m_Site && m_Director)
+			m_Director.RetireSite(m_Result.m_Site);
+		m_Result = null;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -113,11 +185,25 @@ class IA_DynamicSitePlacer
 		m_bWorkQueued = false;
 		if (m_bComplete)
 			return;
-		if (m_bPrecomputeOnly)
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (!init || init.GetAoActivationSerial() != m_iSerial)
+		{
+			Cancel(m_iSerial);
 			return;
+		}
+		if (m_bPrecomputeOnly)
+		{
+			StepSurvey();
+			if (!m_bSurveyDone && m_aShortlist.Count() < MAX_SHORTLIST && (HasSurveyWork() || m_aShortlist.IsEmpty()))
+				QueueWork();
+			return;
+		}
 
 		int now = System.GetTickCount();
-		if ((now - m_iPlaceStartMs) > PLACE_DEADLINE_MS)
+		bool timedOut = now - m_iPlaceStartMs > SURVEY_DEADLINE_MS;
+		if (m_iConstructionStartMs != 0)
+			timedOut = now - m_iConstructionStartMs > PLACE_DEADLINE_MS;
+		if (timedOut)
 		{
 			FailCurrent("timeout");
 			FinishFailure("timeout");
@@ -145,32 +231,55 @@ class IA_DynamicSitePlacer
 		if (m_bWorkQueued || m_bComplete)
 			return;
 		m_bWorkQueued = true;
-		GetGame().GetCallqueue().CallLater(this.ProcessWork, 200, false);
+		int delay = 200;
+		if (m_bPrecomputeOnly || m_iWorkStep == 1 || m_iWorkStep == 2)
+			delay = 16; // Survey and construction yield under their work budgets.
+		GetGame().GetCallqueue().CallLater(this.ProcessWork, delay, false);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void StepPickCandidate()
 	{
-		RefreshShortlistScores();
+		if (m_Director && m_Director.CountRetiredSites() >= 2)
+		{
+			FinishFailure("retired_site_limit");
+			return;
+		}
 		if (m_iCandidateIndex >= m_aShortlist.Count())
 		{
-			FinishFailure("no_legal_site");
+			// Keep looking beyond this batch before allowing a smaller layout.
+			m_aShortlist.Clear();
+			m_iCandidateIndex = 0;
+			if (m_bSurveyDone)
+				FinishFailure("no_legal_site");
+			else
+			{
+				StepSurvey();
+				RefreshShortlistScores();
+			}
 			return;
 		}
 
 		IA_DynamicSiteCandidate cand = m_aShortlist[m_iCandidateIndex];
-		m_iCandidateIndex = m_iCandidateIndex + 1;
-		if (!cand)
-			return;
 		if (!ValidateCandidate(cand))
+		{
+			if (!m_bCandidateSearchPending)
+			{
+				m_iCandidateIndex++;
+				m_iHeadingIndex = 0;
+			}
 			return;
+		}
 
-		m_ActiveLayout = IA_DynamicSiteLayout.CreateById(cand.m_iLayoutId);
+		m_ActiveLayout = ResolveLayout(cand.m_iLayoutId);
 		if (!PreflightResources(m_ActiveLayout))
 			return;
 
 		m_Building = IA_DynamicSiteInstance.Create(m_iSerial, m_iGroupId, cand.m_vCenter, cand.m_fYawDeg, m_ActiveLayout, ResolveEnemyFaction());
+		if (m_iConstructionStartMs == 0)
+			m_iConstructionStartMs = System.GetTickCount();
 		m_iModuleIndex = 0;
+		m_aPlacedPerimeter = {0, 0, 0, 0};
 		m_iWorkStep = 2;
 	}
 
@@ -190,9 +299,12 @@ class IA_DynamicSitePlacer
 		}
 
 		int spawned = 0;
+		int started = System.GetTickCount();
 		int total = m_ActiveLayout.m_aModules.Count();
 		while (m_iModuleIndex < total && spawned < 2)
 		{
+			if (System.GetTickCount() - started >= SURVEY_SLICE_MS)
+				return;
 			IA_DynamicSiteModule mod = m_ActiveLayout.m_aModules[m_iModuleIndex];
 			m_iModuleIndex = m_iModuleIndex + 1;
 			if (!mod)
@@ -206,6 +318,8 @@ class IA_DynamicSitePlacer
 				}
 				continue;
 			}
+			if (mod.m_iPerimeterSide >= 0)
+				m_aPlacedPerimeter[mod.m_iPerimeterSide] = m_aPlacedPerimeter[mod.m_iPerimeterSide] + 1;
 			spawned = spawned + 1;
 			if (m_Building.GetRootCount() > MAX_ROOTS)
 			{
@@ -221,6 +335,11 @@ class IA_DynamicSitePlacer
 
 		if (m_iModuleIndex >= total)
 		{
+			if (!m_ActiveLayout.HasPerimeterCoverage(m_aPlacedPerimeter))
+			{
+				FailCurrent("perimeter_coverage_changed");
+				return;
+			}
 			m_Building.RequestNavRebuild();
 			m_iNavWaitStartMs = System.GetTickCount();
 			m_iWorkStep = 3;
@@ -241,9 +360,12 @@ class IA_DynamicSitePlacer
 			m_iWorkStep = 4;
 			m_iGarrisonLeft = 0;
 			if (m_Settings)
-				m_iGarrisonLeft = m_Settings.ComputeGarrisonBudget();
+				m_iGarrisonLeft = m_Settings.ComputeInitialGarrison(m_ActiveLayout.m_iMaxGarrison);
+			else
+				m_iGarrisonLeft = Math.Round(Math.Min(36, m_ActiveLayout.m_iMaxGarrison) * 1.75);
 			m_Building.SetGarrisonBudget(m_iGarrisonLeft);
 			m_iGuardSlot = 0;
+			Print(string.Format("[IA][Base] Initial garrison budget=%1 layout=%2 max=%3", m_iGarrisonLeft, m_ActiveLayout.m_sName, m_ActiveLayout.m_iMaxGarrison), LogLevel.NORMAL);
 			return;
 		}
 
@@ -279,7 +401,19 @@ class IA_DynamicSitePlacer
 			size = m_iGarrisonLeft;
 
 		vector post = ResolveNextGuardPost();
-		IA_AiGroup group = IA_AiGroup.CreateMilitaryGroupFromUnits(post, IA_Faction.USSR, size, ResolveEnemyFaction(), false, true, false, false);
+		if (!IA_SpawnPlacement.IsOutdoorStandPose(post))
+		{
+			FailCurrent("guard_post_blocked");
+			return;
+		}
+		float defendRadius = m_ActiveLayout.GetDefendPostRadius(m_Building.WorldToLocalFlat(post));
+		if (defendRadius <= 0)
+		{
+			FailCurrent("guard_post_outside_perimeter");
+			return;
+		}
+		// Configure a pinned Defend post before starting staggered soldier spawning.
+		IA_AiGroup group = IA_AiGroup.CreateMilitaryGroupFromUnits(post, IA_Faction.USSR, size, ResolveEnemyFaction(), false, true, true, false);
 		if (!group)
 		{
 			FailCurrent("garrison_failed");
@@ -289,9 +423,10 @@ class IA_DynamicSitePlacer
 		IA_AreaInstance host = m_Building.GetHost();
 		if (host && host.GetArea())
 			group.SetAssignedArea(host.GetArea());
-		group.SetHoldPost(post, 5);
-		group.Spawn(IA_AiOrder.Hold, post);
+		group.SetDefendPost(post, defendRadius);
+		group.Spawn(IA_AiOrder.Defend, post);
 		m_Building.AddGarrisonGroup(group);
+		group.SpawnNextUnit();
 		m_iGarrisonLeft = m_iGarrisonLeft - size;
 		m_iGuardSlot = m_iGuardSlot + 1;
 	}
@@ -332,21 +467,25 @@ class IA_DynamicSitePlacer
 		int extra = m_iGuardSlot - posts;
 		int stations = m_Building.GetPerimeterStationCount();
 		if (stations > 0)
-			return m_Building.GetPerimeterStationWorld(extra % stations);
+		{
+			vector station = m_Building.GetPerimeterStationWorld(extra % stations);
+			vector inward = m_Building.GetOrigin() - station;
+			inward[1] = 0;
+			inward.Normalize();
+			station = station + inward * 6;
+			station[1] = IA_BasePlayerSampler.SampleSupportY(station);
+			return station;
+		}
 		return m_Building.GetOrigin();
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void FailCurrent(string reason)
 	{
+		RecordRejection(reason);
 		Print(string.Format("[IA][Base] Placement candidate failed: %1", reason), LogLevel.WARNING);
-		if (m_Building)
-		{
-			if (m_Building.PlayersNearbyOrOccupying())
-				m_Building.BeginDeferredCleanup();
-			else
-				m_Building.ImmediateRollback();
-		}
+		if (m_Building && m_Director)
+			m_Director.RetireSite(m_Building);
 		m_Building = null;
 		m_ActiveLayout = null;
 		m_iWorkStep = 1;
@@ -363,7 +502,7 @@ class IA_DynamicSitePlacer
 		m_Result = result;
 		m_Building = null;
 		m_bComplete = true;
-		Print(string.Format("[IA][Base] Placement committed serial=%1 site=%2", m_iSerial, result.m_Site.GetSiteId()), LogLevel.NORMAL);
+		Print(string.Format("[IA][Base] Placement committed serial=%1 site=%2 layout=%3 yaw=%4", m_iSerial, result.m_Site.GetSiteId(), m_ActiveLayout.m_sName, result.m_Site.GetYawDeg()), LogLevel.NORMAL);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -376,6 +515,11 @@ class IA_DynamicSitePlacer
 		m_Result = result;
 		m_bComplete = true;
 		Print(string.Format("[IA][Base] Placement failed serial=%1 reason=%2", m_iSerial, reason), LogLevel.WARNING);
+		if (m_Rejections)
+		{
+			foreach (string stage, int count : m_Rejections)
+				Print(string.Format("[IA][Base] Rejections: %1=%2", stage, count), LogLevel.WARNING);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -390,43 +534,241 @@ class IA_DynamicSitePlacer
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void BuildShortlist()
+	protected void InitializeSurvey(int sizeMode)
 	{
 		m_aShortlist.Clear();
-		ref array<vector> centers = new array<vector>();
-		ref array<float> radii = new array<float>();
-		CollectPrimaryCircles(centers, radii);
-		if (centers.IsEmpty())
-			return;
-
-		int attempts = 0;
-		while (attempts < MAX_SAMPLE_CENTERS && m_aShortlist.Count() < MAX_SHORTLIST)
+		m_Rng.SetSeed(m_iSeed);
+		m_iSearchSizeMode = sizeMode;
+		m_iSampleCount = 0;
+		m_iSurveyLayout = 0;
+		m_iSurveyHeading = 0;
+		m_bSurveyAnchorActive = false;
+		m_bSurveyDone = false;
+		ResetRefinement();
+		m_Rejections = new map<string, int>();
+		m_aSearchCenters = new array<vector>();
+		m_aSearchRadii = new array<float>();
+		CollectPrimaryCircles(m_aSearchCenters, m_aSearchRadii);
+		m_aLayouts = new array<ref IA_DynamicSiteLayout>();
+		array<int> layoutIds = {};
+		IA_DynamicSiteLayout.GetAllowedLayoutIds(sizeMode, layoutIds);
+		foreach (int layoutId : layoutIds)
 		{
-			attempts = attempts + 1;
-			int pick = m_Rng.RandInt(0, centers.Count());
-			if (pick >= centers.Count())
-				pick = 0;
-			vector c = centers[pick];
-			float r = radii[pick] + AO_MARGIN_M;
-			float ang = m_Rng.RandFloat01() * 6.283185;
-			float dist = m_Rng.RandFloat01() * r;
-			vector sample = Vector(c[0] + (Math.Cos(ang) * dist), 0, c[2] + (Math.Sin(ang) * dist));
-			sample[1] = GetGame().GetWorld().GetSurfaceY(sample[0], sample[2]);
-			if (!IsInsideUnion(sample, centers, radii))
-				continue;
-			if (IA_SpawnPlacement.IsInOcean(sample))
-				continue;
-			if (IA_SpawnPlacement.GetSlopeTangent(sample, 10) > 0.25)
-				continue;
-
-			ref IA_DynamicSiteCandidate cand = new IA_DynamicSiteCandidate();
-			cand.m_vCenter = sample;
-			cand.m_fYawDeg = 0;
-			cand.m_iLayoutId = IA_DynamicSiteLayout.LAYOUT_FULL;
-			cand.m_iSeed = m_iSeed + attempts;
-			cand.m_fScore = 999999;
-			m_aShortlist.Insert(cand);
+			IA_DynamicSiteLayout layout = IA_DynamicSiteLayout.CreateById(layoutId);
+			if (PreflightResources(layout))
+				m_aLayouts.Insert(layout);
+			else
+				RecordRejection("missing_resource");
 		}
+	}
+
+	// Progressive disk coverage avoids random clusters. Circle-local sequence
+	// indices keep coverage stable when multiple objective circles are interleaved.
+	protected float RadicalInverse(int index, int radix)
+	{
+		float value = 0;
+		float fraction = 1;
+		while (index > 0)
+		{
+			fraction = fraction / radix;
+			int digit = index % radix;
+			value += digit * fraction;
+			index = index / radix;
+		}
+		return value;
+	}
+
+	protected vector CoarseAnchor(int sample)
+	{
+		int count = m_aSearchCenters.Count();
+		int pick = sample % count;
+		int sequence = sample / count + 1;
+		vector center = m_aSearchCenters[pick];
+		float radius = Math.Max(0, m_aSearchRadii[pick] + AO_MARGIN_M);
+		int rotation = m_iSeed % 360;
+		float angle = (RadicalInverse(sequence, 3) + rotation / 360.0) * 6.283185;
+		float distance = Math.Sqrt(RadicalInverse(sequence, 2)) * radius;
+		return Vector(center[0] + Math.Cos(angle) * distance, 0, center[2] + Math.Sin(angle) * distance);
+	}
+
+	protected vector RefinementOffset(int index)
+	{
+		if (index == 0)
+			return vector.Zero;
+		int cell = index - 1;
+		if (cell >= 4)
+			cell++;
+		int row = cell / 3;
+		int column = cell % 3;
+		return Vector((column - 1) * REFINEMENT_STEP_M, 0, (row - 1) * REFINEMENT_STEP_M);
+	}
+
+	protected void ResetRefinement()
+	{
+		m_aRefinementCenters.Clear();
+		m_aRefinementScores.Clear();
+		m_iRefinementSample = 0;
+		m_bSurveyRefining = false;
+	}
+
+	protected bool HasSurveyWork()
+	{
+		return m_bSurveyAnchorActive || m_iSampleCount < MAX_SAMPLE_CENTERS || m_iRefinementSample < m_aRefinementCenters.Count() * REFINEMENT_OFFSETS;
+	}
+
+	protected void RememberNearFit(vector anchor)
+	{
+		if (m_bSurveyRefining)
+			return;
+		int worst = -1;
+		for (int i = 0; i < m_aRefinementCenters.Count(); i++)
+		{
+			if (vector.DistanceXZ(anchor, m_aRefinementCenters[i]) < REFINEMENT_STEP_M * 2)
+			{
+				if (m_iTerrainModulesPassed > m_aRefinementScores[i])
+				{
+					m_aRefinementCenters[i] = anchor;
+					m_aRefinementScores[i] = m_iTerrainModulesPassed;
+				}
+				return;
+			}
+			if (worst < 0 || m_aRefinementScores[i] < m_aRefinementScores[worst])
+				worst = i;
+		}
+		if (m_aRefinementCenters.Count() < MAX_REFINEMENT_CENTERS)
+		{
+			m_aRefinementCenters.Insert(anchor);
+			m_aRefinementScores.Insert(m_iTerrainModulesPassed);
+		}
+		else if (worst >= 0 && m_iTerrainModulesPassed > m_aRefinementScores[worst])
+		{
+			m_aRefinementCenters[worst] = anchor;
+			m_aRefinementScores[worst] = m_iTerrainModulesPassed;
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Survey the entire anchor budget for each size before allowing a downgrade.
+	//! Batches contain one layout only; player distance ranks sites within that size.
+	//! Only complete terrain/obstruction fits enter the shortlist. Survey during
+	//! the ordinary AO; an immediate admin start resumes the same bounded work.
+	protected void StepSurvey()
+	{
+		if (m_bSurveyDone || m_aShortlist.Count() >= MAX_SHORTLIST)
+			return;
+		if (m_aSearchCenters.IsEmpty() || m_aLayouts.IsEmpty())
+		{
+			m_bSurveyDone = true;
+			return;
+		}
+		int started = System.GetTickCount();
+		int poses = 0;
+		while (poses < SURVEY_POSES_PER_TICK && m_aShortlist.Count() < MAX_SHORTLIST)
+		{
+			if (poses > 0 && System.GetTickCount() - started >= SURVEY_SLICE_MS)
+				return;
+			poses++;
+			if (!m_bSurveyAnchorActive)
+			{
+				if (!HasSurveyWork())
+				{
+					// Consume all qualified sites of this size before surveying smaller ones.
+					if (!m_aShortlist.IsEmpty())
+						return;
+					Print(string.Format("[IA][Base] Layout search exhausted: %1 anchors=%2 refinement_positions=%3", m_aLayouts[m_iSurveyLayout].m_sName, m_iSampleCount, m_iRefinementSample), LogLevel.NORMAL);
+					m_iSurveyLayout++;
+					if (m_iSurveyLayout >= m_aLayouts.Count())
+					{
+						m_bSurveyDone = true;
+						return;
+					}
+					m_iSampleCount = 0;
+					ResetRefinement();
+					// Every size receives the same spatial samples, independent of earlier fits.
+					m_Rng.SetSeed(m_iSeed);
+				}
+				m_bSurveyRefining = m_iSampleCount >= MAX_SAMPLE_CENTERS;
+				if (m_bSurveyRefining)
+				{
+					int refineIndex = m_iRefinementSample / REFINEMENT_OFFSETS;
+					m_vSurveyAnchor = m_aRefinementCenters[refineIndex] + RefinementOffset(m_iRefinementSample % REFINEMENT_OFFSETS);
+					m_iRefinementSample++;
+				}
+				else
+				{
+					m_vSurveyAnchor = CoarseAnchor(m_iSampleCount);
+					m_iSampleCount++;
+				}
+				m_vSurveyAnchor[1] = GetPlacementWorld().GetSurfaceY(m_vSurveyAnchor[0], m_vSurveyAnchor[2]);
+				if (IsOcean(m_vSurveyAnchor))
+				{
+					RecordRejection("anchor_water");
+					continue;
+				}
+				bool duplicate = false;
+				foreach (IA_DynamicSiteCandidate existing : m_aShortlist)
+				{
+					if (vector.DistanceXZ(existing.m_vHqAnchor, m_vSurveyAnchor) < 1)
+						duplicate = true;
+				}
+				if (duplicate)
+					continue;
+				m_iSurveyHeading = 0;
+				m_bSurveyAnchorActive = true;
+			}
+			IA_DynamicSiteLayout layout = m_aLayouts[m_iSurveyLayout];
+			int headings = 8;
+			if (m_bSurveyRefining)
+				headings = FINE_HEADINGS;
+			float yaw = m_iSurveyHeading * (360.0 / headings);
+			m_iSurveyHeading++;
+			if (m_iSurveyHeading >= headings)
+			{
+				m_iSurveyHeading = 0;
+				m_bSurveyAnchorActive = false;
+			}
+			vector origin = OriginFromHq(m_vSurveyAnchor, yaw, layout);
+			vector rootMat[4];
+			layout.BuildRootTransform(origin, yaw, rootMat);
+			// The first module is the HQ in every manifest. This cheap check
+			// avoids scanning a whole base around an unusable foundation.
+			if (!ValidateModulePad(rootMat, layout.m_aModules[0]))
+			{
+				RecordTerrainRejection(origin, yaw, layout);
+				continue;
+			}
+			if (!FootprintInsideUnion(origin, yaw, layout))
+			{
+				RecordRejection("ao_boundary");
+				continue;
+			}
+			if (!ValidateTerrain(origin, yaw, layout, true))
+			{
+				RememberNearFit(m_vSurveyAnchor);
+				RecordTerrainRejection(origin, yaw, layout);
+				continue;
+			}
+			ref IA_DynamicSiteCandidate cand = new IA_DynamicSiteCandidate();
+			cand.m_vCenter = origin;
+			cand.m_vHqAnchor = m_vSurveyAnchor;
+			cand.m_fYawDeg = yaw;
+			cand.m_fSurveyYawDeg = yaw;
+			cand.m_iLayoutId = layout.m_iLayoutId;
+			cand.m_iSeed = m_iSeed + m_iSampleCount;
+			m_aShortlist.Insert(cand);
+			m_bSurveyAnchorActive = false;
+			Print(string.Format("[IA][Base] Terrain-qualified site: layout=%1 center=%2 yaw=%3 anchors_sampled=%4", layout.m_sName, origin, yaw, m_iSampleCount), LogLevel.NORMAL);
+		}
+	}
+
+	protected vector OriginFromHq(vector anchor, float yaw, notnull IA_DynamicSiteLayout layout)
+	{
+		vector rootMat[4];
+		layout.BuildRootTransform(vector.Zero, yaw, rootMat);
+		vector offset = layout.LocalOffsetToWorld(rootMat, layout.m_aModules[0].m_vLocalPosition);
+		vector origin = anchor - offset;
+		origin[1] = GetPlacementWorld().GetSurfaceY(origin[0], origin[2]);
+		return origin;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -527,8 +869,9 @@ class IA_DynamicSitePlacer
 			p90i = 0;
 		if (p90i >= dists.Count())
 			p90i = dists.Count() - 1;
-		float spread = IA_SpawnPlacement.GetFootprintHeightDelta(center, 12);
-		return median + (0.35 * dists[p90i]) + (100 * spread);
+		// Every retained site already fits a whole design; a tiny center-height
+		// sample must not displace that evidence with a misleading terrain rank.
+		return median + (0.35 * dists[p90i]);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -559,52 +902,84 @@ class IA_DynamicSitePlacer
 	}
 
 	//------------------------------------------------------------------------------------------------
+	protected IA_DynamicSiteLayout ResolveLayout(int layoutId)
+	{
+		foreach (IA_DynamicSiteLayout layout : m_aLayouts)
+		{
+			if (layout.m_iLayoutId == layoutId)
+				return layout;
+		}
+		return IA_DynamicSiteLayout.CreateById(layoutId);
+	}
+
 	protected bool ValidateCandidate(notnull IA_DynamicSiteCandidate cand)
 	{
-		int sizeMode = 0;
-		if (m_Settings)
-			sizeMode = m_Settings.m_iSizeMode;
-
-		ref array<int> layouts = new array<int>();
-		if (sizeMode == IA_DynamicSiteSizeMode.Compact)
-			layouts.Insert(IA_DynamicSiteLayout.LAYOUT_COMPACT);
-		else if (sizeMode == IA_DynamicSiteSizeMode.Full)
-			layouts.Insert(IA_DynamicSiteLayout.LAYOUT_FULL);
-		else
+		m_bCandidateSearchPending = false;
+		int tested = 0;
+		int started = System.GetTickCount();
+		IA_DynamicSiteLayout layout = ResolveLayout(cand.m_iLayoutId);
+		while (m_iHeadingIndex < FINE_HEADINGS)
 		{
-			layouts.Insert(IA_DynamicSiteLayout.LAYOUT_FULL);
-			layouts.Insert(IA_DynamicSiteLayout.LAYOUT_COMPACT);
-		}
-
-		ref array<float> headings = new array<float>();
-		headings.Insert(0);
-		headings.Insert(90);
-		headings.Insert(180);
-		headings.Insert(270);
-
-		int li;
-		int hi;
-		for (li = 0; li < layouts.Count(); li++)
-		{
-			IA_DynamicSiteLayout layout = IA_DynamicSiteLayout.CreateById(layouts[li]);
-			for (hi = 0; hi < headings.Count(); hi++)
+			if (tested > 0 && System.GetTickCount() - started >= SURVEY_SLICE_MS)
+				break;
+			// Revalidate the exact surveyed pose first, including refined headings.
+			// Keep its reference yaw stable across failed construction attempts.
+			float yaw = cand.m_fSurveyYawDeg + m_iHeadingIndex * (360.0 / FINE_HEADINGS);
+			if (yaw >= 360)
+				yaw -= 360;
+			m_iHeadingIndex++;
+			tested++;
+			vector origin = OriginFromHq(cand.m_vHqAnchor, yaw, layout);
+			if (!FootprintInsideUnion(origin, yaw, layout))
 			{
-				float yaw = headings[hi];
-				if (!FootprintInsideUnion(cand.m_vCenter, yaw, layout))
-					continue;
-				if (!ValidateTerrain(cand.m_vCenter, yaw, layout))
-					continue;
-				if (!ValidatePlayerClearance(cand.m_vCenter, yaw, layout, null))
-					continue;
-				if (!ValidateInteriorRoutes(cand.m_vCenter, yaw, layout, false))
-					continue;
-
-				cand.m_fYawDeg = yaw;
-				cand.m_iLayoutId = layouts[li];
-				return true;
+				RecordRejection("ao_boundary");
+				continue;
 			}
+			if (!ValidateTerrain(origin, yaw, layout))
+			{
+				RecordTerrainRejection(origin, yaw, layout);
+				continue;
+			}
+			if (!ValidatePlayerClearance(origin, yaw, layout, null))
+			{
+				RecordRejection("players_or_visibility");
+				continue;
+			}
+			if (!ValidateInteriorRoutes(origin, yaw, layout, false))
+			{
+				RecordRejection("access_routes");
+				continue;
+			}
+
+			cand.m_vCenter = origin;
+			cand.m_fYawDeg = yaw;
+			cand.m_iLayoutId = layout.m_iLayoutId;
+			// A failed build resumes remaining headings, then other sites of this size.
+			return true;
 		}
+		m_bCandidateSearchPending = m_iHeadingIndex < FINE_HEADINGS;
 		return false;
+	}
+
+	protected void RecordRejection(string reason)
+	{
+		if (m_Rejections)
+			m_Rejections.Set(reason, m_Rejections.Get(reason) + 1);
+	}
+
+	protected void RecordTerrainRejection(vector origin, float yaw, notnull IA_DynamicSiteLayout layout)
+	{
+		string reason = m_sTerrainRejection + "/" + layout.m_sName;
+		// Distinguish the compulsory HQ screening from later module failures.
+		if (m_sTerrainDetail.StartsWith("module="))
+		{
+			int end = m_sTerrainDetail.IndexOf(" ");
+			if (end > 7)
+				reason += "/" + m_sTerrainDetail.Substring(7, end - 7);
+		}
+		if (!m_Rejections.Contains(reason))
+			Print(string.Format("[IA][Base] Rejection example: %1 center=%2 yaw=%3 %4", reason, origin, yaw, m_sTerrainDetail), LogLevel.WARNING);
+		RecordRejection(reason);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -623,6 +998,22 @@ class IA_DynamicSitePlacer
 		corners.Insert(layout.LocalOffsetToWorld(rootMat, Vector(layout.m_fHalfWidthM, 0, -layout.m_fHalfDepthM)));
 		corners.Insert(layout.LocalOffsetToWorld(rootMat, Vector(-layout.m_fHalfWidthM, 0, layout.m_fHalfDepthM)));
 		corners.Insert(layout.LocalOffsetToWorld(rootMat, Vector(layout.m_fHalfWidthM, 0, layout.m_fHalfDepthM)));
+		// A disk is convex: if all rectangle corners are in one disk, every
+		// interior sample is too. Overlapping-circle cases still use the full grid.
+		for (int circle = 0; circle < centers.Count(); circle++)
+		{
+			bool contained = true;
+			foreach (vector corner : corners)
+			{
+				if (!IA_AreaMarker.IsWorldPosInsideCaptureRadius(corner, centers[circle], radii[circle] + AO_MARGIN_M))
+				{
+					contained = false;
+					break;
+				}
+			}
+			if (contained)
+				return true;
+		}
 		int i;
 		for (i = 0; i < corners.Count(); i++)
 		{
@@ -647,9 +1038,12 @@ class IA_DynamicSitePlacer
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected bool ValidateTerrain(vector origin, float yawDeg, notnull IA_DynamicSiteLayout layout)
+	protected bool ValidateTerrain(vector origin, float yawDeg, notnull IA_DynamicSiteLayout layout, bool hqAlreadyValidated = false)
 	{
-		World world = GetGame().GetWorld();
+		m_iTerrainModulesPassed = 0;
+		m_sTerrainRejection = "world_unavailable";
+		m_sTerrainDetail = "";
+		BaseWorld world = GetPlacementWorld();
 		if (!world)
 			return false;
 
@@ -665,19 +1059,29 @@ class IA_DynamicSitePlacer
 			{
 				vector p = layout.LocalOffsetToWorld(rootMat, Vector(x, 0, z));
 				p[1] = world.GetSurfaceY(p[0], p[2]);
-				if (IA_SpawnPlacement.IsInOcean(p))
+				if (IsOcean(p))
+				{
+					m_sTerrainRejection = "footprint_water";
+					m_sTerrainDetail = string.Format("sample=%1 ocean_y=%2", p, world.GetOceanHeight(p[0], p[2]));
 					return false;
+				}
 				if (p[1] < minY)
 					minY = p[1];
 				if (p[1] > maxY)
 					maxY = p[1];
+				// Fail as soon as the sampled range exceeds the limit. Surveying
+				// more anchors must not require full scans of obviously steep sites.
+				if ((maxY - minY) > 4)
+				{
+					m_sTerrainRejection = "footprint_height_span";
+					m_sTerrainDetail = string.Format("height_delta=%1 limit=4", maxY - minY);
+					return false;
+				}
 				z = z + GRID_M;
 			}
 			x = x + GRID_M;
 		}
-		if ((maxY - minY) > 4)
-			return false;
-
+		ref array<int> perimeter = {0, 0, 0, 0};
 		int n = layout.m_aModules.Count();
 		int i;
 		for (i = 0; i < n; i++)
@@ -685,8 +1089,31 @@ class IA_DynamicSitePlacer
 			IA_DynamicSiteModule mod = layout.m_aModules[i];
 			if (!mod)
 				continue;
-			if (!ValidateModulePad(rootMat, mod))
-				return false;
+			// Decorative vignettes never veto a site or consume terrain survey
+			// traces. SpawnModule still checks their support and obstructions.
+			if (mod.m_iRole == IA_DynamicSiteModuleRole.Dressing)
+				continue;
+			// Survey screened this exact HQ pose immediately before this call.
+			// Live candidate validation uses the default and checks every module.
+			bool padValid = i == 0 && hqAlreadyValidated;
+			if (!padValid)
+				padValid = ValidateModulePad(rootMat, mod);
+			if (!padValid)
+			{
+				if (mod.m_bRequired)
+					return false;
+				continue;
+			}
+			if (mod.m_iPerimeterSide >= 0)
+				perimeter[mod.m_iPerimeterSide] = perimeter[mod.m_iPerimeterSide] + 1;
+			if (mod.m_bRequired)
+				m_iTerrainModulesPassed++;
+		}
+		if (!layout.HasPerimeterCoverage(perimeter))
+		{
+			m_sTerrainRejection = "perimeter_coverage";
+			m_sTerrainDetail = string.Format("sides=%1,%2,%3,%4", perimeter[0], perimeter[1], perimeter[2], perimeter[3]);
+			return false;
 		}
 		return true;
 	}
@@ -695,8 +1122,20 @@ class IA_DynamicSitePlacer
 	protected bool ValidateModulePad(vector rootMat[4], notnull IA_DynamicSiteModule mod)
 	{
 		vector worldMat[4];
-		IA_DynamicSiteLayout dummy = IA_DynamicSiteLayout.CreateFull();
-		dummy.LocalToWorld(rootMat, mod.m_vLocalPosition, mod.m_fLocalYawDeg, mod.m_fPrefabYawCorrectionDeg, worldMat);
+		vector localMat[4];
+		Math3D.AnglesToMatrix(Vector(mod.m_fLocalYawDeg + mod.m_fPrefabYawCorrectionDeg, 0, 0), localMat);
+		localMat[3] = mod.m_vLocalPosition;
+		Math3D.MatrixMultiply4(rootMat, localMat, worldMat);
+		float originY;
+		if (!SampleModuleSupport(worldMat, mod, originY))
+			return false;
+		return IsModuleVolumeClear(worldMat, mod);
+	}
+
+	protected bool SampleModuleSupport(vector worldMat[4], notnull IA_DynamicSiteModule mod, out float originY)
+	{
+		float centerY = GetPlacementWorld().GetSurfaceY(worldMat[3][0], worldMat[3][2]);
+		originY = centerY;
 		float minY = 99999;
 		float maxY = -99999;
 		int n = mod.m_aSupportPoints.Count();
@@ -705,16 +1144,86 @@ class IA_DynamicSitePlacer
 		{
 			vector local = mod.m_aSupportPoints[i];
 			vector p = worldMat[3] + (worldMat[0] * local[0]) + (worldMat[2] * local[2]);
-			p[1] = GetGame().GetWorld().GetSurfaceY(p[0], p[2]);
-			if (IA_SpawnPlacement.IsInOcean(p))
+			p[1] = GetPlacementWorld().GetSurfaceY(p[0], p[2]);
+			if (IsOcean(p))
+			{
+				m_sTerrainRejection = "pad_water";
+				m_sTerrainDetail = string.Format("module=%1 sample=%2", mod.m_sId, p);
 				return false;
+			}
 			if (p[1] < minY)
 				minY = p[1];
 			if (p[1] > maxY)
 				maxY = p[1];
 		}
-		if ((maxY - minY) > mod.m_fMaxSupportDeltaM)
+		if (!mod.ResolveSupportHeight(centerY, minY, maxY, originY))
+		{
+			m_sTerrainRejection = "pad_height_span";
+			if (maxY - minY <= mod.m_fMaxSupportDeltaM)
+				m_sTerrainRejection = "foundation_lift";
+			m_sTerrainDetail = string.Format("module=%1 height_delta=%2 limit=%3 bearing=%4..%5 lift=%6 lift_limit=%7", mod.m_sId, maxY - minY, mod.m_fMaxSupportDeltaM, mod.m_vSupportMins, mod.m_vSupportMaxs, originY - centerY, mod.m_fMaxFoundationLiftM);
 			return false;
+		}
+		return true;
+	}
+
+	protected bool IsModuleVolumeClear(vector worldMat[4], notnull IA_DynamicSiteModule mod, IA_DynamicSiteInstance ignoreSite = null)
+	{
+		BaseWorld world = GetPlacementWorld();
+		vector center = worldMat[3];
+		center[1] = world.GetSurfaceY(center[0], center[2]);
+		float minY = center[1];
+		float maxY = center[1];
+		for (int ix = -1; ix <= 1; ix++)
+		{
+			for (int iz = -1; iz <= 1; iz++)
+			{
+				vector p = center + worldMat[0] * (ix * mod.m_fHalfWidthM) + worldMat[2] * (iz * mod.m_fHalfDepthM);
+				p[1] = world.GetSurfaceY(p[0], p[2]);
+				if (IsOcean(p))
+				{
+					m_sTerrainRejection = "pad_water";
+					m_sTerrainDetail = string.Format("module=%1 sample=%2", mod.m_sId, p);
+					return false;
+				}
+				minY = Math.Min(minY, p[1]);
+				maxY = Math.Max(maxY, p[1]);
+			}
+		}
+		// Preserve the actual reserved rectangle at diagonal headings. Its
+		// world-axis bounding box includes unrelated ground outside the pad.
+		ref TraceOBB clearance = new TraceOBB();
+		clearance.Mat[0] = worldMat[0];
+		clearance.Mat[1] = worldMat[1];
+		clearance.Mat[2] = worldMat[2];
+		clearance.Start = Vector(center[0], minY + 0.1, center[2]);
+		clearance.End = clearance.Start + Vector(0, 0.05, 0);
+		clearance.Mins = Vector(-mod.m_fHalfWidthM, 0, -mod.m_fHalfDepthM);
+		clearance.Maxs = Vector(mod.m_fHalfWidthM, maxY - minY + 6, mod.m_fHalfDepthM);
+		// Terrain is checked separately. Starting above a height-span allowance
+		// misses low obstructions; including WORLD here rejects the slope itself.
+		clearance.Flags = TraceFlags.ENTS;
+		// Authored wall ends meet; ignore only this base during construction.
+		ref array<IEntity> exclusions = {};
+		if (ignoreSite)
+		{
+			ignoreSite.CollectOwnedEntities(exclusions);
+			clearance.ExcludeArray = exclusions;
+		}
+		if (world.TraceMove(clearance, null) < 1)
+		{
+			m_sTerrainRejection = "module_obstruction";
+			string hit = "world_geometry";
+			if (clearance.TraceEnt)
+			{
+				hit = clearance.TraceEnt.ClassName();
+				EntityPrefabData prefabData = clearance.TraceEnt.GetPrefabData();
+				if (prefabData)
+					hit = prefabData.GetPrefabName();
+			}
+			m_sTerrainDetail = string.Format("module=%1 hit=%2 pad=%3x%4 center=%5", mod.m_sId, hit, mod.m_fHalfWidthM * 2, mod.m_fHalfDepthM * 2, center);
+			return false;
+		}
 		return true;
 	}
 
@@ -752,8 +1261,12 @@ class IA_DynamicSitePlacer
 	//------------------------------------------------------------------------------------------------
 	protected float DistanceToOrientedRect(vector world, vector origin, float yawDeg, notnull IA_DynamicSiteLayout layout)
 	{
-		ref IA_DynamicSiteInstance tmp = IA_DynamicSiteInstance.Create(0, 0, origin, yawDeg, layout, null);
-		return tmp.DistanceToFootprint(world);
+		vector rootMat[4];
+		layout.BuildRootTransform(origin, yawDeg, rootMat);
+		vector delta = world - origin;
+		float dx = Math.Max(0, Math.AbsFloat(vector.Dot(delta, rootMat[0])) - layout.m_fHalfWidthM);
+		float dz = Math.Max(0, Math.AbsFloat(vector.Dot(delta, rootMat[2])) - layout.m_fHalfDepthM);
+		return Math.Sqrt(dx * dx + dz * dz);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -774,22 +1287,25 @@ class IA_DynamicSitePlacer
 		samples.Insert(layout.LocalOffsetToWorld(rootMat, Vector(layout.m_fHalfWidthM, 0, layout.m_fHalfDepthM)));
 		samples.Insert(layout.LocalOffsetToWorld(rootMat, layout.m_vCaptureLocal) + Vector(0, 6, 0));
 
-		World world = GetGame().GetWorld();
+		BaseWorld world = GetPlacementWorld();
 		int i;
 		for (i = 0; i < samples.Count(); i++)
 		{
 			vector target = samples[i];
-			target[1] = target[1] + 2;
+			target[1] = world.GetSurfaceY(target[0], target[2]) + 2;
+			if (i == samples.Count() - 1)
+				target[1] = target[1] + 6;
 			ref TraceParam p = new TraceParam();
 			p.Start = eye;
 			p.End = target;
 			p.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
-			p.Exclude = observer;
+			array<IEntity> exclusions = {observer};
+			if (ignoreSite)
+				ignoreSite.CollectOwnedEntities(exclusions);
+			p.ExcludeArray = exclusions;
 			float hit = world.TraceMove(p, null);
 			if (hit >= 0.99)
 				return true;
-			if (ignoreSite && p.TraceEnt && ignoreSite.OwnsEntity(p.TraceEnt))
-				continue;
 		}
 		return false;
 	}
@@ -800,20 +1316,25 @@ class IA_DynamicSitePlacer
 		vector rootMat[4];
 		layout.BuildRootTransform(origin, yawDeg, rootMat);
 		vector capture = layout.LocalOffsetToWorld(rootMat, layout.m_vCaptureLocal);
+		// The authored side gates meet the main lane at the cross-lane junction.
+		vector junctionLocal = Vector(0, 0, layout.m_aEntries[1][2]);
+		vector junction = layout.LocalOffsetToWorld(rootMat, junctionLocal);
+		if (!IsRouteSegmentClear(junction, capture, includeProps))
+			return false;
 		int reachable = 0;
 		int i;
 		int n = layout.m_aEntries.Count();
 		for (i = 0; i < n; i++)
 		{
 			vector entry = layout.LocalOffsetToWorld(rootMat, layout.m_aEntries[i]);
-			if (LatticeConnected(entry, capture, origin, yawDeg, layout))
+			if (IsRouteSegmentClear(entry, junction, includeProps))
 				reachable = reachable + 1;
 		}
 		return reachable >= 2;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected bool LatticeConnected(vector from, vector to, vector origin, float yawDeg, notnull IA_DynamicSiteLayout layout)
+	protected bool IsRouteSegmentClear(vector from, vector to, bool checkNavmesh)
 	{
 		vector delta = to - from;
 		delta[1] = 0;
@@ -822,17 +1343,57 @@ class IA_DynamicSitePlacer
 			return true;
 		vector dir = delta / len;
 		int steps = Math.Ceil(len / LANE_SAMPLE_M);
+		vector previous = from;
+		previous[1] = IA_BasePlayerSampler.SampleSupportY(previous);
 		int i;
 		for (i = 0; i <= steps; i++)
 		{
-			vector p = from + (dir * (i * LANE_SAMPLE_M));
-			p[1] = GetGame().GetWorld().GetSurfaceY(p[0], p[2]);
-			if (IA_SpawnPlacement.IsInOcean(p))
+			vector p = from + (dir * Math.Min(len, i * LANE_SAMPLE_M));
+			p[1] = GetPlacementWorld().GetSurfaceY(p[0], p[2]);
+			if (IsOcean(p))
 				return false;
 			if (!IA_SpawnPlacement.HasStandRoom(p))
 				return false;
+			// A swept standing body catches walls between samples and low obstacles.
+			ref TraceBox body = new TraceBox();
+			body.Start = previous + Vector(0, 0.2, 0);
+			body.End = p + Vector(0, 0.2, 0);
+			body.Mins = Vector(-0.4, 0, -0.4);
+			body.Maxs = Vector(0.4, 1.6, 0.4);
+			body.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
+			if (GetPlacementWorld().TraceMove(body, null) < 1)
+				return false;
+			if (checkNavmesh)
+			{
+				if (!HasLocalNavmesh(p))
+					return false;
+			}
+			previous = p;
 		}
 		return true;
+	}
+
+	protected bool HasLocalNavmesh(vector point)
+	{
+		AIWorld aiWorld = GetGame().GetAIWorld();
+		if (!aiWorld)
+			return false;
+		aiWorld.RequestNavmeshLoad(point);
+		NavmeshWorldComponent navmesh = aiWorld.GetNavmeshWorldComponent("Soldiers");
+		if (!navmesh)
+			return false;
+		if (!navmesh.IsTileLoaded(point))
+		{
+			if (!navmesh.IsTileRequested(point))
+				navmesh.LoadTileIn(point);
+			return false;
+		}
+		if (!navmesh.IsTileValid(point))
+			return false;
+		// The ordinary spawn helper searches 16 metres away. That is unsuitable
+		// for validating a lane sample: a valid result can be far from the lane.
+		vector reachable = point;
+		return navmesh.GetReachablePoint(point, 1, reachable) && vector.Distance(point, reachable) <= 1.5;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -843,10 +1404,10 @@ class IA_DynamicSitePlacer
 		for (i = 0; i < n; i++)
 		{
 			IA_DynamicSiteModule mod = layout.m_aModules[i];
-			if (!mod || !mod.m_bRequired)
+			if (!mod)
 				continue;
 			Resource res = Resource.Load(mod.m_Prefab);
-			if (!res)
+			if (!res && mod.m_iRole != IA_DynamicSiteModuleRole.Dressing)
 				return false;
 		}
 		return true;
@@ -863,19 +1424,32 @@ class IA_DynamicSitePlacer
 		site.GetLayout().BuildRootTransform(site.GetOrigin(), site.GetYawDeg(), rootMat);
 		vector worldMat[4];
 		site.GetLayout().LocalToWorld(rootMat, mod.m_vLocalPosition, mod.m_fLocalYawDeg, mod.m_fPrefabYawCorrectionDeg, worldMat);
+		float supportY;
+		if (!SampleModuleSupport(worldMat, mod, supportY))
+			return false;
+		IA_DynamicSiteInstance ignoreSite;
+		if (mod.m_iPerimeterSide >= 0)
+			ignoreSite = site;
+		if (!IsModuleVolumeClear(worldMat, mod, ignoreSite))
+			return false;
 		vector spawnPos = worldMat[3];
-		spawnPos[1] = GetGame().GetWorld().GetSurfaceY(spawnPos[0], spawnPos[2]);
+		spawnPos[1] = supportY;
 		worldMat[3] = spawnPos;
-		if (mod.m_iGroundingPolicy == IA_DynamicSiteGrounding.UprightPad)
-			SCR_TerrainHelper.SnapToTerrain(worldMat, GetGame().GetWorld());
+		if (mod.m_iGroundingPolicy == IA_DynamicSiteGrounding.TerrainSegment)
+		{
+			ref TraceParam groundTrace = new TraceParam();
+			groundTrace.Flags = TraceFlags.WORLD;
+			SCR_TerrainHelper.SnapAndOrientToTerrain(worldMat, GetPlacementWorld(), false, groundTrace);
+		}
 
 		ref EntitySpawnParams params = new EntitySpawnParams();
 		params.TransformMode = ETransformMode.WORLD;
 		Math3D.MatrixCopy(worldMat, params.Transform);
-		IEntity ent = GetGame().SpawnEntityPrefab(res, GetGame().GetWorld(), params);
+		IEntity ent = GetGame().SpawnEntityPrefab(res, GetPlacementWorld(), params);
 		if (!ent)
 			return false;
 		site.AddRoot(ent);
 		return true;
 	}
+
 }

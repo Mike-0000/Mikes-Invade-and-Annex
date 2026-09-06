@@ -47,7 +47,11 @@ enum IA_DynamicSiteSizeMode
 {
 	Auto,
 	Full,
-	Compact
+	Compact,
+	Courtyard,
+	Roadside,
+	CommandPost,
+	RallyPost
 }
 
 enum IA_DynamicSiteGrounding
@@ -66,7 +70,8 @@ enum IA_DynamicSiteModuleRole
 	Supply,
 	Fuel,
 	Cover,
-	Tower
+	Tower,
+	Dressing
 }
 
 class IA_BaseObjectiveSettings
@@ -141,12 +146,28 @@ class IA_BaseObjectiveSettings
 			budget = 36;
 		return budget;
 	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Initial occupying spawn is 1.75x the scaled+layout-capped budget so every
+	//! layout (Full through Rally post) fields more guards than the previous baseline.
+	int ComputeInitialGarrison(int layoutMax)
+	{
+		int budget = ComputeGarrisonBudget();
+		if (budget > layoutMax)
+			budget = layoutMax;
+		int boosted = Math.Round(budget * 1.75);
+		if (boosted < 4)
+			boosted = 4;
+		return boosted;
+	}
 }
 
 class IA_DynamicSiteCandidate
 {
 	vector m_vCenter;
+	vector m_vHqAnchor;
 	float m_fYawDeg;
+	float m_fSurveyYawDeg;
 	int m_iLayoutId;
 	int m_iSeed;
 	float m_fScore = 999999;
