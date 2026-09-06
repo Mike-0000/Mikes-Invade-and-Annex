@@ -10,7 +10,7 @@ import unittest
 
 sys.dont_write_bytecode=True
 from author_base_compositions import Author,REF,parse
-from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT
+from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('D:/ReforgerGameSources/data/data007')
@@ -75,6 +75,11 @@ class CompositionTests(unittest.TestCase):
             first[weighted_cover_order(random.Random(seed),['PKM','Position1'],catalog)[0]]+=1
         self.assertGreater(first['PKM']/first['Position1'],1.35)
         self.assertLess(first['PKM']/first['Position1'],1.65)
+        for r in self.recipes:
+            gunned=sum(1 for m in r['modules'] if m['role']=='Cover' and self.catalog[m['key']]['sockets'])
+            self.assertGreaterEqual(r['guns'],1,(r['name'],r['guns']))
+            if r['size']<3:
+                self.assertGreaterEqual(gunned,2,(r['name'],gunned,r['guns']))
 
     def test_geometry_budgets_lanes_and_guard_posts(self):
         for r in self.recipes:
@@ -92,10 +97,10 @@ class CompositionTests(unittest.TestCase):
                 a=box(m)
                 if m['side']>=0:
                     mb=mesh_box(m,self.measure)
-                    self.assertGreaterEqual(mb[0],-W-0.6)
-                    self.assertGreaterEqual(mb[1],-D-0.6)
-                    self.assertLessEqual(mb[2],W+0.6)
-                    self.assertLessEqual(mb[3],D+0.6)
+                    self.assertGreaterEqual(mb[0],-W-APRON_ALLOW)
+                    self.assertGreaterEqual(mb[1],-D-APRON_ALLOW)
+                    self.assertLessEqual(mb[2],W+APRON_ALLOW)
+                    self.assertLessEqual(mb[3],D+APRON_ALLOW)
                 else:
                     self.assertGreaterEqual(a[0],-W+1)
                     self.assertGreaterEqual(a[1],-D+1)
@@ -138,20 +143,23 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('int style = 0',source)
 
     def test_fighting_positions_sit_on_the_wall_line(self):
+        pos1=fighting_face_z('Position1',self.catalog,self.measure)
+        self.assertLess(pos1,self.measure['Position1']['maxs'][2]-1.0)
         for r in self.recipes:
             W,D=r['half_width'],r['half_depth']
             for m in r['modules']:
                 if m['side']<0:
                     continue
-                mb=mesh_box(m,self.measure)
+                face=fighting_face_z(m['key'],self.catalog,self.measure)
+                x,z=m['position'][0],m['position'][2]
                 if m['side']==0:
-                    self.assertAlmostEqual(mb[3],D-WALL_INSET,places=2)
+                    self.assertAlmostEqual(z+face,D-WALL_INSET,places=2)
                 elif m['side']==1:
-                    self.assertAlmostEqual(mb[2],W-WALL_INSET,places=2)
+                    self.assertAlmostEqual(x+face,W-WALL_INSET,places=2)
                 elif m['side']==2:
-                    self.assertAlmostEqual(mb[1],-(D-WALL_INSET),places=2)
+                    self.assertAlmostEqual(z-face,-(D-WALL_INSET),places=2)
                 else:
-                    self.assertAlmostEqual(mb[0],-(W-WALL_INSET),places=2)
+                    self.assertAlmostEqual(x-face,-(W-WALL_INSET),places=2)
 
     def test_shared_gun_budget_includes_checkpoints(self):
         self.assertEqual(self.catalog['CheckpointM']['sockets'][0]['kind'],0)
@@ -171,6 +179,7 @@ class CompositionTests(unittest.TestCase):
         self.assertNotIn('CollectTree(m_Assembly',source)
         self.assertIn('m_iHeavyInstalled >= 1',source)
         self.assertIn('m_iSample >= 5',source)
+        self.assertIn('Keep("field_of_fire")',source)
         self.assertIn('m_iDeadlineMs',source)
         self.assertNotIn('CallLater',source)
         self.assertNotIn('EOnFrame',source)
@@ -179,6 +188,7 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('m_bEmplacementPhaseDone = !m_Settings || !m_Settings.m_bEmplacementsEnabled',placer)
         self.assertIn('m_bAuthoredAccess',placer)
         self.assertIn('m_bFollowTerrainPlane',placer)
+        self.assertIn('!m_ActiveLayout.m_bComposed && !ValidateEmplacementAccess()',placer)
         site=read('Scripts/Game/IA_DynamicSiteInstance.c')
         self.assertIn('if (!DeleteRoots())',site)
         composed=read('Scripts/Game/IA_ComposedSiteLayout.c')

@@ -386,7 +386,7 @@ class IA_DynamicSitePlacer
 			else
 				m_iGarrisonLeft = Math.Round(Math.Min(36, m_ActiveLayout.m_iMaxGarrison) * 1.75);
 			// Optional access must be navigable after the normal nav rebuild.
-			if (!ValidateEmplacementAccess())
+			if (!m_ActiveLayout.m_bComposed && !ValidateEmplacementAccess())
 			{
 				m_Building.RemoveLastEmplacement();
 				m_Building.RequestNavRebuild();

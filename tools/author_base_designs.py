@@ -9,6 +9,8 @@ import json
 import math
 import random
 
+from author_base_compositions import parse, REF, Node
+
 ROOT=Path(__file__).resolve().parents[1]
 THEMES=['Strongpoint','Encampment','RoadControl','Logistics','Camouflaged']
 SIZES=[('Full',90,70,36),('Compact',70,58,36),('Courtyard',60,52,24),('Roadside',50,60,20),('CommandPost',46,44,16),('RallyPost',38,38,12)]
@@ -33,6 +35,9 @@ def overlap(a,b,gap=0):
 
 WALL_INSET=0.9
 GUNNED_COVER_WEIGHT=1.5
+SANDBAG_FACE=0.62
+APRON_ALLOW=4.0
+_FACE_CACHE={}
 
 
 def cover_weight(key,catalog):
@@ -72,9 +77,67 @@ def wall_line(W,D,side):
     return (W-WALL_INSET)*(1 if side==1 else -1)
 
 
-def snap_outward_face(x,z,side,measure_entry,W,D):
-    """Put the prefab's +Z fighting face on the same line as the sandbag walls."""
-    out=measure_entry['maxs'][2]
+def resource_file(resource_name):
+    if '}' in resource_name:
+        return ROOT/resource_name.split('}',1)[1]
+    return ROOT/resource_name
+
+
+def _prop_floats(node,name,fallback):
+    raw=node.prop(name,' '.join(str(v) for v in fallback)).split()
+    return [float(raw[i]) if i<len(raw) else fallback[i] for i in range(3)]
+
+
+def _wall_aligned(yaw):
+    wrapped=((yaw+180.0)%360.0)-180.0
+    return abs(wrapped)<25.0
+
+
+def _collect_sandbag_faces(resource_name,offset_z=0.0,offset_yaw=0.0):
+    path=resource_file(resource_name)
+    if not path.is_file():
+        return []
+    root=parse(path.read_text(encoding='utf-8-sig'))
+    block=root.block('')
+    if not block:
+        return []
+    faces=[]
+    for child in block.body:
+        if not isinstance(child,Node):
+            continue
+        match=REF.search(child.head)
+        if not match:
+            continue
+        target=match[1]
+        coords=_prop_floats(child,'coords',(0,0,0))
+        angles=_prop_floats(child,'angles',(0,0,0))
+        child_z=offset_z+coords[2]
+        child_yaw=offset_yaw+angles[1]
+        if 'Sandbags/' in target:
+            if _wall_aligned(child_yaw):
+                faces.append(child_z+SANDBAG_FACE)
+            continue
+        if target.startswith('Prefabs/BaseCompositions/'):
+            faces.extend(_collect_sandbag_faces(target,child_z,child_yaw))
+    return faces
+
+
+def fighting_face_z(key,catalog,measure):
+    """Outward sandbag parapet, not dirt berms / wire / slot padding."""
+    if key in _FACE_CACHE:
+        return _FACE_CACHE[key]
+    faces=_collect_sandbag_faces(catalog[key]['prefab'])
+    if faces:
+        out=max(faces)
+    else:
+        out=measure[key]['maxs'][2]
+    _FACE_CACHE[key]=out
+    return out
+
+
+def snap_outward_face(x,z,side,key,catalog,measure,W,D):
+    """Put the fighting sandbag face on the same line as the perimeter walls."""
+    out=fighting_face_z(key,catalog,measure)
     fixed=wall_line(W,D,side)
     if side==0:
         return x,fixed-out
@@ -198,7 +261,7 @@ def build(size_id,variant,catalog,measure):
         a=box(item)
         if side>=0:
             mb=mesh_box(item,measure)
-            if mb[0]<-W-0.6 or mb[2]>W+0.6 or mb[1]<-D-0.6 or mb[3]>D+0.6:
+            if mb[0]<-W-APRON_ALLOW or mb[2]>W+APRON_ALLOW or mb[1]<-D-APRON_ALLOW or mb[3]>D+APRON_ALLOW:
                 return False
         elif a[0]<-W+1 or a[2]>W-1 or a[1]<-D+1 or a[3]>D-1:
             return False
@@ -237,12 +300,16 @@ def build(size_id,variant,catalog,measure):
               ['CheckpointM','CheckpointS','PKMNest','BarricadeM','BarricadeL','Position2','Position3','Tower','Position1'],
               ['Tower','PKM','Position2','BarricadeS','Position1','Position3'],
               ['Bunker','Position4','PKMNest','Position3','Tower','Position2','Position1']]
+    gunned=[[key for key in pal if catalog[key]['sockets']] for pal in palettes]
+    bare=[[key for key in pal if not catalog[key]['sockets']] for pal in palettes]
     slots=[(2,-.48),(2,.48),(1,.55),(3,.55),(0,-.52),(0,.52),(1,-.63),(3,-.63)]
     if size_id<2:
         slots.insert(4,(0,0))
     used={}
     for index,(side,fraction) in enumerate(slots):
-        options=weighted_cover_order(rng,palettes[theme],catalog)
+        # Socketed guns first so a wall of sandbag positions is the fallback,
+        # not the default. Weight still prefers gunned pieces 1.5x among peers.
+        options=weighted_cover_order(rng,gunned[theme],catalog)+weighted_cover_order(rng,bare[theme],catalog)
         if index==0:
             options=['CheckpointM' if theme==2 and size_id<4 else 'PKMNest','PKM']+options
         if index==2 and size_id<2:
@@ -264,7 +331,7 @@ def build(size_id,variant,catalog,measure):
             else:
                 x=0
                 z=D*fraction
-            x,z=snap_outward_face(x,z,side,m,W,D)
+            x,z=snap_outward_face(x,z,side,key,catalog,measure,W,D)
             if insert(key,x,z,yaw,'Cover',side):
                 used[key]=used.get(key,0)+1
                 break
@@ -365,6 +432,7 @@ def sheet(recipes):
 
 
 def generate(catalog_only=False):
+    _FACE_CACHE.clear()
     catalog=json.loads((ROOT/'docs/base-composition-catalog.json').read_text())
     measure=json.loads((ROOT/'docs/base-composition-measurements.json').read_text())['assets']
     outputs={'Scripts/Game/IA_BaseCompositionCatalog.c':catalog_script(catalog,measure)}

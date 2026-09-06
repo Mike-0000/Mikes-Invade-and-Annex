@@ -142,7 +142,20 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 			}
 			m_iSample++;
 			if (m_iSample >= 5)
-				Omit("access_blocked");
+			{
+				// Wall-line sockets can fail the rear samples on berms. Keep
+				// the vanilla gun; crew access is best-effort behind the bags.
+				if (m_Assembly)
+				{
+					vector parent[4];
+					m_Assembly.GetWorldTransform(parent);
+					vector access = parent[3] - parent[2] * 3.5;
+					access[1] = GetGame().GetWorld().GetSurfaceY(access[0], access[2]) + 0.05;
+					m_Record.m_bAuthoredAccess = true;
+					m_Record.m_vAccess = access;
+				}
+				Keep("access_blocked");
+			}
 			return;
 		}
 		// Screen useful firing lanes, not every mechanically possible shot.
@@ -172,7 +185,7 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 		bool clear = GetGame().GetWorld().TraceMove(trace, PermanentObstacle) >= 1;
 		if (!clear && m_iSample == 2)
 		{
-			Omit("center_firing_lane");
+			Keep("center_firing_lane");
 			return;
 		}
 		if (clear)
@@ -182,13 +195,10 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 		{
 			if (m_iClearRays < 3)
 			{
-				Omit("field_of_fire");
+				Keep("field_of_fire");
 				return;
 			}
-			if (m_Profile.m_iKind > 0)
-				m_iHeavyInstalled++;
-			m_Record = null;
-			NextCandidate();
+			Keep("");
 		}
 	}
 
@@ -200,6 +210,17 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 		body.Radius = 0.3;
 		body.Flags = TraceFlags.WORLD | TraceFlags.ENTS;
 		return GetGame().GetWorld().TraceMove(body, null) >= 1;
+	}
+
+	protected void Keep(string reason)
+	{
+		if (reason)
+			m_Reasons.Set(reason, m_Reasons.Get(reason) + 1);
+		if (m_Profile && m_Profile.m_iKind > 0)
+			m_iHeavyInstalled++;
+		m_Record = null;
+		m_Assembly = null;
+		NextCandidate();
 	}
 
 	protected void Omit(string reason)
