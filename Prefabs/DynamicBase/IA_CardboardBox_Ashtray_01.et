@@ -1,0 +1,34 @@
+GenericEntity {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD22B88EEAE3}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{34C2F623958FCACE}Prefabs/Props/Civilian/Ashtray_01_Full_clear.et" {
+   ID "5CB0F58A91A6F594"
+   components {
+    Hierarchy "{5CCCBEF3778F730A}" {
+     Enabled 1
+    }
+   }
+   coords -0.242 0.388 0.122
+   angles 0 0 0
+  }
+  GenericEntity : "{362783B6B604C0B3}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/CardboardBoxStack_01_CompositionDestruction.et" {
+   ID "5CB0F58A91A6F589"
+   components {
+    Hierarchy "{5CCCBEF3779236E6}" {
+     Enabled 1
+    }
+   }
+   coords 0.019 -0.414 0.063
+   angles 0 -90 0
+  }
+ }
+}

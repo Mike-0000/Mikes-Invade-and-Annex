@@ -1,0 +1,64 @@
+GenericEntity {
+ ID "FAA1D61345865E09"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{D6C4CB6E5D13C8C7}Prefabs/Structures/Civilian/MessageBoard/Filled/MessageBoard_USSR_01_RedStarNews_filled_V1.et" {
+   ID "B7B3F5B1DCC85935"
+   components {
+    Hierarchy "{4B3E4EF447085965}" {
+     Enabled 1
+    }
+   }
+   coords 0 0.000000 1.8
+   angles 0 0 0
+  }
+  GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+   ID "549EB5F4D2FA5493"
+   components {
+    Hierarchy "{2DC9F2408C2C5418}" {
+     Enabled 1
+    }
+   }
+   coords -0.25 0.000000 0
+   angles 0 3 0
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "70C608978C395489"
+   components {
+    Hierarchy "{51BA1A4D1EF15A91}" {
+     Enabled 1
+    }
+   }
+   coords -1.3 0.000267 -0.55
+   angles 0 65 0
+  }
+  GenericEntity : "{E4416C4C6938BEEE}Prefabs/Props/Crates/CrateWooden_02/CrateWooden_02_1x1x1.et" {
+   ID "18205A16EC0B5063"
+   components {
+    Hierarchy "{E2F6141F1D6B522E}" {
+     Enabled 1
+    }
+   }
+   coords 1.35 -0.000173 -0.05
+   angles 0 -8 0
+  }
+  GenericEntity : "{C1C087BC66975A4E}Prefabs/DynamicBase/IA_InfrastructureAsset_lamp.et" {
+   ID "7D1A3F220E3A5AC7"
+   components {
+    Hierarchy "{38D437ED92B055D5}" {
+     Enabled 1
+    }
+   }
+   coords 0.2 0.899073 0
+   angles 0 0 0
+  }
+ }
+}

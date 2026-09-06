@@ -1,0 +1,183 @@
+GenericEntity {
+ ID "55D5F6702807516A"
+ components {
+  RplComponent "{8DF62CC85A3E54DF}" {
+  }
+  Hierarchy "{7D3525F7F47B52EC}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{036A2332E131AE05}Prefabs/Props/Military/AmmoBoxes/AmmoBox_762x54_440rnd.et" {
+   ID "5CC6B4BB10619100"
+   coords -1.494 0 2.243
+   angles 0 177.43 0
+   components {
+    Hierarchy "{467C810CDB4E574A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{036A2332E131AE05}Prefabs/Props/Military/AmmoBoxes/AmmoBox_762x54_440rnd.et" {
+   ID "5CC6B4BB10619121"
+   coords -3.598 0 2.299
+   angles 0 -91.692 0
+   components {
+    Hierarchy "{467C810CDB4E574A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{036A2332E131AE05}Prefabs/Props/Military/AmmoBoxes/AmmoBox_762x54_440rnd.et" {
+   ID "5CC6B4BB10619137"
+   coords -3.663 0 2.05
+   angles 0 -58.646 0
+   components {
+    Hierarchy "{467C810CDB4E574A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{036A2332E131AE05}Prefabs/Props/Military/AmmoBoxes/AmmoBox_762x54_440rnd.et" {
+   ID "5CC6B4BB10619150"
+   coords -3.318 0 2.508
+   angles 0 -17.784 0
+   components {
+    Hierarchy "{467C810CDB4E574A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{2C752935D8735FF7}Prefabs/BaseCompositions/IA_Sandbag_Wall_Sign_USSR_01_837502.et" {
+   ID "5CC6B4BB10618CA2"
+   coords 2.893 0 -4.117
+   angles 0 -180 0
+   components {
+    Hierarchy "{824D1A5B520F521C}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{F13C6D41C1685FA5}Prefabs/BaseCompositions/IA_Sandbag_MG_USSR_01_PKM_FD76E0.et" {
+   ID "5CC6B4BB106191D9"
+   coords -2.666 0 3.804
+   angles 0 0 0
+   components {
+    Hierarchy "{1BFFD485DB46502E}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7D6B6794073756AA}Prefabs/BaseCompositions/IA_BarbedCoil_Light_USSR_02_0DC52A.et" {
+   ID "5CC6B4BB10618FEE"
+   coords 2.351 0 -2.973
+   angles 0 148.557 0
+   components {
+    Hierarchy "{F67795E315525B45}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "5CC6B4BB10618F59"
+   coords 3.841 0 -2.623
+   angles 0 69.336 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "5CC6B4BB10618F68"
+   coords -4.355 0 -4.256
+   angles 0 40.995 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "5CC6B4BB10618F70"
+   coords 4.317 0 4.452
+   angles 0 -119.683 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C1977A326F2AA011}Prefabs/Structures/Signs/Military/SignCheckpoint_01_stop.et" {
+   ID "5CC6B4BB10618F26"
+   coords -0.807 0 4.701
+   angles 0 9.861 0
+   components {
+    Hierarchy "{64F10C3B247C5CAC}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{8EC5137E770857C5}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_noStake_417660.et" {
+   ID "5CC6B4BB10618FA1"
+   coords -4.351 0 -3.612
+   angles 0 5.799 0
+   components {
+    Hierarchy "{9EDB1065B01A5ABC}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC5453CCC311603B}Prefabs/Props/Military/Sandbags/Sandbag_01_end_burlap.et" {
+   ID "5CC6B4BB10618F9A"
+   coords -4.425 0 1.608
+   angles 0 88.651 0
+   components {
+    Hierarchy "{902AC114580051B8}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B0C21D8B78565358}Prefabs/BaseCompositions/IA_Chair_Light_USSR_01_78ACBF.et" {
+   ID "5CC6B4BB10618E3A"
+   coords -4.397 0 0.374
+   angles 0 163.925 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CC6B4BB10618F8C"
+   coords -4.212 0 -2.373
+   angles 0 -9.302 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CC6B4BB10618FCD"
+   coords 4.1 0.1 3.638
+   angles 0 -9.015 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CC6B4BB10618FD8"
+   coords 4.17 0.1 2.138
+   angles 0 8.264 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

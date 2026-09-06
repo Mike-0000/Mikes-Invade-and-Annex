@@ -222,7 +222,7 @@ class IA_GmDirector
 			return m_iLiveGroup;
 
 		m_iLiveGroup = AllocGroup();
-		Print(string.Format("[IA_GmDirector] Started Live group %1; staging remains %2", m_iLiveGroup, m_iStagingGroup), LogLevel.NORMAL);
+		IA_Log.Info(string.Format("[IA_GmDirector] Started Live group %1; staging remains %2", m_iLiveGroup, m_iStagingGroup));
 		return m_iLiveGroup;
 	}
 
@@ -232,7 +232,7 @@ class IA_GmDirector
 		EnsureStarted();
 		m_iLiveGroup = m_iStagingGroup;
 		m_iStagingGroup = AllocGroup();
-		Print(string.Format("[IA_GmDirector] Live group is now %1, staging %2", m_iLiveGroup, m_iStagingGroup), LogLevel.NORMAL);
+		IA_Log.Info(string.Format("[IA_GmDirector] Live group is now %1, staging %2", m_iLiveGroup, m_iStagingGroup));
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -363,7 +363,7 @@ class IA_GmDirector
 			marker.SetAreaName(name);
 		}
 
-		Print(string.Format("[IA_GmDirector] Registered '%1' (%2) group %3", name, AreaTypeToString(marker.GetAreaType()), groupId), LogLevel.NORMAL);
+		IA_Log.Info(string.Format("[IA_GmDirector] Registered '%1' (%2) group %3", name, AreaTypeToString(marker.GetAreaType()), groupId));
 
 		vector origin = marker.GetOrigin();
 		RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], groupId, marker.GetRadius(), name);
@@ -467,7 +467,7 @@ class IA_GmDirector
 			ForgetKnownSite(origin[0], origin[2]);
 			IA_AreaMarker.UnregisterMarker(marker);
 			IA_Game.AddEntityToGc(marker);
-			Print(string.Format("[IA_GmDirector] Removed staging site '%1'", marker.GetAreaName()), LogLevel.NORMAL);
+			IA_Log.Info(string.Format("[IA_GmDirector] Removed staging site '%1'", marker.GetAreaName()));
 			return true;
 		}
 
@@ -475,7 +475,7 @@ class IA_GmDirector
 			return false;
 
 		ForgetKnownSite(x, z);
-		Print("[IA_GmDirector] Removed staging pin with no world marker.", LogLevel.NORMAL);
+		IA_Log.Info("[IA_GmDirector] Removed staging pin with no world marker.");
 		return true;
 	}
 
@@ -502,7 +502,7 @@ class IA_GmDirector
 
 		vector origin = marker.GetOrigin();
 		RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], marker.m_areaGroup, marker.GetRadius(), name);
-		Print(string.Format("[IA_GmDirector] Renamed site to '%1'", name), LogLevel.NORMAL);
+		IA_Log.Info(string.Format("[IA_GmDirector] Renamed site to '%1'", name));
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -725,7 +725,7 @@ class IA_GmDirector
 			return null;
 		}
 
-		Print("[IA_GmDirector] Placed side-objective marker", LogLevel.NORMAL);
+		IA_Log.Info("[IA_GmDirector] Placed side-objective marker");
 		return marker;
 	}
 
@@ -769,7 +769,7 @@ class IA_GmDirector
 
 			if (!liveArea && marker)
 			{
-				Print(string.Format("[IA_GmDirector] Building hold at %1 queued until '%2' goes live", origin.ToString(), marker.GetAreaName()), LogLevel.NORMAL);
+				IA_Log.Info(string.Format("[IA_GmDirector] Building hold at %1 queued until '%2' goes live", origin.ToString(), marker.GetAreaName()));
 				return post;
 			}
 		}
@@ -777,7 +777,7 @@ class IA_GmDirector
 		if (liveArea)
 		{
 			if (liveArea.TrySpawnHoldPost(post))
-				Print(string.Format("[IA_GmDirector] Placed building hold at %1 radius %2 and spawned Hold AI", origin.ToString(), post.GetHoldRadius()), LogLevel.NORMAL);
+				IA_Log.Info(string.Format("[IA_GmDirector] Placed building hold at %1 radius %2 and spawned Hold AI", origin.ToString(), post.GetHoldRadius()));
 			else
 				Print(string.Format("[IA_GmDirector] Placed building hold at %1 but the covering AO could not spawn AI", origin.ToString()), LogLevel.WARNING);
 			return post;

@@ -1,0 +1,54 @@
+GenericEntity {
+ ID "2827D7B34E8A50A0"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{AA96C0FB1A65B886}Prefabs/Props/Military/FieldKitchenTrailerUSSR_01.et" {
+   ID "2EA2531E40B55517"
+   components {
+    Hierarchy "{4A7044F936425A79}" {
+     Enabled 1
+    }
+   }
+   coords 0 0.096478 0.4
+   angles 0 0 0
+  }
+  GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+   ID "E28BA263264D5F61"
+   components {
+    Hierarchy "{FCFE0E71175D50F6}" {
+     Enabled 1
+    }
+   }
+   coords 2.4 0.000000 -0.6
+   angles 0 90 0
+  }
+  GenericEntity : "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et" {
+   ID "F992005E70715EDA"
+   components {
+    Hierarchy "{9FA2CB600C3C5BD6}" {
+     Enabled 1
+    }
+   }
+   coords 2.4 0.990376 -0.6
+   angles 0 90 0
+  }
+  GenericEntity : "{BD65F1D86388640D}Prefabs/Props/Civilian/FireExtinguisher_01.et" {
+   ID "30E0153538D352D9"
+   components {
+    Hierarchy "{ED412696FD37505C}" {
+     Enabled 1
+    }
+   }
+   coords -1.5 0.000054 -1.5
+   angles 0 0 0
+  }
+ }
+}

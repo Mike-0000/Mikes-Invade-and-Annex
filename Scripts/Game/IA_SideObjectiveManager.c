@@ -6,6 +6,7 @@ class IA_SideObjectiveManager
     protected ref array<ref IA_SideObjective> m_ActiveObjectives;
     
     protected bool m_IsOnCooldown = false;
+    protected bool m_bMissingMarkersReported = false;
     protected const float OBJECTIVE_COOLDOWN_SECONDS = 900; // 15 minutes
     
     // --- BEGIN ADDED: Startup delay ---
@@ -31,7 +32,10 @@ class IA_SideObjectiveManager
         m_AvailableMarkers = new array<IA_SideObjectiveMarker>();
         
         // --- BEGIN ADDED: Schedule initialization ---
-        Print(string.Format("[IA_SideObjectiveManager] Scheduling startup in %1 seconds", STARTUP_DELAY_SECONDS), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_SideObjectiveManager] Scheduling startup in %1 seconds", STARTUP_DELAY_SECONDS), LogLevel.NORMAL);
+        }
         GetGame().GetCallqueue().CallLater(Initialize, STARTUP_DELAY_SECONDS * 1000, false);
         // --- END ADDED ---
     }
@@ -40,7 +44,10 @@ class IA_SideObjectiveManager
     protected void Initialize()
     {
         m_IsInitialized = true;
-        Print("[IA_SideObjectiveManager] Side objective system initialized. Ready to spawn objectives.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA_SideObjectiveManager] Side objective system initialized. Ready to spawn objectives.", LogLevel.NORMAL);
+        }
     }
     // --- END ADDED ---
 
@@ -88,19 +95,27 @@ class IA_SideObjectiveManager
 
 	protected void StartCooldown()
     {
-        Print("Side objective cooldown started. No new objectives for 10 minutes.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA][SideObjective] Cooldown started. No new objectives for 15 minutes.", LogLevel.NORMAL);
+        }
         m_IsOnCooldown = true;
         GetGame().GetCallqueue().CallLater(EndCooldown, OBJECTIVE_COOLDOWN_SECONDS * 1000, false);
     }
 
     void EndCooldown()
     {
-        Print("Side objective cooldown finished. New objectives can now be started.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("Side objective cooldown finished. New objectives can now be started.", LogLevel.NORMAL);
+        }
         m_IsOnCooldown = false;
     }
 	
     void TryStartNewSideObjective()
     {
+        if (IA_MissionInitializer.BlocksAutomaticPressure())
+            return;
         if (IA_GmDirector.IsAutoSideOff())
             return;
 
@@ -110,10 +125,18 @@ class IA_SideObjectiveManager
             m_AvailableMarkers.Copy(IA_SideObjectiveMarker.GetAllMarkers());
             if (m_AvailableMarkers.IsEmpty())
             {
-                Print("No side objective markers found in the world.", LogLevel.WARNING);
+                if (!m_bMissingMarkersReported)
+                {
+                    Print("[IA][SideObjective] No side objective markers found in the world; automatic objectives will wait for markers.", LogLevel.WARNING);
+                    m_bMissingMarkersReported = true;
+                }
                 return;
             }
-            Print(string.Format("Repopulated available side objective markers. Count: %1", m_AvailableMarkers.Count()), LogLevel.NORMAL);
+            m_bMissingMarkersReported = false;
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("Repopulated available side objective markers. Count: %1", m_AvailableMarkers.Count()), LogLevel.NORMAL);
+            }
         }
 
         // Select a random marker from the available list and then remove it to prevent re-selection.

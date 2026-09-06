@@ -1,0 +1,72 @@
+GenericEntity {
+ ID "1B1871A8701256D2"
+ components {
+  RplComponent "{9BB37F638F4C57F5}" {
+  }
+  Hierarchy "{E462CAC61A585F30}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{D17A475101F2592E}Prefabs/BaseCompositions/IA_Shelter_Arsenal_USSR_01_69C3B8.et" {
+   ID "5D06FC881A7A27FE"
+   coords 3.234 0 -1.135
+   angles 0 -0.979 0
+   components {
+    Hierarchy "{191CBF2D66325BA1}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{202DEBA8713B51CE}Prefabs/BaseCompositions/IA_Shelter_Arsenal_USSR_02_5686F3.et" {
+   ID "5D06FC881A7A276B"
+   coords -3.532 0 -0.735
+   angles 0 2.445 0
+   components {
+    Hierarchy "{83056E132B475AD7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D06FC881A7A2787"
+   coords -0.187 0 -3.159
+   angles 0 2.224 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D06FC881A7A27B3"
+   coords -0.09 0 0.699
+   angles 0 5.423 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6CFC81568835B38}Prefabs/BaseCompositions/IA_Sign_SupplyStorage_01_Ammo_USSR_EB1EE8.et" {
+   ID "5E330D6E7AB8007D"
+   coords -1.275 0 2.3
+   angles 0.672 3.976 -0.168
+   components {
+    Hierarchy "{483E762DBCBC5D0D}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{DF649B29EC7635F3}Prefabs/Structures/Military/Fortifications/DirtPile_01/DirtPile_01_small.et" {
+   ID "5D088D66E9796226"
+   coords -1.283 0 2.297
+   components {
+    Hierarchy "{6D2B575F5AC85AD1}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

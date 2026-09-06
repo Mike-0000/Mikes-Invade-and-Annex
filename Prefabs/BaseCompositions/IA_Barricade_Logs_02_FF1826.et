@@ -1,0 +1,93 @@
+GenericEntity {
+ ID "4DB4BD86C95851F3"
+ components {
+  RplComponent "{9918C9E574125265}" {
+  }
+  Hierarchy "{A1E90A36EC4453BB}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{2AD330CAD22BE0AC}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/CzechHedgehog_01_painted_CompositionDestruction.et" {
+   ID "5CB0D990A16A1124"
+   coords 3.304 0 0.467
+   angles 0 -47.942 0
+   components {
+    Hierarchy "{7ABBC0FAAC085053}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{2AD330CAD22BE0AC}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/CzechHedgehog_01_painted_CompositionDestruction.et" {
+   ID "5CB0D990A16A1139"
+   coords -1.071 0 -0.836
+   angles 0 -93.565 0
+   components {
+    Hierarchy "{7ABBC0FAAC085053}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{2AD330CAD22BE0AC}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/CzechHedgehog_01_painted_CompositionDestruction.et" {
+   ID "5CB0D990A16A5AAF"
+   coords -3.93 0 0.363
+   angles 0 30.193 0
+   components {
+    Hierarchy "{7ABBC0FAAC085053}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{5E317DC74EA1F1A4}Prefabs/Props/Forest/WoodPile/WoodLog_01_B.et" {
+   ID "5DB68EF62AC701CB"
+   coords 0.665 0.474 -1.051
+   angles 13.496 -78.767 0
+   components {
+    Hierarchy "{2F69C92878665C02}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BBAD313E424466CF}Prefabs/Props/Forest/WoodPile/WoodLog_01_C.et" {
+   ID "5CB0D990A16A1125"
+   coords 1.739 0.66 -0.314
+   angles -13.533 -120.547 0
+   components {
+    Hierarchy "{49E13264CB8257B7}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BBAD313E424466CF}Prefabs/Props/Forest/WoodPile/WoodLog_01_C.et" {
+   ID "5CB0D990A16A1126"
+   coords -2.908 0.981 0.125
+   angles 1.539 -70.869 0
+   components {
+    Hierarchy "{49E13264CB8257B7}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{8EC5137E770857C5}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_noStake_417660.et" {
+   ID "5CB0D990A16ADE92"
+   coords 2.451 0 -0.594
+   angles 0 -70.171 0
+   components {
+    Hierarchy "{9EDB1065B01A5ABC}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CB0D990A16ADE93"
+   coords 3.424 0 -0.594
+   angles 0 76.052 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

@@ -154,7 +154,10 @@ class IA_Game
         // --- BEGIN MODIFIED: Check for initial objective scaling override ---
         if (s_isInitialObjectiveSpawning)
         {
-            Print("[PLAYER_SCALING] GetPlayerCount: Initial objective scaling active, returning BASELINE_PLAYER_COUNT: " + BASELINE_PLAYER_COUNT, LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[PLAYER_SCALING] GetPlayerCount: Initial objective scaling active, returning BASELINE_PLAYER_COUNT: " + BASELINE_PLAYER_COUNT, LogLevel.NORMAL);
+            }
             return BASELINE_PLAYER_COUNT;
         }
         // --- END MODIFIED ---
@@ -193,7 +196,10 @@ class IA_Game
         IA_Config config = IA_MissionInitializer.GetGlobalConfig();
         if (config && config.m_fStaticAIScaleOverride > 0)
         {
-            Print(string.Format("[PLAYER_SCALING] Using static AI scale override from config: %1", config.m_fStaticAIScaleOverride), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[PLAYER_SCALING] Using static AI scale override from config: %1", config.m_fStaticAIScaleOverride), LogLevel.NORMAL);
+            }
             return config.m_fStaticAIScaleOverride;
         }
 
@@ -238,7 +244,10 @@ class IA_Game
         if (config && config.m_fAIScaleMultiplier != 1.0)
         {
             float finalScaleFactor = dynamicScaleFactor * config.m_fAIScaleMultiplier;
-            Print(string.Format("[PLAYER_SCALING] Dynamic scale %1 multiplied by config multiplier %2 = %3", dynamicScaleFactor, config.m_fAIScaleMultiplier, finalScaleFactor), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[PLAYER_SCALING] Dynamic scale %1 multiplied by config multiplier %2 = %3", dynamicScaleFactor, config.m_fAIScaleMultiplier, finalScaleFactor), LogLevel.NORMAL);
+            }
             return finalScaleFactor;
         }
 
@@ -271,7 +280,10 @@ class IA_Game
     static int GetMaxVehiclesForPlayerCount(int baseMaxVehicles = 5)
     {
         int playerCount = GetPlayerCount();
-        Print("Base Max Vehicle = " + baseMaxVehicles, LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("Base Max Vehicle = " + baseMaxVehicles, LogLevel.NORMAL);
+        }
         // Logarithmic-style scaling for vehicles
         // Base 0-15 players: baseline vehicles
         if (playerCount <= BASELINE_PLAYER_COUNT)
@@ -306,9 +318,12 @@ class IA_Game
             float aiScale = GetAIScaleFactor();
             int maxVehicles = GetMaxVehiclesForPlayerCount();
             
-           Print("[PLAYER_SCALING] Player count changed to " + currentPlayerCount + 
-                 ". AI Scale Factor: " + aiScale + 
-                  ", Max Vehicles: " + maxVehicles, LogLevel.NORMAL);
+           if (IA_Log.IsDebugEnabled())
+           {
+               Print("[PLAYER_SCALING] Player count changed to " + currentPlayerCount + 
+                     ". AI Scale Factor: " + aiScale + 
+                      ", Max Vehicles: " + maxVehicles, LogLevel.NORMAL);
+           }
                   
             // Update all area instances with new scaling
             foreach (IA_AreaInstance areaInst : m_areas)
@@ -409,9 +424,15 @@ class IA_Game
             return null;
         }
 
-        Print(string.Format("[IA_Game.AddArea] Adding Area '%1' (Group %2) to m_areas.", area.GetName(), groupID), LogLevel.WARNING);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_Game.AddArea] Adding Area '%1' (Group %2) to m_areas.", area.GetName(), groupID), LogLevel.NORMAL);
+        }
         m_areas.Insert(inst);
-        Print(string.Format("[IA_Game.AddArea] m_areas.Count() = %1 after adding %2", m_areas.Count(), area.GetName()), LogLevel.WARNING);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_Game.AddArea] m_areas.Count() = %1 after adding %2", m_areas.Count(), area.GetName()), LogLevel.NORMAL);
+        }
 
         IA_ReplicationWorkaround rep = IA_ReplicationWorkaround.Instance();
         if (rep){
@@ -449,7 +470,10 @@ class IA_Game
     {
         if (m_areas)
         {
-            Print(string.Format("[IA][Game] ClearAllAreas finishing %1 leftover area instances.", m_areas.Count()), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA][Game] ClearAllAreas finishing %1 leftover area instances.", m_areas.Count()), LogLevel.NORMAL);
+            }
             foreach (IA_AreaInstance areaInst : m_areas)
             {
                 if (areaInst)
@@ -484,13 +508,19 @@ class IA_Game
     static void EnableInitialObjectiveScaling()
     {
         s_isInitialObjectiveSpawning = true;
-        Print("[PLAYER_SCALING] Initial objective scaling ENABLED. Using BASELINE_PLAYER_COUNT for upcoming spawns.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[PLAYER_SCALING] Initial objective scaling ENABLED. Using BASELINE_PLAYER_COUNT for upcoming spawns.", LogLevel.NORMAL);
+        }
     }
 
     static void DisableInitialObjectiveScaling()
     {
         s_isInitialObjectiveSpawning = false;
-        Print("[PLAYER_SCALING] Initial objective scaling DISABLED. Reverting to actual player count.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[PLAYER_SCALING] Initial objective scaling DISABLED. Reverting to actual player count.", LogLevel.NORMAL);
+        }
     }
     // --- END ADDED ---
     
@@ -500,7 +530,10 @@ class IA_Game
     void SetActiveDefendMission(IA_DefendMission mission)
     {
         m_activeDefendMission = mission;
-        Print("[IA_Game] Active defend mission set", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA_Game] Active defend mission set", LogLevel.NORMAL);
+        }
     }
     
     IA_DefendMission GetActiveDefendMission()
@@ -599,7 +632,10 @@ class IA_Game
     {
         if (inst && m_transientAreaInstances.Find(inst) == -1)
         {
-            Print(string.Format("[IA_Game.AddTransientArea] Adding Transient Area '%1' to m_transientAreaInstances.", inst.GetArea().GetName()), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_Game.AddTransientArea] Adding Transient Area '%1' to m_transientAreaInstances.", inst.GetArea().GetName()), LogLevel.NORMAL);
+            }
             m_transientAreaInstances.Insert(inst);
         }
     }
@@ -611,7 +647,10 @@ class IA_Game
             int index = m_transientAreaInstances.Find(inst);
             if (index != -1)
             {
-                Print(string.Format("[IA_Game.RemoveTransientArea] Removing Transient Area '%1' from m_transientAreaInstances.", inst.GetArea().GetName()), LogLevel.DEBUG);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_Game.RemoveTransientArea] Removing Transient Area '%1' from m_transientAreaInstances.", inst.GetArea().GetName()), LogLevel.NORMAL);
+                }
                 m_transientAreaInstances.Remove(index);
             }
         }

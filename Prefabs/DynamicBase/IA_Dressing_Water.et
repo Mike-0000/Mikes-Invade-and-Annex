@@ -1,0 +1,64 @@
+GenericEntity {
+ ID "C833CCA5A5BE5E65"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{F4BB6B6A0486F797}Prefabs/Props/Industrial/BarrelMetal_01_military.et" {
+   ID "44A496340EE15582"
+   components {
+    Hierarchy "{29546B26BB825255}" {
+     Enabled 1
+    }
+   }
+   coords -0.65 0.016739 0.25
+   angles 0 0 0
+  }
+  GenericEntity : "{F4BB6B6A0486F797}Prefabs/Props/Industrial/BarrelMetal_01_military.et" {
+   ID "334C5589DFCF5B3E"
+   components {
+    Hierarchy "{9B574E87C769575D}" {
+     Enabled 1
+    }
+   }
+   coords 0.25 0.016739 0.4
+   angles 0 12 0
+  }
+  GenericEntity : "{BCE07A58672955B9}Prefabs/Props/Civilian/Bucket_01.et" {
+   ID "8D937CDC5ED05130"
+   components {
+    Hierarchy "{A0B22FE70A9A561B}" {
+     Enabled 1
+    }
+   }
+   coords 0.75 0.000894 -0.5
+   angles 0 0 0
+  }
+  GenericEntity : "{62B2ADC4243454F9}Prefabs/Props/Civilian/Jerrycan_01.et" {
+   ID "353659D188F05F30"
+   components {
+    Hierarchy "{1150F43FB0715BDA}" {
+     Enabled 1
+    }
+   }
+   coords -0.55 -0.000225 -0.65
+   angles 0 8 0
+  }
+  GenericEntity : "{62B2ADC4243454F9}Prefabs/Props/Civilian/Jerrycan_01.et" {
+   ID "43B699224D5954C8"
+   components {
+    Hierarchy "{8FB03E8A45055921}" {
+     Enabled 1
+    }
+   }
+   coords -0.2 -0.000225 -0.7
+   angles 0 -4 0
+  }
+ }
+}

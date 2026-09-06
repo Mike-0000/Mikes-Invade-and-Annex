@@ -1,0 +1,18 @@
+GenericEntity {
+ ID "80A926114D9D5BAC"
+ components {
+  MeshObject "{5111E74D5E891458}" {
+   Object "{156992367A2F5213}Assets/Structures/BuildingsParts/Electrical/ElectricityBox/ElectricityBox_Small_01.xob"
+  }
+  RigidBody {
+   ModelGeometry 1
+   Static 1
+  }
+  Hierarchy "{5436FC21302C593E}" {
+   Enabled 1
+  }
+  RplComponent : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+ }
+ coords 0 0 0
+}

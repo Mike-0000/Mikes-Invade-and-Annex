@@ -1,0 +1,63 @@
+GenericEntity {
+ ID "6942FC8914085E7E"
+ components {
+  RplComponent "{CEC7CC91B62A549E}" {
+  }
+  Hierarchy "{D78352B6100251C6}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CC6B48B9C8C2BDB"
+   coords -2.507 0 1.126
+   angles 0 -69.67 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "5CC6B48B9C8C2A48"
+   coords -1.895 0 2.014
+   angles 0 42.427 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "5CC6B48B9C8C2B00"
+   coords 1.86 0 -2.132
+   angles 0 103.572 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C1977A326F2AA011}Prefabs/Structures/Signs/Military/SignCheckpoint_01_stop.et" {
+   ID "5CC6B48B9C8C2BF4"
+   coords -1.831 0 2.687
+   angles 0 5.604 0
+   components {
+    Hierarchy "{64F10C3B247C5CAC}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C8806310DC354E8B}Prefabs/Props/VehicleParts/Tires/Tire_BTR70.et" {
+   ID "5CC6B48B9C8C2A7C"
+   coords 1.74 0.26 -1.752
+   angles 0 -96.241 75
+   components {
+    Hierarchy "{9B71950E0F6958D0}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

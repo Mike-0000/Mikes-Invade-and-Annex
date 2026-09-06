@@ -1,0 +1,34 @@
+GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD2299CF3606}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{34C2F623958FCACE}Prefabs/Props/Civilian/Ashtray_01_Full_clear.et" {
+   ID "5CB0F58FEB5B152C"
+   components {
+    Hierarchy "{5CCCBEF327D1A378}" {
+     Enabled 1
+    }
+   }
+   coords 0.529 0.899 -0.219
+   angles 0 -44.367 0
+  }
+  GenericEntity : "{4DBA189750F6F017}Prefabs/Props/Civilian/Typewriter_01/Typewriter_01_grey.et" {
+   ID "5CB0F58FEB5B1521"
+   components {
+    Hierarchy "{5CCCBEF327D4A0FB}" {
+     Enabled 1
+    }
+   }
+   coords 0.016 0.899 0.094
+   angles 0 -4.766 0
+  }
+ }
+}

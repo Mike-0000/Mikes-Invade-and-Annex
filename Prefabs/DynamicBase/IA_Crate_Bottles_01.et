@@ -1,0 +1,41 @@
+GenericEntity : "{2B1D0128ED660BE9}Prefabs/Props/Crates/BoxWooden_01.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5CB0D990B6C742F2}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  $grp GenericEntity : "{8963CD1DC1CDB614}Prefabs/Props/Civilian/BeerBottle_01_brown.et" {
+   {
+    ID "5CB0D990B6C742C8"
+    coords -0.121 0.015 -0.055
+    angles 0 -92.18 0
+   }
+   {
+    ID "5CB0D990B6C742CA"
+    coords 0.008 0.039 -0.051
+    angles 90 17.456 146.429
+   }
+   {
+    ID "5CB0D990B6C742CB"
+    coords 0.141 0.004 -0.09
+    angles 0 -121.853 0
+   }
+   {
+    ID "5CB0D990B6D8C890"
+    coords -0.098 0.014 0.088
+    angles 0 43.728 0
+   }
+   {
+    ID "5CB0D990B6D8C896"
+    coords 0.007 0 0.085
+    angles 0 -155.911 0
+   }
+  }
+ }
+}

@@ -1,0 +1,43 @@
+GenericEntity {
+ ID "05331E110CF95FAE"
+ components {
+  RplComponent "{8646B46B3EAA5EC5}" {
+  }
+  Hierarchy "{6D0A6E83D6215AFF}" {
+   Enabled 1
+  }
+  MeshObject "{506EDA9D46FC6C06}" {
+   LODFactors {
+    20 15 10 1 1
+   }
+   PixelSizeScale 1
+   ClutterOccluder 1
+   ClutterOccluderClipPlane 1.5
+   Object "{454CCBB26BB830DB}Assets/Structures/Military/Camps/TentUSSR_01/TentUSSR_01.xob"
+  }
+  RigidBody "{506EDA9CBE1B57FF}" {
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{69D6BDFC872F8BE4}Prefabs/Structures/Military/Camps/TentUSSR_01/TentUSSR_01_floor.et" {
+   ID "5A04A8A784D18831"
+   components {
+    Hierarchy "{612AE78C95E98EEB}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9A66B3445C233316}Prefabs/Props/Fabric/RedCrossCloth/RedCrossClothSoviet_01_big.et" {
+   ID "54FAC13F64B3CE23"
+   components {
+    Hierarchy "{5C66A2830C1FD89C}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

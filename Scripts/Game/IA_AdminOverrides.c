@@ -62,6 +62,17 @@ class IA_AdminOverrides
 	float m_fAiFireRateElite = 1.25;
 	float m_fAiPerceptionNormal = 1.0;
 	float m_fAiPerceptionElite = 1.5;
+	bool m_bHasDynamicBaseOverride;
+	bool m_bDynamicBaseEnabled = true;
+	bool m_bDynamicBaseEmplacementsEnabled = true;
+	int m_iDynamicBaseChancePct = 100;
+	bool m_bDynamicBaseInGm;
+	int m_iDynamicBaseSizeMode;
+	int m_iDynamicBaseCaptureSec = 90;
+	int m_iDynamicBaseRegroupMinSec = 90;
+	int m_iDynamicBaseRegroupMaxSec = 240;
+	float m_fDynamicBaseRegroupFraction = 0.60;
+	float m_fDynamicBaseGarrisonMultiplier = 1.0;
 
 	//------------------------------------------------------------------------------------------------
 	static string GetPath()
@@ -106,7 +117,7 @@ class IA_AdminOverrides
 			return false;
 		}
 
-		Print("[IA][AdminOverrides] Cleared " + CONFIG_PATH, LogLevel.NORMAL);
+		IA_Log.Info("[IA][AdminOverrides] Cleared " + CONFIG_PATH);
 		return true;
 	}
 
@@ -191,6 +202,18 @@ class IA_AdminOverrides
 		m_fAiFireRateElite = config.m_fAiFireRateElite;
 		m_fAiPerceptionNormal = config.m_fAiPerceptionNormal;
 		m_fAiPerceptionElite = config.m_fAiPerceptionElite;
+		m_bHasDynamicBaseOverride = true;
+		config.ClampDynamicBaseSettings();
+		m_bDynamicBaseEnabled = config.m_bDynamicBaseEnabled;
+		m_bDynamicBaseEmplacementsEnabled = config.m_bDynamicBaseEmplacementsEnabled;
+		m_iDynamicBaseChancePct = config.m_iDynamicBaseChancePct;
+		m_bDynamicBaseInGm = config.m_bDynamicBaseInGm;
+		m_iDynamicBaseSizeMode = config.m_iDynamicBaseSizeMode;
+		m_iDynamicBaseCaptureSec = config.m_iDynamicBaseCaptureSec;
+		m_iDynamicBaseRegroupMinSec = config.m_iDynamicBaseRegroupMinSec;
+		m_iDynamicBaseRegroupMaxSec = config.m_iDynamicBaseRegroupMaxSec;
+		m_fDynamicBaseRegroupFraction = config.m_fDynamicBaseRegroupFraction;
+		m_fDynamicBaseGarrisonMultiplier = config.m_fDynamicBaseGarrisonMultiplier;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -272,6 +295,21 @@ class IA_AdminOverrides
 			config.m_fAiPerceptionElite = m_fAiPerceptionElite;
 			config.ClampAiCombatSettings();
 		}
+
+		if (m_bHasDynamicBaseOverride)
+		{
+			config.m_bDynamicBaseEnabled = m_bDynamicBaseEnabled;
+			config.m_bDynamicBaseEmplacementsEnabled = m_bDynamicBaseEmplacementsEnabled;
+			config.m_iDynamicBaseChancePct = m_iDynamicBaseChancePct;
+			config.m_bDynamicBaseInGm = m_bDynamicBaseInGm;
+			config.m_iDynamicBaseSizeMode = m_iDynamicBaseSizeMode;
+			config.m_iDynamicBaseCaptureSec = m_iDynamicBaseCaptureSec;
+			config.m_iDynamicBaseRegroupMinSec = m_iDynamicBaseRegroupMinSec;
+			config.m_iDynamicBaseRegroupMaxSec = m_iDynamicBaseRegroupMaxSec;
+			config.m_fDynamicBaseRegroupFraction = m_fDynamicBaseRegroupFraction;
+			config.m_fDynamicBaseGarrisonMultiplier = m_fDynamicBaseGarrisonMultiplier;
+			config.ClampDynamicBaseSettings();
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -288,7 +326,7 @@ class IA_AdminOverrides
 
 		file.WriteLine(ToJson());
 		file.Close();
-		Print("[IA][AdminOverrides] Saved " + CONFIG_PATH, LogLevel.NORMAL);
+		IA_Log.Info("[IA][AdminOverrides] Saved " + CONFIG_PATH);
 		return true;
 	}
 
@@ -309,7 +347,7 @@ class IA_AdminOverrides
 			rolesI = 1;
 
 		string json = "{";
-		json = json + ",\"v\":2";
+		json = json + "\"v\":2";
 		json = json + ",\"civCount\":" + m_fCivilianCountMultiplier.ToString();
 		json = json + ",\"aiScale\":" + m_fAIScaleMultiplier.ToString();
 		json = json + ",\"disableHeli\":" + heliI.ToString();
@@ -379,6 +417,19 @@ class IA_AdminOverrides
 		json = json + ",\"aiFireE\":" + m_fAiFireRateElite.ToString();
 		json = json + ",\"aiPercN\":" + m_fAiPerceptionNormal.ToString();
 		json = json + ",\"aiPercE\":" + m_fAiPerceptionElite.ToString();
+		json = json + ",\"dynamicBaseVersion\":2";
+		ref IA_Config extrasCfg = new IA_Config();
+		extrasCfg.m_bDynamicBaseEnabled = m_bDynamicBaseEnabled;
+		extrasCfg.m_bDynamicBaseEmplacementsEnabled = m_bDynamicBaseEmplacementsEnabled;
+		extrasCfg.m_iDynamicBaseChancePct = m_iDynamicBaseChancePct;
+		extrasCfg.m_bDynamicBaseInGm = m_bDynamicBaseInGm;
+		extrasCfg.m_iDynamicBaseSizeMode = m_iDynamicBaseSizeMode;
+		extrasCfg.m_iDynamicBaseCaptureSec = m_iDynamicBaseCaptureSec;
+		extrasCfg.m_iDynamicBaseRegroupMinSec = m_iDynamicBaseRegroupMinSec;
+		extrasCfg.m_iDynamicBaseRegroupMaxSec = m_iDynamicBaseRegroupMaxSec;
+		extrasCfg.m_fDynamicBaseRegroupFraction = m_fDynamicBaseRegroupFraction;
+		extrasCfg.m_fDynamicBaseGarrisonMultiplier = m_fDynamicBaseGarrisonMultiplier;
+		json = json + ",\"dynamicBaseExtras\":\"" + IA_Config.PackDynamicBaseExtras(extrasCfg) + "\"";
 		json = json + "}";
 		return json;
 	}
@@ -503,6 +554,36 @@ class IA_AdminOverrides
 				m_fAiPerceptionNormal = ExtractValue(json, "aiPercN").ToFloat();
 			if (HasKey(json, "aiPercE"))
 				m_fAiPerceptionElite = ExtractValue(json, "aiPercE").ToFloat();
+		}
+		if (HasKey(json, "dynamicBaseVersion"))
+		{
+			int dbVersion = ExtractValue(json, "dynamicBaseVersion").ToInt();
+			if ((dbVersion == 1 || dbVersion == 2) && HasKey(json, "dynamicBaseExtras"))
+			{
+				string extras = ExtractValue(json, "dynamicBaseExtras");
+				ref array<string> extraParts = new array<string>();
+				extras.Split(",", extraParts, false);
+				if ((dbVersion == 1 && extraParts.Count() != 10) || (dbVersion == 2 && extraParts.Count() != 11))
+					Print("[IA][AdminOverrides] dynamicBaseExtras malformed — keeping script defaults.", LogLevel.WARNING);
+				else
+				{
+					ref IA_Config parsed = new IA_Config();
+					IA_Config.UnpackDynamicBaseExtras(parsed, extras);
+					m_bHasDynamicBaseOverride = true;
+					m_bDynamicBaseEnabled = parsed.m_bDynamicBaseEnabled;
+					m_bDynamicBaseEmplacementsEnabled = parsed.m_bDynamicBaseEmplacementsEnabled;
+					m_iDynamicBaseChancePct = parsed.m_iDynamicBaseChancePct;
+					m_bDynamicBaseInGm = parsed.m_bDynamicBaseInGm;
+					m_iDynamicBaseSizeMode = parsed.m_iDynamicBaseSizeMode;
+					m_iDynamicBaseCaptureSec = parsed.m_iDynamicBaseCaptureSec;
+					m_iDynamicBaseRegroupMinSec = parsed.m_iDynamicBaseRegroupMinSec;
+					m_iDynamicBaseRegroupMaxSec = parsed.m_iDynamicBaseRegroupMaxSec;
+					m_fDynamicBaseRegroupFraction = parsed.m_fDynamicBaseRegroupFraction;
+					m_fDynamicBaseGarrisonMultiplier = parsed.m_fDynamicBaseGarrisonMultiplier;
+				}
+			}
+			else
+				Print("[IA][AdminOverrides] Unsupported dynamicBaseVersion — keeping script defaults.", LogLevel.WARNING);
 		}
 	}
 

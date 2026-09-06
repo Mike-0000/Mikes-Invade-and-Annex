@@ -26,6 +26,10 @@ class IA_DefendMission
     private ref IA_AreaGroupManager m_ownedQrfManager; // kept alive for truck arrival CallLaters if needed
     private ref IA_EnhancedDefendDirector m_Enhanced;
     private bool m_bEnhancedClockOn;
+    private IA_AreaInstance m_ExplicitHost;
+    private int m_iActivationSerial;
+    private bool m_bDynamicBase;
+    private ref IA_Config m_DefenseConfig;
 
     private float m_fStartMult = 0.75;
     private float m_fPeakMult = 1.75;
@@ -47,17 +51,46 @@ class IA_DefendMission
             m_durationMinutes = 1;
         m_baseTargetAICount = CalculateTargetAICount();
         
-        Print(string.Format("[IA_DefendMission] Created defend mission at %1 (%2) for group %3, base AI cap: %4, duration: %5 min", 
-            m_defendPoint.ToString(), m_defendMarkerName, m_groupID, m_baseTargetAICount, m_durationMinutes), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_DefendMission] Created defend mission at %1 (%2) for group %3, base AI cap: %4, duration: %5 min", 
+                m_defendPoint.ToString(), m_defendMarkerName, m_groupID, m_baseTargetAICount, m_durationMinutes), LogLevel.NORMAL);
+        }
     }
     
     static IA_DefendMission Create(vector defendPoint, int groupID, string markerName = "")
     {
-        IA_DefendMission mission = new IA_DefendMission(defendPoint, groupID, markerName);
-        IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+        ref IA_DefendMission mission = new IA_DefendMission(defendPoint, groupID, markerName);
+        IA_Config cfg = mission.GetDefenseConfig();
         if (cfg && !cfg.UseLegacyDefense())
             mission.m_Enhanced = IA_EnhancedDefendDirector.Create(mission);
         return mission;
+    }
+
+    static IA_DefendMission CreateForDynamicBase(vector defendPoint, int groupId, string displayName, IA_AreaInstance host, Faction enemyFaction, int activationSerial, IA_Config defenseConfigSnapshot)
+    {
+        ref IA_DefendMission mission = new IA_DefendMission(defendPoint, groupId, displayName);
+        mission.m_ExplicitHost = host;
+        mission.m_defendFaction = enemyFaction;
+        mission.m_iActivationSerial = activationSerial;
+        mission.m_bDynamicBase = true;
+        mission.m_DefenseConfig = defenseConfigSnapshot;
+        IA_Config cfg = mission.GetDefenseConfig();
+        if (cfg && !cfg.UseLegacyDefense())
+            mission.m_Enhanced = IA_EnhancedDefendDirector.Create(mission);
+        return mission;
+    }
+
+    IA_Config GetDefenseConfig()
+    {
+        if (m_DefenseConfig)
+            return m_DefenseConfig;
+        return IA_MissionInitializer.GetGlobalConfig();
+    }
+
+    int GetActivationSerial()
+    {
+        return m_iActivationSerial;
     }
     
     void StartDefendMission()
@@ -76,7 +109,7 @@ class IA_DefendMission
         m_lastWaveSpawnTime = m_startTime;
         RollPressureProfile();
         
-        Print(string.Format("[IA_DefendMission] Starting defend mission at %1", m_defendPoint.ToString()), LogLevel.NORMAL);
+        IA_Log.Info(string.Format("[IA_DefendMission] Starting defend mission at %1", m_defendPoint.ToString()));
         
         // Get all area instances for this group
         CollectAffectedAreas();
@@ -110,7 +143,10 @@ class IA_DefendMission
         // Check if mission duration is complete
         if (currentTime - m_startTime >= m_duration)
         {
-            Print(string.Format("[IA_DefendMission] %1 minute duration complete - ending mission", m_durationMinutes), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_DefendMission] %1 minute duration complete - ending mission", m_durationMinutes), LogLevel.NORMAL);
+            }
             EndDefendMission();
             return;
         }
@@ -174,7 +210,7 @@ class IA_DefendMission
         if (!m_isActive)
             return;
             
-        Print("[IA_DefendMission] Ending defend mission", LogLevel.NORMAL);
+        IA_Log.Info("[IA_DefendMission] Ending defend mission");
         if (m_Enhanced)
             m_Enhanced.CleanupEvents();
         m_isActive = false;
@@ -205,20 +241,67 @@ class IA_DefendMission
         }
         
         m_affectedAreas.Clear();
+        if (m_ownedQrfManager)
+            m_ownedQrfManager.Shutdown();
         m_ownedQrfManager = null;
         
-        // Notify IA_Game and mission initializer that defend mission is complete
         IA_Game gameInstance = IA_Game.Instantiate();
-        if (gameInstance)
+        if (gameInstance && gameInstance.GetActiveDefendMission() == this)
+            gameInstance.SetActiveDefendMission(null);
+
+        if (m_bDynamicBase)
         {
-            gameInstance.SetActiveDefendMission(null); // Clear the active defend mission
-            
-            // Notify mission initializer to proceed to next zone
-            if (initializer)
+            IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+            if (init)
             {
-                initializer.OnDefendMissionComplete();
+                IA_DynamicObjectiveDirector director = init.GetDynamicObjectiveDirector();
+                if (director && director.GetObjective())
+                    director.GetObjective().OnDefenseEnded(m_iActivationSerial, true);
             }
+            return;
         }
+
+        if (initializer)
+            initializer.OnDefendMissionComplete();
+    }
+
+    void AbortDefendMission()
+    {
+        if (!m_isActive && !m_Enhanced)
+        {
+            m_isActive = false;
+            return;
+        }
+
+        Print("[IA_DefendMission] Aborting defend mission without success.", LogLevel.WARNING);
+        if (m_Enhanced)
+            m_Enhanced.CleanupEvents();
+        m_isActive = false;
+        DismissDefendTask();
+        IA_MissionInitializer.PublishDefendHud("", IA_DefendHudState.Hidden, 0, 0, 0, IA_DefendHudPhase.None);
+
+        foreach (IA_AreaInstance area : m_affectedAreas)
+        {
+            if (area)
+                area.SetDefendMode(false);
+        }
+        m_affectedAreas.Clear();
+        if (m_ownedQrfManager)
+            m_ownedQrfManager.Shutdown();
+        m_ownedQrfManager = null;
+
+        IA_Game gameInstance = IA_Game.Instantiate();
+        if (gameInstance && gameInstance.GetActiveDefendMission() == this)
+            gameInstance.SetActiveDefendMission(null);
+    }
+
+    protected void DismissDefendTask()
+    {
+        if (m_affectedAreas.IsEmpty())
+            return;
+        IA_AreaInstance firstArea = m_affectedAreas[0];
+        if (firstArea)
+            firstArea.DismissOpenTasks();
     }
     
     private int CalculateTargetAICount()
@@ -226,7 +309,10 @@ class IA_DefendMission
         float scaleFactor = IA_Game.GetAIScaleFactor();
         float scaled = scaleFactor * 1.9;
         int targetCount = Math.Round(9 * (scaled * scaled) * 1.6);
-        Print(string.Format("[IA_DefendMission] Calculated base target AI count: %1 (scale factor: %2)", targetCount, scaleFactor), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_DefendMission] Calculated base target AI count: %1 (scale factor: %2)", targetCount, scaleFactor), LogLevel.NORMAL);
+        }
         
         return targetCount;
     }
@@ -256,8 +342,11 @@ class IA_DefendMission
         int lullFlag = 0;
         if (m_bHasLull)
             lullFlag = 1;
-        Print(string.Format("[IA_DefendMission] Pressure profile start=%1 peak=%2 at %3 min surge=%4-%5s lull=%6 vehicleBeat=%7",
-            m_fStartMult, m_fPeakMult, m_fPeakMinutes, m_surgeStartMs / 1000, m_surgeEndMs / 1000, lullFlag, m_fVehicleBeatFrac), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_DefendMission] Pressure profile start=%1 peak=%2 at %3 min surge=%4-%5s lull=%6 vehicleBeat=%7",
+                m_fStartMult, m_fPeakMult, m_fPeakMinutes, m_surgeStartMs / 1000, m_surgeEndMs / 1000, lullFlag, m_fVehicleBeatFrac), LogLevel.NORMAL);
+        }
     }
 
     private bool TryPlaceLull()
@@ -421,6 +510,19 @@ class IA_DefendMission
     
     private void CollectAffectedAreas()
     {
+        if (m_bDynamicBase)
+        {
+            m_affectedAreas.Clear();
+            if (!m_ExplicitHost || m_ExplicitHost.IsShutDown() || m_ExplicitHost.GetAreaGroup() != m_groupID)
+            {
+                Print("[IA_DefendMission] Explicit dynamic-base host is not live for this group.", LogLevel.ERROR);
+                return;
+            }
+            m_affectedAreas.Clear();
+            m_affectedAreas.Insert(m_ExplicitHost);
+            return;
+        }
+
         IA_Game gameInstance = IA_Game.Instantiate();
         if (!gameInstance)
         {
@@ -436,8 +538,11 @@ class IA_DefendMission
             return;
         }
         
-        Print(string.Format("[IA_DefendMission] CollectAffectedAreas: Found %1 total areas, looking for area containing defend point %2", 
-            allAreas.Count(), m_defendPoint.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_DefendMission] CollectAffectedAreas: Found %1 total areas, looking for area containing defend point %2", 
+                allAreas.Count(), m_defendPoint.ToString()), LogLevel.NORMAL);
+        }
             
         // Find the specific area that contains the defend point
         IA_AreaInstance defendArea = null;
@@ -460,16 +565,22 @@ class IA_DefendMission
         if (defendArea)
         {
             m_affectedAreas.Insert(defendArea);
-            Print(string.Format("[IA_DefendMission] Found defend area: %1 (group %2) at distance %3 from defend point", 
-                defendArea.m_area.GetName(), defendArea.GetAreaGroup(), closestDistance), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_DefendMission] Found defend area: %1 (group %2) at distance %3 from defend point", 
+                    defendArea.m_area.GetName(), defendArea.GetAreaGroup(), closestDistance), LogLevel.NORMAL);
+            }
         }
         else
         {
             Print("[IA_DefendMission] Failed to find any area for defend point!", LogLevel.ERROR);
         }
         
-        Print(string.Format("[IA_DefendMission] CollectAffectedAreas: Collected %1 areas for defend mission", 
-            m_affectedAreas.Count()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_DefendMission] CollectAffectedAreas: Collected %1 areas for defend mission", 
+                m_affectedAreas.Count()), LogLevel.NORMAL);
+        }
     }
     
     private void CreateDefendTask()
@@ -502,8 +613,11 @@ class IA_DefendMission
             taskTitle = "Defend " + m_defendMarkerName;
         string taskDesc = string.Format("Hold the position for %1 minutes against enemy attacks. Enemy pressure will increase.", m_durationMinutes);
         
-        Print(string.Format("[IA_DefendMission] Creating defend task for area %1 at position %2", 
-            firstArea.m_area.GetName(), m_defendPoint.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_DefendMission] Creating defend task for area %1 at position %2", 
+                firstArea.m_area.GetName(), m_defendPoint.ToString()), LogLevel.NORMAL);
+        }
 
         firstArea.DismissOpenTasks();
         firstArea.QueueTask(taskTitle, taskDesc, m_defendPoint);
@@ -518,7 +632,10 @@ class IA_DefendMission
         if (!firstArea)
             return false;
             
-        Print("[IA_DefendMission] CompleteDefendTask: Attempting to complete defend task", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA_DefendMission] CompleteDefendTask: Attempting to complete defend task", LogLevel.NORMAL);
+        }
         
         string taskTitle;
         if (m_defendMarkerName.IsEmpty())
@@ -529,7 +646,10 @@ class IA_DefendMission
         
         if (taskCompleted)
         {
-            Print("[IA_DefendMission] Successfully completed defend task", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[IA_DefendMission] Successfully completed defend task", LogLevel.NORMAL);
+            }
             return true;
         }
 
@@ -539,7 +659,10 @@ class IA_DefendMission
     
     private void SetAllAIToDefendMode()
     {
-        Print("[IA_DefendMission] Setting all existing AI to defend mode - this should only happen once!", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA_DefendMission] Setting all existing AI to defend mode - this should only happen once!", LogLevel.NORMAL);
+        }
         
         foreach (IA_AreaInstance area : m_affectedAreas)
         {
@@ -555,7 +678,10 @@ class IA_DefendMission
             {
                 if (group && group.IsSpawned() && group.GetAliveCount() > 0 && !group.IsHoldingPost())
                 {
-                    Print(string.Format("[IA_DefendMission] Setting defend mode for existing group at %1", group.GetOrigin().ToString()), LogLevel.NORMAL);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[IA_DefendMission] Setting defend mode for existing group at %1", group.GetOrigin().ToString()), LogLevel.NORMAL);
+                    }
                     // This will give them SearchAndDestroy orders on the defend point and set them to authority-managed
                     group.SetDefendMode(true, m_defendPoint);
                 }
@@ -605,12 +731,18 @@ class IA_DefendMission
             unitBudget = room;
         if (unitBudget < 2)
         {
-            Print(string.Format("[IA_DefendMission] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_DefendMission] Skipping wave: only %1 unit slots under cap", unitBudget), LogLevel.NORMAL);
+            }
             return;
         }
 
-        Print(string.Format("[IA_DefendMission] Spawning defend wave: budget %1 units from area %2 (cap room %3, mult %4, nextInterval %5ms)", 
-            unitBudget, targetArea.m_area.GetName(), room, mult, m_waveSpawnInterval), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_DefendMission] Spawning defend wave: budget %1 units from area %2 (cap room %3, mult %4, nextInterval %5ms)", 
+                unitBudget, targetArea.m_area.GetName(), room, mult, m_waveSpawnInterval), LogLevel.NORMAL);
+        }
             
         // --- BEGIN MODIFIED: Use stored faction or get it once ---
         // If we haven't set the faction for this defend mission yet, get it now and store it
@@ -620,7 +752,10 @@ class IA_DefendMission
             if (initializer)
             {
                 m_defendFaction = initializer.GetRandomEnemyFaction();
-                Print(string.Format("[IA_DefendMission] Setting defend faction for all waves: %1", m_defendFaction), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_DefendMission] Setting defend faction for all waves: %1", m_defendFaction), LogLevel.NORMAL);
+                }
             }
         }
         
@@ -660,10 +795,7 @@ class IA_DefendMission
             return false;
         }
 
-        IA_AreaGroupManager qrfManager = null;
-        IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
-        if (init)
-            qrfManager = init.GetCurrentAreaGroupManager();
+        IA_AreaGroupManager qrfManager = GetOrCreateQrfManager(targetArea);
 
         // Fallback if the group manager was cleared: keep a owned manager alive for vehicle CallLaters
         if (!qrfManager)
@@ -675,12 +807,20 @@ class IA_DefendMission
                 m_ownedQrfManager = new IA_AreaGroupManager(areas);
             }
             qrfManager = m_ownedQrfManager;
-            Print("[IA_DefendMission] Vehicle beat using owned AreaGroupManager", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[IA_DefendMission] Vehicle beat using owned AreaGroupManager", LogLevel.NORMAL);
+            }
         }
 
         bool spawned = qrfManager.SpawnDefendVehicleBeat(targetArea, m_defendPoint, m_defendFaction);
         if (spawned)
-            Print("[IA_DefendMission] Mid-hold vehicle QRF beat spawned", LogLevel.NORMAL);
+        {
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[IA_DefendMission] Mid-hold vehicle QRF beat spawned", LogLevel.NORMAL);
+            }
+        }
         else
             Print("[IA_DefendMission] Mid-hold vehicle QRF beat failed; will retry", LogLevel.WARNING);
 
@@ -755,8 +895,21 @@ class IA_DefendMission
 
     void OnHostAreaForceFinish()
     {
-        if (m_isActive)
-            EndDefendMission();
+        if (!m_isActive)
+            return;
+        if (m_bDynamicBase)
+        {
+            AbortDefendMission();
+            IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+            if (init)
+            {
+                IA_DynamicObjectiveDirector director = init.GetDynamicObjectiveDirector();
+                if (director && director.GetObjective())
+                    director.GetObjective().OnDefenseEnded(m_iActivationSerial, false);
+            }
+            return;
+        }
+        EndDefendMission();
     }
 
     void BeginEnhancedHold()
@@ -1000,7 +1153,7 @@ class IA_DefendMission
         IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
         if (init)
             qrfManager = init.GetCurrentAreaGroupManager();
-        if (qrfManager)
+        if (qrfManager && qrfManager.ContainsLiveArea(targetArea))
             return qrfManager;
 
         if (!m_ownedQrfManager && targetArea)

@@ -1,0 +1,161 @@
+GenericEntity {
+ ID "D00933FEBDBE5A95"
+ components {
+  RplComponent "{264EC5C521EE52C0}" {
+  }
+  Hierarchy "{AE28A02DA1EC523D}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CB6B281C4F9940C"
+   coords -0.822 0.373 0.445
+   angles 89.98 -73.301 -12.473
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CB6B281C4F9C4AD"
+   coords 0.833 0.181 0.285
+   angles 0 -106.465 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CB6B281C4F9C4AE"
+   coords -2.798 0.369 -1.595
+   angles -89.98 59.53 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CB6B281C4F9C4AF"
+   coords -2.082 0.175 -1.995
+   angles 0 44.267 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{EC2BFCB8B7A9534C}Prefabs/BaseCompositions/IA_Table_Desk_USSR_01_0527CA.et" {
+   ID "5CB6B281C4F9C485"
+   coords -0.458 0.185 0.395
+   angles 0 95.717 0
+   components {
+    Hierarchy "{62F314506BAF5186}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{3A2F9D2E8C335ED3}Prefabs/BaseCompositions/IA_Table_Typewriter_USSR_01_C08162.et" {
+   ID "5CB6B281C4F9C4B9"
+   coords 0.479 0.181 0.353
+   angles 0 83.139 0
+   components {
+    Hierarchy "{62F314506BAF5186}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{65A3735E5B635E8F}Prefabs/BaseCompositions/IA_Table_Desk_USSR_05_25ACD5.et" {
+   ID "5CB6B281C4F9C48F"
+   coords -0.495 0.18 -2.356
+   angles 0 -3.707 0
+   components {
+    Hierarchy "{62F314506BAF5186}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{9DABCA8CF0EF529F}Prefabs/BaseCompositions/IA_Cabinet_Stack_USSR_01_81C1DC.et" {
+   ID "5CB6B281C4F9C493"
+   coords 0.769 0.169 -2.466
+   angles 0 -2.493 0
+   components {
+    Hierarchy "{A75835BF8FCA57EE}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7DA20C66CE0299D6}Prefabs/Structures/Signs/Military/Sign_CommandPost_USSR_01.et" {
+   ID "5CB6B281C4F9CB78"
+   coords 2.37 0 3.693
+   angles 1.066 -0.012 -0.624
+   components {
+    Hierarchy "{830436023A435A57}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B383E37EFC5551CB}Prefabs/BaseCompositions/IA_Table_RadioStation_USSR_01_8878F4.et" {
+   ID "5CB6B281C4F9C49D"
+   coords -2.168 0.173 -2.394
+   angles 0 1.799 0
+   components {
+    Hierarchy "{62F314506BAF5186}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{4752A6A1F3DF505B}Prefabs/BaseCompositions/IA_Table_Desk_USSR_04_9639F3.et" {
+   ID "5CB6B281C4F9CB6A"
+   coords -2.429 0.188 2.058
+   angles 0 90 0
+   components {
+    Hierarchy "{6E18721B60455A99}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C8DC4D5192C95E2D}Prefabs/BaseCompositions/IA_CardboardBox_Ashtray_01_84CCF9.et" {
+   ID "5CB6B281C4F9C4B5"
+   coords -2.447 0.162 2.441
+   angles 0 100.637 0
+   components {
+    Hierarchy "{0BEFB4AFD75B5AFB}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C76C3AF337109066}Prefabs/Props/Crates/CardboardBoxStack_01.et" {
+   ID "5CB6B281C4F99402"
+   coords 2.328 0.162 2.407
+   angles 0 -60.166 0
+   components {
+    Hierarchy "{E771922A3ED052E6}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{DF649B29EC7635F3}Prefabs/Structures/Military/Fortifications/DirtPile_01/DirtPile_01_small.et" {
+   ID "5CB6B281C4F9CB75"
+   coords 2.347 0 3.674
+   components {
+    Hierarchy "{6D2B575F5AC85AD1}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{FAA8DFFC24FE1EC1}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/TentUSSR_01_camonet_CompositionDestruction.et" {
+   ID "5CB6B281C4F9CB49"
+   coords 0 0 0
+   components {
+    Hierarchy "{5A588831BFE58C44}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

@@ -57,7 +57,8 @@ class IA_EnhancedDefendDirector
 	//------------------------------------------------------------------------------------------------
 	static IA_EnhancedDefendDirector Create(notnull IA_DefendMission mission)
 	{
-		return new IA_EnhancedDefendDirector(mission);
+		ref IA_EnhancedDefendDirector director = new IA_EnhancedDefendDirector(mission);
+		return director;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -68,7 +69,7 @@ class IA_EnhancedDefendDirector
 		if (!m_Mission)
 			return;
 
-		m_Config = IA_MissionInitializer.GetGlobalConfig();
+		m_Config = m_Mission.GetDefenseConfig();
 		if (m_Config)
 			m_Config.ClampDefenseSettings();
 
@@ -78,18 +79,19 @@ class IA_EnhancedDefendDirector
 		BuildEventPlan();
 
 		m_Mission.BeginEnhancedHold();
+		string doctrineName = DoctrineName();
+		string site = m_Mission.GetMarkerName();
+
+		// Authored positions and captured bases share the entire defense flow.
 		m_ePhase = IA_DefendPhase.Prepare;
 		m_iPrepareStart = System.GetTickCount();
 		m_iPrepareStartUnix = System.GetUnixTime();
 		m_bFirstBeat = false;
-
-		string doctrineName = DoctrineName();
-		string site = m_Mission.GetMarkerName();
 		m_Mission.NotifyPlayers("DefendMissionStarted", doctrineName + " — defend " + site);
 		m_Mission.NotifyPlayers("TaskCreated", "PREPARE: " + doctrineName);
-
 		FireFirstBeat();
 		m_bFirstBeat = true;
+
 		Publish();
 		GetGame().GetCallqueue().Remove(this.Update);
 		GetGame().GetCallqueue().CallLater(this.Update, 1000, true);
@@ -506,11 +508,13 @@ class IA_EnhancedDefendDirector
 		int preferI = 0;
 		if (preferFirst)
 			preferI = 1;
-		Print(string.Format("[IA][Defend] Event plan count=%1 offsetsMs=%2/%3/%4 durationMs=%5 preferFirst=%6",
-			planned, o0, o1, o2, durationMs, preferI), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][Defend] Event plan count=%1 offsetsMs=%2/%3/%4 durationMs=%5 preferFirst=%6",
+				planned, o0, o1, o2, durationMs, preferI), LogLevel.NORMAL);
+		}
 	}
 
-	//------------------------------------------------------------------------------------------------
 	protected int ScaleEventOffset(int durationMs, float frac)
 	{
 		int ms = Math.Round(durationMs * frac);

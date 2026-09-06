@@ -45,7 +45,10 @@ class IA_HaloDropSites
 
 		CollectFromOpenMap(outSites, centers, radii);
 
-		Print(string.Format("[IA][HALO] Drop sites: %1 (centers %2)", outSites.Count(), centerCount), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][HALO] Drop sites: %1 (centers %2)", outSites.Count(), centerCount), LogLevel.NORMAL);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------

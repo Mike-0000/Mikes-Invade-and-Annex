@@ -1,0 +1,133 @@
+GenericEntity {
+ ID "7877C3F67BED5A71"
+ components {
+  RplComponent "{E007F238BD6A501B}" {
+  }
+  Hierarchy "{23A0D54334675897}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{C84C47BA1BB9563B}Prefabs/BaseCompositions/IA_SupplyStack_Large_01_storage_USSR_covered_0DB92C.et" {
+   ID "5D45393C6E9B22B4"
+   coords 1.55 -0.001 3.079
+   angles 0 8.257 0
+   components {
+    Hierarchy "{40D2A11B72B9547F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C84C47BA1BB9563B}Prefabs/BaseCompositions/IA_SupplyStack_Large_01_storage_USSR_covered_0DB92C.et" {
+   ID "5D45393C6E9B74F8"
+   coords 2.746 -0.001 0.371
+   angles 0 7.748 0
+   components {
+    Hierarchy "{40D2A11B72B9547F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C84C47BA1BB9563B}Prefabs/BaseCompositions/IA_SupplyStack_Large_01_storage_USSR_covered_0DB92C.et" {
+   ID "5D45393C6E9B74FD"
+   coords 2.787 -0.001 1.71
+   angles 0 -87.395 0
+   components {
+    Hierarchy "{40D2A11B72B9547F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7FFD9FD50A2B5606}Prefabs/BaseCompositions/IA_SupplyStack_Large_01_storage_BE8650.et" {
+   ID "5D45393C6E9B22B6"
+   coords 1.134 -0.001 0.457
+   angles 0 -88.279 0
+   components {
+    Hierarchy "{57DAA4F1B31B542A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7FFD9FD50A2B5606}Prefabs/BaseCompositions/IA_SupplyStack_Large_01_storage_BE8650.et" {
+   ID "5D45393C6E9B22B7"
+   coords 1.331 -0.001 1.768
+   angles 0 5.315 0
+   components {
+    Hierarchy "{57DAA4F1B31B542A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B96C5072DCF25953}Prefabs/BaseCompositions/IA_SupplyStack_01_V2_storage_ACFE5F.et" {
+   ID "5D45393C6E9B22AF"
+   coords 0.082 -0.001 1.732
+   angles 0 92.697 0
+   components {
+    Hierarchy "{09302C5EFAF7582A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B96C5072DCF25953}Prefabs/BaseCompositions/IA_SupplyStack_01_V2_storage_ACFE5F.et" {
+   ID "5D45393C6E9B22B9"
+   coords 4.181 -0.001 2.881
+   angles 0 -86.377 0
+   components {
+    Hierarchy "{09302C5EFAF7582A}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B5D4739321745D50}Prefabs/BaseCompositions/IA_SupplyStack_01_V1_storage_884E72.et" {
+   ID "5D45393C6E9B22B8"
+   coords 4.075 -0.001 1.547
+   angles 0 -87.358 0
+   components {
+    Hierarchy "{D21F57512A415B9C}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B5D4739321745D50}Prefabs/BaseCompositions/IA_SupplyStack_01_V1_storage_884E72.et" {
+   ID "5D45393C6E9B22BA"
+   coords 2.942 -0.001 3.184
+   angles 0 3.535 0
+   components {
+    Hierarchy "{D21F57512A415B9C}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B5D4739321745D50}Prefabs/BaseCompositions/IA_SupplyStack_01_V1_storage_884E72.et" {
+   ID "5D45393C6E9B74C4"
+   coords -0.01 -0.001 0.348
+   angles 0 90.92 0
+   components {
+    Hierarchy "{D21F57512A415B9C}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{1B3E7498C6D55BCE}Prefabs/BaseCompositions/IA_SupplyStack_01_V5_storage_USSR_covered_E5572E.et" {
+   ID "5D45393C6E9B74C6"
+   coords 4.026 -0.001 0.273
+   angles 0 96.56 0
+   components {
+    Hierarchy "{D4BFD50AE0F155B4}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{ADD48405D73F5BA4}Prefabs/BaseCompositions/IA_SupplyStack_01_V1_storage_USSR_covered_68BE8E.et" {
+   ID "5D45393C6E9B22B3"
+   coords 0.241 -0.001 3.116
+   angles 0 93.077 0
+   components {
+    Hierarchy "{51A5F9B23A985551}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

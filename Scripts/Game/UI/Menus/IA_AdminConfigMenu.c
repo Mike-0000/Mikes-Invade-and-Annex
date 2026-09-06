@@ -90,6 +90,11 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Toggle m_DefendEvtSniperToggle;
 	protected ref MUI_Slider m_DefendHotDropSlider;
 	protected ref MUI_Label m_DefendHotDropLabel;
+	protected ref MUI_Toggle m_DynamicBaseEnabledToggle;
+	protected ref MUI_Toggle m_DynamicBaseEmplacementsToggle;
+	protected ref MUI_NumericField m_DynamicBaseChanceField;
+	protected ref MUI_Toggle m_DynamicBaseInGmToggle;
+	protected ref MUI_Dropdown m_DynamicBaseSizeDrop;
 
 	//------------------------------------------------------------------------------------------------
 	override void OnMenuOpen()
@@ -476,10 +481,16 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(promoteBtn, "Become Game Master", "Gives you Game Master access so you can use the Director map and other Game Master tools.");
 		m_Hints.AddHint(completeBtn, "Complete the current objective", "Immediately marks the current objective as captured and moves the mission forward. Skips a defense even if one was placed.");
 
+		ref MUI_Button seizeBaseBtn = runtime.CreateButton("Complete objectives + seize base", "seizeBase");
+		seizeBaseBtn.MakeDanger();
+		seizeBaseBtn.GetOnClicked().Insert(OnMikesCompleteAndSeizeBase);
+
 		ref MUI_Row actionRow2 = runtime.CreateRow("actionRow2");
 		actionRow2.SetGap(12);
 		actionRow2.AddChild(completeDefendBtn);
-		m_Hints.AddHint(completeDefendBtn, "Complete and start defense", "Finishes every current objective and starts a defense if a Defend marker was placed for this AO. If none was placed, it completes the zone normally.");
+		actionRow2.AddChild(seizeBaseBtn);
+		m_Hints.AddHint(completeDefendBtn, "Complete and start field-base assault", "Finishes remaining required objectives and starts one field-base attempt. Seize the command area, then start the normal defense at that same site without an extra regroup or warning countdown. If a base job is already running, this leaves it alone. If placement fails, an authored defense is forced when a Defend marker remains.");
+		m_Hints.AddHint(seizeBaseBtn, "Complete objectives and seize a base", "Finishes remaining required objectives and starts one validated field-base attempt. Geometry and AI limits still apply. If placement fails, an authored defense is forced when a Defend marker remains.");
 
 		footerBtns.AddChild(persistRow);
 		footerBtns.AddChild(actionRow);
@@ -511,6 +522,47 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		intro.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		intro.SetMuted(true);
 		m_PageDefense.AddChild(intro);
+
+		ref MUI_Label baseIntro = runtime.CreateLabel("Applies after this AO's required objectives; successful placement uses the captured base for defense.", "dynBaseIntro");
+		baseIntro.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		baseIntro.SetMuted(true);
+		m_PageDefense.AddChild(baseIntro);
+
+		m_DynamicBaseEnabledToggle = runtime.CreateToggle("Dynamic field base after required objectives", "dynBaseOn");
+		m_PageDefense.AddChild(m_DynamicBaseEnabledToggle);
+		m_Hints.AddHint(m_DynamicBaseEnabledToggle, "Dynamic field base", "After required objectives, try to place a USSR field base to seize and immediately defend using the same defense settings, doctrines and phases as an authored position. Off uses the existing authored-defense roll.");
+
+		m_DynamicBaseEmplacementsToggle = runtime.CreateToggle("Optional finite-ammunition base emplacements", "dynBaseGuns");
+		m_PageDefense.AddChild(m_DynamicBaseEmplacementsToggle);
+		m_Hints.AddHint(m_DynamicBaseEmplacementsToggle, "Base emplacements", "Allow PKM, NSV and AA positions in newly constructed bases. Crews come from the existing defender budget. Off leaves the fortifications unarmed; it does not alter an active base.");
+
+		m_DynamicBaseChanceField = runtime.CreateNumericField("Dynamic base chance (0 disables automatic selection)", "dynBaseChance");
+		m_DynamicBaseChanceField.SetRange(0, 100);
+		m_DynamicBaseChanceField.SetStep(1);
+		m_DynamicBaseChanceField.SetDecimals(0);
+		m_DynamicBaseChanceField.SetValue(100);
+		m_PageDefense.AddChild(m_DynamicBaseChanceField);
+		m_Hints.AddHint(m_DynamicBaseChanceField, "Selection chance", "0 disables automatic selection. 100 always attempts a legal site. Missed or failed placement returns to the authored 80% defense roll.");
+
+		m_DynamicBaseInGmToggle = runtime.CreateToggle("Allow automatic dynamic base in Game Master mode", "dynBaseGm");
+		m_PageDefense.AddChild(m_DynamicBaseInGmToggle);
+		m_Hints.AddHint(m_DynamicBaseInGmToggle, "Game Master auto", "When Game Master mode is on, automatic base selection stays off unless this is enabled. The seize-base command still works.");
+
+		ref MUI_Label sizeLbl = runtime.CreateLabel("Dynamic base size", "dynBaseSizeLbl");
+		sizeLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		sizeLbl.SetMuted(true);
+		m_PageDefense.AddChild(sizeLbl);
+		m_DynamicBaseSizeDrop = runtime.CreateDropdown("dynBaseSize");
+		m_DynamicBaseSizeDrop.AddItem("Auto");
+		m_DynamicBaseSizeDrop.AddItem("Full");
+		m_DynamicBaseSizeDrop.AddItem("Compact");
+		m_DynamicBaseSizeDrop.AddItem("Courtyard (88 x 76 m)");
+		m_DynamicBaseSizeDrop.AddItem("Roadside (60 x 96 m)");
+		m_DynamicBaseSizeDrop.AddItem("Command post (64 x 56 m)");
+		m_DynamicBaseSizeDrop.AddItem("Rally post (36 x 48 m)");
+		m_DynamicBaseSizeDrop.SetIndex(0);
+		m_PageDefense.AddChild(m_DynamicBaseSizeDrop);
+		m_Hints.AddHint(m_DynamicBaseSizeDrop, "Base size", "Auto tries six layouts, from the full operating base down to a 36 x 48 m fortified rally post. Choose a named layout to require that design. Smaller bases have fewer occupying guards; capture and the normal defense take place at the same base.");
 
 		m_DefendLegacyToggle = runtime.CreateToggle("Use legacy defense (12-16 min, no events)", "defLegacy");
 		m_PageDefense.AddChild(m_DefendLegacyToggle);
@@ -997,6 +1049,23 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		if (m_GmAutoSupportToggle)
 			m_GmAutoSupportToggle.SetChecked(cfg.m_bGmAutoPlaceSupport);
 
+		if (m_DynamicBaseEnabledToggle)
+			m_DynamicBaseEnabledToggle.SetChecked(cfg.m_bDynamicBaseEnabled);
+		if (m_DynamicBaseEmplacementsToggle)
+			m_DynamicBaseEmplacementsToggle.SetChecked(cfg.m_bDynamicBaseEmplacementsEnabled);
+		if (m_DynamicBaseChanceField)
+			m_DynamicBaseChanceField.SetValue(cfg.m_iDynamicBaseChancePct);
+		if (m_DynamicBaseInGmToggle)
+			m_DynamicBaseInGmToggle.SetChecked(cfg.m_bDynamicBaseInGm);
+		if (m_DynamicBaseSizeDrop)
+		{
+			int sizeIdx = cfg.m_iDynamicBaseSizeMode;
+			if (sizeIdx < 0)
+				sizeIdx = 0;
+			if (sizeIdx > IA_DynamicSiteSizeMode.RallyPost)
+				sizeIdx = 0;
+			m_DynamicBaseSizeDrop.SetIndex(sizeIdx);
+		}
 		if (m_DefendLegacyToggle)
 			m_DefendLegacyToggle.SetChecked(cfg.m_bUseLegacyDefense);
 		if (m_DefendDurMinField)
@@ -1285,6 +1354,22 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			combatPack.m_fAiPerceptionElite = m_ElitePercField.GetValue();
 		packed = packed + "|" + IA_Config.PackAiCombatExtras(combatPack);
 
+		ref IA_Config basePack = new IA_Config();
+		IA_Config live = IA_MissionInitializer.GetGlobalConfig();
+		if (live)
+			IA_Config.UnpackDynamicBaseExtras(basePack, IA_Config.PackDynamicBaseExtras(live));
+		if (m_DynamicBaseEnabledToggle)
+			basePack.m_bDynamicBaseEnabled = m_DynamicBaseEnabledToggle.IsChecked();
+		if (m_DynamicBaseEmplacementsToggle)
+			basePack.m_bDynamicBaseEmplacementsEnabled = m_DynamicBaseEmplacementsToggle.IsChecked();
+		if (m_DynamicBaseChanceField)
+			basePack.m_iDynamicBaseChancePct = Math.Round(m_DynamicBaseChanceField.GetValue());
+		if (m_DynamicBaseInGmToggle)
+			basePack.m_bDynamicBaseInGm = m_DynamicBaseInGmToggle.IsChecked();
+		if (m_DynamicBaseSizeDrop)
+			basePack.m_iDynamicBaseSizeMode = m_DynamicBaseSizeDrop.GetIndex();
+		packed = packed + "|" + IA_Config.PackDynamicBaseExtras(basePack);
+
 		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
 	}
 
@@ -1365,6 +1450,12 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected void OnMikesCompleteAndDefend()
 	{
 		IA_MissionInitializer.ForceCompleteZoneAndDefend();
+		GetGame().GetMenuManager().CloseMenu(this);
+	}
+
+	protected void OnMikesCompleteAndSeizeBase()
+	{
+		IA_MissionInitializer.ForceCompleteObjectivesAndSeizeBase();
 		GetGame().GetMenuManager().CloseMenu(this);
 	}
 }

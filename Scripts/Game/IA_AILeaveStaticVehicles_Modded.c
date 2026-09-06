@@ -22,7 +22,10 @@ modded class SCR_AILeaveStaticVehicles
 
 		if (!m_bLoggedStayMountedLeave)
 		{
-			Print("[IA] StayMounted LeaveStaticVehicles proceeding (non-artillery)", LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("[IA] StayMounted LeaveStaticVehicles proceeding (non-artillery)", LogLevel.NORMAL);
+			}
 			m_bLoggedStayMountedLeave = true;
 		}
 

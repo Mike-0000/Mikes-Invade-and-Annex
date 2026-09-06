@@ -1,0 +1,44 @@
+GenericEntity : "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et" {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC6DD22994D1130}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GameEntity : "{2CB0AA2A87842C18}Prefabs/Props/Civilian/LampKerosene_01/LampKerosene_01_military_USSR.et" {
+   ID "5CB6B2A8CC1A8313"
+   components {
+    Hierarchy "{5CCCBEF327175694}" {
+     Enabled 1
+    }
+   }
+   coords 0.525 0.899 -0.206
+   angles 0 -23.212 0
+  }
+  GenericEntity : "{642101F827FFA52D}Prefabs/Props/Military/Manuals/Manual_Soviet_01.et" {
+   ID "5CB6B2A8CC1A8316"
+   components {
+    Hierarchy "{5CCCBEF3271A448A}" {
+     Enabled 1
+    }
+   }
+   coords -0.415 0.899 0.26
+   angles 0 44.054 0
+  }
+  GenericEntity : "{ABA12EC2F6D0F778}Prefabs/Props/Military/Compositions/USSR/RadioStation_USSR.et" {
+   ID "5D371ACA69288754"
+   components {
+    Hierarchy "{5D6477341BB53CE5}" {
+     Enabled 1
+    }
+   }
+   coords -0.01 0.899 -0.17
+   angles 0 4.524 0
+  }
+ }
+}

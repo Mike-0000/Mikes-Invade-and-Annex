@@ -34,7 +34,10 @@ class IA_PlayerRoleHandler
         // Start periodic player checks
         GetGame().GetCallqueue().CallLater(PeriodicPlayerCheck, 2500, true);
         
-        Print("IA_PlayerRoleHandler initialized with periodic player checks and 3-minute grace period.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA_PlayerRoleHandler initialized with periodic player checks and 3-minute grace period.", LogLevel.NORMAL);
+        }
     }
     
     // Periodically check for new/disconnected players
@@ -108,7 +111,10 @@ class IA_PlayerRoleHandler
 					{
 						ccc.GetOnPlayerDeathWithParam().Insert(OnPlayerDied);
 						s_playerCharacterListenerMap.Set(playerGuid, currentCharacterId);
-						Print(string.Format("Attached death listener to player %1 (GUID: %2) on new character (ID: %3)", playerId, playerGuid, currentCharacterId), LogLevel.NORMAL);
+						if (IA_Log.IsDebugEnabled())
+						{
+							Print(string.Format("Attached death listener to player %1 (GUID: %2) on new character (ID: %3)", playerId, playerGuid, currentCharacterId), LogLevel.NORMAL);
+						}
 					}
 				}
             }
@@ -163,14 +169,20 @@ class IA_PlayerRoleHandler
             roleManager.UnregisterPlayer(expiredGuid);
             s_playerCharacterListenerMap.Remove(expiredGuid); // Also remove from death listener tracking
             
-            Print(string.Format("Grace period expired for player GUID %1. Role reservation released.", expiredGuid), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("Grace period expired for player GUID %1. Role reservation released.", expiredGuid), LogLevel.NORMAL);
+            }
         }
     }
     
     // Handle player reconnecting within grace period
     private static void HandlePlayerReconnect(int playerId, string playerGuid)
     {
-        Print(string.Format("Player %1 (GUID: %2) reconnected within grace period. Restoring role...", playerId, playerGuid), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("Player %1 (GUID: %2) reconnected within grace period. Restoring role...", playerId, playerGuid), LogLevel.NORMAL);
+        }
         
         // The role is still stored in the role manager, so we just need to reapply it to the character
         CheckAndReapplyPlayerRole(playerId, playerGuid);
@@ -197,7 +209,10 @@ class IA_PlayerRoleHandler
         }
 
         IA_StatsManager.GetInstance().QueuePlayerDeath(victimGuid, victimName);
-        Print(string.Format("Queued PlayerDeath event for %1 (GUID: %2)", victimName, victimGuid), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("Queued PlayerDeath event for %1 (GUID: %2)", victimName, victimGuid), LogLevel.NORMAL);
+        }
     }
     // --- END ADDED ---
     
@@ -229,15 +244,21 @@ class IA_PlayerRoleHandler
         {
             // Role mismatch - reapply the stored role
             playerChar.SetRole(storedRole, true);
-            Print(string.Format("Reapplied role %1 to player %2 after respawn", 
-                typename.EnumToString(IA_PlayerRole, storedRole), playerId), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("Reapplied role %1 to player %2 after respawn", 
+                    typename.EnumToString(IA_PlayerRole, storedRole), playerId), LogLevel.NORMAL);
+            }
         }
     }
     
     // Handle new player joining
     private static void HandleNewPlayer(int playerId)
     {
-        Print(string.Format("Player %1 connected, initializing role...", playerId), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("Player %1 connected, initializing role...", playerId), LogLevel.NORMAL);
+        }
         
         // The player entity might not be ready yet, set up a delayed check
         GetGame().GetCallqueue().CallLater(InitializePlayerRole, 1500, false, playerId);
@@ -254,7 +275,10 @@ class IA_PlayerRoleHandler
         if (!playerEntity)
         {
             // Player entity still not available, try again later
-            Print(string.Format("InitializePlayerRole: Player entity for player %1 not yet available. Retrying.", playerId), LogLevel.DEBUG);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("InitializePlayerRole: Player entity for player %1 not yet available. Retrying.", playerId), LogLevel.NORMAL);
+            }
             GetGame().GetCallqueue().CallLater(InitializePlayerRole, 1000, false, playerId);
             return;
         }
@@ -277,7 +301,10 @@ class IA_PlayerRoleHandler
     // Handle player disconnection event
     private static void HandleDisconnectedPlayer(string playerGuid)
     {
-        Print(string.Format("Player with GUID %1 disconnected. Starting 3-minute grace period...", playerGuid), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("Player with GUID %1 disconnected. Starting 3-minute grace period...", playerGuid), LogLevel.NORMAL);
+        }
         
         // Don't immediately clean up role - add to grace period tracking instead
         int currentTime = System.GetUnixTime();
@@ -296,7 +323,10 @@ modded class IA_Game
         // Initialize the role system
         if (Replication.IsServer())
         {
-            Print("Initializing IA_PlayerRoleHandler from IA_Game", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("Initializing IA_PlayerRoleHandler from IA_Game", LogLevel.NORMAL);
+            }
             IA_PlayerRoleHandler.Initialize();
         }
     }

@@ -1,0 +1,23 @@
+GenericEntity {
+ ID "1A61386698B65784"
+ components {
+  RplComponent "{9219789D5F6650E2}" {
+  }
+  Hierarchy "{8D418F73AC9F5E61}" {
+   Enabled 1
+  }
+  MeshObject "{56DE7C8DCD0F4E0A}" {
+   LODFactors {
+    70 50 30 10 2 1 1
+   }
+   Object "{F5F75B2974929E82}Assets/Structures/Walls/BarbedWire/BarbedTape_Stake.xob"
+  }
+  RigidBody "{56DE7C8DDE282E03}" {
+   ResponseIndex "TinyDestructible"
+   Mass 10
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

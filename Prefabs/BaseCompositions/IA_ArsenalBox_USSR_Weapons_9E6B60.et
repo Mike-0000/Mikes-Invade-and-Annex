@@ -1,0 +1,45 @@
+GenericEntity {
+ ID "BEB776A9BA755621"
+ components {
+  RplComponent "{C3A5C71CB5585971}" {
+  }
+  Hierarchy "{9CFFADDF634A5B10}" {
+   Enabled 1
+  }
+  MeshObject "{56F2C6D1431AD85A}" {
+   Object "{56326B665211D386}Assets/Props/Military/AmmoBox/ArsenalBox_01/ArsenalBox_01.xob"
+   Materials {
+    MaterialAssignClass "{6108C5B1AF5663FB}" {
+     SourceMaterial "ArsenalBox_01_Decal"
+     AssignedMaterial "{7D22666A955D5C03}Assets/Props/Military/AmmoBox/ArsenalBox_01/Data/ArsenalBox_01_Decal_USSR_general.emat"
+    }
+    MaterialAssignClass "{6108C5B1AF5663E6}" {
+     SourceMaterial "ArsenalBox_01_MLOD"
+     AssignedMaterial "{65BCA117814EAB89}Assets/Props/Military/AmmoBox/ArsenalBox_01/Data/ArsenalBox_01_USSR_MLOD.emat"
+    }
+    MaterialAssignClass "{6108C5B1AF56631E}" {
+     SourceMaterial "explosive_0A0A9C1C7B189A8B"
+     AssignedMaterial "{8024926C8E4B04DA}Assets/Props/Military/AmmoBox/EquipmentBoxWooden_01/Data/EquipmentBoxWooden_Explosives_01_USSR.emat"
+    }
+    MaterialAssignClass "{6108C5B1AF566318}" {
+     SourceMaterial "tarp_EBFB69929B4DE0C6"
+     AssignedMaterial "{D3A4EB4DC4462175}Assets/Props/Military/AmmoBox/EquipmentBoxStack/Data/EquipmentBoxStack_01_cover_USSR.emat"
+    }
+    MaterialAssignClass "{6108C5B1AF566312}" {
+     SourceMaterial "weapon_box_6864083D30F4F63D"
+     AssignedMaterial "{7D2E831AFA5CF50D}Assets/Props/Military/AmmoBox/EquipmentBoxWooden_01/Data/EquipmentBoxWooden_Weapon_01_USSR.emat"
+    }
+    MaterialAssignClass "{6108BA50A472EDF5}" {
+     SourceMaterial "ArsenalBox_01_Decal"
+     AssignedMaterial "{BCD47D283B411EC0}Assets/Props/Military/AmmoBox/ArsenalBox_01/Data/ArsenalBox_01_Decal_USSR_weapons.emat"
+    }
+   }
+  }
+  RigidBody "{56F2C6D1431AD9DF}" {
+   Mass 10
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

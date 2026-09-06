@@ -33,7 +33,10 @@ class IA_AISpawnPoint : ScriptedGameTriggerEntity
             if (!s_AllSpawnPoints.Contains(this))
             {
                 s_AllSpawnPoints.Insert(this);
-                Print(string.Format("[IA_AISpawnPoint] Registered spawn point %1 at %2 (radius %3m). Total spawn points: %4", this, GetOrigin(), radius, s_AllSpawnPoints.Count()), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AISpawnPoint] Registered spawn point %1 at %2 (radius %3m). Total spawn points: %4", this, GetOrigin(), radius, s_AllSpawnPoints.Count()), LogLevel.NORMAL);
+                }
             }
         }
     }
@@ -72,7 +75,10 @@ class IA_AISpawnPoint : ScriptedGameTriggerEntity
 
         if (removedCount > 0)
         {
-            Print(string.Format("[IA_AISpawnPoint] Cleaned up %1 null spawn points. Original count: %2, New count: %3", removedCount, initialCount, s_AllSpawnPoints.Count()), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AISpawnPoint] Cleaned up %1 null spawn points. Original count: %2, New count: %3", removedCount, initialCount, s_AllSpawnPoints.Count()), LogLevel.NORMAL);
+            }
         }
         
         return s_AllSpawnPoints;

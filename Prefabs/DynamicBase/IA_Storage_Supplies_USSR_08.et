@@ -1,0 +1,109 @@
+GenericEntity {
+ ID "5282DCB5DFC8538F"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  $grp GenericEntity : "{0457BBAF5262EECE}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/SupplyStack_Large_01_storage_USSR_covered.et" {
+   {
+    ID "5D45393C5D30CEEE"
+    coords 1.357 -0.001 0.158
+    angles 0 91.49 0
+   }
+   {
+    ID "5D45393C5D3171A0"
+    coords 2.063 -0.001 -2.791
+    angles 0 179.909 0
+   }
+  }
+  $grp GenericEntity : "{1F7AE3AAD6198021}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V3_storage_USSR_covered.et" {
+   {
+    ID "5D45393C5D30530A"
+    coords -3.617 -0.001 -1.139
+    angles 0 6.468 0
+   }
+   {
+    ID "5D45393C5D30CEF2"
+    coords -0.764 -0.001 -1.314
+    angles 0 -86.077 0
+   }
+   {
+    ID "5D45393C5D3171A5"
+    coords 2.283 -0.001 -1.442
+    angles 0 6.53 0
+   }
+  }
+  $grp GenericEntity : "{3FD3F403025BBDF5}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/SupplyStack_Large_01_storage.et" {
+   {
+    ID "5D45393C5D30530D"
+    coords -3.659 -0.001 -2.661
+    angles 0 -93.713 0
+   }
+   {
+    ID "5D45393C5D30CEF0"
+    coords -2.176 -0.001 -1.361
+    angles 0 -90.899 0
+   }
+   {
+    ID "5D45393C5D30CEF3"
+    coords -1.596 -0.001 0.26
+    angles 0 -88.07 0
+   }
+   {
+    ID "5D45393C5D3171AA"
+    coords 0.744 -0.001 -1.278
+    angles 0 -86.209 0
+   }
+   {
+    ID "5D45393C5D3171AF"
+    coords 0.644 -0.001 -2.769
+    angles 0 -88.171 0
+   }
+  }
+  $grp GenericEntity : "{98A34AE10104A932}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V1_storage.et" {
+   {
+    ID "5D45393C5D30530B"
+    coords 3.468 -0.001 -2.9
+    angles 0 6.56 0
+   }
+   {
+    ID "5D45393C5D3171AD"
+    coords -0.736 -0.001 -2.753
+    angles 0 -2.665 0
+   }
+  }
+  GenericEntity : "{B1017A36B1F2229E}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V6_storage.et" {
+   ID "5D45393C5D317158"
+   coords 3.676 -0.001 -0.24
+   angles 0 -84.171 0
+  }
+  GenericEntity : "{DA3D4CF729F32F6B}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V5_storage.et" {
+   ID "5D45393C5D31715D"
+   coords 3.696 -0.001 -1.614
+   angles 0 93.399 0
+  }
+  $grp GenericEntity : "{F39F7C209905A4C7}Prefabs/Props/Military/SupplyBox/SupplyStack/SupplyStack_01/SupplyStack_01_V3_storage.et" {
+   {
+    ID "5D45393C5D30530C"
+    coords -2.203 -0.001 -2.753
+    angles 0 93.621 0
+   }
+   {
+    ID "5D45393C5D30CEED"
+    coords -0.189 -0.001 0.181
+    angles 0 1.578 0
+   }
+   {
+    ID "5D45393C5D3171A6"
+    coords 2.669 -0.001 0.018
+    angles 0 95.162 0
+   }
+  }
+ }
+}

@@ -33,13 +33,19 @@ modded class SCR_ChimeraCharacter{
 		if(!Replication.IsServer()){
 						Do_TriggerSetUIOneHandler(messageType, taskTitle, playerId);
 
-			Print("Running As Client",LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("Running As Client",LogLevel.NORMAL);
+			}
 			
 		} else{
 						Rpc(RpcDo_TriggerSetUIOneHandler, messageType, taskTitle, playerId);
 						Do_TriggerSetUIOneHandler(messageType, taskTitle, playerId);
 
-			Print("Running As Server",LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("Running As Server",LogLevel.NORMAL);
+			}
 		}
 		
 			

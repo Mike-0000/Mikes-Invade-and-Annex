@@ -39,7 +39,10 @@ modded class SCR_PlacingEditorComponentClass
 		m_aIndexes.Insert(m_iPrefabCount);
 		m_iPrefabCount = m_iPrefabCount + m_IARegistry.GetPrefabs().Count();
 		m_Registries.Insert(m_IARegistry);
-		Print(string.Format("[IA] Registered %1 I&A sites in the Game Master content browser", m_IARegistry.GetPrefabs().Count()), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA] Registered %1 I&A sites in the Game Master content browser", m_IARegistry.GetPrefabs().Count()), LogLevel.NORMAL);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------

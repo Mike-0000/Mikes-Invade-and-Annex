@@ -1,0 +1,30 @@
+GenericEntity {
+ ID "1067D8502B8E56EF"
+ components {
+  RplComponent "{AED7E6A2BF5555AD}" {
+  }
+  Hierarchy "{C4B24DC252EC55E7}" {
+   Enabled 1
+  }
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{62A30D148D0D93B0}Assets/Props/Military/AmmoBox/EquipmentBoxWooden_01/EquipmentBoxWooden_Equipment_01.xob"
+   Materials {
+    MaterialAssignClass "{58B2E6A74D727F62}" {
+     SourceMaterial "EquipmentBoxWooden_Medical_01"
+     AssignedMaterial "{F040F802F02B0D96}Assets/Props/Military/AmmoBox/EquipmentBoxWooden_01/Data/EquipmentBoxWooden_Medical_01_USSR.emat"
+    }
+    MaterialAssignClass "{58B2E6A74D727F79}" {
+     SourceMaterial "EquipmentBoxWooden_decal"
+     AssignedMaterial "{17332645A86C9BA6}Assets/Props/Military/AmmoBox/EquipmentBoxWooden_01/Data/EquipmentBoxWooden_decal_USSR.emat"
+    }
+   }
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   Mass 10
+   ModelGeometry 1
+   Static 1
+   ResponseIndex "SmallDestructible"
+  }
+ }
+ coords 0 0 0
+}

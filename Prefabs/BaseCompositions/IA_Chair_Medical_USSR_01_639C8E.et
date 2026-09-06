@@ -1,0 +1,11 @@
+GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+ ID "6FBC81FA5E95502C"
+ components {
+  RplComponent "{5624A88DC2D9928D}" {
+  }
+  Hierarchy "{CAFB38C0AD945880}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+}

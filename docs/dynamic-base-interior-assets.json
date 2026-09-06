@@ -1,0 +1,769 @@
+{
+  "Prefabs/Props/Military/Furniture/NoticeBoardMilitary_01_USSR.et": {
+    "resource": "{2E21C8934CFD9F50}Prefabs/Props/Military/Furniture/NoticeBoardMilitary_01_USSR.et",
+    "mins": [
+      -0.890779,
+      0.0,
+      -0.019056
+    ],
+    "maxs": [
+      0.910457,
+      1.1,
+      0.000944
+    ]
+  },
+  "Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et": {
+    "resource": "{1A1020205E2B1710}Prefabs/Props/Military/Furniture/TableMilitary_USSR_01.et",
+    "mins": [
+      -0.689188,
+      0.0,
+      -0.400183
+    ],
+    "maxs": [
+      0.69017,
+      0.899073,
+      0.400183
+    ]
+  },
+  "Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et": {
+    "resource": "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et",
+    "mins": [
+      -0.258972,
+      -0.000267,
+      -0.203884
+    ],
+    "maxs": [
+      0.259766,
+      0.503034,
+      0.213921
+    ]
+  },
+  "Prefabs/Props/Crates/CrateWooden_02/CrateWooden_02_1x1x1.et": {
+    "resource": "{E4416C4C6938BEEE}Prefabs/Props/Crates/CrateWooden_02/CrateWooden_02_1x1x1.et",
+    "mins": [
+      -0.501926,
+      0.000173,
+      -0.501591
+    ],
+    "maxs": [
+      0.501926,
+      1.00656,
+      0.505578
+    ]
+  },
+  "Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et": {
+    "resource": "{339AED2BCBDF3265}Prefabs/Props/Military/Camps/PalletMRE_01_Soviet.et",
+    "mins": [
+      -0.274891,
+      -0.091303,
+      -0.220594
+    ],
+    "maxs": [
+      0.287848,
+      0.092194,
+      0.216785
+    ]
+  },
+  "Prefabs/Props/Industrial/BarrelMetal_01_military.et": {
+    "resource": "{F4BB6B6A0486F797}Prefabs/Props/Industrial/BarrelMetal_01_military.et",
+    "mins": [
+      -0.378721,
+      -0.016739,
+      -0.380762
+    ],
+    "maxs": [
+      0.378721,
+      1.08167,
+      0.378721
+    ]
+  },
+  "Prefabs/Props/Civilian/Jerrycan_01.et": {
+    "resource": "{62B2ADC4243454F9}Prefabs/Props/Civilian/Jerrycan_01.et",
+    "mins": [
+      -0.078979,
+      0.000225,
+      -0.189276
+    ],
+    "maxs": [
+      0.08262,
+      0.517499,
+      0.184786
+    ]
+  },
+  "Prefabs/Props/Civilian/Bucket_01.et": {
+    "resource": "{BCE07A58672955B9}Prefabs/Props/Civilian/Bucket_01.et",
+    "mins": [
+      -0.214206,
+      -0.000894,
+      -0.206208
+    ],
+    "maxs": [
+      0.213788,
+      0.400319,
+      0.207491
+    ]
+  },
+  "Prefabs/Props/Industrial/ToolBox_01/ToolBox_01_grey.et": {
+    "resource": "{0F866B72D473D8C4}Prefabs/Props/Industrial/ToolBox_01/ToolBox_01_grey.et",
+    "mins": [
+      -0.274615,
+      0.0,
+      -0.118786
+    ],
+    "maxs": [
+      0.276521,
+      0.357536,
+      0.117054
+    ]
+  },
+  "Prefabs/Props/VehicleParts/Tires/Wheel_Ural4320.et": {
+    "resource": "{B3D9BC5688598B6E}Prefabs/Props/VehicleParts/Tires/Wheel_Ural4320.et",
+    "mins": [
+      -0.647815,
+      -0.015546,
+      -0.647815
+    ],
+    "maxs": [
+      0.647815,
+      0.450529,
+      0.647814
+    ]
+  },
+  "Prefabs/Props/Construction/CableReel/CableReelWooden_01.et": {
+    "resource": "{A419F4547954DA05}Prefabs/Props/Construction/CableReel/CableReelWooden_01.et",
+    "mins": [
+      -0.622088,
+      -0.011512,
+      -0.601461
+    ],
+    "maxs": [
+      0.60882,
+      0.887842,
+      0.624082
+    ]
+  },
+  "Prefabs/Props/Civilian/SackUniversal_01_Pile.et": {
+    "resource": "{0879933F4FDD2C2B}Prefabs/Props/Civilian/SackUniversal_01_Pile.et",
+    "mins": [
+      -0.893691,
+      -0.030332,
+      -0.701852
+    ],
+    "maxs": [
+      1.06562,
+      1.22506,
+      0.779852
+    ]
+  },
+  "Prefabs/Structures/Civilian/MessageBoard/Filled/MessageBoard_USSR_01_RedStarNews_filled_V1.et": {
+    "resource": "{D6C4CB6E5D13C8C7}Prefabs/Structures/Civilian/MessageBoard/Filled/MessageBoard_USSR_01_RedStarNews_filled_V1.et",
+    "mins": [
+      -1.26169,
+      -0.301129,
+      -0.612973
+    ],
+    "maxs": [
+      1.28917,
+      2.44307,
+      0.457517
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Briefing.et": {
+    "resource": "{C1DC3475A54F5B8B}Prefabs/DynamicBase/IA_Dressing_Briefing.et",
+    "mins": [
+      -1.59423,
+      -0.301129,
+      -0.871593
+    ],
+    "maxs": [
+      1.91685,
+      2.44307,
+      2.25752
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Mess.et": {
+    "resource": "{C5FCEDF014885D44}Prefabs/DynamicBase/IA_Dressing_Mess.et",
+    "mins": [
+      -1.30388,
+      0.0,
+      -1.17575
+    ],
+    "maxs": [
+      1.24576,
+      1.08257,
+      0.491224
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Stores.et": {
+    "resource": "{EBACA024C71C5CAF}Prefabs/DynamicBase/IA_Dressing_Stores.et",
+    "mins": [
+      -1.25193,
+      0.0,
+      -2.55374
+    ],
+    "maxs": [
+      1.45753,
+      1.25539,
+      0.948886
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Utility.et": {
+    "resource": "{9F0EFC4CC9CD571D}Prefabs/DynamicBase/IA_Dressing_Utility.et",
+    "mins": [
+      -1.34028,
+      0.0,
+      -0.573417
+    ],
+    "maxs": [
+      1.0488,
+      0.899354,
+      0.999212
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Water.et": {
+    "resource": "{B3E06835E2455923}Prefabs/DynamicBase/IA_Dressing_Water.et",
+    "mins": [
+      -1.02872,
+      0.0,
+      -0.894324
+    ],
+    "maxs": [
+      0.963788,
+      1.09841,
+      0.849186
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Workshop.et": {
+    "resource": "{3A2537AB39405511}Prefabs/DynamicBase/IA_Dressing_Workshop.et",
+    "mins": [
+      -1.50006,
+      0.0,
+      -0.711203
+    ],
+    "maxs": [
+      1.61835,
+      1.25661,
+      0.918346
+    ]
+  },
+  "Prefabs/Props/Military/Generators/GeneratorPortable_USSR_01.et": {
+    "resource": "{FCBEDECB2A39B6BC}Prefabs/Props/Military/Generators/GeneratorPortable_USSR_01.et",
+    "mins": [
+      -0.250908,
+      0.000342,
+      -0.516351
+    ],
+    "maxs": [
+      0.260916,
+      0.681679,
+      0.443216
+    ]
+  },
+  "Prefabs/Props/Military/Generators/GeneratorFloodlight_USSR_01.et": {
+    "resource": "{616F4E93658E5A3A}Prefabs/Props/Military/Generators/GeneratorFloodlight_USSR_01.et",
+    "mins": [
+      -1.49656,
+      -0.009675,
+      -0.841108
+    ],
+    "maxs": [
+      1.55175,
+      3.78688,
+      0.833702
+    ]
+  },
+  "Prefabs/Props/Military/Camps/Lamp_Interactive.et": {
+    "resource": "{5E18F5832C69F8A9}Prefabs/Props/Military/Camps/Lamp_Interactive.et",
+    "mins": [
+      -0.124234,
+      0.0,
+      -0.117781
+    ],
+    "maxs": [
+      0.119553,
+      0.477932,
+      0.2192
+    ]
+  },
+  "Prefabs/Props/Military/FieldKitchenTrailerUSSR_01.et": {
+    "resource": "{AA96C0FB1A65B886}Prefabs/Props/Military/FieldKitchenTrailerUSSR_01.et",
+    "mins": [
+      -1.12452,
+      -0.096478,
+      -2.07468
+    ],
+    "maxs": [
+      1.12452,
+      3.07091,
+      2.00518
+    ]
+  },
+  "Prefabs/Structures/Civilian/Latrine_01.et": {
+    "resource": "{7A04C0C85BEC7916}Prefabs/Structures/Civilian/Latrine_01.et",
+    "mins": [
+      -0.691174,
+      -1.16687,
+      -0.805217
+    ],
+    "maxs": [
+      0.671456,
+      2.34003,
+      0.900818
+    ]
+  },
+  "Prefabs/Props/Civilian/TableSink_01.et": {
+    "resource": "{97FF4DA84258FBAF}Prefabs/Props/Civilian/TableSink_01.et",
+    "mins": [
+      -0.265064,
+      -0.003056,
+      -0.288011
+    ],
+    "maxs": [
+      0.304756,
+      0.979752,
+      0.255576
+    ]
+  },
+  "Prefabs/Props/Agriculture/WaterTank_01_v1.et": {
+    "resource": "{C7BE6D1395342D32}Prefabs/Props/Agriculture/WaterTank_01_v1.et",
+    "mins": [
+      -0.714482,
+      -0.007783,
+      -1.21774
+    ],
+    "maxs": [
+      0.714482,
+      2.03358,
+      2.86686
+    ]
+  },
+  "Prefabs/Props/Civilian/FireExtinguisher_01.et": {
+    "resource": "{BD65F1D86388640D}Prefabs/Props/Civilian/FireExtinguisher_01.et",
+    "mins": [
+      -0.200061,
+      -5.4e-05,
+      -0.111203
+    ],
+    "maxs": [
+      0.104998,
+      0.657403,
+      0.102035
+    ]
+  },
+  "Prefabs/Props/Industrial/Pallets/Pallet_01.et": {
+    "resource": "{D7F69BF7D2DCA0A8}Prefabs/Props/Industrial/Pallets/Pallet_01.et",
+    "mins": [
+      -0.414843,
+      -0.002289,
+      -0.602966
+    ],
+    "maxs": [
+      0.399388,
+      0.141399,
+      0.626527
+    ]
+  },
+  "Prefabs/Props/Military/Camps/PalletAmmo_01_Soviet_camo.et": {
+    "resource": "{1AC31E2AF0C54F8A}Prefabs/Props/Military/Camps/PalletAmmo_01_Soviet_camo.et",
+    "mins": [
+      -0.727272,
+      -0.002211,
+      -0.768654
+    ],
+    "maxs": [
+      0.677521,
+      0.987309,
+      0.756064
+    ]
+  },
+  "Prefabs/Props/EmptyStorages/USSR_MedicalBox_empty.et": {
+    "resource": "{387B85277E063AEA}Prefabs/Props/EmptyStorages/USSR_MedicalBox_empty.et",
+    "mins": [
+      -0.465078,
+      -0.004568,
+      -0.234718
+    ],
+    "maxs": [
+      0.465078,
+      0.480834,
+      0.251268
+    ]
+  },
+  "Prefabs/Props/Garbage/Bins/TrashBin_03/TrashBin_USSR_03_full.et": {
+    "resource": "{F0E4FC2785C49124}Prefabs/Props/Garbage/Bins/TrashBin_03/TrashBin_USSR_03_full.et",
+    "mins": [
+      -0.225866,
+      -0.090865,
+      -0.059971
+    ],
+    "maxs": [
+      0.225838,
+      0.883887,
+      0.195907
+    ]
+  },
+  "Prefabs/Props/Industrial/Pallets/MarsBox_01_green.et": {
+    "resource": "{88A1A9164B53E2E5}Prefabs/Props/Industrial/Pallets/MarsBox_01_green.et",
+    "mins": [
+      -0.457916,
+      0.000874,
+      -0.676496
+    ],
+    "maxs": [
+      0.457053,
+      0.657096,
+      0.677399
+    ]
+  },
+  "Prefabs/Structures/BuildingParts/Eletrical/ElectricityBoxes/ElectricityBox_small_01.et": {
+    "resource": "{CDE4035B661F9555}Prefabs/Structures/BuildingParts/Eletrical/ElectricityBoxes/ElectricityBox_small_01.et",
+    "mins": [
+      -0.181094,
+      -0.167366,
+      0.0
+    ],
+    "maxs": [
+      0.181093,
+      0.167366,
+      0.1309
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_BriefingLit.et": {
+    "resource": "{986F4B80B0BE52E0}Prefabs/DynamicBase/IA_Dressing_BriefingLit.et",
+    "mins": [
+      -1.59423,
+      -0.301129,
+      -0.871593
+    ],
+    "maxs": [
+      1.91685,
+      2.44307,
+      2.25752
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_BulkWater.et": {
+    "resource": "{CE0933F9935A5FD4}Prefabs/DynamicBase/IA_Dressing_BulkWater.et",
+    "mins": [
+      -1.76506,
+      0.0,
+      -1.21774
+    ],
+    "maxs": [
+      0.714482,
+      2.04136,
+      2.86686
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Comms.et": {
+    "resource": "{BB26A698BEF55499}Prefabs/DynamicBase/IA_Dressing_Comms.et",
+    "mins": [
+      -0.689188,
+      0.0,
+      -0.400183
+    ],
+    "maxs": [
+      1.65705,
+      1.25661,
+      0.977399
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_CommsLit.et": {
+    "resource": "{D7D10DFBACA05AD0}Prefabs/DynamicBase/IA_Dressing_CommsLit.et",
+    "mins": [
+      -0.689188,
+      0.0,
+      -0.400183
+    ],
+    "maxs": [
+      1.65705,
+      1.377,
+      0.977399
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_EntranceLight.et": {
+    "resource": "{8726E742FEE65661}Prefabs/DynamicBase/IA_Dressing_EntranceLight.et",
+    "mins": [
+      -1.49656,
+      0.0,
+      -0.841108
+    ],
+    "maxs": [
+      1.55175,
+      3.79656,
+      0.833702
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Kitchen.et": {
+    "resource": "{0138CE87F30058BE}Prefabs/DynamicBase/IA_Dressing_Kitchen.et",
+    "mins": [
+      -1.70006,
+      0.0,
+      -1.67468
+    ],
+    "maxs": [
+      2.80018,
+      3.16739,
+      2.40518
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_KitchenLit.et": {
+    "resource": "{7381F407AD8A54B8}Prefabs/DynamicBase/IA_Dressing_KitchenLit.et",
+    "mins": [
+      -1.70006,
+      0.0,
+      -1.67468
+    ],
+    "maxs": [
+      2.80018,
+      3.16739,
+      2.40518
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Medical.et": {
+    "resource": "{AC27F856D7A750A7}Prefabs/DynamicBase/IA_Dressing_Medical.et",
+    "mins": [
+      -1.09044,
+      0.0,
+      -1.60018
+    ],
+    "maxs": [
+      1.66508,
+      0.899073,
+      0.551268
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_MedicalLit.et": {
+    "resource": "{A9D76F51AE7B5D37}Prefabs/DynamicBase/IA_Dressing_MedicalLit.et",
+    "mins": [
+      -1.09044,
+      0.0,
+      -1.60018
+    ],
+    "maxs": [
+      1.66508,
+      1.377,
+      0.551268
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_MessLit.et": {
+    "resource": "{06111FFC070A5834}Prefabs/DynamicBase/IA_Dressing_MessLit.et",
+    "mins": [
+      -1.30388,
+      0.0,
+      -1.17575
+    ],
+    "maxs": [
+      1.24576,
+      1.377,
+      0.491224
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Power.et": {
+    "resource": "{3F22F8B9E0EB5442}Prefabs/DynamicBase/IA_Dressing_Power.et",
+    "mins": [
+      -1.30006,
+      0.0,
+      -0.961203
+    ],
+    "maxs": [
+      1.50882,
+      1.00639,
+      2.17408
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Rest.et": {
+    "resource": "{754823CC537E5D85}Prefabs/DynamicBase/IA_Dressing_Rest.et",
+    "mins": [
+      -1.65792,
+      0.0,
+      -0.294564
+    ],
+    "maxs": [
+      0.913833,
+      0.656222,
+      1.4774
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Sanitation.et": {
+    "resource": "{6F3672FEE4B857A1}Prefabs/DynamicBase/IA_Dressing_Sanitation.et",
+    "mins": [
+      -0.691174,
+      -1.16687,
+      -0.588011
+    ],
+    "maxs": [
+      1.80476,
+      2.34003,
+      1.50082
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_StoresCovered.et": {
+    "resource": "{674112EA1BA85649}Prefabs/DynamicBase/IA_Dressing_StoresCovered.et",
+    "mins": [
+      -1.57727,
+      0.0,
+      -0.711203
+    ],
+    "maxs": [
+      1.44688,
+      0.98952,
+      1.25606
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_Waste.et": {
+    "resource": "{A70917953C1D58AB}Prefabs/DynamicBase/IA_Dressing_Waste.et",
+    "mins": [
+      -0.682014,
+      0.0,
+      -0.0908179
+    ],
+    "maxs": [
+      0.681987,
+      0.974752,
+      0.325431
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_WaterWash.et": {
+    "resource": "{AB8A3CB589625084}Prefabs/DynamicBase/IA_Dressing_WaterWash.et",
+    "mins": [
+      -0.915064,
+      0.0,
+      -0.806208
+    ],
+    "maxs": [
+      1.02872,
+      1.09841,
+      0.628721
+    ]
+  },
+  "Prefabs/DynamicBase/IA_Dressing_WorkshopLit.et": {
+    "resource": "{965FEDAFCD3F54D5}Prefabs/DynamicBase/IA_Dressing_WorkshopLit.et",
+    "mins": [
+      -1.50006,
+      0.0,
+      -0.711203
+    ],
+    "maxs": [
+      1.61835,
+      1.377,
+      0.918346
+    ]
+  },
+  "Prefabs/Props/Signs/Industrial/SignIndustrial_30x20_1_NoSmoking.et": {
+    "resource": "{E139195E3A6231D9}Prefabs/Props/Signs/Industrial/SignIndustrial_30x20_1_NoSmoking.et",
+    "mins": [
+      -0.144,
+      -0.216,
+      0.0
+    ],
+    "maxs": [
+      0.144,
+      0.216,
+      0.008967
+    ]
+  },
+  "Prefabs/DynamicBase/IA_InfrastructureAsset_covered.et": {
+    "resource": "{BA4D420FC21458D4}Prefabs/DynamicBase/IA_InfrastructureAsset_covered.et",
+    "mins": [
+      -0.727272,
+      -0.002211,
+      -0.768654
+    ],
+    "maxs": [
+      0.677521,
+      0.987309,
+      0.756064
+    ]
+  },
+  "Prefabs/DynamicBase/IA_InfrastructureAsset_electric.et": {
+    "resource": "{099D5A2F225859E5}Prefabs/DynamicBase/IA_InfrastructureAsset_electric.et",
+    "mins": [
+      -0.181094,
+      -0.167366,
+      0.0
+    ],
+    "maxs": [
+      0.181093,
+      0.167366,
+      0.1309
+    ]
+  },
+  "Prefabs/DynamicBase/IA_InfrastructureAsset_floodlight.et": {
+    "resource": "{1A0003104F1D5AA2}Prefabs/DynamicBase/IA_InfrastructureAsset_floodlight.et",
+    "mins": [
+      -1.49656,
+      -0.009675,
+      -0.841108
+    ],
+    "maxs": [
+      1.55175,
+      3.78688,
+      0.833702
+    ]
+  },
+  "Prefabs/DynamicBase/IA_InfrastructureAsset_generator.et": {
+    "resource": "{BF76579A28EF5EA1}Prefabs/DynamicBase/IA_InfrastructureAsset_generator.et",
+    "mins": [
+      -0.250908,
+      0.000342,
+      -0.516351
+    ],
+    "maxs": [
+      0.260916,
+      0.681679,
+      0.443216
+    ]
+  },
+  "Prefabs/DynamicBase/IA_InfrastructureAsset_lamp.et": {
+    "resource": "{C1C087BC66975A4E}Prefabs/DynamicBase/IA_InfrastructureAsset_lamp.et",
+    "mins": [
+      -0.124234,
+      0.0,
+      -0.117781
+    ],
+    "maxs": [
+      0.119553,
+      0.477932,
+      0.2192
+    ]
+  },
+  "Prefabs/DynamicBase/IA_InfrastructureAsset_latrine.et": {
+    "resource": "{F7A71209CE045FD3}Prefabs/DynamicBase/IA_InfrastructureAsset_latrine.et",
+    "mins": [
+      -0.691174,
+      -1.16687,
+      -0.805217
+    ],
+    "maxs": [
+      0.671456,
+      2.34003,
+      0.900818
+    ]
+  },
+  "Prefabs/DynamicBase/IA_InfrastructureAsset_medical.et": {
+    "resource": "{D8FF66B445235D0F}Prefabs/DynamicBase/IA_InfrastructureAsset_medical.et",
+    "mins": [
+      -0.465078,
+      -0.004568,
+      -0.234718
+    ],
+    "maxs": [
+      0.465078,
+      0.480834,
+      0.251268
+    ]
+  },
+  "Prefabs/DynamicBase/IA_InfrastructureAsset_nosmoking.et": {
+    "resource": "{CFB089173D9D52F4}Prefabs/DynamicBase/IA_InfrastructureAsset_nosmoking.et",
+    "mins": [
+      -0.144,
+      -0.216,
+      0.0
+    ],
+    "maxs": [
+      0.144,
+      0.216,
+      0.008967
+    ]
+  }
+}

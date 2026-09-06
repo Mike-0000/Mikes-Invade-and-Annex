@@ -93,7 +93,7 @@ class IA_RadioRelayGrid
 		}
 
 		s_bSpawned = true;
-		Print(string.Format("[IA][Radio] Spawned %1 always-on relays on a %2x%3 grid (step %4 m, handheld %5 m, bounds %6..%7 / %8..%9).", spawned, countX, countZ, GRID_STEP_M, HANDHELD_RANGE_M, minX, maxX, minZ, maxZ), LogLevel.NORMAL);
+		IA_Log.Info(string.Format("[IA][Radio] Spawned %1 always-on relays on a %2x%3 grid (step %4 m, handheld %5 m, bounds %6..%7 / %8..%9).", spawned, countX, countZ, GRID_STEP_M, HANDHELD_RANGE_M, minX, maxX, minZ, maxZ));
 	}
 
 	//------------------------------------------------------------------------------------------------

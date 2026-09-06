@@ -183,21 +183,30 @@ class IA_LeaderboardManagerComponent : ScriptComponent
     private void OnLeaderboardDataChanged()
     {
         // This is called on clients when the data arrives
-        Print("IA_LeaderboardManagerComponent: Replicated leaderboard data received on client.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA_LeaderboardManagerComponent: Replicated leaderboard data received on client.", LogLevel.NORMAL);
+        }
         GetOnLeaderboardDataUpdated().Invoke(m_sReplicatedLeaderboardJson);
     }
 	
 	private void OnServerLeaderboardDataChanged()
     {
         // This is called on clients when the server-specific data arrives
-        Print("IA_LeaderboardManagerComponent: Replicated SERVER leaderboard data received on client.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA_LeaderboardManagerComponent: Replicated SERVER leaderboard data received on client.", LogLevel.NORMAL);
+        }
         GetOnServerLeaderboardDataUpdated().Invoke(m_sReplicatedServerLeaderboardJson);
     }
 	
 	private void OnGlobalServerLeaderboardDataChanged()
 	{
 		// This is called on clients when the global server data arrives
-		Print("IA_LeaderboardManagerComponent: Replicated GLOBAL SERVER leaderboard data received on client.", LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print("IA_LeaderboardManagerComponent: Replicated GLOBAL SERVER leaderboard data received on client.", LogLevel.NORMAL);
+		}
 		GetOnGlobalServerLeaderboardDataUpdated().Invoke(m_sReplicatedGlobalServerLeaderboardJson);
 	}
 }; 

@@ -19,11 +19,17 @@ modded class SCR_AIMessageHandling
 
 		if (ShouldKeepVehicleCrewMounted(agent, vehicleEntity, relatedActivity))
 		{
-			Print(string.Format("[IA] StayMounted skip group GetOut from=%1", sendFrom), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA] StayMounted skip group GetOut from=%1", sendFrom), LogLevel.NORMAL);
+			}
 			return;
 		}
 
-		Print(string.Format("[IA] StayMounted allow group GetOut from=%1", sendFrom), LogLevel.DEBUG);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA] StayMounted allow group GetOut from=%1", sendFrom), LogLevel.NORMAL);
+		}
 
 		float dismountDelay = 0.9 * soldierId;
 

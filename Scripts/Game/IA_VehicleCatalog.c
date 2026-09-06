@@ -125,7 +125,10 @@ class IA_VehicleCatalog
 		array<Faction> EnemyFactions = {};
 		
 		if (config && config.m_sDesiredEnemyVehicleFactionKeys && !config.m_sDesiredEnemyVehicleFactionKeys.IsEmpty()) {
-			Print("[IA_VehicleCatalog] Using config override for enemy vehicle factions", LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("[IA_VehicleCatalog] Using config override for enemy vehicle factions", LogLevel.NORMAL);
+			}
 			
 			foreach (string factionKey : config.m_sDesiredEnemyVehicleFactionKeys) {
 				Faction configFaction = factionManager.GetFactionByKey(factionKey);
@@ -142,7 +145,10 @@ class IA_VehicleCatalog
 							
 							if (vehicleEntries.Count() >= 1) {
 								EnemyFactions.Insert(configFaction);
-								Print("[IA_VehicleCatalog] Added vehicle faction '" + factionKey + "' from config", LogLevel.NORMAL);
+								if (IA_Log.IsDebugEnabled())
+								{
+									Print("[IA_VehicleCatalog] Added vehicle faction '" + factionKey + "' from config", LogLevel.NORMAL);
+								}
 							} else {
 								Print("[IA_VehicleCatalog] Skipping vehicle faction '" + factionKey + "' - insufficient vehicles (" + vehicleEntries.Count() + ")", LogLevel.WARNING);
 							}
@@ -169,7 +175,10 @@ class IA_VehicleCatalog
 						array<SCR_EntityCatalogEntry> areaFactionEntityCatalogEntryArray = {};
 						areaFactionEntityCatalog.GetFullFilteredEntityList(areaFactionEntityCatalogEntryArray, includedLabels, excludedLabels);
 						if (areaFactionEntityCatalogEntryArray.Count() > 0){
-							Print("[IA_VehicleCatalog] No config override, using Area Faction for vehicle query", LogLevel.NORMAL);
+							if (IA_Log.IsDebugEnabled())
+							{
+								Print("[IA_VehicleCatalog] No config override, using Area Faction for vehicle query", LogLevel.NORMAL);
+							}
 							return areaFactionEntityCatalogEntryArray;
 						}
 					}
@@ -177,7 +186,10 @@ class IA_VehicleCatalog
 			}
 			
 			// Fallback to general enemy faction detection
-			Print("[IA_VehicleCatalog] Using default enemy vehicle faction detection", LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("[IA_VehicleCatalog] Using default enemy vehicle faction detection", LogLevel.NORMAL);
+			}
 			SCR_Faction USFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
 			array<Faction> AllFactions = {};
 			factionManager.GetFactionsList(AllFactions);

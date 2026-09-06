@@ -1,0 +1,68 @@
+GenericEntity {
+ ID "0E7AAF9FA0E25AC5"
+ components {
+  RplComponent "{47F6BE1FAC0D5F1D}" {
+  }
+  Hierarchy "{B4AF5EC85C7A516A}" {
+   Enabled 1
+  }
+  MeshObject "{5872F0EB7FA40561}" {
+   LODFactors {
+    5 2 1.5 1 1 1
+   }
+   Materials {
+    MaterialAssignClass "{5D749594E09A8DAB}" {
+     SourceMaterial "Color_Palette"
+     AssignedMaterial "{3AC33AF76AE6D370}Common/Materials/ColorPalette/Color_palette_02_HONEY_08_S1_R0.emat"
+    }
+    MaterialAssignClass "{5D749594E09A8DB2}" {
+     SourceMaterial "Default_Transparent"
+     AssignedMaterial "{C5AC5B15BAB1F9B3}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Decal.emat"
+    }
+    MaterialAssignClass "{5D749594E09A8D8D}" {
+     SourceMaterial "EquipmentBoxWooden_Explosives_01"
+     AssignedMaterial "{8BB3B94F7F3FBD15}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Explosives.emat"
+    }
+    MaterialAssignClass "{5D749594E09A8D82}" {
+     SourceMaterial "EquipmentBoxWooden_Medical_01"
+     AssignedMaterial "{92C8FBF3352B08E0}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Medical.emat"
+    }
+    MaterialAssignClass "{5D74959E5B864901}" {
+     SourceMaterial "Color_Palette"
+     AssignedMaterial "{3AC33AF76AE6D370}Common/Materials/ColorPalette/Color_palette_02_HONEY_08_S1_R0.emat"
+    }
+    MaterialAssignClass "{5D74959E5B864913}" {
+     SourceMaterial "Default_Transparent"
+     AssignedMaterial "{C5AC5B15BAB1F9B3}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Decal.emat"
+    }
+    MaterialAssignClass "{5D74959E5B8649EC}" {
+     SourceMaterial "EquipmentBoxWooden_Explosives_01"
+     AssignedMaterial "{8BB3B94F7F3FBD15}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Explosives.emat"
+    }
+    MaterialAssignClass "{5D74959E5B8649E3}" {
+     SourceMaterial "EquipmentBoxWooden_Medical_01"
+     AssignedMaterial "{92C8FBF3352B08E0}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Medical.emat"
+    }
+   }
+   Object "{56B55CB0378598D5}Assets/Props/Military/AmmoBox/EquipmentBoxStack/EquipmentBoxStack_01_V6.xob"
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   Mass 10
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{A97B3CC76DF9AF6B}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V6_cover.et" {
+   ID "5D30E783EA6F52C6"
+   coords 0 0 0
+   components {
+    Hierarchy "{56B68717E713A191}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

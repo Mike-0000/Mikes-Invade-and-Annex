@@ -1,0 +1,128 @@
+GenericEntity {
+ ID "F0CBB1DE31B15682"
+ components {
+  RplComponent "{44989EE35A62571F}" {
+  }
+  Hierarchy "{DB0B9D5795575961}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{D62D8AE1B94B5E9C}Prefabs/BaseCompositions/IA_Storage_Supplies_USSR_01_9DE738.et" {
+   ID "5D45393ACC919C9A"
+   coords 0.204 0 -4.889
+   components {
+    Hierarchy "{EB7508AECD7B51C8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{50A752B7D5E679A2}Prefabs/Props/Industrial/Repair/GasWelder_01.et" {
+   ID "5D0A8E7AFDAC920E"
+   coords 3.597 0 -1.791
+   angles 0 47.424 0
+   components {
+    Hierarchy "{E2F4A13E69D852AE}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{D7D7776C22BA51CC}Prefabs/BaseCompositions/IA_Sign_SupplyStorage_01_Vehicle_USSR_97873D.et" {
+   ID "5E6B10F93E713574"
+   coords -0.089 0 3.2
+   angles 0.802 3.81 2.554
+   components {
+    Hierarchy "{C5EAC37A98B15952}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{5D31850B326BA246}Prefabs/Props/Industrial/AirCompressor_01/AirCompressor_01.et" {
+   ID "5D36B9EC9356D3E0"
+   coords -1.095 0 -1.643
+   angles 0 -165.354 0
+   components {
+    Hierarchy "{ACA86A11FE225089}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9A48BE19E2D05348}Prefabs/BaseCompositions/IA_E_SupportStationSystem_Repair_CE6ADF.et" {
+   ID "5E69068807751152"
+   coords 0 0 2
+   components {
+    Hierarchy "{EBCBD375EB7151AE}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{90A74133C1DC6226}Prefabs/Props/Industrial/Repair/EngineCrane_01.et" {
+   ID "5D0A8E7AFDAC95E2"
+   coords -3.716 0 -2.052
+   angles 0 -2.546 0
+   components {
+    Hierarchy "{C3C423D7C41D57EC}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9B7F08BF4C938AD2}Prefabs/Structures/Military/Camps/Canvas_Covers/Soviet/CanvasCover_Medium_Soviet.et" {
+   ID "5D088D15BE9D6D0C"
+   coords -1.661 0 -3.729
+   components {
+    Hierarchy "{F1D4CBA33CD35777}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9B7F08BF4C938AD2}Prefabs/Structures/Military/Camps/Canvas_Covers/Soviet/CanvasCover_Medium_Soviet.et" {
+   ID "5D088D15BE9E8798"
+   coords 1.64 0 -3.729
+   components {
+    Hierarchy "{F1D4CBA33CD35777}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B557358F8F64AE31}Prefabs/Props/Industrial/Repair/HydraulicCarJack_01.et" {
+   ID "5D0A8E7AFDAC95C1"
+   coords -3.076 0 -1.646
+   angles 0 -138.311 0
+   components {
+    Hierarchy "{736FDA491DAA57E2}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D088D15BE9D6CB2"
+   coords 0.093 0 -3.36
+   angles 0 -92.54 0
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B0C21D8B78565358}Prefabs/BaseCompositions/IA_Chair_Light_USSR_01_78ACBF.et" {
+   ID "5D1ED9044D2324D1"
+   coords -0.772 0 -2.467
+   angles 0 35.891 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{DF649B29EC7635F3}Prefabs/Structures/Military/Fortifications/DirtPile_01/DirtPile_01_small.et" {
+   ID "5E330D6A52886874"
+   coords -0.121 0 3.214
+   components {
+    Hierarchy "{6D2B575F5AC85AD1}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,52 @@
+GenericEntity {
+ ID "2C752935D8735FF7"
+ components {
+  RplComponent "{057D5D9BF3105686}" {
+  }
+  Hierarchy "{824D1A5B520F521C}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{B03F9691E961C4CA}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v3.et" {
+   ID "5CB0D996E74F3603"
+   coords 0.211 0 -0.05
+   angles 0 178.26 0
+   components {
+    Hierarchy "{F019C4CC5EDB5206}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CB0D996E74F360C"
+   coords 1.087 0 0.033
+   angles 0 -1.74 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CB0D996E74F360F"
+   coords -0.876 0 -0.047
+   angles 0 178.26 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{DA34DC311BF6D0CB}Prefabs/Structures/Signs/Military/SignRectangle_01_140x100/Sign_Warzone_USSR_01.et" {
+   ID "5CB0D996E74F360B"
+   coords 0 0.666 0
+   components {
+    Hierarchy "{EEF5010A869D5E89}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

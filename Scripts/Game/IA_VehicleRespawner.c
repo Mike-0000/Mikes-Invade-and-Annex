@@ -113,7 +113,10 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			return string.Empty;
 		}
 
-		Print(string.Format("IA_VehicleRespawner %1: Got config instance, checking spawn type: %2", m_RespawnerOwnerEntity, typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("IA_VehicleRespawner %1: Got config instance, checking spawn type: %2", m_RespawnerOwnerEntity, typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.NORMAL);
+		}
 
 		array<ResourceName> vehicleArray;
 		
@@ -161,14 +164,20 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 		
 		if (vehicleArray.Count() == 0)
 		{
-			Print(string.Format("IA_VehicleRespawner %1: No vehicle prefabs configured for spawn type: %2 (array exists but is empty)", m_RespawnerOwnerEntity, typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("IA_VehicleRespawner %1: No vehicle prefabs configured for spawn type: %2 (array exists but is empty)", m_RespawnerOwnerEntity, typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.NORMAL);
+			}
 			return string.Empty;
 		}
 
 		// Return a random prefab from the array
 		int randomIndex = Math.RandomInt(0, vehicleArray.Count());
 		string selectedPrefab = vehicleArray[randomIndex];
-		Print(string.Format("IA_VehicleRespawner %1: Selected prefab %2 (index %3 of %4) for spawn type: %5", m_RespawnerOwnerEntity, selectedPrefab, randomIndex, vehicleArray.Count(), typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("IA_VehicleRespawner %1: Selected prefab %2 (index %3 of %4) for spawn type: %5", m_RespawnerOwnerEntity, selectedPrefab, randomIndex, vehicleArray.Count(), typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.NORMAL);
+		}
 		return selectedPrefab;
 	}
 	//------------------------------------------------------------------------------------------------
@@ -216,13 +225,19 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			
 			if (isHeli && config.m_bDisableHQHelipads)
 			{
-				Print(string.Format("IA_VehicleRespawner %1: Spawning disabled by config (HQ Helicopters).", m_RespawnerOwnerEntity), LogLevel.DEBUG);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print(string.Format("IA_VehicleRespawner %1: Spawning disabled by config (HQ Helicopters).", m_RespawnerOwnerEntity), LogLevel.NORMAL);
+				}
 				return;
 			}
 			
 			if (!isHeli && config.m_bDisableHQGroundVehicles)
 			{
-				Print(string.Format("IA_VehicleRespawner %1: Spawning disabled by config (HQ Ground Vehicles).", m_RespawnerOwnerEntity), LogLevel.DEBUG);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print(string.Format("IA_VehicleRespawner %1: Spawning disabled by config (HQ Ground Vehicles).", m_RespawnerOwnerEntity), LogLevel.NORMAL);
+				}
 				return;
 			}
 		}
@@ -264,16 +279,22 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			}
 			else
 			{
-				Print(string.Format("IA_VehicleRespawner %1: Using catalog fallback for spawn type: %2", 
-					m_RespawnerOwnerEntity, 
-					typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print(string.Format("IA_VehicleRespawner %1: Using catalog fallback for spawn type: %2", 
+						m_RespawnerOwnerEntity, 
+						typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.NORMAL);
+				}
 			}
 		}
 		else
 		{
-			Print(string.Format("IA_VehicleRespawner %1: Using config override for spawn type: %2", 
-				m_RespawnerOwnerEntity, 
-				typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.DEBUG);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("IA_VehicleRespawner %1: Using config override for spawn type: %2", 
+					m_RespawnerOwnerEntity, 
+					typename.EnumToString(IA_VehicleSpawnType, m_eVehicleSpawnType)), LogLevel.NORMAL);
+			}
 		}
 		
 		Resource resource = Resource.Load(vehiclePrefabToSpawn);

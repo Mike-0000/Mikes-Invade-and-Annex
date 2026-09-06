@@ -1,0 +1,24 @@
+GenericEntity {
+ ID "C89C4E17A88258C6"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{1A0003104F1D5AA2}Prefabs/DynamicBase/IA_InfrastructureAsset_floodlight.et" {
+   ID "AA83AADB498A5C95"
+   components {
+    Hierarchy "{C8C88265A0C45704}" {
+     Enabled 1
+    }
+   }
+   coords 0 0.009675 0
+   angles 0 0 0
+  }
+ }
+}

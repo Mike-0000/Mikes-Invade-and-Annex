@@ -2,6 +2,8 @@
 
 Status: proposed implementation plan. No gameplay changes made. Numerical values below are starting points for playtesting, not verified engine limits.
 
+**Implementation handoff:** Read [DYNAMIC_BASE_IMPLEMENTATION_RUNBOOK.md](DYNAMIC_BASE_IMPLEMENTATION_RUNBOOK.md) after this overview. The runbook resolves implementation choices, specifies interfaces and settings transport, and provides ordered work packages and acceptance cases. Where this overview offers alternatives, the runbook's v1 decisions take precedence. Existing source code takes precedence over line numbers and API examples in either document.
+
 ## Recommended experience
 
 After the required objectives in an AO are complete, reveal a newly placed enemy operating base. Players converge, assault it, capture its command area, reorganize inside the base, then defend that same position against a counterattack. Only then does the AO complete.

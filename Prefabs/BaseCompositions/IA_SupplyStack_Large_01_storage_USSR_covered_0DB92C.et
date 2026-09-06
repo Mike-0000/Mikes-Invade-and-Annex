@@ -1,0 +1,60 @@
+GenericEntity {
+ ID "C84C47BA1BB9563B"
+ components {
+  RplComponent "{56F616AFE12A5A2C}" {
+  }
+  Hierarchy "{40D2A11B72B9547F}" {
+   Enabled 1
+  }
+  MeshObject "{5872F0EB7FA40561}" {
+   LODFactors {
+    5 2 1.5 1 1 1
+   }
+   Object "{B8A18DA1DEC04635}Assets/Props/Military/AmmoBox/EquipmentBoxStack/EquipmentBoxStack_01_V4.xob"
+   Materials {
+    MaterialAssignClass "{5D6686C533878AE4}" {
+     SourceMaterial "Color_Palette"
+     AssignedMaterial "{3AC33AF76AE6D370}Common/Materials/ColorPalette/Color_palette_02_HONEY_08_S1_R0.emat"
+    }
+    MaterialAssignClass "{5D6686C533878AC6}" {
+     SourceMaterial "Common/Materials/Default_Transparent"
+     AssignedMaterial "{C5AC5B15BAB1F9B3}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Decal.emat"
+    }
+    MaterialAssignClass "{5D6686C533878AB1}" {
+     SourceMaterial "EquipmentBoxWooden_Ammunition_01"
+     AssignedMaterial "{6EA65B66922A8044}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Ammu.emat"
+    }
+    MaterialAssignClass "{5D6686C533878ABB}" {
+     SourceMaterial "EquipmentBoxWooden_Explosives_01"
+     AssignedMaterial "{8BB3B94F7F3FBD15}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Explosives.emat"
+    }
+    MaterialAssignClass "{5D6686C533878AA1}" {
+     SourceMaterial "EquipmentBoxWooden_Launcher_01"
+     AssignedMaterial "{B32DAFCE14A90676}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Launcher.emat"
+    }
+    MaterialAssignClass "{5D6686C533878AA9}" {
+     SourceMaterial "EquipmentBoxWooden_Weapon_01"
+     AssignedMaterial "{97100C6233B2CC2A}Assets/Props/Military/SupplyBox/SupplyStack/SupplyStack_Large_01/Data/SupplyStack_Large_01_Weapon.emat"
+    }
+   }
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   Mass 10
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{178B5DA72EB74160}Prefabs/Props/Military/AmmoBoxes/EquipmentBoxStack/USSR/EquipmentBoxStack_USSR_01_V4_cover.et" {
+   ID "5D3085BCBE7D9302"
+   coords 0 0 0
+   components {
+    Hierarchy "{56B68717E713A191}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

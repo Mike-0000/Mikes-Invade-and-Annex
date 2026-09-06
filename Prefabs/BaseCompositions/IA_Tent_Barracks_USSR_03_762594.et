@@ -1,0 +1,157 @@
+GenericEntity {
+ ID "F0B18BF9342857FF"
+ components {
+  RplComponent "{73791A506083531C}" {
+  }
+  Hierarchy "{FC85D469FF445299}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{698401813A165973}Prefabs/BaseCompositions/IA_Bed_Notebook_USSR_01_2D5C8B.et" {
+   ID "5CC4A438BAFCC4B2"
+   coords 2.454 0.174 -1.68
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{698401813A165973}Prefabs/BaseCompositions/IA_Bed_Notebook_USSR_01_2D5C8B.et" {
+   ID "5CC4A438BAFCC4B7"
+   coords -2.316 0.182 1.74
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CC4A438BAFCC4BF"
+   coords 0.037 0.187 0.789
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{F6C167A06A035E13}Prefabs/BaseCompositions/IA_Chair_NightStand_USSR_04_ABFE40.et" {
+   ID "5CC4A438BAFCC4BA"
+   coords 2.423 0.188 0.315
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6AD7BFA352A25749}Prefabs/BaseCompositions/IA_Crate_Bottles_01_2708E0.et" {
+   ID "5CC4A438BAFCC4C2"
+   coords 0.648 0.174 -2.397
+   components {
+    Hierarchy "{A90B0671B17A5E21}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6AD7BFA352A25749}Prefabs/BaseCompositions/IA_Crate_Bottles_01_2708E0.et" {
+   ID "5CC4A438BAFCC4C6"
+   coords -2.259 0.175 1.003
+   components {
+    Hierarchy "{A90B0671B17A5E21}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C8F78A890B0B5F6C}Prefabs/BaseCompositions/IA_Table_Desk_USSR_02_060347.et" {
+   ID "5CC4A438BAFCC4CF"
+   coords 0.024 0.187 0.423
+   components {
+    Hierarchy "{62F314506BAF5186}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C8DC4D5192C95E2D}Prefabs/BaseCompositions/IA_CardboardBox_Ashtray_01_84CCF9.et" {
+   ID "5CC4A438BAFCC4C8"
+   coords -1.52 0.176 -2.429
+   components {
+    Hierarchy "{0BEFB4AFD75B5AFB}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{9F7211592BE80DC2}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/TentUSSR_01_CompositionDestruction.et" {
+   ID "5CC4A438BAFCC4A0"
+   coords 0 0 0
+   components {
+    Hierarchy "{5A588831BE1DF592}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4A438BAFCC4D4"
+   coords 2.466 0.168 1.792
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4A438BAFCC4D7"
+   coords -2.329 0.175 -1.743
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C76C3AF337109066}Prefabs/Props/Crates/CardboardBoxStack_01.et" {
+   ID "5CC4A438BAFCC4D1"
+   coords 2.489 -0.246 1.238
+   components {
+    Hierarchy "{E771922A3ED052E6}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C76C3AF337109066}Prefabs/Props/Crates/CardboardBoxStack_01.et" {
+   ID "5CC4A438BAFCC4DE"
+   coords -2.334 0.175 0.03
+   components {
+    Hierarchy "{E771922A3ED052E6}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C99D1B2E817E12D9}Prefabs/Props/Military/Furniture/TableMilitary_USSR_02_cabinet.et" {
+   ID "5CC4A438BAFCC4DD"
+   coords 1.625 0.202 -2.509
+   components {
+    Hierarchy "{A75835BF8FCA57EE}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{EB34D3754D245EF0}Prefabs/BaseCompositions/IA_Bed_Blankets_USSR_01_CE80A1.et" {
+   ID "5CC4A438BAFCC4DB"
+   coords 0.098 0.185 -2.398
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{3D09659FBB665EB8}Prefabs/BaseCompositions/IA_Chair_NightStand_USSR_05_1F82C9.et" {
+   ID "5CC4A438BAFCC4E7"
+   coords 2.28 0.189 -0.213
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

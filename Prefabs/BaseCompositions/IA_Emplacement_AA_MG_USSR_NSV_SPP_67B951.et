@@ -1,0 +1,93 @@
+GenericEntity {
+ ID "D42DCBAB697A5CA2"
+ components {
+  RplComponent "{B8219AC31DFA5101}" {
+  }
+  Hierarchy "{898E026F9C255975}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{39F7EE885940DC8F}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v1.et" {
+   ID "6530770E3E2ACD12"
+   coords 2.229 0 0.204
+   angles 0 70.894 0
+   components {
+    Hierarchy "{E9A971FCEF575148}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{79AA43911CC6C3E8}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Small_Soviet.et" {
+   ID "6530770E3E2ACD16"
+   coords 0.536 0 -0.104
+   angles 0 -0.218 0
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7AF4B627D5C90235}Prefabs/Props/Military/Sandbags/Sandbag_01_round_high_burlap.et" {
+   ID "6530770E3E2A18E6"
+   coords -1.407 0 0.389
+   angles 0 -70.107 0
+   components {
+    Hierarchy "{0D7D44C9DF5159F3}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7AF4B627D5C90235}Prefabs/Props/Military/Sandbags/Sandbag_01_round_high_burlap.et" {
+   ID "6530770E3E2A18E7"
+   coords 2.225 0 0.157
+   angles 0 82.054 0
+   components {
+    Hierarchy "{0D7D44C9DF5159F3}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7AF4B627D5C90235}Prefabs/Props/Military/Sandbags/Sandbag_01_round_high_burlap.et" {
+   ID "6530770E3E2A5368"
+   coords 0.542 0 1.666
+   angles 0 1.833 0
+   components {
+    Hierarchy "{0D7D44C9DF5159F3}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{937999008F178E82}Prefabs/Props/Military/Sandbags/Sandbag_01_short_high_burlap.et" {
+   ID "6530770E3E2ACD11"
+   coords 0.691 -0.518 1.323
+   angles 0 -79.953 0
+   components {
+    Hierarchy "{58E15AFCD4F05489}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B03F9691E961C4CA}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v3.et" {
+   ID "6530770E3E2A536C"
+   coords 0.547 0 1.628
+   angles 0 -0.881 0
+   components {
+    Hierarchy "{F019C4CC5EDB5206}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B03F9691E961C4CA}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v3.et" {
+   ID "6530770E3E2A536F"
+   coords -1.654 0 0.202
+   angles 0 -59.997 0
+   components {
+    Hierarchy "{F019C4CC5EDB5206}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

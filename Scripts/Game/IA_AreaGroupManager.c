@@ -32,7 +32,10 @@ class IA_AreaGroupManager
     void IA_AreaGroupManager(array<ref IA_AreaInstance> instances)
     {
         m_areaInstances = instances;
-        Print(string.Format("[AreaGroupManager] Created for a group with %1 area instances.", m_areaInstances.Count()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[AreaGroupManager] Created for a group with %1 area instances.", m_areaInstances.Count()), LogLevel.NORMAL);
+        }
     }
 
     // --- QRF (Quick Reaction Force) System ---
@@ -86,6 +89,11 @@ class IA_AreaGroupManager
         }
     }
 
+    bool ContainsLiveArea(IA_AreaInstance area)
+    {
+        return !m_bShutDown && area && !area.IsShutDown() && m_areaInstances.Find(area) != -1;
+    }
+
     void QRFTask()
     {
         if (m_bShutDown)
@@ -105,6 +113,8 @@ class IA_AreaGroupManager
         if (!forDefend && IA_MissionInitializer.IsQRFDisabled())
             return; // QRF globally disabled (legacy defend holds still get QRF)
 
+        if (!forDefend && IA_MissionInitializer.BlocksAutomaticPressure())
+            return;
         if (!forDefend && IA_GmDirector.IsAutoQrfOff())
             return;
 
@@ -121,7 +131,10 @@ class IA_AreaGroupManager
         if (currentTime - m_lastQRFCheckTime < checkInterval)
             return;
         m_lastQRFCheckTime = currentTime;
-        Print(string.Format("[QRF] Running for group with %1 areas.", m_areaInstances.Count()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[QRF] Running for group with %1 areas.", m_areaInstances.Count()), LogLevel.NORMAL);
+        }
 
         IA_AreaInstance closestArea = null;
         vector finalTarget = vector.Zero;
@@ -148,7 +161,10 @@ class IA_AreaGroupManager
             }
             if (!groupUnderAttack)
             {
-                Print("[QRF] Check failed: No area in the group is under attack.", LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print("[QRF] Check failed: No area in the group is under attack.", LogLevel.NORMAL);
+                }
                 return;
             }
 
@@ -156,7 +172,10 @@ class IA_AreaGroupManager
             bool hasTarget = ComputeGroupThreatTarget(targetPos);
             if (!hasTarget || targetPos == vector.Zero)
             {
-                Print("[QRF] Aborted: No valid recent danger events to target.", LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print("[QRF] Aborted: No valid recent danger events to target.", LogLevel.NORMAL);
+                }
                 return;
             }
 
@@ -171,21 +190,30 @@ class IA_AreaGroupManager
         if (currentTime - m_lastQRFTime < cooldown)
         {
             int remaining = cooldown - (currentTime - m_lastQRFTime);
-            Print(string.Format("[QRF] Global cooldown active: %1s remaining.", remaining), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[QRF] Global cooldown active: %1s remaining.", remaining), LogLevel.NORMAL);
+            }
             return;
         }
 
         float roll = IA_Game.rng.RandFloat01();
         if (roll > chance)
         {
-            Print(string.Format("[QRF] Global chance failed (roll %1 > %2).", roll, chance), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[QRF] Global chance failed (roll %1 > %2).", roll, chance), LogLevel.NORMAL);
+            }
             return;
         }
 
         IA_QRFType selectedType = SelectQRFType(forDefend);
 
-        Print(string.Format("[QRF] Selected %1; closest area '%2'; final target %3. Attempting spawn...",
-            QRFTypeToString(selectedType), closestArea.GetArea().GetName(), finalTarget.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[QRF] Selected %1; closest area '%2'; final target %3. Attempting spawn...",
+                QRFTypeToString(selectedType), closestArea.GetArea().GetName(), finalTarget.ToString()), LogLevel.NORMAL);
+        }
 
         bool spawned = SpawnQRFForTarget(selectedType, finalTarget, closestArea, null, forDefend, false);
         if (spawned)
@@ -356,8 +384,11 @@ class IA_AreaGroupManager
 
         IA_QRFType type = SelectQRFType(true);
 
-        Print(string.Format("[QRF] Defend mid-hold beat selected %1 toward %2",
-            QRFTypeToString(type), defendPoint.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[QRF] Defend mid-hold beat selected %1 toward %2",
+                QRFTypeToString(type), defendPoint.ToString()), LogLevel.NORMAL);
+        }
 
         return SpawnQRFForTarget(type, defendPoint, areaInst, enemyFaction, true, false);
     }
@@ -462,7 +493,10 @@ class IA_AreaGroupManager
         if (count > 0)
         {
             groupCenter = totalPos / count;
-            Print(string.Format("[QRF] Calculated area group center: %1", groupCenter), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[QRF] Calculated area group center: %1", groupCenter), LogLevel.NORMAL);
+            }
         }
         else
         {
@@ -492,7 +526,10 @@ class IA_AreaGroupManager
                         }
                         else
                         {
-                            Print(string.Format("[QRF] Discarded danger event at %1, too far from group center %2 (Distance: %3m, Max: %4m)", currentDangerPos, groupCenter, vector.Distance(currentDangerPos, groupCenter), MAX_DANGER_EVENT_DISTANCE), LogLevel.NORMAL);
+                            if (IA_Log.IsDebugEnabled())
+                            {
+                                Print(string.Format("[QRF] Discarded danger event at %1, too far from group center %2 (Distance: %3m, Max: %4m)", currentDangerPos, groupCenter, vector.Distance(currentDangerPos, groupCenter), MAX_DANGER_EVENT_DISTANCE), LogLevel.NORMAL);
+                            }
                         }
                     }
                 }
@@ -501,7 +538,10 @@ class IA_AreaGroupManager
 
         if (relevantPositions.IsEmpty())
         {
-            Print("[QRF] No recent danger events found across area group.", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[QRF] No recent danger events found across area group.", LogLevel.NORMAL);
+            }
             return false;
         }
 
@@ -511,7 +551,10 @@ class IA_AreaGroupManager
         vector primaryThreatLocation = relevantPositions[medianIndex];
         outTarget = IA_Game.rng.GenerateRandomPointInRadius(4, 30, primaryThreatLocation);
         outTarget[1] = GetGame().GetWorld().GetSurfaceY(outTarget[0], outTarget[2]);
-        Print(string.Format("[QRF] Target determined (Median+jitter): %1 for area group.", outTarget), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[QRF] Target determined (Median+jitter): %1 for area group.", outTarget), LogLevel.NORMAL);
+        }
         return true;
     }
 
@@ -537,7 +580,10 @@ class IA_AreaGroupManager
             return false;
         if (targetAreaInst.GetOwningFaction() == IA_Faction.US)
         {
-            Print("[QRF] Spawn skipped: target area already captured.", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[QRF] Spawn skipped: target area already captured.", LogLevel.NORMAL);
+            }
             return false;
         }
 
@@ -559,7 +605,11 @@ class IA_AreaGroupManager
             spawnCenter = targetAreaInst.GetArea().GetOrigin();
 
         int activeGroup = IA_VehicleManager.GetActiveGroup();
-        vector infAnchor = IA_SpawnPlacement.FindReinforcementInfantryOrigin(spawnCenter, -1);
+        vector infAnchor;
+        if (forDefendMission)
+            infAnchor = IA_SpawnPlacement.FindDefendWaveInfantryOrigin(spawnCenter, -1);
+        else
+            infAnchor = IA_SpawnPlacement.FindReinforcementInfantryOrigin(spawnCenter, -1);
         vector vehAnchor = IA_SpawnPlacement.FindInboundVehicleSpawn(spawnCenter, activeGroup, -1);
 
         bool success = false;
@@ -617,8 +667,11 @@ class IA_AreaGroupManager
             else
                 notif = QRFTypeToString(type) + " inbound at " + areaName + "!";
             IA_Game.S_TriggerGlobalNotification("ReinforcementsCalled", notif);
-            Print(string.Format("[QRF] %1 spawned towards %2 at %3 (defendBeat=%4)",
-                QRFTypeToString(type), areaName, targetPos.ToString(), forDefendMission), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[QRF] %1 spawned towards %2 at %3 (defendBeat=%4)",
+                    QRFTypeToString(type), areaName, targetPos.ToString(), forDefendMission), LogLevel.NORMAL);
+            }
         }
         else
         {
@@ -659,8 +712,22 @@ class IA_AreaGroupManager
         else if (vector.Distance(spawnPos, vector.Zero) < 50)
             preferredUsable = false;
 
-        if (!preferredUsable)
+        if (forDefendMission)
+        {
+            if (!preferredUsable)
+                spawnPos = IA_SpawnPlacement.FindDefendWaveInfantryOrigin(targetPos, -1);
+            else
+            {
+                ref array<vector> players = new array<vector>();
+                IA_SpawnPlacement.CollectPlayerPositions(players);
+                if (IA_SpawnPlacement.IsNearAnyPlayer(spawnPos, players, IA_SpawnPlacement.DEFEND_WAVE_PLAYER_MIN_M))
+                    spawnPos = IA_SpawnPlacement.FindDefendWaveInfantryOrigin(targetPos, -1);
+            }
+        }
+        else if (!preferredUsable)
+        {
             spawnPos = IA_SpawnPlacement.FindReinforcementInfantryOrigin(areaInst.GetArea().GetOrigin(), -1);
+        }
 
         if (spawnPos == vector.Zero)
         {
@@ -738,7 +805,10 @@ class IA_AreaGroupManager
             delayMs = delayMs + Math.RandomInt(0, span + 1);
 
         GetGame().GetCallqueue().CallLater(this.OnAirborneQRFSpawn, delayMs, false);
-        Print(string.Format("[QRF] Airborne inbound, drop in %1s.", (delayMs / 1000).ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[QRF] Airborne inbound, drop in %1s.", (delayMs / 1000).ToString()), LogLevel.NORMAL);
+        }
         return true;
     }
 
@@ -779,11 +849,15 @@ class IA_AreaGroupManager
         vector dropLz;
         bool foundLz = false;
         if (forDefendMission)
+        {
             foundLz = IA_SpawnPlacement.TryFindDefendDropLz(attackTarget, m_airborneHotDrop, dropLz, m_recentDropLzs);
-        if (!foundLz)
+        }
+        else
+        {
             foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz);
-        if (!foundLz)
-            foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz);
+            if (!foundLz)
+                foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz);
+        }
         if (!foundLz)
         {
             Print("[QRF] Airborne miss: no open-sky LZ.", LogLevel.WARNING);
@@ -809,8 +883,11 @@ class IA_AreaGroupManager
         }
 
         RememberDropLz(dropLz);
-        Print(string.Format("[QRF] Airborne LZ %1 attack %2 dist=%3 hot=%4",
-            dropLz.ToString(), attackTarget.ToString(), vector.Distance(dropLz, attackTarget), m_airborneHotDrop), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[QRF] Airborne LZ %1 attack %2 dist=%3 hot=%4",
+                dropLz.ToString(), attackTarget.ToString(), vector.Distance(dropLz, attackTarget), m_airborneHotDrop), LogLevel.NORMAL);
+        }
 
         int remaining = jumperCount;
         int teamIndex = 0;
@@ -1160,7 +1237,10 @@ class IA_AreaGroupManager
                     if (mortarPit.IssueMortarFireMission(defensePos, defenseShots))
                     {
                         m_lastPitDefenseFireTime = currentTime;
-                        Print(string.Format("[ArtilleryStrike] Pit defense fire: %1 rounds at %2", defenseShots, defensePos), LogLevel.NORMAL);
+                        if (IA_Log.IsDebugEnabled())
+                        {
+                            Print(string.Format("[ArtilleryStrike] Pit defense fire: %1 rounds at %2", defenseShots, defensePos), LogLevel.NORMAL);
+                        }
                     }
                 }
                 return;
@@ -1172,7 +1252,10 @@ class IA_AreaGroupManager
             int remaining = m_artilleryStrikeImpactDelay - (currentTime - m_artilleryStrikeSmokeTime);
             if (remaining > 0)
             {
-                Print(string.Format("[ArtilleryStrike] Waiting for smoke-to-impact delay. %1s remaining.", remaining), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[ArtilleryStrike] Waiting for smoke-to-impact delay. %1s remaining.", remaining), LogLevel.NORMAL);
+                }
                 return;
             }
 
@@ -1188,8 +1271,10 @@ class IA_AreaGroupManager
             bool fired = mortarPit.IssueMortarFireMission(m_artilleryStrikeCenter, shotCount);
             if (!fired)
                 Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
-            else
+            else if (IA_Log.IsDebugEnabled())
+            {
                 Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, m_artilleryStrikeCenter, cooldown), LogLevel.NORMAL);
+            }
 
             ClearPendingArtilleryStrike();
             m_lastArtilleryStrikeEndTime = currentTime;
@@ -1198,13 +1283,19 @@ class IA_AreaGroupManager
 
         if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
         {
-            Print("[ArtilleryStrike] Check failed: No usable mortar pit crew in this AO group.", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[ArtilleryStrike] Check failed: No usable mortar pit crew in this AO group.", LogLevel.NORMAL);
+            }
             return;
         }
 
         if (currentTime - m_lastArtilleryStrikeCheckTime < ARTILLERY_CHECK_INTERVAL)
         {
-            Print(string.Format("[ArtilleryStrike] Check skipped: interval not yet met. %1s remaining.", ARTILLERY_CHECK_INTERVAL - (currentTime - m_lastArtilleryStrikeCheckTime)), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[ArtilleryStrike] Check skipped: interval not yet met. %1s remaining.", ARTILLERY_CHECK_INTERVAL - (currentTime - m_lastArtilleryStrikeCheckTime)), LogLevel.NORMAL);
+            }
             return;
         }
         m_lastArtilleryStrikeCheckTime = currentTime;
@@ -1222,28 +1313,43 @@ class IA_AreaGroupManager
         }
         if (!groupUnderAttack)
         {
-            Print("[ArtilleryStrike] Check failed: No area in the group is under attack.", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[ArtilleryStrike] Check failed: No area in the group is under attack.", LogLevel.NORMAL);
+            }
             return;
         }
-        Print(string.Format("[ArtilleryStrike] Passed 'Under Attack' check. Area '%1' is under attack.", attackedAreaName), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[ArtilleryStrike] Passed 'Under Attack' check. Area '%1' is under attack.", attackedAreaName), LogLevel.NORMAL);
+        }
 
         if (currentTime - m_lastArtilleryStrikeEndTime < cooldown)
         {
-            Print(string.Format("[ArtilleryStrike] Check failed: On cooldown. %1 seconds remaining.", cooldown - (currentTime - m_lastArtilleryStrikeEndTime)), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[ArtilleryStrike] Check failed: On cooldown. %1 seconds remaining.", cooldown - (currentTime - m_lastArtilleryStrikeEndTime)), LogLevel.NORMAL);
+            }
             return;
         }
 
         float randomRoll = IA_Game.rng.RandFloat01();
         if (randomRoll > strikeChance)
         {
-            Print(string.Format("[ArtilleryStrike] Check failed: Random chance not met (Rolled %1, needed <= %2).", randomRoll, strikeChance), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[ArtilleryStrike] Check failed: Random chance not met (Rolled %1, needed <= %2).", randomRoll, strikeChance), LogLevel.NORMAL);
+            }
             return;
         }
 
         vector targetPos;
         if (!ComputeGroupThreatTarget(targetPos))
         {
-            Print("[ArtilleryStrike] Strike aborted for area group. No recent danger events found.", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[ArtilleryStrike] Strike aborted for area group. No recent danger events found.", LogLevel.NORMAL);
+            }
             return;
         }
 
@@ -1252,7 +1358,10 @@ class IA_AreaGroupManager
         m_artillerySmokeSpawned = true;
         m_artilleryStrikeSmokeTime = currentTime;
         m_artilleryStrikeImpactDelay = PickArtilleryImpactDelay(minDelay, maxDelay);
-        Print(string.Format("[ArtilleryStrike] Warning smoke spawned at %1. Impact in %2 seconds.", targetPos, m_artilleryStrikeImpactDelay), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[ArtilleryStrike] Warning smoke spawned at %1. Impact in %2 seconds.", targetPos, m_artilleryStrikeImpactDelay), LogLevel.NORMAL);
+        }
     }
 
     protected void ClearPendingArtilleryStrike()
@@ -1274,7 +1383,10 @@ class IA_AreaGroupManager
 
     protected void SpawnArtilleryWarningSmoke(vector center)
     {
-        Print(string.Format("[ArtilleryStrike] Spawning 6 warning smoke markers around %1.", center), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[ArtilleryStrike] Spawning 6 warning smoke markers around %1.", center), LogLevel.NORMAL);
+        }
         ref Resource smokeRes = Resource.Load(RED_SMOKE_EFFECT_PREFAB);
         if (!smokeRes)
         {
@@ -1302,4 +1414,4 @@ class IA_AreaGroupManager
         }
         return null;
     }
-}; 
+};

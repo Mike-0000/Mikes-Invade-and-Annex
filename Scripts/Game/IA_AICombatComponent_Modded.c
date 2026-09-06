@@ -17,7 +17,10 @@ modded class SCR_AICombatComponent
 		{
 			if (!m_bLoggedStayMountedTurretSkip)
 			{
-				Print("[IA] StayMounted skip turret-dismount (movable vehicle)", LogLevel.DEBUG);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print("[IA] StayMounted skip turret-dismount (movable vehicle)", LogLevel.NORMAL);
+				}
 				m_bLoggedStayMountedTurretSkip = true;
 			}
 

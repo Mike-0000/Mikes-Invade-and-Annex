@@ -1,0 +1,238 @@
+GenericEntity {
+ ID "B4CD0903EE755E2F"
+ components {
+  RplComponent "{412865A5510450A1}" {
+  }
+  Hierarchy "{13DCA554B2925479}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CCCBEF208CBD5D5"
+   coords -2.59 0 1.314
+   angles 0 -42.931 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{18982CB5D0D29247}Prefabs/Props/Civilian/BeerBottle_01_empty_brown.et" {
+   ID "5CCCBEF208CBD521"
+   coords -2.066 0 1.375
+   components {
+    Hierarchy "{66AA72680C91AD08}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{18982CB5D0D29247}Prefabs/Props/Civilian/BeerBottle_01_empty_brown.et" {
+   ID "5CCCBEF208CBD532"
+   coords 0.28 0.044 -0.507
+   angles 0 0 -90
+   components {
+    Hierarchy "{66AA72680C91AD08}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{18982CB5D0D29247}Prefabs/Props/Civilian/BeerBottle_01_empty_brown.et" {
+   ID "5CCCBEF208CBD553"
+   coords -2.205 0 1.447
+   components {
+    Hierarchy "{66AA72680C91AD08}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6AD7BFA352A25749}Prefabs/BaseCompositions/IA_Crate_Bottles_01_2708E0.et" {
+   ID "5CCCBEF208CBD561"
+   coords 2.402 0 -0.732
+   angles 0 109.149 0
+   components {
+    Hierarchy "{A90B0671B17A5E21}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6AD7BFA352A25749}Prefabs/BaseCompositions/IA_Crate_Bottles_01_2708E0.et" {
+   ID "5CCCBEF208CBD5BE"
+   coords 2.381 0 -1.271
+   angles 0 38.183 0
+   components {
+    Hierarchy "{A90B0671B17A5E21}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{FE18970E6CFB57E5}Prefabs/BaseCompositions/IA_Sandbag_Camo_long_high_USSR_074E76.et" {
+   ID "5CCCBEF208CBDAE6"
+   coords 3.392 0 -0.943
+   angles 0 -87.176 0
+   components {
+    Hierarchy "{983AC77B99D050B6}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7AF4B627D5C90235}Prefabs/Props/Military/Sandbags/Sandbag_01_round_high_burlap.et" {
+   ID "5CCCBEF208CBD799"
+   coords 2.371 0 1.716
+   angles 0 30 0
+   components {
+    Hierarchy "{0D7D44C9DF5159F3}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{8963CD1DC1CDB614}Prefabs/Props/Civilian/BeerBottle_01_brown.et" {
+   ID "5CCCBEF208CBD541"
+   coords 2.161 0.046 -1.454
+   angles 0 0 -90
+   components {
+    Hierarchy "{66AA72680C91AD08}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{8963CD1DC1CDB614}Prefabs/Props/Civilian/BeerBottle_01_brown.et" {
+   ID "5CCCBEF208CBD572"
+   coords 2.367 0 -1.642
+   components {
+    Hierarchy "{66AA72680C91AD08}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B03F9691E961C4CA}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v3.et" {
+   ID "5CCCBEF208CBD46B"
+   coords 3.317 0 -1.832
+   angles 0 -88.878 0
+   components {
+    Hierarchy "{F019C4CC5EDB5206}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B03F9691E961C4CA}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v3.et" {
+   ID "5CCCBEF208CBD48F"
+   coords -2.509 0 2.36
+   angles 0 1.122 0
+   components {
+    Hierarchy "{F019C4CC5EDB5206}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B03F9691E961C4CA}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v3.et" {
+   ID "5CCCBEF208CBD499"
+   coords 0.538 0 2.3
+   angles 0 1.122 0
+   components {
+    Hierarchy "{F019C4CC5EDB5206}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEF208CBD72D"
+   coords -2.059 0 2.294
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEF208CBD73E"
+   coords -3.378 0 2.295
+   angles 0 -180 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEF208CBD740"
+   coords 3.346 0 -2.665
+   angles 0 90 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "5CCCBEF208CBD754"
+   coords 0.285 0 2.294
+   angles 0 -180 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BE7B5BAFE1A16A50}Prefabs/Props/Military/Fortification/BarbedTape_Coil.et" {
+   ID "5CCCBEF208CBD4B7"
+   coords -3.547 0 1.266
+   angles 0 -12.135 0
+   components {
+    Hierarchy "{F67795E315525B45}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C1576E5555582214}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_short.et" {
+   ID "5CCCBEF208CBD47A"
+   coords 2.976 0 1.31
+   angles 0 49.486 0
+   components {
+    Hierarchy "{C1E5464202905CC5}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CFFEB23FBEA00322}Prefabs/Props/Military/Sandbags/Sandbag_01_short_burlap.et" {
+   ID "5CCCBEF208CBD70C"
+   coords -0.946 0.1 2.274
+   components {
+    Hierarchy "{4CD5E27E8A5F56B0}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{DDF59362051B28BC}Prefabs/Props/Military/Fortification/BarbedTape_KnifeRest.et" {
+   ID "5CCCBEF208CBD4FA"
+   coords 3.217 0 2.519
+   angles 0 -58.204 0
+   components {
+    Hierarchy "{12BFD527A0725D79}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CCCBEF208CBD4A2"
+   coords 4.31 0 0.829
+   angles 0 178.709 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A74DE4EB757A5930}Prefabs/BaseCompositions/IA_BarbedTape_01_Short_9E6E4F.et" {
+   ID "5CCCBEF208CBD4CD"
+   coords 1.141 0 3.218
+   angles 0 -93.906 0
+   components {
+    Hierarchy "{79E3D7F123195109}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

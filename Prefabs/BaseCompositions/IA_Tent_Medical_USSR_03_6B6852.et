@@ -1,0 +1,142 @@
+GenericEntity {
+ ID "AB05186B997A5827"
+ components {
+  RplComponent "{4D27D28518E55F4D}" {
+  }
+  Hierarchy "{8E8ED6BFA6AA52FD}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{CF1B0016A276546F}Prefabs/BaseCompositions/IA_Chair_NightStand_USSR_03_FC63C0.et" {
+   ID "5CC4E282125661B0"
+   coords 1.71 0.156 -2.535
+   angles 0 11.134 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CC4E28212566188"
+   coords -2.115 0.17 -1.563
+   angles 0 -78.594 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{0ECB11681D65503F}Prefabs/BaseCompositions/IA_Cabinet_Books_USSR_01_6C3412.et" {
+   ID "5CC4E282125661A2"
+   coords -2.413 0.166 0.175
+   angles 0 94.509 0
+   components {
+    Hierarchy "{A75835BF8FCA57EE}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{46E4BC646E5D550B}Prefabs/BaseCompositions/IA_Chair_Medical_USSR_02_58B5ED.et" {
+   ID "5CC4E282125661B4"
+   coords 2.275 0.182 0.299
+   angles 0 -98.622 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BCE07A58672955B9}Prefabs/Props/Civilian/Bucket_01.et" {
+   ID "5CC4E2821256618E"
+   coords -2.19 0.283 1.427
+   angles -16.07 -118.296 80.706
+   components {
+    Hierarchy "{F46BA6C3429C5776}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{BCE07A58672955B9}Prefabs/Props/Civilian/Bucket_01.et" {
+   ID "5CC4E2821256618F"
+   coords -2.256 0.168 1.132
+   angles 0 -69.96 0
+   components {
+    Hierarchy "{F46BA6C3429C5776}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{AA786DD0A7D05069}Prefabs/BaseCompositions/IA_Table_Desk_USSR_03_3E01A7.et" {
+   ID "5CC4E282125661D3"
+   coords -2.35 0.165 -1.67
+   angles 0 90 0
+   components {
+    Hierarchy "{63E297D8CD4D5B25}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4E282125661D4"
+   coords -2.38 0.175 1.835
+   angles 0 -87.89 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4E282125661D9"
+   coords 2.388 0.175 -1.747
+   angles 0 88.387 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4E282125661DA"
+   coords 2.423 0.175 1.835
+   angles 0 -89.815 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{17CC865EA25D573F}Prefabs/BaseCompositions/IA_TentUSSRMedical_01_CompositionDestruction_DD82A6.et" {
+   ID "5CC4E282125661CE"
+   coords 0 0 0
+   components {
+    Hierarchy "{2E1A004692EC50E4}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{B0C21D8B78565358}Prefabs/BaseCompositions/IA_Chair_Light_USSR_01_78ACBF.et" {
+   ID "5CC4E282125661BB"
+   coords 2.446 0.176 -0.261
+   angles 0 -4.43 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{6FBC81FA5E95502C}Prefabs/BaseCompositions/IA_Chair_Medical_USSR_01_639C8E.et" {
+   ID "5CC4E2821256C090"
+   coords 1.71 0.164 2.617
+   angles 0 55.367 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

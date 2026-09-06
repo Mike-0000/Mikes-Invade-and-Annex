@@ -71,7 +71,10 @@ class IA_ObjectiveElitePatrol
 		m_vApprox = Jitter(m_vSite, 80, 150);
 		SpawnMapMarker(m_vApprox);
 
-		Print(string.Format("[IA][ElitePatrol] occupying patrol at %1 for %2", m_vSite.ToString(), area.GetName()), LogLevel.NORMAL);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][ElitePatrol] occupying patrol at %1 for %2", m_vSite.ToString(), area.GetName()), LogLevel.NORMAL);
+		}
 		return true;
 	}
 

@@ -1,0 +1,44 @@
+GenericEntity {
+ ID "A495D4995C055239"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{F7A71209CE045FD3}Prefabs/DynamicBase/IA_InfrastructureAsset_latrine.et" {
+   ID "815FE74807595250"
+   components {
+    Hierarchy "{92A59B04DE035759}" {
+     Enabled 1
+    }
+   }
+   coords 0 0.000000 0.6
+   angles 0 0 0
+  }
+  GenericEntity : "{97FF4DA84258FBAF}Prefabs/Props/Civilian/TableSink_01.et" {
+   ID "9A47B2E634FA5896"
+   components {
+    Hierarchy "{5BFD643F00865992}" {
+     Enabled 1
+    }
+   }
+   coords 1.5 0.003056 -0.3
+   angles 0 0 0
+  }
+  GenericEntity : "{62B2ADC4243454F9}Prefabs/Props/Civilian/Jerrycan_01.et" {
+   ID "1CCCC405F2055F6A"
+   components {
+    Hierarchy "{4D8D9673BEED5F30}" {
+     Enabled 1
+    }
+   }
+   coords 1.5 -0.000225 0.3
+   angles 0 0 0
+  }
+ }
+}

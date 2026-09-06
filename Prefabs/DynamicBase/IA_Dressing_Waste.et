@@ -1,0 +1,34 @@
+GenericEntity {
+ ID "41010DD086FB523C"
+ components {
+  RplComponent "{54AC8D6E673199EE}" : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+  Hierarchy "{5DC704E4D968FC31}" {
+   Enabled 1
+  }
+ }
+ Flags 0x403 0
+ coords 0 0 0
+ {
+  GenericEntity : "{F0E4FC2785C49124}Prefabs/Props/Garbage/Bins/TrashBin_03/TrashBin_USSR_03_full.et" {
+   ID "4AB9FBDCC87B5BA3"
+   components {
+    Hierarchy "{A76EED44AE5B56BD}" {
+     Enabled 1
+    }
+   }
+   coords -0.45 0.090865 0
+   angles 0 8 0
+  }
+  GenericEntity : "{F0E4FC2785C49124}Prefabs/Props/Garbage/Bins/TrashBin_03/TrashBin_USSR_03_full.et" {
+   ID "0A40A74967FA58D5"
+   components {
+    Hierarchy "{9AC1FBD782645E5C}" {
+     Enabled 1
+    }
+   }
+   coords 0.45 0.090865 0.1
+   angles 0 -8 0
+  }
+ }
+}

@@ -143,12 +143,15 @@ class IA_ApiHandler
         m_Config = IA_ApiConfigManager.GetConfig();
         if (m_Config && m_Config.m_sServerGuid == "")
         {
-            Print("IA API Handler: Server GUID not found, beginning registration.", LogLevel.NORMAL);
+            IA_Log.Info("IA API Handler: Server GUID not found, beginning registration.");
             _RegisterServer();
         }
 		else
 		{
-			Print("IA API Handler: Server GUID exists. Fetching initial leaderboard data.", LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("IA API Handler: Server GUID exists. Fetching initial leaderboard data.", LogLevel.NORMAL);
+			}
 			FetchAllLeaderboards();
 		}
     }
@@ -156,7 +159,10 @@ class IA_ApiHandler
     void OnRegisterSuccess(RestCallback cb)
     {
         string data = cb.GetData();
-        Print("IA API: Registration successful. Data = " + data, LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA][API] Registration response received.", LogLevel.NORMAL);
+        }
         IA_ApiRegisterServerResponse response = IA_ApiRegisterServerResponse.FromJson(data);
         if (response && response.serverGuid != "")
         {
@@ -165,14 +171,14 @@ class IA_ApiHandler
             {
                 config.m_sServerGuid = response.serverGuid;
                 IA_ApiConfigManager.SaveConfig();
-                Print("IA API: Server GUID " + response.serverGuid + " saved to config.", LogLevel.NORMAL);
+                IA_Log.Info("IA API: Server GUID " + response.serverGuid + " saved to config.");
 
                 FetchAllLeaderboards();
             }
         }
         else
         {
-            Print("IA API: Registration response did not contain a valid serverGuid. Response: " + response, LogLevel.ERROR);
+            Print("[IA][API] Registration response did not contain a valid server GUID.", LogLevel.ERROR);
         }
     }
 
@@ -186,7 +192,10 @@ class IA_ApiHandler
 
     void OnSubmitStatsSuccess(RestCallback cb)
     {
-        Print("IA API: Statistics submitted successfully.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA API: Statistics submitted successfully.", LogLevel.NORMAL);
+        }
         GetGame().GetCallqueue().CallLater(FetchAllLeaderboards, 5000, false);
     }
 
@@ -201,7 +210,10 @@ class IA_ApiHandler
     void OnFetchAllLeaderboardsSuccess(RestCallback cb)
     {
         string data = cb.GetData();
-        Print("IA API: All leaderboard data received successfully.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA API: All leaderboard data received successfully.", LogLevel.NORMAL);
+        }
 
         IA_LeaderboardManagerComponent manager = IA_LeaderboardManagerComponent.GetInstance();
         if (manager)
@@ -247,7 +259,10 @@ class IA_ApiHandler
         m_submitStatsCallback.SetOnSuccess(OnSubmitStatsSuccess);
         m_submitStatsCallback.SetOnError(OnSubmitStatsError);
         ctx.POST(m_submitStatsCallback, "/submitStats", requestData.ToJson());
-        Print("IA API: Submitting statistics for server: " + serverName + " with payload: " + requestData.ToJson(), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA][API] Statistics submission requested.", LogLevel.NORMAL);
+        }
     }
 
     void FetchAllLeaderboards()
@@ -264,7 +279,10 @@ class IA_ApiHandler
         m_fetchAllLeaderboardsCallback.SetOnError(OnFetchAllLeaderboardsError);
         string url = "/getAllLeaderboards?serverGuid=" + m_Config.m_sServerGuid;
         ctx.GET(m_fetchAllLeaderboardsCallback, url);
-        Print("IA API: Server is fetching all leaderboards.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA API: Server is fetching all leaderboards.", LogLevel.NORMAL);
+        }
     }
 
     private void _RegisterServer()
@@ -281,8 +299,14 @@ class IA_ApiHandler
         string serverName = IA_ApiConfigManager.GetServerNameFromFile();
         IA_ApiRegisterServerRequest requestData = new IA_ApiRegisterServerRequest(serverName, m_Config.m_sOwnerEmail);
 
-        Print("Request URL: "+ m_sApiBaseUrl + " requestData In JSON: " + requestData.ToJson() ,LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA][API] Server registration requested.", LogLevel.NORMAL);
+        }
         ctx.POST(m_registerCallback, "/registerServer", requestData.ToJson());
-        Print("IA API: Attempting to register server...", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("IA API: Attempting to register server...", LogLevel.NORMAL);
+        }
     }
 } 

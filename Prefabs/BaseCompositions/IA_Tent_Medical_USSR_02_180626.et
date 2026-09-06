@@ -1,0 +1,152 @@
+GenericEntity {
+ ID "8C5763B1EEEE5C74"
+ components {
+  RplComponent "{DF3BF5301FC85FB1}" {
+  }
+  Hierarchy "{68D476F54CC65BB4}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "5CC4E28004680865"
+   coords -0.485 0.179 -2.138
+   angles 0 14.707 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{0ECB11681D65503F}Prefabs/BaseCompositions/IA_Cabinet_Books_USSR_01_6C3412.et" {
+   ID "5CC4E2800468098C"
+   coords 0.662 0.174 -2.469
+   angles 0 -2.493 0
+   components {
+    Hierarchy "{A75835BF8FCA57EE}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{6AD7BFA352A25749}Prefabs/BaseCompositions/IA_Crate_Bottles_01_2708E0.et" {
+   ID "5CC4E2800468086E"
+   coords -2.408 0.176 -2.262
+   angles 0 10.634 0
+   components {
+    Hierarchy "{A90B0671B17A5E21}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{65A3735E5B635E8F}Prefabs/BaseCompositions/IA_Table_Desk_USSR_05_25ACD5.et" {
+   ID "5CC4E280046809B5"
+   coords -0.429 0.179 -2.386
+   angles 0 -2.493 0
+   components {
+    Hierarchy "{62F314506BAF5186}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{46E4BC646E5D550B}Prefabs/BaseCompositions/IA_Chair_Medical_USSR_02_58B5ED.et" {
+   ID "5CC4E28004680987"
+   coords 1.704 0.154 -2.521
+   angles 0 95.068 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C8DC4D5192C95E2D}Prefabs/BaseCompositions/IA_CardboardBox_Ashtray_01_84CCF9.et" {
+   ID "5CC4E28004680992"
+   coords 2.358 0.169 -1.33
+   angles 0 84.356 0
+   components {
+    Hierarchy "{0BEFB4AFD75B5AFB}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4E28004680864"
+   coords 2.419 0.166 -1.767
+   angles 0 90.679 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4E280046809B8"
+   coords -2.439 0.166 1.813
+   angles 0 -86.817 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4E280046809B9"
+   coords -2.401 0.166 -1.794
+   angles 0 92.065 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C6BFE324CCCFE6C4}Prefabs/Props/Military/Furniture/CotMilitary_USSR_01.et" {
+   ID "5CC4E280046809BE"
+   coords 2.37 0.166 1.805
+   angles 0 -92.422 0
+   components {
+    Hierarchy "{2319C5072EBE5611}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C76C3AF337109066}Prefabs/Props/Crates/CardboardBoxStack_01.et" {
+   ID "5CC4E28004680991"
+   coords -2.409 -0.249 1.224
+   angles 0 -3.741 0
+   components {
+    Hierarchy "{E771922A3ED052E6}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{17CC865EA25D573F}Prefabs/BaseCompositions/IA_TentUSSRMedical_01_CompositionDestruction_DD82A6.et" {
+   ID "5CC4E280046809A9"
+   coords 0 0 0
+   components {
+    Hierarchy "{2E1A004692EC50E4}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C99D1B2E817E12D9}Prefabs/Props/Military/Furniture/TableMilitary_USSR_02_cabinet.et" {
+   ID "5CC4E28004680985"
+   coords -2.483 0.167 0.027
+   angles 0 90 0
+   components {
+    Hierarchy "{A75835BF8FCA57EE}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{6FBC81FA5E95502C}Prefabs/BaseCompositions/IA_Chair_Medical_USSR_01_639C8E.et" {
+   ID "5CC4E2800468099D"
+   coords -1.569 0.17 -2.423
+   angles 0 -155.864 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

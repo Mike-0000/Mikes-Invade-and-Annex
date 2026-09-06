@@ -1,0 +1,37 @@
+GenericEntity {
+ ID "1015AD7D730653FD"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{080C462FFFA28A24}Assets/Structures/Civilian/Latrine_01/Latrine_01.xob"
+   ClutterOccluder 1
+  }
+  RigidBody {
+   ModelGeometry 1
+   Static 1
+  }
+  Hierarchy "{92A59B04DE035759}" {
+   Enabled 1
+  }
+  RplComponent : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+ }
+ coords 0 0 0
+ {
+  GenericEntity {
+   ID "F48DB1358B725D5A"
+   components {
+    MeshObject {
+     Object "{F9451F4315B6F8D5}Assets/Structures/BuildingsParts/Doors/Door_Latrine/Door_Latrine_01_A_LEFT_EXT_COV_B.xob"
+    }
+    RigidBody {
+     ModelGeometry 1
+     Static 1
+    }
+    Hierarchy {
+     Enabled 1
+     PivotID "socket_door_ext_left_01"
+    }
+   }
+  }
+ }
+}

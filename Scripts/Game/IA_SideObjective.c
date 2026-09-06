@@ -92,7 +92,10 @@ class IA_SideObjective
             return;
 
         m_State = IA_SideObjectiveState.Active;
-        Print(string.Format("[IA_SideObjective] Objective '%1' started at %2", m_Title, m_Position.ToString()), LogLevel.DEBUG);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_SideObjective] Objective '%1' started at %2", m_Title, m_Position.ToString()), LogLevel.NORMAL);
+        }
     }
 
     void Update(float timeSlice)
@@ -315,22 +318,30 @@ class IA_AssassinationObjective : IA_SideObjective
         }
 
         // --- Now perform actions with the calculated positions ---
-        Print(string.Format("Starting Assassination objective. Area centered at %1", areaCenter.ToString()), LogLevel.NORMAL);
+        IA_Log.Info(string.Format("Starting Assassination objective. Area centered at %1", areaCenter.ToString()));
 		
         // Create a transient area and a private area instance for this objective's AI
         string areaName = "SideObjective_Assassination_" + Math.RandomInt(0, 100000);
         m_TransientArea = IA_Area.CreateTransient(areaName, IA_AreaType.Assassination, areaCenter, 110);
         
-		if (m_TransientArea)
-             Print(string.Format("[IA_AssassinationObjective] Successfully created transient area: %1", m_TransientArea.GetName()), LogLevel.NORMAL);
+        if (m_TransientArea)
+        {
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AssassinationObjective] Successfully created transient area: %1", m_TransientArea.GetName()), LogLevel.NORMAL);
+            }
+        }
         else
-             Print(string.Format("[IA_AssassinationObjective] FAILED to create transient area."), LogLevel.ERROR);
+            Print(string.Format("[IA_AssassinationObjective] FAILED to create transient area."), LogLevel.ERROR);
 			 
         m_ObjectiveAreaInstance = IA_AreaInstance.Create(m_TransientArea, m_EnemyIAFaction, m_EnemyGameFaction, 0, -1);
         
         if (m_ObjectiveAreaInstance)
 		{
-             Print(string.Format("[IA_AssassinationObjective] Created private AreaInstance for objective."), LogLevel.NORMAL);
+             if (IA_Log.IsDebugEnabled())
+             {
+                 Print(string.Format("[IA_AssassinationObjective] Created private AreaInstance for objective."), LogLevel.NORMAL);
+             }
 			 IA_Game.Instantiate().AddTransientArea(m_ObjectiveAreaInstance);
 		}
         else
@@ -367,7 +378,10 @@ class IA_AssassinationObjective : IA_SideObjective
 
                 if (m_Generator)
                 {
-                    Print(string.Format("[IA_AssassinationObjective] Spawned generator at %1 with orientation", worldGenMat[3].ToString()), LogLevel.NORMAL);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[IA_AssassinationObjective] Spawned generator at %1 with orientation", worldGenMat[3].ToString()), LogLevel.NORMAL);
+                    }
 
                     // Attach damage listener
                     SCR_DamageManagerComponent dmg = SCR_DamageManagerComponent.Cast(m_Generator.FindComponent(SCR_DamageManagerComponent));
@@ -539,7 +553,10 @@ class IA_AssassinationObjective : IA_SideObjective
         m_Generator = GetGame().SpawnEntityPrefab(genResource, null, IA_CreateSimpleSpawnParams(genPos));
         if (m_Generator)
         {
-            Print(string.Format("[IA_AssassinationObjective] Spawned generator at %1", genPos.ToString()), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AssassinationObjective] Spawned generator at %1", genPos.ToString()), LogLevel.NORMAL);
+            }
             
             // Add damage handler to detect destruction
             SCR_DamageManagerComponent damageManager = SCR_DamageManagerComponent.Cast(m_Generator.FindComponent(SCR_DamageManagerComponent));
@@ -560,7 +577,10 @@ class IA_AssassinationObjective : IA_SideObjective
         if (state == EDamageState.DESTROYED && !m_GeneratorDestroyed)
         {
             m_GeneratorDestroyed = true;
-            Print("[IA_AssassinationObjective] Generator destroyed! Reinforcements disabled.", LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[IA_AssassinationObjective] Generator destroyed! Reinforcements disabled.", LogLevel.NORMAL);
+            }
             
             // If we have a private area instance, tell it to cancel its reinforcements
             if (m_ObjectiveAreaInstance)
@@ -607,7 +627,10 @@ class IA_AssassinationObjective : IA_SideObjective
         m_EscapeVehicle = GetGame().SpawnEntityPrefab(vehRes, null, IA_CreateSimpleSpawnParams(spawnPos));
         if (m_EscapeVehicle)
         {
-            Print(string.Format("[IA_AssassinationObjective] Spawned escape vehicle at %1", spawnPos.ToString()), LogLevel.NORMAL);
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_AssassinationObjective] Spawned escape vehicle at %1", spawnPos.ToString()), LogLevel.NORMAL);
+            }
         }
     }
 
@@ -616,7 +639,7 @@ class IA_AssassinationObjective : IA_SideObjective
         if (m_State != IA_SideObjectiveState.Active) return;
 
         m_State = IA_SideObjectiveState.Completed;
-        Print(string.Format("Assassination objective at %1 completed.", m_Position.ToString()), LogLevel.NORMAL);
+        IA_Log.Info(string.Format("Assassination objective at %1 completed.", m_Position.ToString()));
         
         CompletePlayerTask();
 
@@ -671,7 +694,10 @@ class IA_AssassinationObjective : IA_SideObjective
 
 		if(m_bHVTSpawned && !m_HVT)
 		{
-			Print("[IA_AssassinationObjective] HVT entity is null after being spawned, assuming objective complete.", LogLevel.NORMAL);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("[IA_AssassinationObjective] HVT entity is null after being spawned, assuming objective complete.", LogLevel.NORMAL);
+			}
             _CleanupObjective(true);
             return; 
 		}
@@ -692,7 +718,10 @@ class IA_AssassinationObjective : IA_SideObjective
                 m_EscapeCountdownEndTime = System.GetTickCount() + (randMinutes * 60 * 1000);
                 m_EscapeCountdownActive = true;
                 m_EscapeBehaviorTriggered = true; // Lock in the escape sequence
-                Print(string.Format("[IA_AssassinationObjective] Area under attack – escape countdown started (%1 minutes).", randMinutes), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_AssassinationObjective] Area under attack – escape countdown started (%1 minutes).", randMinutes), LogLevel.NORMAL);
+                }
 
                 // Inform players reinforcements incoming. If a generator is still operational, add hint to destroy it.
                 string notifText = "Side Objective: Reinforcements Inbound!";
@@ -730,7 +759,10 @@ class IA_AssassinationObjective : IA_SideObjective
                 // HVT just reached the escape point
                 m_bHVTEscaping = true;
                 m_iHVTEscapeTimeEnd = System.GetTickCount() + 60000; // 60 second timer
-                Print("[IA_AssassinationObjective] HVT reached escape point. Starting 30s extraction timer.", LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print("[IA_AssassinationObjective] HVT reached escape point. Starting 30s extraction timer.", LogLevel.NORMAL);
+                }
                 
                 // Notify players
                 IA_Game.S_TriggerGlobalNotification("HVTEscaping", "Side Objective: HVT has reached the extraction point! Eliminate them immediately!");
@@ -743,12 +775,18 @@ class IA_AssassinationObjective : IA_SideObjective
                 {
                     // HVT left the escape point
                     m_bHVTEscaping = false;
-                    Print("[IA_AssassinationObjective] HVT left the escape point. Extraction timer reset.", LogLevel.NORMAL);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print("[IA_AssassinationObjective] HVT left the escape point. Extraction timer reset.", LogLevel.NORMAL);
+                    }
                 }
                 else if (System.GetTickCount() >= m_iHVTEscapeTimeEnd)
                 {
                     // Timer finished, HVT successfully escaped
-                    Print("[IA_AssassinationObjective] HVT successfully extracted – objective failed.", LogLevel.NORMAL);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print("[IA_AssassinationObjective] HVT successfully extracted – objective failed.", LogLevel.NORMAL);
+                    }
 					IA_Game.S_TriggerGlobalNotification("HVTEscaped", "Side Objective: The HVT has Escaped! Mission Failed.");
 
                     Fail();
@@ -761,7 +799,10 @@ class IA_AssassinationObjective : IA_SideObjective
     {
         if (m_EscapePoint == vector.Zero) return;
 
-        Print("[IA_AssassinationObjective] Giving delayed escape move orders.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA_AssassinationObjective] Giving delayed escape move orders.", LogLevel.NORMAL);
+        }
 
         // Order every AI in the objective area instance to move to escape point
         if (m_ObjectiveAreaInstance)
@@ -785,14 +826,20 @@ class IA_AssassinationObjective : IA_SideObjective
                 if (IsHVTGroup(grp))
                 {
                     escapePoint = m_EscapePoint;
-                    Print("[IA_AssassinationObjective] HVT group ordered to escape point via tactical state.", LogLevel.DEBUG);
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print("[IA_AssassinationObjective] HVT group ordered to escape point via tactical state.", LogLevel.NORMAL);
+                    }
                 }
                 else
                 {
                     // Other groups get randomized positions nearby
                     escapePoint = IA_Game.rng.GenerateRandomPointInRadius(2, 8, m_EscapePoint);
                     escapePoint[1] = GetGame().GetWorld().GetSurfaceY(escapePoint[0], escapePoint[2]);
-					Print("[IA_AssassinationObjective] Guard/Reinforcement group ordered to escape point via tactical state.", LogLevel.DEBUG);
+					if (IA_Log.IsDebugEnabled())
+					{
+						Print("[IA_AssassinationObjective] Guard/Reinforcement group ordered to escape point via tactical state.", LogLevel.NORMAL);
+					}
                 }
                 
 				// Set the state to Escaping for all groups. This correctly sets the highest waypoint priority
@@ -826,7 +873,10 @@ class IA_AssassinationObjective : IA_SideObjective
         // The m_EscapeCountdownActive flag is our gatekeeper.
         if (!m_EscapeCountdownActive) return;
 
-        Print("[IA_AssassinationObjective] Escape countdown finished – switching AI to ESCAPE mode.", LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print("[IA_AssassinationObjective] Escape countdown finished – switching AI to ESCAPE mode.", LogLevel.NORMAL);
+        }
 
         // Deactivate AI, then schedule a delayed reactivation to ensure the engine processes the state change.
         if (m_ObjectiveAreaInstance)
@@ -878,12 +928,15 @@ class IA_AssassinationObjective : IA_SideObjective
     override void Fail()
     {
          if (m_State != IA_SideObjectiveState.Active) return;
-         Print(string.Format("Assassination objective at %1 failed.", m_Position.ToString()), LogLevel.NORMAL);
+         IA_Log.Info(string.Format("Assassination objective at %1 failed.", m_Position.ToString()));
 
          // Delete the HVT immediately when the objective fails
          if (m_HVT)
          {
-             Print("[IA_AssassinationObjective] Deleting HVT entity immediately due to objective failure.", LogLevel.NORMAL);
+             if (IA_Log.IsDebugEnabled())
+             {
+                 Print("[IA_AssassinationObjective] Deleting HVT entity immediately due to objective failure.", LogLevel.NORMAL);
+             }
              IA_Game.AddEntityToGc(m_HVT);
              m_HVT = null;
          }
@@ -905,12 +958,18 @@ class IA_AssassinationObjective : IA_SideObjective
                 string playerName = GetGame().GetPlayerManager().GetPlayerName(playerID);
                 
                 IA_StatsManager.GetInstance().QueueHVTKill(playerGuid, playerName);
-                Print(string.Format("HVT for objective at %1 has been killed by player %2 (GUID: %3).", m_Position.ToString(), playerName, playerGuid), LogLevel.NORMAL);
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("HVT for objective at %1 has been killed by player %2 (GUID: %3).", m_Position.ToString(), playerName, playerGuid), LogLevel.NORMAL);
+                }
             }
         }
         else
         {
-             Print(string.Format("HVT for objective at %1 has been killed by non-player.", m_Position.ToString()), LogLevel.NORMAL);
+             if (IA_Log.IsDebugEnabled())
+             {
+                 Print(string.Format("HVT for objective at %1 has been killed by non-player.", m_Position.ToString()), LogLevel.NORMAL);
+             }
         }
 
         _CleanupObjective(true);
@@ -1036,7 +1095,10 @@ class IA_AssassinationObjective : IA_SideObjective
         string desc = "Stop the HVT from reaching the escape point.";
         m_EscapeTask = _CreateTaskAtPosition(title, desc, m_EscapePoint);
 
-        Print(string.Format("[IA_AssassinationObjective] Escape task created at %1", m_EscapePoint.ToString()), LogLevel.NORMAL);
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA_AssassinationObjective] Escape task created at %1", m_EscapePoint.ToString()), LogLevel.NORMAL);
+        }
 
         // Notify players
         IA_Game.S_TriggerGlobalNotification("HVTPreparingEscape", "Side Objective: The HVT is preparing to make their escape!");

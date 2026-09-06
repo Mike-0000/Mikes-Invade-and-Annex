@@ -1,0 +1,51 @@
+GenericEntity {
+ ID "202DEBA8713B51CE"
+ components {
+  RplComponent "{92A901CFDB385CC2}" {
+  }
+  Hierarchy "{83056E132B475AD7}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et" {
+   ID "5D06E95728480C7A"
+   coords 0.035 0.691 -2.989
+   angles 0 -90 -86.114
+   components {
+    Hierarchy "{CB4FC986DD1A5B32}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{CC92DF5FD9330C37}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/ShelterStorage_USSR_01_CompositionDestruction.et" {
+   ID "5D06E95F639B410C"
+   coords 0 0 0
+   components {
+    Hierarchy "{5A58883FD62D706E}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{DEFB7307619D5FEA}Prefabs/BaseCompositions/IA_Storage_Arsenal_USSR_02_F2C39F.et" {
+   ID "5D82CDCA57D02289"
+   coords 0.078 0.1 1.192
+   components {
+    Hierarchy "{6FCE4CDFA985555D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B8EBC43A08EE5082}Prefabs/BaseCompositions/IA_ArsenalBox_USSR_Equipment_81EA62.et" {
+   ID "5D371ACBDC5FA529"
+   coords -0.001 0.1 2.987
+   angles 0 6.565 0
+   components {
+    Hierarchy "{22C1910474A957A0}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

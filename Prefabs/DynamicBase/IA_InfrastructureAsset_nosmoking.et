@@ -1,0 +1,24 @@
+GenericEntity {
+ ID "6380E3DA40EB5E58"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{1D6904AF26A12A24}Assets/Props/Signs/Industrial/SignIndustrial_30x20_01.xob"
+   Materials {
+    MaterialAssignClass "{5AC2793A949B0D9D}" {
+     SourceMaterial "SignIndustrial_01_Vertical_46BD5E84F69AAB12"
+     AssignedMaterial "{5E30C227D00EA45C}Assets/Props/Signs/Industrial/Data/SignIndustrial_01_Vertical_01_NoSmoking.emat"
+    }
+   }
+  }
+  RigidBody {
+   ModelGeometry 1
+   Static 1
+  }
+  Hierarchy "{20D7A9B1F60B5EAB}" {
+   Enabled 1
+  }
+  RplComponent : "{B193E926C1935A4C}Prefabs/Editor/Components/Default_RplComponent.ct" {
+  }
+ }
+ coords 0 0 0
+}
