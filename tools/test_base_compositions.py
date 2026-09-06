@@ -10,7 +10,7 @@ import unittest
 
 sys.dont_write_bytecode=True
 from author_base_compositions import Author,REF,parse
-from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW,RECIPE_EXPANDED_BUDGET
+from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,connection_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW,RECIPE_EXPANDED_BUDGET
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('D:/ReforgerGameSources/data/data007')
@@ -146,7 +146,7 @@ class CompositionTests(unittest.TestCase):
                 elif w['side'] in (1,3):
                     self.assertTrue(z+1.483<=-13+0.001 or z-1.483>=-3-0.001)
                 a=(x-1.47,z-.62,x+1.47,z+.62) if w['side'] in (0,2) else (x-.62,z-1.47,x+.62,z+1.47)
-                self.assertFalse(any(overlap(a,mesh_box(m,self.measure)) for m in r['modules'] if m['side']==w['side']),(r['name'],w))
+                self.assertFalse(any(overlap(a,connection_box(m,self.catalog,self.measure),-0.55) for m in r['modules'] if m['side']==w['side']),(r['name'],w))
         source=read('Scripts/Game/IA_ComposedSiteLayout.c')
         self.assertIn('AddCover("infill_"',source)
         self.assertIn('m_bRequired = true',source)
@@ -155,6 +155,9 @@ class CompositionTests(unittest.TestCase):
     def test_fighting_positions_sit_on_the_wall_line(self):
         pos1=fighting_face_z('Position1',self.catalog,self.measure)
         self.assertLess(pos1,self.measure['Position1']['maxs'][2]-1.0)
+        nest=fighting_face_z('PKMNest',self.catalog,self.measure)
+        self.assertLess(nest,1.5)
+        self.assertLess(nest,self.measure['PKMNest']['maxs'][2]-2.0)
         for r in self.recipes:
             W,D=r['half_width'],r['half_depth']
             for m in r['modules']:

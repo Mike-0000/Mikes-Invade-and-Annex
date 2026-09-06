@@ -39,7 +39,11 @@ def overlap(a,b,gap=0):
 WALL_INSET=0.9
 GUNNED_COVER_WEIGHT=1.5
 SANDBAG_FACE=0.62
-APRON_ALLOW=4.0
+APRON_ALLOW=5.0
+# Infill may nibble this far into a joining bag so the ring does not stop short.
+JOIN_OVERLAP=0.45
+BAG_HALF=0.7
+_POST_CACHE={}
 _FACE_CACHE={}
 
 
@@ -112,12 +116,17 @@ def _prop_floats(node,name,fallback):
     return [float(raw[i]) if i<len(raw) else fallback[i] for i in range(3)]
 
 
-def _wall_aligned(yaw):
+def _wall_parallel(yaw):
     wrapped=((yaw+180.0)%360.0)-180.0
-    return abs(wrapped)<25.0
+    return min(abs(wrapped),abs(abs(wrapped)-180.0))<25.0
 
 
-def _collect_sandbag_faces(resource_name,offset_z=0.0,offset_yaw=0.0):
+def _rotate(x,z,yaw):
+    angle=math.radians(yaw)
+    return x*math.cos(angle)+z*math.sin(angle),-x*math.sin(angle)+z*math.cos(angle)
+
+
+def _collect_sandbag_posts(resource_name,offset_x=0.0,offset_z=0.0,offset_yaw=0.0):
     path=resource_file(resource_name)
     if not path.is_file():
         return []
@@ -125,7 +134,7 @@ def _collect_sandbag_faces(resource_name,offset_z=0.0,offset_yaw=0.0):
     block=root.block('')
     if not block:
         return []
-    faces=[]
+    posts=[]
     for child in block.body:
         if not isinstance(child,Node):
             continue
@@ -135,33 +144,85 @@ def _collect_sandbag_faces(resource_name,offset_z=0.0,offset_yaw=0.0):
         target=match[1]
         coords=_prop_floats(child,'coords',(0,0,0))
         angles=_prop_floats(child,'angles',(0,0,0))
-        child_z=offset_z+coords[2]
+        lx,lz=_rotate(coords[0],coords[2],offset_yaw)
+        child_x=offset_x+lx
+        child_z=offset_z+lz
         child_yaw=offset_yaw+angles[1]
         if 'Sandbags/' in target:
-            if _wall_aligned(child_yaw):
-                faces.append(child_z+SANDBAG_FACE)
+            if _wall_parallel(child_yaw):
+                posts.append((child_x,child_z))
             continue
         if target.startswith('Prefabs/BaseCompositions/'):
-            faces.extend(_collect_sandbag_faces(target,child_z,child_yaw))
-    return faces
+            posts.extend(_collect_sandbag_posts(target,child_x,child_z,child_yaw))
+    return posts
+
+
+def sandbag_posts(key,catalog):
+    if key in _POST_CACHE:
+        return _POST_CACHE[key]
+    posts=_collect_sandbag_posts(catalog[key]['prefab'])
+    _POST_CACHE[key]=posts
+    return posts
+
+
+def _connecting_face_from_posts(posts,fallback):
+    if not posts:
+        return fallback
+    xs=[p[0] for p in posts]
+    span=max(xs)-min(xs)
+    if span<0.5:
+        zs=sorted(p[1] for p in posts)
+        return zs[len(zs)//2]
+    edge=max(0.35,0.28*span)
+    lo,hi=min(xs),max(xs)
+    edges=[p for p in posts if p[0]<=lo+edge or p[0]>=hi-edge]
+    zs=sorted(p[1] for p in edges)
+    return zs[len(zs)//2]
 
 
 def fighting_face_z(key,catalog,measure):
-    """Outward sandbag parapet, not dirt berms / wire / slot padding."""
+    """Origin of the bags that should meet the wall, not the front parapet."""
     if key in _FACE_CACHE:
         return _FACE_CACHE[key]
-    faces=_collect_sandbag_faces(catalog[key]['prefab'])
-    if faces:
-        out=max(faces)
-    else:
-        out=measure[key]['maxs'][2]
+    out=_connecting_face_from_posts(sandbag_posts(key,catalog),measure[key]['maxs'][2])
     _FACE_CACHE[key]=out
     return out
 
 
+def connection_box(item,catalog,measure):
+    """World-axis AABB of the joining bags, not dirt / wire / the front bulge."""
+    posts=sandbag_posts(item['key'],catalog)
+    if not posts:
+        return mesh_box(item,measure)
+    face=fighting_face_z(item['key'],catalog,measure)
+    near=[p for p in posts if abs(p[1]-face)<=0.9]
+    if not near:
+        near=posts
+    xs=[p[0] for p in near]
+    zs=[p[1] for p in near]
+    min_x=min(xs)-BAG_HALF+JOIN_OVERLAP
+    max_x=max(xs)+BAG_HALF-JOIN_OVERLAP
+    if min_x>max_x:
+        mid=(min(xs)+max(xs))*0.5
+        min_x=mid-0.4
+        max_x=mid+0.4
+    min_z=min(zs)-0.35
+    max_z=max(zs)+0.35
+    angle=math.radians(item['yaw'])
+    cx,cz=item['position'][0],item['position'][2]
+    world_x=[]; world_z=[]
+    for lx,lz in ((min_x,min_z),(min_x,max_z),(max_x,min_z),(max_x,max_z)):
+        world_x.append(cx+lx*math.cos(angle)+lz*math.sin(angle))
+        world_z.append(cz-lx*math.sin(angle)+lz*math.cos(angle))
+    return min(world_x),min(world_z),max(world_x),max(world_z)
+
+
 def snap_outward_face(x,z,side,key,catalog,measure,W,D):
-    """Put the fighting sandbag face on the same line as the perimeter walls."""
+    """Put the joining sandbag origins on the same line as the perimeter walls."""
     out=fighting_face_z(key,catalog,measure)
+    overflow=measure[key]['maxs'][2]-out
+    if overflow>WALL_INSET+APRON_ALLOW:
+        out=measure[key]['maxs'][2]-(WALL_INSET+APRON_ALLOW)
     fixed=wall_line(W,D,side)
     if side==0:
         return x,fixed-out
@@ -175,8 +236,9 @@ def snap_outward_face(x,z,side,key,catalog,measure,W,D):
 def perimeter_walls(W,D,modules,catalog,measure=None):
     """Tile the unused perimeter, subtracting gates, assemblies and firing lanes.
 
-    Fighting-position gaps use the measured mesh so walls meet the bags instead
-    of the oversized reservation pad. Firing corridors stay padded.
+    Fighting-position gaps use the joining-bag span so walls meet the bags
+    instead of stopping at dirt, wire or a front-facing nest ring. Firing
+    corridors stay padded.
     """
     walls=[]
     for side in range(4):
@@ -190,7 +252,7 @@ def perimeter_walls(W,D,modules,catalog,measure=None):
             blocked.append((-13,-3))
         for m in modules:
             if m['side']==side:
-                a=mesh_box(m,measure) if measure else box(m)
+                a=connection_box(m,catalog,measure) if measure else box(m)
                 blocked.append((a[0],a[2]) if horizontal else (a[1],a[3]))
             for socket in catalog[m['key']]['sockets']:
                 x,z=m['position'][0],m['position'][2]
@@ -481,6 +543,7 @@ def sheet(recipes):
 
 def generate(catalog_only=False):
     _FACE_CACHE.clear()
+    _POST_CACHE.clear()
     catalog=json.loads((ROOT/'docs/base-composition-catalog.json').read_text())
     measure=json.loads((ROOT/'docs/base-composition-measurements.json').read_text())['assets']
     outputs={'Scripts/Game/IA_BaseCompositionCatalog.c':catalog_script(catalog,measure)}
