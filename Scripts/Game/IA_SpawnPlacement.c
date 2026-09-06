@@ -14,6 +14,12 @@ class IA_SpawnPlacement
 	static const float REINF_MIN_M = 80.0;
 	static const float REINF_MAX_M = 180.0;
 	static const float REINF_PLAYER_MIN_M = 100.0;
+	//! Defense waves must sit outside the hold, not in the 80-180 m reinforcement ring players already occupy.
+	static const float DEFEND_WAVE_MIN_M = 280.0;
+	static const float DEFEND_WAVE_MAX_M = 520.0;
+	static const float DEFEND_WAVE_PLAYER_MIN_M = 280.0;
+	static const float DEFEND_DROP_PLAYER_MIN_M = 200.0;
+	static const float DEFEND_DROP_HOT_PLAYER_MIN_M = 150.0;
 	static const int SAFE_ORIGIN_ROAD_TRIES = 8;
 	static const int SAFE_ORIGIN_MESH_TRIES = 20;
 	static const float SAFE_ORIGIN_REACH_M = 16.0;
@@ -80,7 +86,11 @@ class IA_SpawnPlacement
 
 			vector worldTm[4];
 			playerEntity.GetWorldTransform(worldTm);
-			positions.Insert(worldTm[3]);
+			vector worldPos = worldTm[3];
+			if (worldPos == vector.Zero)
+				continue;
+
+			positions.Insert(worldPos);
 		}
 	}
 
@@ -96,7 +106,13 @@ class IA_SpawnPlacement
 		int i;
 		for (i = 0; i < playerCount; i++)
 		{
-			if (vector.DistanceSq(pos, players[i]) <= radiusSq)
+			vector playerPos = players[i];
+			if (playerPos == vector.Zero)
+				continue;
+
+			float dx = pos[0] - playerPos[0];
+			float dz = pos[2] - playerPos[2];
+			if ((dx * dx + dz * dz) <= radiusSq)
 				return true;
 		}
 
@@ -143,7 +159,13 @@ class IA_SpawnPlacement
 		int i;
 		for (i = 0; i < playerCount; i++)
 		{
-			float dsq = vector.DistanceSq(pos, players[i]);
+			vector playerPos = players[i];
+			if (playerPos == vector.Zero)
+				continue;
+
+			float dx = pos[0] - playerPos[0];
+			float dz = pos[2] - playerPos[2];
+			float dsq = (dx * dx) + (dz * dz);
 			if (dsq < playerMinSq)
 				return false;
 
@@ -739,6 +761,34 @@ class IA_SpawnPlacement
 		return FindSafeInfantryOrigin(fightPos, REINF_MIN_M, REINF_MAX_M, REINF_PLAYER_MIN_M, sectorIndex);
 	}
 
+	//! Defense / radio-tower / side-objective waves. Players already hold the
+	//! objective, so the 80-180 m reinforcement ring lands on them. Stay at least
+	//! PLAYER_MIN outside the flag and every living pawn; fail closed if none.
+	static vector FindDefendWaveInfantryOrigin(vector fightPos, int sectorIndex = -1)
+	{
+		if (fightPos == vector.Zero)
+			return vector.Zero;
+
+		vector found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, DEFEND_WAVE_MAX_M, DEFEND_WAVE_PLAYER_MIN_M, sectorIndex);
+		if (found != vector.Zero)
+			return found;
+
+		found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, DEFEND_WAVE_MAX_M, DEFEND_WAVE_PLAYER_MIN_M, -1);
+		if (found != vector.Zero)
+			return found;
+
+		found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, HARD_CAP_FROM_CENTER_M, DEFEND_WAVE_PLAYER_MIN_M, -1);
+		if (found != vector.Zero)
+			return found;
+
+		found = FindSafeInfantryOrigin(fightPos, CENTER_MIN_M, HARD_CAP_FROM_CENTER_M, DEFEND_WAVE_PLAYER_MIN_M, -1);
+		if (found != vector.Zero)
+			return found;
+
+		Print(string.Format("[IA][SpawnPlacement] miss defend wave origin anchor=%1", fightPos.ToString()), LogLevel.WARNING);
+		return vector.Zero;
+	}
+
 	static vector FindInboundInfantrySpawn(vector center, int sectorIndex)
 	{
 		return FindOccupyingInfantryOrigin(center, sectorIndex);
@@ -1316,7 +1366,8 @@ class IA_SpawnPlacement
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Air Assault LZ: hot drop near the AO when requested and safe, otherwise 150-300 m perimeter.
+	//! Air Assault LZ: hot drop stays off living pawns (150 m), otherwise 200-400 m
+	//! perimeter with a 200 m player floor. Never falls back onto the defend point.
 	//! `avoidLzs` keeps later waves off a pad already used this defend.
 	static bool TryFindDefendDropLz(vector center, bool preferHotDrop, out vector outLz, array<vector> avoidLzs = null)
 	{
@@ -1329,25 +1380,19 @@ class IA_SpawnPlacement
 
 		if (preferHotDrop)
 		{
-			if (TrySampleAnnulusDropLz(center, 40, 120, 16, players, 80, avoidLzs, DROP_WAVE_SEPARATION_M, outLz))
+			if (TrySampleAnnulusDropLz(center, 80, 160, 16, players, DEFEND_DROP_HOT_PLAYER_MIN_M, avoidLzs, DROP_WAVE_SEPARATION_M, outLz))
 				return true;
-			if (TrySampleAnnulusDropLz(center, 30, 140, 10, players, 80, avoidLzs, 40, outLz))
+			if (TrySampleAnnulusDropLz(center, 60, 200, 10, players, DEFEND_DROP_HOT_PLAYER_MIN_M, avoidLzs, 40, outLz))
 				return true;
 		}
 
-		if (TrySampleAnnulusDropLz(center, 150, 300, 24, players, 80, avoidLzs, DROP_WAVE_SEPARATION_M, outLz))
+		if (TrySampleAnnulusDropLz(center, 200, 400, 24, players, DEFEND_DROP_PLAYER_MIN_M, avoidLzs, DROP_WAVE_SEPARATION_M, outLz))
 			return true;
-		if (TrySampleAnnulusDropLz(center, 120, 320, 16, players, 80, avoidLzs, 40, outLz))
+		if (TrySampleAnnulusDropLz(center, 180, 450, 16, players, DEFEND_DROP_PLAYER_MIN_M, avoidLzs, 40, outLz))
 			return true;
-		if (TrySampleAnnulusDropLz(center, 100, 350, 12, players, 80, null, 0, outLz))
+		if (TrySampleAnnulusDropLz(center, 160, 500, 16, players, DEFEND_DROP_PLAYER_MIN_M, null, 0, outLz))
 			return true;
 
-		vector fallback;
-		if (!TryFindDropLz(center, DROP_LZ_SEARCH_WIDE_R, fallback))
-			return false;
-		if (IsNearAnyPlayer(fallback, players, 80))
-			return false;
-		outLz = fallback;
-		return true;
+		return false;
 	}
 }

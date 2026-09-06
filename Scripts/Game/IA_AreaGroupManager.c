@@ -605,7 +605,11 @@ class IA_AreaGroupManager
             spawnCenter = targetAreaInst.GetArea().GetOrigin();
 
         int activeGroup = IA_VehicleManager.GetActiveGroup();
-        vector infAnchor = IA_SpawnPlacement.FindReinforcementInfantryOrigin(spawnCenter, -1);
+        vector infAnchor;
+        if (forDefendMission)
+            infAnchor = IA_SpawnPlacement.FindDefendWaveInfantryOrigin(spawnCenter, -1);
+        else
+            infAnchor = IA_SpawnPlacement.FindReinforcementInfantryOrigin(spawnCenter, -1);
         vector vehAnchor = IA_SpawnPlacement.FindInboundVehicleSpawn(spawnCenter, activeGroup, -1);
 
         bool success = false;
@@ -708,8 +712,22 @@ class IA_AreaGroupManager
         else if (vector.Distance(spawnPos, vector.Zero) < 50)
             preferredUsable = false;
 
-        if (!preferredUsable)
+        if (forDefendMission)
+        {
+            if (!preferredUsable)
+                spawnPos = IA_SpawnPlacement.FindDefendWaveInfantryOrigin(targetPos, -1);
+            else
+            {
+                ref array<vector> players = new array<vector>();
+                IA_SpawnPlacement.CollectPlayerPositions(players);
+                if (IA_SpawnPlacement.IsNearAnyPlayer(spawnPos, players, IA_SpawnPlacement.DEFEND_WAVE_PLAYER_MIN_M))
+                    spawnPos = IA_SpawnPlacement.FindDefendWaveInfantryOrigin(targetPos, -1);
+            }
+        }
+        else if (!preferredUsable)
+        {
             spawnPos = IA_SpawnPlacement.FindReinforcementInfantryOrigin(areaInst.GetArea().GetOrigin(), -1);
+        }
 
         if (spawnPos == vector.Zero)
         {
@@ -831,11 +849,15 @@ class IA_AreaGroupManager
         vector dropLz;
         bool foundLz = false;
         if (forDefendMission)
+        {
             foundLz = IA_SpawnPlacement.TryFindDefendDropLz(attackTarget, m_airborneHotDrop, dropLz, m_recentDropLzs);
-        if (!foundLz)
+        }
+        else
+        {
             foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_R, dropLz);
-        if (!foundLz)
-            foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz);
+            if (!foundLz)
+                foundLz = IA_SpawnPlacement.TryFindDropLz(attackTarget, IA_SpawnPlacement.DROP_LZ_SEARCH_WIDE_R, dropLz);
+        }
         if (!foundLz)
         {
             Print("[QRF] Airborne miss: no open-sky LZ.", LogLevel.WARNING);

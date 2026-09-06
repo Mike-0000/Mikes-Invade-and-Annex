@@ -5123,7 +5123,11 @@ class IA_AreaInstance
                 else
                     center = m_area.GetOrigin();
 
-                vector spawnPos = IA_SpawnPlacement.FindReinforcementInfantryOrigin(center, sectorIndex);
+                vector spawnPos;
+                if (forDefendMission)
+                    spawnPos = IA_SpawnPlacement.FindDefendWaveInfantryOrigin(center, sectorIndex);
+                else
+                    spawnPos = IA_SpawnPlacement.FindReinforcementInfantryOrigin(center, sectorIndex);
                 if (spawnPos == vector.Zero)
                     return false;
 
