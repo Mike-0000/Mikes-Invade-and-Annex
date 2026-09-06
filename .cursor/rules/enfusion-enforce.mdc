@@ -228,6 +228,10 @@ Enfusion has **no WebView**. Widgets are the compositor (Canvas, text, EditBox).
 
 Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer rule / `F:\Mikes-UI\README.md`.
 
+## In-game validation handoff
+
+- **Stop and hand off to the user when the next required evidence needs an in-game test.** Finish bounded source, compiler, and suitable Workbench checks, then state what is implemented, what passed, what remains unverified, and the smallest concrete in-game test the user should run. Do not continue speculative edits, add increasingly elaborate preview probes, or repeat review/test cycles to substitute for live gameplay evidence. Resume the affected work after the user supplies results or explicitly authorizes further investigation. Clearly distinguish preview-world limitations from confirmed gameplay bugs; never claim live behavior is validated by compilation or asset previews.
+
 ## Safety
 
 - Null-check entities and components before use. Early-return on invalid state.
