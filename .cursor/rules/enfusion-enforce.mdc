@@ -55,6 +55,7 @@ Prefer **`SCR_`** types over thinner native/`GameCode` types — they have the m
 - **`Class` is the super-root. `Managed` is GC'd.** Downcast with `T.Cast(obj)`, then null-check. `IsInherited(typename)`.
 - **`null` is not an enum value.** Enums are ints. `ShouldDefer(null, waypoint)` when the first arg is `IA_AiOrder` is `Cannot convert 'Class' to 'int'`. Split the overload or pass a real enum. Evidence: `compiler: IA_AI_Group.c` `ShouldDeferForTypedWaypointTree`.
 - **`pointer` types cannot be class members.** They are plain C++ pointers with no weak refs and no GC (`Types.c`). `Physics` is `NativeComponent : pointer`, so `protected Physics m_Physics` is `Pointer type 'Physics' can only be used with local variables` and can block the Game script module. Fetch a local with `owner.GetPhysics()`; cache `IEntity` if you need the owner. `global_pointer` is the subtype `Types.c` marks "Safe to store outside local scope". Evidence: `compiler: MHJ_CanopyFlight.c`; `Physics.c`, `NativeComponent.c`, `Types.c`.
+- **Locals are function-scoped, not block-scoped.** A later `if` cannot redeclare a name already used above in the same method; that is `Multiple declaration of variable`. Reuse the existing local or pick a new name. Evidence: `compiler: IA_CompositionGunBuilder.c:150` `parent` / `access`.
 - **Subclass constructors must match prototype parameter names** for inherited ctor args. `ScriptedCommand` is `protected void ScriptedCommand(BaseAnimPhysComponent pAnimPhysComponent)`. Renaming that first arg (e.g. `animPhysComponent`) is `SCRIPT (E): … name differs from prototype 'pAnimPhysComponent'` and the Game script module will not compile. Extra parameters after the prototype are fine. Evidence: `compiler: MHJ_HaloCommand.c`; `ScriptedCommand.c`; vanilla `SCR_CharacterCommandSwim` / `SCR_CharacterCommandFly`.
 - **`notnull` in a signature is a contract**, not a runtime gift. Still validate at trust boundaries.
 - **`out` / `inout` / `owned`** are real. `out` = callee writes; `inout` = read then write; `owned` on proto returns = VM must not release the string/array.
@@ -235,6 +236,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-09-06 — Enforce locals are function-scoped; a nested `if` cannot redeclare `parent` / `access` already declared above (`compiler: IA_CompositionGunBuilder.c:150`).
 - 2026-09-05 — `RemoveStaticMarker` drops the manager `ref` then calls `GetMarkerID()` again; a non-`ref` holder NPEs (`SCR_MapMarkerManagerComponent.c:287`, `runtime:` Complete Zone during seize).
 - 2026-09-02 — Horizontal-only AI-drop chest sweep plus a short `GroundY` from the feet tunnels sloped one-sided monument faces; sweep the full 3D step and start `GroundY` from well above, skipping trees (`MHJ_AiDropAutopilot.c`, `runtime:` airborne QRF through pyramid voids).
 - 2026-08-31 — `SCR_AICombatComponent.EOnInit` copies prefab `m_eAISkillDefault` onto live skill; `SetAISkill` before that init is lost. Combat component is on the character (`SCR_AICombatComponent.c`, `Character_Base.et`).
