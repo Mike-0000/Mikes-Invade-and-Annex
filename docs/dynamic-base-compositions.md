@@ -1,6 +1,6 @@
 # Composition-based dynamic bases
 
-Implementation complete in the experimental addon; **live gameplay acceptance remains pending**. This replaces the active fixed scenery/low-tripod placement approach. Historical layouts and their regression fixtures remain available to Workbench tools, not the runtime recipe selector.
+Implementation complete in the experimental addon. The user reports the composition bases are working well; the subsequent sandbag-infill change still needs its short visual/gameplay check. This replaces the active fixed scenery/low-tripod placement approach. Historical layouts and their regression fixtures remain available to Workbench tools, not the runtime recipe selector.
 
 ## Designs and limits
 
@@ -17,15 +17,15 @@ The runtime uses 120 deterministic recipes: twenty per size, across Strongpoint,
 
 *Existing settings and the existing 1.75x garrison scaling still apply. Gun crews are deducted from that total, not added to it. One heavy position (NSV, scoped NSV or AA) is allowed on Full/Compact only; AA shares that allowance. Installed counts may be lower, including zero after optional access/firing validation.
 
-The catalog contains 28 composition types. Full encampments can use the large clustered living area instead of several separate service areas. Small living areas, HQ, hospital/medical, maintenance, supplies/ammunition/fuel, towers, bunkers, MG nests, four infantry sandbag positions and three sizes of checkpoint/barricade appear across the library. RoadControl describes an internal approach design; it does not promise alignment with an existing map road.
+The catalog contains 28 composition types. The large clustered living area remains in the asset catalog, but Full encampments now use the small living cluster so perimeter walls fit within the existing entity cap. Small living areas, HQ, hospital/medical, maintenance, supplies/ammunition/fuel, towers, bunkers, MG nests, four infantry sandbag positions and three sizes of checkpoint/barricade appear across the library. RoadControl describes an internal approach design; it does not promise alignment with an existing map road.
 
-Three reserved approaches join an outdoor capture point and the central crossing. These are discrete fortifications, not a continuous sealed wall ring. Outdoor guard posts avoid measured composition pads; native Defend remains a whole-base soft leash. Towers are scenery with their physical ladders, **not a promise that AI will climb or occupy the platform**.
+Three reserved approaches join an outdoor capture point and the central crossing. Standard solid burlap sandbag panels now fill the perimeter between the authored fortifications. The generator subtracts the three ten-metre gate openings, composition footprints and conservatively padded horizontal gun-firing corridors before tiling wall runs. Sub-panel-length slivers are left clear rather than scaling a stock wall into a reserved opening. The result is a much denser perimeter, not a guarantee of an impassable sealed ring. Outdoor guard posts avoid measured composition pads; native Defend remains a whole-base soft leash. Towers are scenery with their physical ladders, **not a promise that AI will climb or occupy the platform**.
 
 ## Adaptation and ownership
 
 - `tools/author_base_compositions.py` resolves vanilla prefab placements into new I&A resource GUIDs. Nested compositions become scenery roots. Campaign construction/disassembly, service/arsenal/spawn logic, activity points and weapons are excluded. Some vegetation, decals and generators are intentionally excluded too.
 - Physical props normally retain their vanilla inheritance. Service-bearing physical hierarchies are adapted using mesh/rigid-body data and physical children rather than inheriting their service scripts. Consequently these adapted objects do not promise vanilla service actions or destruction behavior. Living/service compositions are scenery, not functional Conflict facilities.
-- Native Preview measurements cover mesh bounds and expanded hierarchy counts, not campaign interaction boxes. The generated runtime catalog adds count headroom; recipes reserve up to twelve hardware entities per socket and stay at or below 820 expanded entities. Existing absolute ceilings remain 256 roots / 850 expanded entities.
+- Native Preview measurements cover mesh bounds and expanded hierarchy counts, not campaign interaction boxes. The generated runtime catalog adds count headroom; recipes reserve up to twelve hardware entities per socket and stay at or below 820 expanded entities. Existing absolute ceilings remain 256 roots / 850 expanded entities. Wall infill reserves its budget before expensive accommodation/service choices and then releases unused reservation. Current recipes add 59–178 single-entity panels, with maxima of 195 roots including guns and 819 expanded entities including gun allowances; optional service selection yields to walls when necessary.
 - Composition roots follow the terrain plane, with a five-degree inclination cap and existing support-residual/clearance validation. Complete authored support arrangements carry the guns; the obsolete three-centimetre tripod-foot test is not used for composition sockets.
 - Guns are separate site-owned roots. Checkpoint/nest weapons are extracted into the **same** socket and budget system, preventing hidden extra guns. Failed gun checks retain the fortification and continue construction.
 - Optional installation is sliced and deadline-bounded. Access tries at most five outdoor positions. Firing checks require the central ray and at least three of five useful lanes, excluding only the gun's own hierarchy—not its sandbags or the base. This is not certification of every angle or every barrel sweep.
@@ -41,7 +41,15 @@ The admin Defense page exposes **Optional finite-ammunition base emplacements**.
 
 Assignments release only their own reservation and balance their LOD pin. Existing release/abort/capture/defense transitions retain the guns for player reuse according to the site's retirement policy. Cleanup remains deferred for player occupancy and entry/exit transitions; hardware accounting excludes character descendants. No new map/HUD indicators or global infantry/turret behavior changes are introduced.
 
-## Validation evidence
+## Sandbag infill acceptance (2026-09-06)
+
+- 30 Python tests pass, including wall reproducibility, gate clearance, composition separation and full wall-inclusive accounting.
+- Native `IA_BaseDesignTest` passes all 120 recipes / 24 headings, `failures=0`: `F:/IA_EmplacementProbe/logs/logs_2026-09-06_01-53-48/script.log`.
+- WORKBENCH, PC, XBOX, PS4 and PS5 compile validation passes: `.../logs_2026-09-06_01-53-55/script.log`.
+- Logging validator passes 115 scripts. Infill panels use the original stock solid burlap wall and its independently terrain-aligned placement path. They are required modules, not silently omitted decorative pieces.
+- **Next live check:** spawn a new base, walk its perimeter and all three entrances, inspect wall joins around the compositions, and confirm its previously working guns still fire outward. Existing active bases are not modified in place.
+
+## Original composition validation evidence
 
 Final source/automation pass:
 

@@ -17,7 +17,7 @@ class IA_BaseDesignTest : IA_BaseFoundationProbe
 				foreach (IA_DynamicSiteModule module : layout.m_aModules)
 				{
 					expanded += module.m_iEstimatedExpandedEntities;
-					Check(module.m_bFollowTerrainPlane, "composition grounding enabled");
+					Check(module.m_bFollowTerrainPlane || module.m_iGroundingPolicy == IA_DynamicSiteGrounding.TerrainSegment, "composition or wall grounding enabled");
 					if (module.m_iPerimeterSide >= 0)
 						sides[module.m_iPerimeterSide] = sides[module.m_iPerimeterSide] + 1;
 				}

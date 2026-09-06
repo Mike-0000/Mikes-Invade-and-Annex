@@ -9,7 +9,7 @@ import unittest
 
 sys.dont_write_bytecode=True
 from author_base_compositions import Author,REF,parse
-from author_base_designs import generate,box,overlap,CAPS
+from author_base_designs import generate,box,overlap,CAPS,perimeter_walls
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('D:/ReforgerGameSources/data/data007')
@@ -58,7 +58,7 @@ class CompositionTests(unittest.TestCase):
     def test_all_sizes_themes_and_nonduplicated_recipes(self):
         self.assertEqual(len(self.recipes),120)
         used={m['key'] for r in self.recipes for m in r['modules']}
-        self.assertEqual(used,set(self.catalog))
+        self.assertEqual(used,set(self.catalog)-{'LivingLarge'}) # wall budget takes priority over the 518-entity cluster
         for size in range(6):
             recipes=[r for r in self.recipes if r['size']==size]
             self.assertEqual(len(recipes),20)
@@ -72,7 +72,7 @@ class CompositionTests(unittest.TestCase):
             self.assertEqual(modules[0]['role'],'Hq')
             self.assertTrue(any(m['role']=='Barracks' and m['required'] for m in modules))
             self.assertLessEqual(r['expanded']+r['guns']*12,820)
-            self.assertLessEqual(len(modules)+r['guns'],256)
+            self.assertLessEqual(len(modules)+len(r['walls'])+r['guns'],256)
             self.assertLessEqual(r['guns'],CAPS[r['size']])
             self.assertLessEqual(r['heavy'],int(r['size']<2))
             counts=Counter(m['side'] for m in modules)
@@ -96,6 +96,24 @@ class CompositionTests(unittest.TestCase):
                     x=p[0]*math.cos(a)+p[2]*math.sin(a)
                     z=-p[0]*math.sin(a)+p[2]*math.cos(a)
                     self.assertAlmostEqual(math.hypot(x,z),math.hypot(p[0],p[2]),places=5)
+
+    def test_wall_infill_gates_and_accounting(self):
+        for r in self.recipes:
+            walls=r['walls']
+            self.assertEqual(walls,perimeter_walls(r['half_width'],r['half_depth'],r['modules'],self.catalog))
+            self.assertGreater(len(walls),30)
+            self.assertEqual(r['expanded'],sum(m['expanded'] for m in r['modules'])+len(walls))
+            for w in walls:
+                x,z=w['position'][0],w['position'][2]
+                if w['side']==2:
+                    self.assertTrue(x+1.483<=-5.0+0.001 or x-1.483>=5.0-0.001)
+                elif w['side'] in (1,3):
+                    self.assertTrue(z+1.483<=-13+0.001 or z-1.483>=-3-0.001)
+                a=(x-1.47,z-.62,x+1.47,z+.62) if w['side'] in (0,2) else (x-.62,z-1.47,x+.62,z+1.47)
+                self.assertFalse(any(overlap(a,box(m)) for m in r['modules']))
+        source=read('Scripts/Game/IA_ComposedSiteLayout.c')
+        self.assertIn('AddCover("infill_"',source)
+        self.assertIn('m_bRequired = true',source)
 
     def test_shared_gun_budget_includes_checkpoints(self):
         self.assertEqual(self.catalog['CheckpointM']['sockets'][0]['kind'],0)

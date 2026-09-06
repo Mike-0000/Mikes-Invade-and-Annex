@@ -27,6 +27,13 @@ class IA_ComposedSiteLayout : IA_DynamicSiteLayout
 		return Math.Max(0, Math.Min(preferredRadius, clearance));
 	}
 
+	void AddPerimeterWall(vector position, float yaw, int side)
+	{
+		AddCover("infill_" + m_aModules.Count().ToString(), position[0], position[2], yaw, 0, side);
+		// Do not reveal a nominally closed perimeter with randomly missing walls.
+		m_aModules[m_aModules.Count() - 1].m_bRequired = true;
+	}
+
 	void AddComposition(string key, vector position, float yaw, int role, int side, bool required)
 	{
 		ref IA_BaseCompositionAsset asset = IA_BaseCompositionCatalog.Get(key);
