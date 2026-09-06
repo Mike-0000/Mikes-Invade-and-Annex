@@ -40,9 +40,26 @@ class IA_ComposedSiteLayout : IA_DynamicSiteLayout
 		if (!asset)
 			return;
 		string id = key + "_" + m_aModules.Count().ToString();
-		float halfW = Math.Max(Math.AbsFloat(asset.m_vMins[0]), Math.AbsFloat(asset.m_vMaxs[0])) + 1;
-		float halfD = Math.Max(Math.AbsFloat(asset.m_vMins[2]), Math.AbsFloat(asset.m_vMaxs[2])) + 1;
-		AddModule(id, asset.m_Prefab, position[0], position[2], yaw, halfW, halfD, role, 0.15, asset.m_iExpanded);
+		float meshW = Math.Max(Math.AbsFloat(asset.m_vMins[0]), Math.AbsFloat(asset.m_vMaxs[0]));
+		float meshD = Math.Max(Math.AbsFloat(asset.m_vMins[2]), Math.AbsFloat(asset.m_vMaxs[2]));
+		float halfW = meshW;
+		float halfD = meshD;
+		float maxDelta = 0.15;
+		if (side >= 0)
+		{
+			// Wall-line poses sit on the grade. The old 0.15 m absolute span
+			// rejected every nest once FollowTerrainPlane was cleared. Do not
+			// add the interior +1 m pad or the volume samples land outside
+			// the wall and fail on edge terrain.
+			maxDelta = 0.8;
+			required = true;
+		}
+		else
+		{
+			halfW = meshW + 1;
+			halfD = meshD + 1;
+		}
+		AddModule(id, asset.m_Prefab, position[0], position[2], yaw, halfW, halfD, role, maxDelta, asset.m_iExpanded);
 		IA_DynamicSiteModule module = m_aModules[m_aModules.Count() - 1];
 		module.m_bRequired = required;
 		module.m_iPerimeterSide = side;
