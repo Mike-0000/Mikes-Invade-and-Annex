@@ -32,6 +32,25 @@ def overlap(a,b,gap=0):
 
 
 WALL_INSET=0.9
+GUNNED_COVER_WEIGHT=1.5
+
+
+def cover_weight(key,catalog):
+    if catalog.get(key,{}).get('sockets'):
+        return GUNNED_COVER_WEIGHT
+    return 1.0
+
+
+def weighted_cover_order(rng,keys,catalog):
+    """Gunned fighting positions are 1.5x as likely as bare cover."""
+    remaining=list(keys)
+    ordered=[]
+    while remaining:
+        weights=[cover_weight(key,catalog) for key in remaining]
+        pick=rng.choices(remaining,weights=weights,k=1)[0]
+        remaining.remove(pick)
+        ordered.append(pick)
+    return ordered
 
 
 def mesh_box(item,measure):
@@ -223,8 +242,7 @@ def build(size_id,variant,catalog,measure):
         slots.insert(4,(0,0))
     used={}
     for index,(side,fraction) in enumerate(slots):
-        options=list(palettes[theme])
-        rng.shuffle(options)
+        options=weighted_cover_order(rng,palettes[theme],catalog)
         if index==0:
             options=['CheckpointM' if theme==2 and size_id<4 else 'PKMNest','PKM']+options
         if index==2 and size_id<2:

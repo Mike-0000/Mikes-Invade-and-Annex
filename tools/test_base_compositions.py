@@ -3,13 +3,14 @@ from pathlib import Path
 from collections import Counter
 import json
 import math
+import random
 import re
 import sys
 import unittest
 
 sys.dont_write_bytecode=True
 from author_base_compositions import Author,REF,parse
-from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET
+from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('D:/ReforgerGameSources/data/data007')
@@ -65,6 +66,15 @@ class CompositionTests(unittest.TestCase):
             signatures={json.dumps(r['modules'],sort_keys=True) for r in recipes}
             self.assertEqual(len(signatures),20)
             self.assertEqual(len({r['theme'] for r in recipes}),5)
+
+    def test_gunned_cover_is_weighted_over_bare_positions(self):
+        self.assertEqual(GUNNED_COVER_WEIGHT,1.5)
+        catalog={'PKM':{'sockets':[{}]},'Position1':{'sockets':[]}}
+        first={'PKM':0,'Position1':0}
+        for seed in range(4000):
+            first[weighted_cover_order(random.Random(seed),['PKM','Position1'],catalog)[0]]+=1
+        self.assertGreater(first['PKM']/first['Position1'],1.35)
+        self.assertLess(first['PKM']/first['Position1'],1.65)
 
     def test_geometry_budgets_lanes_and_guard_posts(self):
         for r in self.recipes:
