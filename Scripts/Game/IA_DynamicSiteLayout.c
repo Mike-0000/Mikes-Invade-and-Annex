@@ -77,6 +77,7 @@ class IA_DynamicSiteLayout
 	static const ResourceName PREFAB_COVER_WINDOW = "{CD67070EFAFC28C7}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_burlap.et";
 	static const ResourceName PREFAB_COVER_HIGH = "{BE16EE8FAA315FE2}Prefabs/Props/Military/Sandbags/Sandbag_01_long_high_burlap.et";
 	static const ResourceName PREFAB_COVER_ROUND = "{7AF4B627D5C90235}Prefabs/Props/Military/Sandbags/Sandbag_01_round_high_burlap.et";
+	static const ResourceName PREFAB_COVER_END = "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et";
 	static const ResourceName PREFAB_TOWER = "{DFBF655559915333}Prefabs/Compositions/Slotted/SlotFlatSmall/GuardTower_S_USSR_01.et";
 	static const ResourceName PREFAB_WORKSHOP = "{EE2DA99D3A9B5F46}Prefabs/DynamicBase/IA_VehicleMaintenance_M_USSR_01.et";
 	static const ResourceName PREFAB_FUEL = "{490B2E7D9EB95EC7}Prefabs/DynamicBase/IA_FuelStorage_S_USSR_01.et";
@@ -1125,6 +1126,8 @@ class IA_DynamicSiteLayout
 		else if (style == 2)
 			prefab = PREFAB_COVER_HIGH;
 		else if (style == 3)
+			prefab = PREFAB_COVER_END;
+		else if (style == 4)
 			prefab = PREFAB_COVER_ROUND;
 		// One replicated stock panel per section, independently terrain-aligned.
 		AddModule(id, prefab, x, z, yawDeg, 1.8, 0.8, IA_DynamicSiteModuleRole.Cover, 0.50, 1);

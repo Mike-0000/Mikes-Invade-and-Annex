@@ -27,9 +27,9 @@ class IA_ComposedSiteLayout : IA_DynamicSiteLayout
 		return Math.Max(0, Math.Min(preferredRadius, clearance));
 	}
 
-	void AddPerimeterWall(vector position, float yaw, int side)
+	void AddPerimeterWall(vector position, float yaw, int side, int style = 0)
 	{
-		AddCover("infill_" + m_aModules.Count().ToString(), position[0], position[2], yaw, 0, side);
+		AddCover("infill_" + m_aModules.Count().ToString(), position[0], position[2], yaw, style, side);
 		// Do not reveal a nominally closed perimeter with randomly missing walls.
 		m_aModules[m_aModules.Count() - 1].m_bRequired = true;
 	}
@@ -46,7 +46,9 @@ class IA_ComposedSiteLayout : IA_DynamicSiteLayout
 		IA_DynamicSiteModule module = m_aModules[m_aModules.Count() - 1];
 		module.m_bRequired = required;
 		module.m_iPerimeterSide = side;
-		module.m_bFollowTerrainPlane = true;
+		// Perimeter fighting positions stay on the authored heading so they
+		// sit in the wall line. Interior tents may still follow the grade.
+		module.m_bFollowTerrainPlane = side < 0;
 		module.m_fClearanceHeightM = Math.Max(6, asset.m_vMaxs[1] + 1);
 		module.SetSupportFootprint(Vector(asset.m_vMins[0], 0, asset.m_vMins[2]), Vector(asset.m_vMaxs[0], 0, asset.m_vMaxs[2]));
 		if (side >= 0)

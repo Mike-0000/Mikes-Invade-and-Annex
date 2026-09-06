@@ -9,7 +9,7 @@ import unittest
 
 sys.dont_write_bytecode=True
 from author_base_compositions import Author,REF,parse
-from author_base_designs import generate,box,overlap,CAPS,perimeter_walls
+from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('D:/ReforgerGameSources/data/data007')
@@ -80,10 +80,17 @@ class CompositionTests(unittest.TestCase):
             lanes=[(-4,-D,4,r['capture'][2]),(-W,-12,W,-4)]
             for i,m in enumerate(modules):
                 a=box(m)
-                self.assertGreaterEqual(a[0],-W+1)
-                self.assertGreaterEqual(a[1],-D+1)
-                self.assertLessEqual(a[2],W-1)
-                self.assertLessEqual(a[3],D-1)
+                if m['side']>=0:
+                    mb=mesh_box(m,self.measure)
+                    self.assertGreaterEqual(mb[0],-W-0.6)
+                    self.assertGreaterEqual(mb[1],-D-0.6)
+                    self.assertLessEqual(mb[2],W+0.6)
+                    self.assertLessEqual(mb[3],D+0.6)
+                else:
+                    self.assertGreaterEqual(a[0],-W+1)
+                    self.assertGreaterEqual(a[1],-D+1)
+                    self.assertLessEqual(a[2],W-1)
+                    self.assertLessEqual(a[3],D-1)
                 for other in modules[i+1:]:
                     self.assertFalse(overlap(a,box(other),1),(r['name'],m['key'],other['key']))
                 if m['role']!='Hq':
@@ -100,9 +107,13 @@ class CompositionTests(unittest.TestCase):
     def test_wall_infill_gates_and_accounting(self):
         for r in self.recipes:
             walls=r['walls']
-            self.assertEqual(walls,perimeter_walls(r['half_width'],r['half_depth'],r['modules'],self.catalog))
+            self.assertEqual(walls,perimeter_walls(r['half_width'],r['half_depth'],r['modules'],self.catalog,self.measure))
             self.assertGreater(len(walls),30)
             self.assertEqual(r['expanded'],sum(m['expanded'] for m in r['modules'])+len(walls))
+            styles={w.get('style',0) for w in walls}
+            self.assertIn(3,styles,(r['name'],styles))
+            if r['size']<3:
+                self.assertTrue(len(styles)>=3,(r['name'],styles))
             for w in walls:
                 x,z=w['position'][0],w['position'][2]
                 if w['side']==2:
@@ -110,10 +121,27 @@ class CompositionTests(unittest.TestCase):
                 elif w['side'] in (1,3):
                     self.assertTrue(z+1.483<=-13+0.001 or z-1.483>=-3-0.001)
                 a=(x-1.47,z-.62,x+1.47,z+.62) if w['side'] in (0,2) else (x-.62,z-1.47,x+.62,z+1.47)
-                self.assertFalse(any(overlap(a,box(m)) for m in r['modules']))
+                self.assertFalse(any(overlap(a,mesh_box(m,self.measure)) for m in r['modules'] if m['side']==w['side']),(r['name'],w))
         source=read('Scripts/Game/IA_ComposedSiteLayout.c')
         self.assertIn('AddCover("infill_"',source)
         self.assertIn('m_bRequired = true',source)
+        self.assertIn('int style = 0',source)
+
+    def test_fighting_positions_sit_on_the_wall_line(self):
+        for r in self.recipes:
+            W,D=r['half_width'],r['half_depth']
+            for m in r['modules']:
+                if m['side']<0:
+                    continue
+                mb=mesh_box(m,self.measure)
+                if m['side']==0:
+                    self.assertAlmostEqual(mb[3],D-WALL_INSET,places=2)
+                elif m['side']==1:
+                    self.assertAlmostEqual(mb[2],W-WALL_INSET,places=2)
+                elif m['side']==2:
+                    self.assertAlmostEqual(mb[1],-(D-WALL_INSET),places=2)
+                else:
+                    self.assertAlmostEqual(mb[0],-(W-WALL_INSET),places=2)
 
     def test_shared_gun_budget_includes_checkpoints(self):
         self.assertEqual(self.catalog['CheckpointM']['sockets'][0]['kind'],0)

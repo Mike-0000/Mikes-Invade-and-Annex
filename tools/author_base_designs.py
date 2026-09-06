@@ -31,17 +31,52 @@ def overlap(a,b,gap=0):
     return not(a[2]+gap<=b[0] or b[2]+gap<=a[0] or a[3]+gap<=b[1] or b[3]+gap<=a[1])
 
 
-def perimeter_walls(W,D,modules,catalog):
+WALL_INSET=0.9
+
+
+def mesh_box(item,measure):
+    """World-axis AABB of the measured mesh, not the reserved clearance pad."""
+    m=measure[item['key']]
+    angle=math.radians(item['yaw'])
+    cx,cz=item['position'][0],item['position'][2]
+    xs=[]; zs=[]
+    for lx,lz in ((m['mins'][0],m['mins'][2]),(m['mins'][0],m['maxs'][2]),
+                  (m['maxs'][0],m['mins'][2]),(m['maxs'][0],m['maxs'][2])):
+        xs.append(cx+lx*math.cos(angle)+lz*math.sin(angle))
+        zs.append(cz-lx*math.sin(angle)+lz*math.cos(angle))
+    return min(xs),min(zs),max(xs),max(zs)
+
+
+def wall_line(W,D,side):
+    if side in (0,2):
+        return (D-WALL_INSET)*(1 if side==0 else -1)
+    return (W-WALL_INSET)*(1 if side==1 else -1)
+
+
+def snap_outward_face(x,z,side,measure_entry,W,D):
+    """Put the prefab's +Z fighting face on the same line as the sandbag walls."""
+    out=measure_entry['maxs'][2]
+    fixed=wall_line(W,D,side)
+    if side==0:
+        return x,fixed-out
+    if side==1:
+        return fixed-out,z
+    if side==2:
+        return x,fixed+out
+    return fixed+out,z
+
+
+def perimeter_walls(W,D,modules,catalog,measure=None):
     """Tile the unused perimeter, subtracting gates, assemblies and firing lanes.
 
-    Flat socket yaw projections deliberately pad firing corridors by two metres;
-    native placement still checks the actual tilted gun and all physical walls.
+    Fighting-position gaps use the measured mesh so walls meet the bags instead
+    of the oversized reservation pad. Firing corridors stay padded.
     """
     walls=[]
     for side in range(4):
         horizontal=side in (0,2)
-        extent=(W if horizontal else D)-.9
-        fixed=((D if horizontal else W)-.9)*(1 if side in (0,1) else -1)
+        extent=(W if horizontal else D)-WALL_INSET
+        fixed=wall_line(W,D,side)
         blocked=[]
         if side==2:
             blocked.append((-5,5))
@@ -49,7 +84,7 @@ def perimeter_walls(W,D,modules,catalog):
             blocked.append((-13,-3))
         for m in modules:
             if m['side']==side:
-                a=box(m)
+                a=mesh_box(m,measure) if measure else box(m)
                 blocked.append((a[0],a[2]) if horizontal else (a[1],a[3]))
             for socket in catalog[m['key']]['sockets']:
                 x,z=m['position'][0],m['position'][2]
@@ -91,7 +126,12 @@ def perimeter_walls(W,D,modules,catalog):
             for i in range(count):
                 along=a+1.483+i*step
                 position=[along,0,fixed] if horizontal else [fixed,0,along]
-                walls.append({'position':[round(v,4) for v in position],'yaw':[0,90,180,270][side],'side':side})
+                # Solid / firing slit / high parapet, with an end-cap next to
+                # gates and fighting positions. Same family as vanilla positions.
+                style=[0,1,0,2][i%4]
+                if i==0 or i==count-1:
+                    style=3
+                walls.append({'position':[round(v,4) for v in position],'yaw':[0,90,180,270][side],'side':side,'style':style})
     return walls
 
 
@@ -137,7 +177,11 @@ def build(size_id,variant,catalog,measure):
               'half_width':max(abs(m['mins'][0]),abs(m['maxs'][0]))+1,
               'half_depth':max(abs(m['mins'][2]),abs(m['maxs'][2]))+1,'expanded':cost}
         a=box(item)
-        if a[0]<-W+1 or a[2]>W-1 or a[1]<-D+1 or a[3]>D-1:
+        if side>=0:
+            mb=mesh_box(item,measure)
+            if mb[0]<-W-0.6 or mb[2]>W+0.6 or mb[1]<-D-0.6 or mb[3]>D+0.6:
+                return False
+        elif a[0]<-W+1 or a[2]>W-1 or a[1]<-D+1 or a[3]>D-1:
             return False
         if any(overlap(a,box(other),1) for other in modules):
             return False
@@ -171,7 +215,7 @@ def build(size_id,variant,catalog,measure):
     # Secure each side before allocating optional interior luxuries.
     palettes=[['Bunker','Tower','PKMNest','Position2','Position3','Position1','PKM'],
               ['PKM','Position1','Position3','Position4','Tower','Position2'],
-              ['CheckpointM','PKMNest','BarricadeM','BarricadeL','Position2','Position3','Tower','Position1'],
+              ['CheckpointM','CheckpointS','PKMNest','BarricadeM','BarricadeL','Position2','Position3','Tower','Position1'],
               ['Tower','PKM','Position2','BarricadeS','Position1','Position3'],
               ['Bunker','Position4','PKMNest','Position3','Tower','Position2','Position1']]
     slots=[(2,-.48),(2,.48),(1,.55),(3,.55),(0,-.52),(0,.52),(1,-.63),(3,-.63)]
@@ -198,16 +242,17 @@ def build(size_id,variant,catalog,measure):
                 x=W*fraction
                 if side==2 and key.startswith('Checkpoint'):
                     x=(w+5)*(1 if fraction>0 else -1)
-                z=(D-d-2)*(1 if side==0 else -1)
+                z=0
             else:
-                x=(W-d-2)*(1 if side==1 else -1)
+                x=0
                 z=D*fraction
+            x,z=snap_outward_face(x,z,side,m,W,D)
             if insert(key,x,z,yaw,'Cover',side):
                 used[key]=used.get(key,0)+1
                 break
     sides={x['side'] for x in modules}
     assert all(side in sides for side in range(4)),(name,variant,'side missing',sides)
-    walls=perimeter_walls(W,D,modules,catalog)
+    walls=perimeter_walls(W,D,modules,catalog,measure)
     wall_reserve=len(walls)
     service_lists=[['Hospital','Ammo','Medical','Fuel'],['Fuel','Medical','Supply'],
                    ['MaintenanceSmall','Supply','Medical'],['MaintenanceLarge','Supply','Fuel','Ammo'],
@@ -274,7 +319,7 @@ def recipe_script(recipes):
         lines += ['\t}']
         lines += [f'\tprotected static void BuildWalls{i}(IA_ComposedSiteLayout layout)','\t{']
         for wall in r['walls']:
-            lines += [f'\t\tlayout.AddPerimeterWall({vec(wall["position"])}, {wall["yaw"]}, {wall["side"]});']
+            lines += [f'\t\tlayout.AddPerimeterWall({vec(wall["position"])}, {wall["yaw"]}, {wall["side"]}, {wall.get("style",0)});']
         lines += ['\t}']
     return '\n'.join(lines+['}',''])
 
