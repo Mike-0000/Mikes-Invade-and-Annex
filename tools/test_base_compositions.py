@@ -210,7 +210,11 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('required = true',composed)
         self.assertIn('module.m_bFollowTerrainPlane = side < 0',composed)
         self.assertIn('COMPOSITION_MIN_UP_Y',placer)
+        self.assertIn('COMPOSITION_MIN_UP_Y_RELAXED',placer)
         self.assertIn('FOOTPRINT_HEIGHT_SPAN_M',placer)
+        self.assertIn('FOOTPRINT_HEIGHT_SPAN_RELAXED_M',placer)
+        self.assertIn('TryBeginRelaxedTerrainPass',placer)
+        self.assertIn('TERRAIN_SPAN_SCORE_PER_M',placer)
 
     def test_aa_retains_vanilla_limits_without_campaign_disassembly(self):
         aa=read('Prefabs/Emplacements/IA_Emplacement_AA.et')

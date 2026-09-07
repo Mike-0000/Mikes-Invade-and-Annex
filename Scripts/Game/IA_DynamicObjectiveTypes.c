@@ -149,6 +149,8 @@ class IA_DynamicSiteCandidate
 	int m_iLayoutId;
 	int m_iSeed;
 	float m_fScore = 999999;
+	float m_fHeightSpanM;
+	int m_iTerrainPass;
 	bool m_bRoadAligned;
 	bool m_bVehicleAccess;
 	int m_iInfantryEntries;

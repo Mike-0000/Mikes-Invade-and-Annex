@@ -21,11 +21,18 @@ class IA_DynamicSitePlacer
 	static const int MAX_EXPANDED = 2200;
 	static const int NAV_RECHECK_MS = 15000;
 	static const float LANE_SAMPLE_M = 3;
-	// Whole-base bowl. 4 m rejected RallyPosts on ordinary Everon rolls.
-	static const float FOOTPRINT_HEIGHT_SPAN_M = 6;
-	// cos(10 deg). The old 5 deg (0.9961947) vetoed almost every Montignac
-	// field once HQ and LivingLarge both followed the terrain plane.
-	static const float COMPOSITION_MIN_UP_Y = 0.9848078;
+	// Whole-base bowl on the first survey pass. 6 m still demanded a near-
+	// level field; 8 m keeps an open clearing without requiring a billiard table.
+	static const float FOOTPRINT_HEIGHT_SPAN_M = 8;
+	// Last-resort pass when the strict survey finds nothing. Still a clearing,
+	// not a hillside.
+	static const float FOOTPRINT_HEIGHT_SPAN_RELAXED_M = 12;
+	// cos(12 deg). First pass still wants a gentle grade.
+	static const float COMPOSITION_MIN_UP_Y = 0.9781476;
+	// cos(16 deg) for the last-resort pass only.
+	static const float COMPOSITION_MIN_UP_Y_RELAXED = 0.9612617;
+	// Player-travel metres added to the shortlist score per metre of height span.
+	static const float TERRAIN_SPAN_SCORE_PER_M = 60;
 
 	protected int m_iSerial;
 	protected int m_iGroupId;
@@ -65,6 +72,8 @@ class IA_DynamicSitePlacer
 	protected vector m_vSurveyAnchor;
 	protected bool m_bSurveyAnchorActive;
 	protected bool m_bSurveyDone;
+	protected int m_iTerrainPass;
+	protected float m_fLastFootprintSpanM;
 	protected ref array<vector> m_aRefinementCenters = {};
 	protected ref array<int> m_aRefinementScores = {};
 	protected int m_iRefinementSample;
@@ -264,7 +273,15 @@ class IA_DynamicSitePlacer
 			m_aShortlist.Clear();
 			m_iCandidateIndex = 0;
 			if (m_bSurveyDone)
+			{
+				if (TryBeginRelaxedTerrainPass())
+				{
+					StepSurvey();
+					RefreshShortlistScores();
+					return;
+				}
 				FinishFailure("no_legal_site");
+			}
 			else
 			{
 				StepSurvey();
@@ -764,6 +781,8 @@ class IA_DynamicSitePlacer
 		m_iSurveyHeading = 0;
 		m_bSurveyAnchorActive = false;
 		m_bSurveyDone = false;
+		m_iTerrainPass = 0;
+		m_fLastFootprintSpanM = 0;
 		ResetRefinement();
 		m_Rejections = new map<string, int>();
 		m_aSearchCenters = new array<vector>();
@@ -838,6 +857,38 @@ class IA_DynamicSitePlacer
 		return m_bSurveyAnchorActive || m_iSampleCount < MAX_SAMPLE_CENTERS || m_iRefinementSample < m_aRefinementCenters.Count() * REFINEMENT_OFFSETS;
 	}
 
+	protected float CurrentFootprintHeightSpanLimit()
+	{
+		if (m_iTerrainPass > 0)
+			return FOOTPRINT_HEIGHT_SPAN_RELAXED_M;
+		return FOOTPRINT_HEIGHT_SPAN_M;
+	}
+
+	protected float CurrentCompositionMinUpY()
+	{
+		if (m_iTerrainPass > 0)
+			return COMPOSITION_MIN_UP_Y_RELAXED;
+		return COMPOSITION_MIN_UP_Y;
+	}
+
+	protected bool TryBeginRelaxedTerrainPass()
+	{
+		if (m_iTerrainPass > 0)
+			return false;
+		if (!m_aShortlist.IsEmpty())
+			return false;
+		m_iTerrainPass = 1;
+		m_bSurveyDone = false;
+		m_iSampleCount = 0;
+		m_iSurveyLayout = 0;
+		m_iSurveyHeading = 0;
+		m_bSurveyAnchorActive = false;
+		ResetRefinement();
+		m_Rng.SetSeed(m_iSeed);
+		IA_Log.Info("[IA][Base] Strict terrain survey found no site; starting relaxed last-resort pass.");
+		return true;
+	}
+
 	protected void RememberNearFit(vector anchor)
 	{
 		if (m_bSurveyRefining)
@@ -904,6 +955,8 @@ class IA_DynamicSitePlacer
 					m_iSurveyLayout++;
 					if (m_iSurveyLayout >= m_aLayouts.Count())
 					{
+						if (TryBeginRelaxedTerrainPass())
+							return;
 						m_bSurveyDone = true;
 						return;
 					}
@@ -980,11 +1033,13 @@ class IA_DynamicSitePlacer
 			cand.m_fSurveyYawDeg = yaw;
 			cand.m_iLayoutId = layout.m_iLayoutId;
 			cand.m_iSeed = m_iSeed + m_iSampleCount;
+			cand.m_fHeightSpanM = m_fLastFootprintSpanM;
+			cand.m_iTerrainPass = m_iTerrainPass;
 			m_aShortlist.Insert(cand);
 			m_bSurveyAnchorActive = false;
 			if (IA_Log.IsDebugEnabled())
 			{
-				Print(string.Format("[IA][Base] Terrain-qualified site: layout=%1 center=%2 yaw=%3 anchors_sampled=%4", layout.m_sName, origin, yaw, m_iSampleCount), LogLevel.NORMAL);
+				Print(string.Format("[IA][Base] Terrain-qualified site: layout=%1 center=%2 yaw=%3 span=%4 pass=%5 anchors_sampled=%6", layout.m_sName, origin, yaw, m_fLastFootprintSpanM, m_iTerrainPass, m_iSampleCount), LogLevel.NORMAL);
 			}
 		}
 	}
@@ -1074,32 +1129,35 @@ class IA_DynamicSitePlacer
 			IA_DynamicSiteCandidate cand = m_aShortlist[i];
 			if (!cand)
 				continue;
-			cand.m_fScore = ScoreCenter(cand.m_vCenter, players);
+			cand.m_fScore = ScoreCenter(cand.m_vCenter, players, cand.m_fHeightSpanM);
 		}
 		SortShortlist();
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected float ScoreCenter(vector center, notnull array<vector> players)
+	protected float ScoreCenter(vector center, notnull array<vector> players, float heightSpanM)
 	{
-		if (players.IsEmpty())
-			return 0;
+		float travel = 0;
+		if (!players.IsEmpty())
+		{
+			ref array<float> dists = new array<float>();
+			int count = players.Count();
+			int i;
+			for (i = 0; i < count; i++)
+				dists.Insert(vector.Distance(center, players[i]));
+			dists.Sort();
+			float median = dists[dists.Count() / 2];
+			int p90i = Math.Round((dists.Count() - 1) * 0.90);
+			if (p90i < 0)
+				p90i = 0;
+			if (p90i >= dists.Count())
+				p90i = dists.Count() - 1;
+			travel = median + (0.35 * dists[p90i]);
+		}
 
-		ref array<float> dists = new array<float>();
-		int count = players.Count();
-		int i;
-		for (i = 0; i < count; i++)
-			dists.Insert(vector.Distance(center, players[i]));
-		dists.Sort();
-		float median = dists[dists.Count() / 2];
-		int p90i = Math.Round((dists.Count() - 1) * 0.90);
-		if (p90i < 0)
-			p90i = 0;
-		if (p90i >= dists.Count())
-			p90i = dists.Count() - 1;
-		// Every retained site already fits a whole design; a tiny center-height
-		// sample must not displace that evidence with a misleading terrain rank.
-		return median + (0.35 * dists[p90i]);
+		// Whole-layout span is already known. Prefer the flatter clearing among
+		// otherwise similar travel distances; 1 m of bowl ≈ 60 m of travel.
+		return travel + (heightSpanM * TERRAIN_SPAN_SCORE_PER_M);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1182,6 +1240,7 @@ class IA_DynamicSitePlacer
 			cand.m_vCenter = origin;
 			cand.m_fYawDeg = yaw;
 			cand.m_iLayoutId = layout.m_iLayoutId;
+			cand.m_fHeightSpanM = m_fLastFootprintSpanM;
 			// A failed build resumes remaining headings, then other sites of this size.
 			return true;
 		}
@@ -1272,12 +1331,14 @@ class IA_DynamicSitePlacer
 	protected bool ValidateTerrain(vector origin, float yawDeg, notnull IA_DynamicSiteLayout layout, bool hqAlreadyValidated = false)
 	{
 		m_iTerrainModulesPassed = 0;
+		m_fLastFootprintSpanM = 999;
 		m_sTerrainRejection = "world_unavailable";
 		m_sTerrainDetail = "";
 		BaseWorld world = GetPlacementWorld();
 		if (!world)
 			return false;
 
+		float spanLimit = CurrentFootprintHeightSpanLimit();
 		vector rootMat[4];
 		layout.BuildRootTransform(origin, yawDeg, rootMat);
 		float minY = 99999;
@@ -1302,16 +1363,17 @@ class IA_DynamicSitePlacer
 					maxY = p[1];
 				// Fail as soon as the sampled range exceeds the limit. Surveying
 				// more anchors must not require full scans of obviously steep sites.
-				if ((maxY - minY) > FOOTPRINT_HEIGHT_SPAN_M)
+				if ((maxY - minY) > spanLimit)
 				{
 					m_sTerrainRejection = "footprint_height_span";
-					m_sTerrainDetail = string.Format("height_delta=%1 limit=%2", maxY - minY, FOOTPRINT_HEIGHT_SPAN_M);
+					m_sTerrainDetail = string.Format("height_delta=%1 limit=%2 pass=%3", maxY - minY, spanLimit, m_iTerrainPass);
 					return false;
 				}
 				z = z + GRID_M;
 			}
 			x = x + GRID_M;
 		}
+		m_fLastFootprintSpanM = maxY - minY;
 		ref array<int> perimeter = {0, 0, 0, 0};
 		int n = layout.m_aModules.Count();
 		int i;
@@ -1375,7 +1437,7 @@ class IA_DynamicSitePlacer
 
 	protected bool SampleModuleSupport(vector worldMat[4], notnull IA_DynamicSiteModule mod, out float originY)
 	{
-		if (mod.m_bFollowTerrainPlane && worldMat[1][1] < COMPOSITION_MIN_UP_Y)
+		if (mod.m_bFollowTerrainPlane && worldMat[1][1] < CurrentCompositionMinUpY())
 		{
 			m_sTerrainRejection = "composition_slope";
 			m_sTerrainDetail = "module=" + mod.m_sId;
