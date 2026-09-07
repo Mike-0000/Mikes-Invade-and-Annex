@@ -8,7 +8,7 @@ class IA_StaticGunAssignment
 	protected static const int INITIAL_ATTEMPTS = 3;
 	protected static const int INITIAL_WINDOW_MS = 5000;
 	protected static const int REMOUNT_ATTEMPTS = 8;
-	protected static const int REMOUNT_RETRY_MS = 2000;
+	protected static const int REMOUNT_RETRY_MS = 500;
 	protected static const int ACCEPTED_WAIT_MS = 4000;
 
 	protected IA_AiGroup m_Group;
@@ -29,8 +29,10 @@ class IA_StaticGunAssignment
 	protected bool m_bRestoreDefense = true;
 	protected bool m_bExitRequested;
 	protected bool m_bBoardingCancelled;
+	protected bool m_bPosted;
 	protected vector m_vDefend;
 	protected float m_fRadius;
+	protected static ref array<IEntity> s_PostedPawns;
 
 	void Setup(IA_AiGroup group, IA_StaticGunComponent gun, int serial, vector defend, float radius)
 	{
@@ -47,10 +49,60 @@ class IA_StaticGunAssignment
 	bool InitialPending() { return m_iState < 2 && !m_bWasMounted; }
 	bool IsMounted() { return m_iState == 2; }
 
+	static bool IsPostedPawn(IEntity pawn)
+	{
+		return pawn && s_PostedPawns && s_PostedPawns.Find(pawn) >= 0;
+	}
+
+	static bool IsPostedAgent(AIAgent agent)
+	{
+		if (!agent)
+			return false;
+		return IsPostedPawn(agent.GetControlledEntity());
+	}
+
+	protected void RegisterPosted()
+	{
+		if (m_bPosted || !m_Pawn)
+			return;
+		if (!s_PostedPawns)
+			s_PostedPawns = new array<IEntity>();
+		if (s_PostedPawns.Find(m_Pawn) < 0)
+			s_PostedPawns.Insert(m_Pawn);
+		m_bPosted = true;
+	}
+
+	protected void UnregisterPosted()
+	{
+		if (!m_bPosted)
+			return;
+		if (s_PostedPawns && m_Pawn)
+			s_PostedPawns.RemoveItem(m_Pawn);
+		m_bPosted = false;
+	}
+
 	void OnSpawnReady()
 	{
 		if (!m_iReadyMs)
 			m_iReadyMs = System.GetTickCount();
+		if (m_Pawn)
+		{
+			RegisterPosted();
+			return;
+		}
+		if (!m_Group)
+			return;
+		array<AIAgent> agents = {};
+		SCR_AIGroup nativeGroup = m_Group.GetSCR_AIGroup();
+		if (nativeGroup)
+			nativeGroup.GetAgents(agents);
+		if (agents.IsEmpty())
+			return;
+		m_Agent = agents[0];
+		if (m_Agent)
+			m_Pawn = m_Agent.GetControlledEntity();
+		if (m_Pawn)
+			RegisterPosted();
 	}
 
 	void Tick(bool permitInitialMount, bool siteLive)
@@ -90,6 +142,8 @@ class IA_StaticGunAssignment
 					m_Pawn = m_Agent.GetControlledEntity();
 			}
 		}
+		if (m_Pawn && m_iState < 3)
+			RegisterPosted();
 		ChimeraCharacter character = ChimeraCharacter.Cast(m_Pawn);
 		if (!character || !character.GetCharacterController() || character.GetCharacterController().GetLifeState() != ECharacterLifeState.ALIVE || IsPlayer())
 		{
@@ -210,6 +264,7 @@ class IA_StaticGunAssignment
 	{
 		if (!Replication.IsServer() || m_iState == 4)
 			return;
+		UnregisterPosted();
 		if (!restoreDefense)
 			m_bRestoreDefense = false;
 		ClearReservation();

@@ -14,7 +14,7 @@ modded class SCR_AICombatComponent
 		if (CurrentVehicleIsStaticArtillery())
 			return false;
 
-		if (CurrentCompartmentIsIaStaticGun())
+		if (IA_StaticGunAssignment.IsPostedPawn(GetOwner()) || CurrentCompartmentIsIaStaticGun())
 			return false;
 
 		if (CurrentEntityIsOnMovableVehicle())
@@ -75,5 +75,15 @@ modded class SCR_AICombatComponent
 		}
 
 		return false;
+	}
+
+	override void TryAddDismountTurretActions(vector targetPos, bool addGetOut = true, bool addGetIn = true, float dangerLookPriority = 0)
+	{
+		if (IA_StaticGunAssignment.IsPostedPawn(GetOwner()) || CurrentCompartmentIsIaStaticGun())
+		{
+			addGetOut = false;
+			addGetIn = false;
+		}
+		super.TryAddDismountTurretActions(targetPos, addGetOut, addGetIn, dangerLookPriority);
 	}
 };

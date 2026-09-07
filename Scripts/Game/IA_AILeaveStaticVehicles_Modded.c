@@ -10,6 +10,9 @@ modded class SCR_AILeaveStaticVehicles
 
 	override ENodeResult EOnTaskSimulate(AIAgent owner, float dt)
 	{
+		if (GroupHasPostedGunner(owner))
+			return ENodeResult.SUCCESS;
+
 		if (m_Utility && m_Utility.m_VehicleMgr)
 		{
 			ref array<ref SCR_AIGroupVehicle> used = new array<ref SCR_AIGroupVehicle>();
@@ -59,5 +62,20 @@ modded class SCR_AILeaveStaticVehicles
 		if (!groupVehicle)
 			return false;
 		return IA_StaticGunComponent.FindOnNearestParent(groupVehicle.GetEntity()) != null;
+	}
+
+	protected bool GroupHasPostedGunner(AIAgent owner)
+	{
+		SCR_AIGroup group = SCR_AIGroup.Cast(owner);
+		if (!group)
+			return false;
+		array<AIAgent> agents = {};
+		group.GetAgents(agents);
+		foreach (AIAgent agent : agents)
+		{
+			if (IA_StaticGunAssignment.IsPostedAgent(agent))
+				return true;
+		}
+		return false;
 	}
 };

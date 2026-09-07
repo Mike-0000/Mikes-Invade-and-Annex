@@ -14,6 +14,8 @@ modded class SCR_AIMessageHandling
 	{
 		IEntity usageOwner;
 		SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.FindOnNearestParent(vehicleEntity, usageOwner);
+		if (IA_StaticGunAssignment.IsPostedAgent(agent))
+			return;
 		if (usage && usage.GetVehicleType() == EAIVehicleType.STATIC_ARTILLERY)
 			return;
 		if (IA_StaticGunComponent.FindOnNearestParent(vehicleEntity))

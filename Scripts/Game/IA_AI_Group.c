@@ -5577,6 +5577,8 @@ class IA_AiGroup
         m_isHoldingPost = false;
         m_bDefendPost = false;
         RemoveAllOrders(true);
+        if (m_tacticalState != IA_GroupTacticalState.InVehicle)
+            SetTacticalState(IA_GroupTacticalState.InVehicle, defendCenter, null, true);
         m_StaticGunAssignment = new IA_StaticGunAssignment();
         m_StaticGunAssignment.Setup(this, gun, serial, defendCenter, defendRadius);
     }
