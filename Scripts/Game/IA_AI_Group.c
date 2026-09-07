@@ -237,7 +237,10 @@ class IA_AiGroup
     private bool m_bKeepAltitude = false;
     private bool m_isHoldingPost = false;
     private bool m_bDefendPost = false;
+    private bool m_bHoldEntered = false;
+    private bool m_bHoldMarchScheduled = false;
     private vector m_holdPost = vector.Zero;
+    private vector m_vHoldApproach = vector.Zero;
     private float m_holdRadius = 0;
     private int m_iAirborneInFlight = 0;
     private vector m_vAirDropTarget = vector.Zero;
@@ -871,8 +874,15 @@ class IA_AiGroup
                 origin = m_holdPost;
                 order = IA_AiOrder.DefendSmall;
             }
-            else if (order != IA_AiOrder.Hold)
+            else if (m_bHoldEntered)
+            {
+                if (order != IA_AiOrder.Hold)
+                    return;
+            }
+            else if (order != IA_AiOrder.Hold && order != IA_AiOrder.Move && order != IA_AiOrder.PriorityMove)
+            {
                 return;
+            }
         }
 
         // Store last order data
@@ -1295,7 +1305,9 @@ class IA_AiGroup
 
     void RemoveAllOrders(bool resetLastOrderTime = false)
     {
-        if (m_isHoldingPost && HasHoldWaypoint())
+        if (m_isHoldingPost && m_bDefendPost && HasHoldWaypoint())
+            return;
+        if (m_isHoldingPost && m_bHoldEntered && HasHoldWaypoint())
             return;
 
         if (!m_group)
@@ -3118,11 +3130,17 @@ class IA_AiGroup
 
         if (m_isHoldingPost && m_holdPost != vector.Zero)
         {
-            if (!HasHoldWaypoint())
+            if (m_bDefendPost)
             {
-                RemoveAllOrders();
-                AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+                if (!HasHoldWaypoint())
+                {
+                    RemoveAllOrders();
+                    AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+                }
+                return;
             }
+
+            TickHoldMarch();
             return;
         }
         
@@ -3736,8 +3754,15 @@ class IA_AiGroup
                 else
                     holdPos = m_lastConfirmedPosition;
 
-                if (!HasHoldWaypoint())
-                    AddOrder(holdPos, IA_AiOrder.Hold, true);
+                if (m_bDefendPost)
+                {
+                    if (!HasHoldWaypoint())
+                        AddOrder(holdPos, IA_AiOrder.Hold, true);
+                }
+                else
+                {
+                    StartHoldMarch();
+                }
                 break;
                 
             case IA_GroupTacticalState.Flanking:
@@ -4066,9 +4091,167 @@ class IA_AiGroup
     {
         m_isHoldingPost = true;
         m_bDefendPost = false;
+        m_bHoldEntered = false;
         m_holdPost = pos;
         m_bKeepAltitude = true;
         m_holdRadius = radius;
+        m_vHoldApproach = vector.Zero;
+        if (pos != vector.Zero)
+            m_vHoldApproach = IA_SpawnPlacement.FindHoldApproach(pos);
+    }
+
+    //! Wait at an interior post is not a Move. Groups spawn on the road, walk to
+    //! an outdoor approach, then enter the validated hold pose.
+    protected void StartHoldMarch()
+    {
+        if (m_bDefendPost)
+            return;
+        TickHoldMarch();
+    }
+
+    protected void TickHoldMarch()
+    {
+        if (m_bDefendPost)
+            return;
+        if (m_holdPost == vector.Zero)
+            return;
+
+        if (m_bHoldEntered)
+        {
+            if (!HasHoldWaypoint())
+                AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+            return;
+        }
+
+        if (!m_isSpawned)
+            return;
+
+        vector here = GetOrigin();
+        if (here == vector.Zero)
+            here = m_staggeredSpawnPos;
+
+        if (here != vector.Zero)
+        {
+            if (vector.Distance(here, m_holdPost) <= IA_SpawnPlacement.HOLD_ENTER_M)
+            {
+                EnterHoldPost();
+                return;
+            }
+        }
+
+        if (m_vHoldApproach == vector.Zero)
+            m_vHoldApproach = IA_SpawnPlacement.FindHoldApproach(m_holdPost);
+
+        if (m_vHoldApproach == vector.Zero)
+        {
+            EnterHoldPost();
+            return;
+        }
+
+        if (here != vector.Zero)
+        {
+            if (vector.Distance(here, m_vHoldApproach) <= IA_SpawnPlacement.HOLD_APPROACH_ARRIVE_M)
+            {
+                EnterHoldPost();
+                return;
+            }
+        }
+
+        if (HasActiveWaypoint())
+            return;
+
+        AddOrder(m_vHoldApproach, IA_AiOrder.PriorityMove, true);
+        EnableInboundSimulation(m_vHoldApproach);
+        ScheduleHoldMarchTick();
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][Hold] March %1 then enter %2", m_vHoldApproach.ToString(), m_holdPost.ToString()), LogLevel.NORMAL);
+        }
+    }
+
+    protected void ScheduleHoldMarchTick()
+    {
+        if (m_bHoldMarchScheduled)
+            return;
+        if (m_bHoldEntered)
+            return;
+        if (!m_isHoldingPost)
+            return;
+        if (m_bDefendPost)
+            return;
+
+        m_bHoldMarchScheduled = true;
+        GetGame().GetCallqueue().CallLater(this.OnHoldMarchTick, 1000, false);
+    }
+
+    protected void OnHoldMarchTick()
+    {
+        m_bHoldMarchScheduled = false;
+        TickHoldMarch();
+        if (!m_bHoldEntered && m_isHoldingPost && !m_bDefendPost)
+            ScheduleHoldMarchTick();
+    }
+
+    protected void EnterHoldPost()
+    {
+        if (m_bHoldEntered)
+            return;
+        if (m_holdPost == vector.Zero)
+            return;
+
+        m_bHoldEntered = true;
+        RelocateHoldUnits(m_holdPost);
+        RemoveAllOrders();
+        AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+        UnpinInboundSimulation();
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][Hold] Entered post at %1", m_holdPost.ToString()), LogLevel.NORMAL);
+        }
+    }
+
+    protected void RelocateHoldUnits(vector holdPos)
+    {
+        if (!m_group)
+            return;
+        if (holdPos == vector.Zero)
+            return;
+
+        m_group.SetOrigin(holdPos);
+
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        int count = agents.Count();
+        int i;
+        for (i = 0; i < count; i++)
+        {
+            AIAgent agent = agents[i];
+            if (!agent)
+                continue;
+
+            IEntity pawn = agent.GetControlledEntity();
+            if (!pawn)
+                continue;
+
+            vector pos = holdPos;
+            if (i > 0)
+            {
+                float iF = i;
+                float countF = count;
+                float ang = Math.PI2 * (iF / countF);
+                vector probe;
+                probe[0] = holdPos[0] + Math.Cos(ang) * 0.9;
+                probe[1] = holdPos[1];
+                probe[2] = holdPos[2] + Math.Sin(ang) * 0.9;
+                if (IA_SpawnPlacement.HasStandRoom(probe))
+                    pos = probe;
+            }
+
+            pawn.SetOrigin(pos);
+            Physics phys = pawn.GetPhysics();
+            if (phys)
+                phys.SetVelocity(vector.Zero);
+        }
     }
 
     // Preserve the garrison assignment with an indefinite Defend waypoint.
@@ -4595,6 +4778,9 @@ class IA_AiGroup
         }
 
         if (m_vInboundTarget == vector.Zero)
+            return;
+
+        if (m_isHoldingPost && !m_bHoldEntered && !m_bDefendPost)
             return;
 
         if (vector.Distance(GetOrigin(), m_vInboundTarget) < IA_SpawnPlacement.ARRIVE_UNPIN_M)

@@ -11,6 +11,10 @@ class IA_SpawnPlacement
 	static const float OCCUPY_MAX_M = 250.0;
 	static const float HOLD_ORIGIN_MIN_M = 15.0;
 	static const float HOLD_ORIGIN_MAX_M = 80.0;
+	static const float HOLD_APPROACH_MIN_M = 6.0;
+	static const float HOLD_APPROACH_MAX_M = 22.0;
+	static const float HOLD_ENTER_M = 10.0;
+	static const float HOLD_APPROACH_ARRIVE_M = 7.0;
 	static const float REINF_MIN_M = 80.0;
 	static const float REINF_MAX_M = 180.0;
 	static const float REINF_PLAYER_MIN_M = 100.0;
@@ -754,6 +758,64 @@ class IA_SpawnPlacement
 			playerMin = PLAYER_MIN_M;
 
 		return FindSafeInfantryOrigin(holdPos, HOLD_ORIGIN_MIN_M, HOLD_ORIGIN_MAX_M, playerMin, -1);
+	}
+
+	//! Closest outdoor walkable point next to a building hold. Wait waypoints at
+	//! interior posts are not on Soldiers navmesh, so Hold groups must Move here
+	//! first and only then enter.
+	static vector FindHoldApproach(vector holdPos)
+	{
+		if (holdPos == vector.Zero)
+			return vector.Zero;
+
+		float radius = HOLD_APPROACH_MIN_M;
+		while (radius <= HOLD_APPROACH_MAX_M)
+		{
+			int steps = 8;
+			if (radius > 12)
+				steps = 12;
+
+			vector best = vector.Zero;
+			float bestDist = 999999;
+			int step;
+			for (step = 0; step < steps; step++)
+			{
+				float stepF = step;
+				float stepsF = steps;
+				float angle = Math.PI2 * (stepF / stepsF);
+				vector probe;
+				probe[0] = holdPos[0] + Math.Cos(angle) * radius;
+				probe[2] = holdPos[2] + Math.Sin(angle) * radius;
+				probe[1] = holdPos[1];
+
+				vector hit;
+				if (!TryWalkableAt(probe, hit))
+					continue;
+				if (!IsOutdoorStandPose(hit))
+					continue;
+
+				vector reached;
+				if (TryNavmeshReachable(hit, reached))
+				{
+					if (IsOutdoorStandPose(reached))
+						hit = reached;
+				}
+
+				float dist = vector.Distance(hit, holdPos);
+				if (dist < bestDist)
+				{
+					bestDist = dist;
+					best = hit;
+				}
+			}
+
+			if (best != vector.Zero)
+				return best;
+
+			radius = radius + 4;
+		}
+
+		return vector.Zero;
 	}
 
 	static vector FindReinforcementInfantryOrigin(vector fightPos, int sectorIndex = -1)

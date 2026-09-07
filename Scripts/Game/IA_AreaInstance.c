@@ -6121,7 +6121,8 @@ class IA_AreaInstance
         return true;
     }
 
-    //! Extra fireteams that Hold inside a few buildings. Occupying patrols are untouched.
+    //! Extra fireteams that spawn on the road, walk to a building, then Hold inside.
+    //! Occupying patrols are untouched.
     protected void SpawnBuildingGarrisonGroups(Faction areaFactionForGroupTask)
     {
         if (m_bBuildingGarrisonSpawned)
