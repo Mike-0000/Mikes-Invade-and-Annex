@@ -32,6 +32,11 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 				return;
 			}
 			m_Spec = layout.m_aEmplacements[m_iCandidate];
+			if (IsBarrenSide(m_Spec.m_iSide))
+			{
+				Omit("barren_wall");
+				return;
+			}
 			m_iAttempts++;
 			m_Assembly = m_Site.GetPanel(m_Spec.m_sPanelId);
 			if (!m_Assembly || !m_Spec.m_Socket)

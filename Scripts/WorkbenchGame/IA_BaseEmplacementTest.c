@@ -15,6 +15,17 @@ class IA_BaseEmplacementTest : IA_BaseFoundationProbe
 					Check(budget - crew >= 4, "four ordinary infantry minimum");
 			}
 		}
+		int barrenHits;
+		int lastBarren = IA_EmplacementProfile.ChooseBarrenSide(7);
+		Check(IA_EmplacementProfile.ChooseBarrenSide(7) == lastBarren, "barren wall roll is seeded");
+		for (int seed = 0; seed < 200; seed++)
+		{
+			int side = IA_EmplacementProfile.ChooseBarrenSide(seed);
+			Check(side >= -1 && side <= 3, "barren side is a wall or none");
+			if (side >= 0)
+				barrenHits++;
+		}
+		Check(barrenHits > 50 && barrenHits < 110, "about two in five bases leave one wall empty");
 		for (int id = 0; id < 6; id++)
 		{
 			ref IA_DynamicSiteLayout layout = IA_DynamicSiteLayout.CreateById(id);

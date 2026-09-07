@@ -58,6 +58,8 @@ class IA_EmplacementProfile
 		return profile;
 	}
 
+	static const float BARREN_WALL_CHANCE = 0.4;
+
 	static int GunCap(int layoutId)
 	{
 		if (layoutId == IA_DynamicSiteLayout.LAYOUT_FULL)
@@ -65,6 +67,16 @@ class IA_EmplacementProfile
 		if (layoutId == IA_DynamicSiteLayout.LAYOUT_COMPACT)
 			return 5;
 		return 4;
+	}
+
+	//! -1 keeps every face armed. 0-3 leaves that sandbag face empty.
+	static int ChooseBarrenSide(int seed)
+	{
+		ref RandomGenerator rng = new RandomGenerator();
+		rng.SetSeed(seed);
+		if (rng.RandFloat01() >= BARREN_WALL_CHANCE)
+			return -1;
+		return rng.RandInt(0, 4);
 	}
 
 	static int CrewBudget(int installed, int budget)

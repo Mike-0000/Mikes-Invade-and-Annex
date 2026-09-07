@@ -7,6 +7,7 @@ class IA_EmplacementBuilder
 	protected ref IA_EmplacementProfile m_Profile;
 	protected ref IA_StaticGunRecord m_Record;
 	protected ref array<bool> m_Sides = {false, false, false, false};
+	protected int m_iBarrenSide = -1;
 	protected int m_iCandidate;
 	protected int m_iStage;
 	protected int m_iSample;
@@ -27,8 +28,21 @@ class IA_EmplacementBuilder
 	{
 		m_Site = site;
 		m_iDeadlineMs = System.GetTickCount() + 6000;
+		m_iBarrenSide = -1;
 		if (site)
+		{
 			site.GetLayout().PrepareEmplacements();
+			m_iBarrenSide = IA_EmplacementProfile.ChooseBarrenSide(site.GetSiteId());
+		}
+	}
+
+	protected bool IsBarrenSide(int side)
+	{
+		if (m_iBarrenSide < 0)
+			return false;
+		if (side < 0)
+			return false;
+		return side == m_iBarrenSide;
 	}
 
 	bool IsDone() { return m_bDone; }
@@ -47,7 +61,7 @@ class IA_EmplacementBuilder
 			{
 				reasons = reasons + reason + "=" + count.ToString() + " ";
 			}
-			m_Site.SetEmplacementBuildSummary(string.Format("attempted=%1 workMs=%2 omissions=[%3]", m_iAttempts, m_iWorkMs, reasons));
+			m_Site.SetEmplacementBuildSummary(string.Format("attempted=%1 workMs=%2 barrenSide=%3 omissions=[%4]", m_iAttempts, m_iWorkMs, m_iBarrenSide, reasons));
 		}
 	}
 
@@ -76,6 +90,11 @@ class IA_EmplacementBuilder
 				return;
 			}
 			m_Spec = layout.m_aEmplacements[m_iCandidate];
+			if (IsBarrenSide(m_Spec.m_iSide))
+			{
+				Reject("barren_wall");
+				return;
+			}
 			if (m_Sides[m_Spec.m_iSide] || !m_Site.GetPanel(m_Spec.m_sPanelId))
 			{
 				Reject("side_or_panel");
@@ -401,7 +420,7 @@ class IA_EmplacementBuilder
 			}
 			m_Record = null;
 		}
-		if (m_Spec && m_Spec.m_bHeavy && !m_bFallback && reason != "side_or_panel")
+		if (m_Spec && m_Spec.m_bHeavy && !m_bFallback && reason != "side_or_panel" && reason != "barren_wall")
 		{
 			m_bFallback = true;
 			m_iStage = 0;

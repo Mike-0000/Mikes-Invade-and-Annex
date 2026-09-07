@@ -217,6 +217,13 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('FOOTPRINT_HEIGHT_SPAN_RELAXED_M',placer)
         self.assertIn('TryBeginRelaxedTerrainPass',placer)
         self.assertIn('TERRAIN_SPAN_SCORE_PER_M',placer)
+        profile=read('Scripts/Game/IA_EmplacementProfile.c')
+        self.assertIn('BARREN_WALL_CHANCE = 0.4',profile)
+        self.assertIn('ChooseBarrenSide',profile)
+        builder=read('Scripts/Game/IA_EmplacementBuilder.c')
+        self.assertIn('IsBarrenSide',builder)
+        self.assertIn('barren_wall',builder)
+        self.assertIn('barren_wall',read('Scripts/Game/IA_CompositionGunBuilder.c'))
 
     def test_aa_retains_vanilla_limits_without_campaign_disassembly(self):
         aa=read('Prefabs/Emplacements/IA_Emplacement_AA.et')
