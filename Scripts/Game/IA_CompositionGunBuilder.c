@@ -24,6 +24,7 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 	protected void StepSocket()
 	{
 		IA_DynamicSiteLayout layout = m_Site.GetLayout();
+		vector parent[4];
 		if (m_iStage == 0)
 		{
 			if (m_iCandidate >= layout.m_aEmplacements.Count() || m_Site.GetEmplacements().Count() >= IA_EmplacementProfile.GunCap(layout.m_iLayoutId))
@@ -51,14 +52,39 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 				return;
 			}
 			m_Profile = IA_EmplacementProfile.CreateKind(kind);
+			m_Assembly.GetWorldTransform(parent);
+			m_Spec.m_Socket.Transform(parent, m_Mat);
+			IA_StaticGunComponent existing = IA_StaticGunComponent.FindInTree(m_Assembly);
+			if (existing)
+			{
+				IEntity gun = existing.GetOwner();
+				if (!gun)
+				{
+					Omit("spawn");
+					return;
+				}
+				vector gunMat[4];
+				gun.GetWorldTransform(gunMat);
+				Math3D.MatrixCopy(gunMat, m_Mat);
+				m_Record = new IA_StaticGunRecord();
+				m_Record.m_Root = gun;
+				m_Record.m_Gun = existing;
+				m_Record.m_Spec = m_Spec;
+				m_Record.m_Profile = m_Profile;
+				m_Record.m_vOrigin = m_Mat[3];
+				vector angles = Math3D.MatrixToAngles(m_Mat);
+				m_Record.m_fYaw = angles[0];
+				m_Record.m_bAssemblyOwned = true;
+				m_Site.AddEmplacement(m_Record);
+				m_iSpawnMs = System.GetTickCount();
+				m_iStage = 1;
+				return;
+			}
 			if (m_Site.GetRootCount() + 1 > IA_DynamicSitePlacer.MAX_ROOTS || m_Site.CountExpandedEntities() + m_Profile.m_iExpanded > IA_DynamicSitePlacer.MAX_EXPANDED)
 			{
 				Omit("budget");
 				return;
 			}
-			vector parent[4];
-			m_Assembly.GetWorldTransform(parent);
-			m_Spec.m_Socket.Transform(parent, m_Mat);
 			Resource resource = Resource.Load(m_Profile.m_Prefab);
 			if (!resource || !resource.IsValid())
 			{
@@ -68,20 +94,20 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 			ref EntitySpawnParams params = new EntitySpawnParams();
 			params.TransformMode = ETransformMode.WORLD;
 			Math3D.MatrixCopy(m_Mat, params.Transform);
-			IEntity gun = GetGame().SpawnEntityPrefab(resource, GetGame().GetWorld(), params);
-			if (!gun)
+			IEntity spawned = GetGame().SpawnEntityPrefab(resource, GetGame().GetWorld(), params);
+			if (!spawned)
 			{
 				Omit("spawn");
 				return;
 			}
 			m_Record = new IA_StaticGunRecord();
-			m_Record.m_Root = gun;
-			m_Record.m_Gun = IA_StaticGunComponent.Find(gun);
+			m_Record.m_Root = spawned;
+			m_Record.m_Gun = IA_StaticGunComponent.Find(spawned);
 			m_Record.m_Spec = m_Spec;
 			m_Record.m_Profile = m_Profile;
 			m_Record.m_vOrigin = m_Mat[3];
-			vector angles = Math3D.MatrixToAngles(m_Mat);
-			m_Record.m_fYaw = angles[0];
+			vector spawnedAngles = Math3D.MatrixToAngles(m_Mat);
+			m_Record.m_fYaw = spawnedAngles[0];
 			m_Site.AddEmplacement(m_Record);
 			m_iSpawnMs = System.GetTickCount();
 			m_iStage = 1;
@@ -93,16 +119,36 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 				return;
 			if (!m_Record.m_Gun)
 			{
+				if (m_Record.m_bAssemblyOwned)
+				{
+					Keep("missing_marker");
+					return;
+				}
 				Omit("missing_marker");
 				return;
 			}
 			if (!m_Record.m_Gun.Initialize(m_Site.GetSerial(), m_Profile, m_Site.GetEnemyFaction()))
 			{
+				if (m_Record.m_bAssemblyOwned)
+				{
+					Keep("initialization_" + m_Record.m_Gun.GetInitializationFailure());
+					return;
+				}
 				Omit("initialization_" + m_Record.m_Gun.GetInitializationFailure());
 				return;
 			}
-			if (CountHardware(m_Record.m_Root) > m_Profile.m_iExpanded || !m_Record.m_Gun.GetMuzzleTransform(m_MuzzleMat))
+			if (!m_Record.m_bAssemblyOwned && CountHardware(m_Record.m_Root) > m_Profile.m_iExpanded)
 			{
+				Omit("hardware_or_muzzle");
+				return;
+			}
+			if (!m_Record.m_Gun.GetMuzzleTransform(m_MuzzleMat))
+			{
+				if (m_Record.m_bAssemblyOwned)
+				{
+					Keep("hardware_or_muzzle");
+					return;
+				}
 				Omit("hardware_or_muzzle");
 				return;
 			}
@@ -123,7 +169,6 @@ class IA_CompositionGunBuilder : IA_EmplacementBuilder
 				Omit("missing_assembly");
 				return;
 			}
-			vector parent[4];
 			m_Assembly.GetWorldTransform(parent);
 			vector local = Vector(0, 0, -module.m_fHalfDepthM - 1.5);
 			if (m_iSample == 1)

@@ -40,7 +40,8 @@ class CompositionTests(unittest.TestCase):
             self.assertEqual(read(path),content,path)
             if not path.endswith('.et'):
                 continue
-            self.assertNotRegex(content,r'(?m)^\s*(?:SCR_\w*(?:Campaign|ServicePoint|SupportStation|ResourceComponent)\w*|ScriptedRadioComponent)\s|/Systems/|/Arsenal/|/Weapons/')
+            self.assertNotRegex(content,r'(?m)^\s*(?:SCR_\w*(?:Campaign|ServicePoint|SupportStation|ResourceComponent)\w*|ScriptedRadioComponent)\s|/Systems/|/Arsenal/')
+            self.assertNotRegex(content,r'Prefabs/Weapons/(?!Tripods/)')
             root=parse(content)
             components=root.block('components').body
             self.assertEqual(sum(c.head.startswith('RplComponent ') for c in components),1,path)
@@ -188,6 +189,8 @@ class CompositionTests(unittest.TestCase):
     def test_native_supporting_geometry_not_old_tripod_fit(self):
         source=read('Scripts/Game/IA_CompositionGunBuilder.c')
         self.assertIn('m_Spec.m_Socket.Transform(parent, m_Mat)',source)
+        self.assertIn('FindInTree',source)
+        self.assertIn('m_bAssemblyOwned',source)
         self.assertNotIn('uneven_feet',source)
         self.assertNotIn('m_aFeet',source)
         self.assertIn('CollectTree(m_Record.m_Root, exclusions)',source)
@@ -206,6 +209,10 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('!m_ActiveLayout.m_bComposed && !ValidateEmplacementAccess()',placer)
         site=read('Scripts/Game/IA_DynamicSiteInstance.c')
         self.assertIn('if (!DeleteRoots())',site)
+        self.assertIn('TryAddDefenseMortar',site)
+        self.assertIn('DEFENSE_MORTAR_CHANCE = 0.35',site)
+        self.assertIn('AssignMortar',site)
+        self.assertIn('GetMortarPlacementPrefab',site)
         composed=read('Scripts/Game/IA_ComposedSiteLayout.c')
         self.assertIn('maxDelta = 0.8',composed)
         self.assertIn('InteriorSupportDelta',composed)
@@ -224,6 +231,21 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('IsBarrenSide',builder)
         self.assertIn('barren_wall',builder)
         self.assertIn('barren_wall',read('Scripts/Game/IA_CompositionGunBuilder.c'))
+
+    def test_gunned_shells_keep_stock_tripods(self):
+        for key in ('PKM','NSV','AA'):
+            prefab=read(self.catalog[key]['prefab'].split('}',1)[1])
+            self.assertIn('Prefabs/Weapons/Tripods/',prefab,key)
+            self.assertIn('IA_StaticGunComponent',prefab,key)
+            self.assertIn('Parent Node From Parent Entity',prefab,key)
+        nest=read(self.catalog['PKMNest']['prefab'].split('}',1)[1])
+        self.assertIn('IA_Sandbag_MG_USSR_01_PKM',nest)
+
+    def test_bunker_is_regular_wall_cover(self):
+        bunkered=[r for r in self.recipes if any(m['key']=='Bunker' and m['side']>=0 for m in r['modules'])]
+        self.assertGreaterEqual(len(bunkered),20)
+        themes={r['theme'] for r in bunkered}
+        self.assertGreaterEqual(len(themes),3)
 
     def test_aa_retains_vanilla_limits_without_campaign_disassembly(self):
         aa=read('Prefabs/Emplacements/IA_Emplacement_AA.et')

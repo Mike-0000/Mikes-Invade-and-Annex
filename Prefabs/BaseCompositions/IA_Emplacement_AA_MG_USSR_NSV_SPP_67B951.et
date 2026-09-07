@@ -19,6 +19,21 @@ GenericEntity {
     }
    }
   }
+  Turret : "{3EA26CFD7A202636}Prefabs/Weapons/Tripods/6T7/Tripod_6T7_NSV_SPP.et" {
+   ID "6530770E3E2ACD14"
+   coords 0.626 0.946 1.264
+   angles 18.622 8.065 2.257
+   components {
+    IA_StaticGunComponent "{4749583AFCAF55FF}" {
+    }
+    RplComponent "{51ACD09DAD530767}" {
+     "Parent Node From Parent Entity" 1
+    }
+    Hierarchy "{51ACD09C446C017C}" {
+     Enabled 1
+    }
+   }
+  }
   GenericEntity : "{79AA43911CC6C3E8}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Small_Soviet.et" {
    ID "6530770E3E2ACD16"
    coords 0.536 0 -0.104

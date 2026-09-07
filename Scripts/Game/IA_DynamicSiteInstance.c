@@ -7,6 +7,8 @@ class IA_DynamicSiteInstance
 	static const float ASSEMBLY_RADIUS_M = 150;
 	static const float CLEANUP_PLAYER_M = 600;
 	static const int CLEANUP_TICK_SEC = 8;
+	static const float DEFENSE_MORTAR_CHANCE = 0.35;
+	static const int DEFENSE_MORTAR_CREW_TRIES = 12;
 
 	protected int m_iSerial;
 	protected int m_iGroupId;
@@ -32,6 +34,10 @@ class IA_DynamicSiteInstance
 	protected int m_iEmplacementTickMs;
 	protected string m_sEmplacementBuildSummary;
 	protected bool m_bEmplacementSummaryReported;
+	protected IEntity m_MortarRoot;
+	protected IEntity m_MortarGun;
+	protected ref IA_AiGroup m_MortarCrew;
+	protected int m_iMortarCrewAttempts;
 
 	//------------------------------------------------------------------------------------------------
 	void IA_DynamicSiteInstance()
@@ -292,7 +298,8 @@ class IA_DynamicSiteInstance
 	{
 		if (!record || !record.m_Root)
 			return;
-		AddRoot(record.m_Root); // Register before component/inventory verification.
+		if (!record.m_bAssemblyOwned)
+			AddRoot(record.m_Root); // Register before component/inventory verification.
 		m_Emplacements.Insert(record);
 	}
 
@@ -307,10 +314,14 @@ class IA_DynamicSiteInstance
 		if (record.m_Crew)
 			record.m_Crew.ReleaseStaticGunAssignment(true);
 		IEntity root = record.m_Root;
+		bool assemblyOwned = record.m_bAssemblyOwned;
 		m_Emplacements.Remove(index);
-		m_aRoots.RemoveItem(root);
-		if (root)
-			SCR_EntityHelper.DeleteEntityAndChildren(root);
+		if (!assemblyOwned)
+		{
+			m_aRoots.RemoveItem(root);
+			if (root)
+				SCR_EntityHelper.DeleteEntityAndChildren(root);
+		}
 		return true;
 	}
 
@@ -395,6 +406,133 @@ class IA_DynamicSiteInstance
 			IA_BaseDesignLibrary.Committed(m_Layout.m_iDesignVariant);
 		m_bEmplacementsRevealed = true;
 		ReportEmplacements();
+		TryAddDefenseMortar();
+	}
+
+	void TryAddDefenseMortar()
+	{
+		if (!Replication.IsServer())
+			return;
+		if (!m_Layout || !m_Layout.m_bComposed)
+			return;
+		if (m_MortarRoot || m_MortarGun)
+			return;
+		if (IA_Game.rng.RandFloat01() >= DEFENSE_MORTAR_CHANCE)
+			return;
+
+		vector worldPos;
+		if (!FindDefenseMortarPose(worldPos))
+			return;
+
+		ResourceName prefab = IA_AreaMarker.GetMortarPlacementPrefab();
+		Resource resource = Resource.Load(prefab);
+		if (!resource || !resource.IsValid())
+		{
+			Print("[IA][Base] Defense mortar prefab failed to load", LogLevel.WARNING);
+			return;
+		}
+
+		ref EntitySpawnParams params = new EntitySpawnParams();
+		params.TransformMode = ETransformMode.WORLD;
+		Math3D.AnglesToMatrix(Vector(m_fYawDeg + 180, 0, 0), params.Transform);
+		params.Transform[3] = worldPos;
+		IEntity pit = GetGame().SpawnEntityPrefab(resource, GetGame().GetWorld(), params);
+		if (!pit)
+		{
+			Print("[IA][Base] Defense mortar spawn failed", LogLevel.WARNING);
+			return;
+		}
+
+		m_MortarRoot = pit;
+		AddRoot(pit);
+		ref array<IEntity> guns = {};
+		IA_AreaMarker.CollectStaticArtilleryInHierarchy(pit, guns);
+		if (guns && !guns.IsEmpty())
+			m_MortarGun = guns[0];
+		SpawnDefenseMortarCrew(worldPos);
+		IA_Log.Info(string.Format("[IA][Base] Defense mortar added site=%1 at %2", m_iSiteId, worldPos));
+	}
+
+	protected bool FindDefenseMortarPose(out vector worldPos)
+	{
+		vector rootMat[4];
+		m_Layout.BuildRootTransform(m_vOrigin, m_fYawDeg, rootMat);
+		ref array<vector> locals = {};
+		locals.Insert(m_Layout.m_vCaptureLocal + Vector(0, 0, -12));
+		locals.Insert(m_Layout.m_vCaptureLocal + Vector(10, 0, -10));
+		locals.Insert(m_Layout.m_vCaptureLocal + Vector(-10, 0, -10));
+		locals.Insert(m_Layout.m_vAssemblyLocal);
+		locals.Insert(Vector(0, 0, -8));
+		int count = locals.Count();
+		for (int i = 0; i < count; i++)
+		{
+			vector candidate = m_Layout.LocalOffsetToWorld(rootMat, locals[i]);
+			candidate[1] = IA_BasePlayerSampler.SampleSupportY(candidate);
+			if (!IA_CompositionGunBuilder.StandingClear(candidate))
+				continue;
+			if (!IA_SpawnPlacement.IsOutdoorStandPose(candidate))
+				continue;
+			worldPos = candidate;
+			return true;
+		}
+		return false;
+	}
+
+	protected void SpawnDefenseMortarCrew(vector worldPos)
+	{
+		if (!m_Host || !m_Host.GetArea())
+			return;
+		vector crewPos = worldPos;
+		crewPos[2] = crewPos[2] + 1.5;
+		crewPos[1] = IA_BasePlayerSampler.SampleSupportY(crewPos);
+		IA_AiGroup group = IA_AiGroup.CreateMilitaryGroupFromUnits(crewPos, IA_Faction.USSR, 1, m_EnemyFaction, false, true, true, false);
+		if (!group)
+			return;
+		group.SetAssignedArea(m_Host.GetArea());
+		group.SetMortarCrew(true);
+		group.Spawn(IA_AiOrder.Defend, crewPos);
+		AddGarrisonGroup(group);
+		m_MortarCrew = group;
+		group.SpawnNextUnit();
+		GetGame().GetCallqueue().CallLater(TryAssignDefenseMortarCrew, 2000, false);
+	}
+
+	protected void TryAssignDefenseMortarCrew()
+	{
+		if (!Replication.IsServer())
+			return;
+		if (m_bCleanupArmed)
+			return;
+		if (!m_MortarCrew)
+			return;
+
+		m_iMortarCrewAttempts = m_iMortarCrewAttempts + 1;
+		if (m_iMortarCrewAttempts > DEFENSE_MORTAR_CREW_TRIES)
+		{
+			Print(string.Format("[IA][Base] Defense mortar crew gave up site=%1", m_iSiteId), LogLevel.WARNING);
+			return;
+		}
+
+		if (!m_MortarGun && m_MortarRoot)
+		{
+			ref array<IEntity> guns = {};
+			IA_AreaMarker.CollectStaticArtilleryInHierarchy(m_MortarRoot, guns);
+			if (guns && !guns.IsEmpty())
+				m_MortarGun = guns[0];
+		}
+		if (!m_MortarGun)
+		{
+			GetGame().GetCallqueue().CallLater(TryAssignDefenseMortarCrew, 2000, false);
+			return;
+		}
+		if (!m_MortarCrew.IsSpawned() || m_MortarCrew.GetAliveCount() <= 0)
+		{
+			GetGame().GetCallqueue().CallLater(TryAssignDefenseMortarCrew, 2000, false);
+			return;
+		}
+		if (m_MortarCrew.AssignMortar(m_MortarGun))
+			return;
+		GetGame().GetCallqueue().CallLater(TryAssignDefenseMortarCrew, 2000, false);
 	}
 
 	void StopEmplacementAssignments(bool restoreDefense)

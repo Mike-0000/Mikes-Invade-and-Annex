@@ -27,6 +27,24 @@ class IA_StaticGunComponent : ScriptComponent
 		return IA_StaticGunComponent.Cast(entity.FindComponent(IA_StaticGunComponent));
 	}
 
+	static IA_StaticGunComponent FindInTree(IEntity entity)
+	{
+		if (!entity)
+			return null;
+		IA_StaticGunComponent gun = Find(entity);
+		if (gun)
+			return gun;
+		IEntity child = entity.GetChildren();
+		while (child)
+		{
+			gun = FindInTree(child);
+			if (gun)
+				return gun;
+			child = child.GetSibling();
+		}
+		return null;
+	}
+
 	TurretCompartmentSlot GetSeat() { return m_Seat; }
 	IEntity GetWeapon() { return m_Weapon; }
 	int GetSiteSerial() { return m_iSiteSerial; }
