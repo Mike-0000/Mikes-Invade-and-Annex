@@ -1225,21 +1225,41 @@ class IA_AreaGroupManager
             maxDelay = config.m_iArtilleryMaxDelay;
         }
 
-        IA_AreaInstance mortarPit = FindMortarPitInstance();
-        if (mortarPit && mortarPit.CanIssueMortarFireMission())
+        ref array<IA_AreaInstance> batteries = new array<IA_AreaInstance>();
+        CollectArtilleryBatteries(batteries);
+
+        if (!batteries.IsEmpty())
         {
-            vector defensePos;
-            if (mortarPit.GetMortarPitDefenseTarget(defensePos))
+            bool haveLocalDefense = false;
+            foreach (IA_AreaInstance battery : batteries)
+            {
+                vector probe;
+                if (battery && battery.GetMortarPitDefenseTarget(probe))
+                {
+                    haveLocalDefense = true;
+                    break;
+                }
+            }
+            if (haveLocalDefense)
             {
                 if (currentTime - m_lastPitDefenseFireTime >= ARTILLERY_PIT_DEFENSE_COOLDOWN)
                 {
                     int defenseShots = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
-                    if (mortarPit.IssueMortarFireMission(defensePos, defenseShots))
+                    bool defenseFired = false;
+                    foreach (IA_AreaInstance battery : batteries)
+                    {
+                        vector defensePos;
+                        if (!battery || !battery.GetMortarPitDefenseTarget(defensePos))
+                            continue;
+                        if (battery.IssueMortarFireMission(defensePos, defenseShots))
+                            defenseFired = true;
+                    }
+                    if (defenseFired)
                     {
                         m_lastPitDefenseFireTime = currentTime;
                         if (IA_Log.IsDebugEnabled())
                         {
-                            Print(string.Format("[ArtilleryStrike] Pit defense fire: %1 rounds at %2", defenseShots, defensePos), LogLevel.NORMAL);
+                            Print(string.Format("[ArtilleryStrike] Local mortar defense fire: %1 rounds", defenseShots), LogLevel.NORMAL);
                         }
                     }
                 }
@@ -1259,7 +1279,7 @@ class IA_AreaGroupManager
                 return;
             }
 
-            if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
+            if (batteries.IsEmpty())
             {
                 Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
                 ClearPendingArtilleryStrike();
@@ -1268,7 +1288,7 @@ class IA_AreaGroupManager
             }
 
             int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
-            bool fired = mortarPit.IssueMortarFireMission(m_artilleryStrikeCenter, shotCount);
+            bool fired = IssueMortarFireOnBatteries(batteries, m_artilleryStrikeCenter, shotCount);
             if (!fired)
                 Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
             else if (IA_Log.IsDebugEnabled())
@@ -1281,11 +1301,11 @@ class IA_AreaGroupManager
             return;
         }
 
-        if (!mortarPit || !mortarPit.CanIssueMortarFireMission())
+        if (batteries.IsEmpty())
         {
             if (IA_Log.IsDebugEnabled())
             {
-                Print("[ArtilleryStrike] Check failed: No usable mortar pit crew in this AO group.", LogLevel.NORMAL);
+                Print("[ArtilleryStrike] Check failed: No usable mortar crew in this AO group.", LogLevel.NORMAL);
             }
             return;
         }
@@ -1403,15 +1423,51 @@ class IA_AreaGroupManager
         }
     }
 
-    protected IA_AreaInstance FindMortarPitInstance()
+    protected void CollectArtilleryBatteries(notnull array<IA_AreaInstance> outBatteries)
     {
-        if (!m_areaInstances)
-            return null;
-        foreach (IA_AreaInstance instance : m_areaInstances)
+        int groupId = -1;
+        if (m_areaInstances)
         {
-            if (instance && instance.IsMortarPitArea())
-                return instance;
+            foreach (IA_AreaInstance instance : m_areaInstances)
+            {
+                if (!instance)
+                    continue;
+                if (groupId == -1)
+                    groupId = instance.GetAreaGroup();
+                if (!instance.CanIssueMortarFireMission())
+                    continue;
+                if (outBatteries.Find(instance) == -1)
+                    outBatteries.Insert(instance);
+            }
         }
-        return null;
+
+        IA_Game game = IA_Game.Instantiate();
+        if (!game)
+            return;
+
+        ref array<IA_AreaInstance> transients = new array<IA_AreaInstance>();
+        game.CollectTransientAreas(transients);
+        foreach (IA_AreaInstance inst : transients)
+        {
+            if (!inst || !inst.CanIssueMortarFireMission())
+                continue;
+            if (groupId != -1 && inst.GetAreaGroup() != groupId)
+                continue;
+            if (outBatteries.Find(inst) == -1)
+                outBatteries.Insert(inst);
+        }
+    }
+
+    protected bool IssueMortarFireOnBatteries(notnull array<IA_AreaInstance> batteries, vector targetPos, int shotCount)
+    {
+        bool fired = false;
+        foreach (IA_AreaInstance battery : batteries)
+        {
+            if (!battery || !battery.CanIssueMortarFireMission())
+                continue;
+            if (battery.IssueMortarFireMission(targetPos, shotCount))
+                fired = true;
+        }
+        return fired;
     }
 };

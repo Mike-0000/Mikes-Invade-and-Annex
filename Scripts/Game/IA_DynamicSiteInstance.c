@@ -531,7 +531,12 @@ class IA_DynamicSiteInstance
 			return;
 		}
 		if (m_MortarCrew.AssignMortar(m_MortarGun))
+		{
+			if (m_Host)
+				m_Host.RegisterDefenseMortar(m_MortarCrew, m_MortarGun);
+			IA_Log.Info(string.Format("[IA][Base] Defense mortar crew seated site=%1", m_iSiteId));
 			return;
+		}
 		GetGame().GetCallqueue().CallLater(TryAssignDefenseMortarCrew, 2000, false);
 	}
 

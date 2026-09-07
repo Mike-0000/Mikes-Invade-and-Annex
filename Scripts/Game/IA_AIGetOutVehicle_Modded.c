@@ -1,6 +1,6 @@
 // Combat and group move-planning issue GetOut at high priority. Block the
-// group dismount *message* for STATIC_ARTILLERY so idle gunners are not
-// ordered off the tube. Also keep Pilot/Turret on living movable vehicles
+// group dismount *message* for STATIC_ARTILLERY and IA site-owned guns so
+// idle gunners are not ordered off. Also keep Pilot/Turret on living movable vehicles
 // so VehicleCombatActivity does not dump drivers of "unarmed-looking"
 // technicals. Do not swallow SCR_AIGetOutVehicle itself: the vanilla
 // artillery BT must hop out after aiming to load a shell, and cargo must
@@ -14,7 +14,11 @@ modded class SCR_AIMessageHandling
 	{
 		IEntity usageOwner;
 		SCR_AIVehicleUsageComponent usage = SCR_AIVehicleUsageComponent.FindOnNearestParent(vehicleEntity, usageOwner);
+		if (IA_StaticGunAssignment.IsPostedAgent(agent))
+			return;
 		if (usage && usage.GetVehicleType() == EAIVehicleType.STATIC_ARTILLERY)
+			return;
+		if (IA_StaticGunComponent.FindOnNearestParent(vehicleEntity))
 			return;
 
 		if (ShouldKeepVehicleCrewMounted(agent, vehicleEntity, relatedActivity))

@@ -1,7 +1,8 @@
-// MovePlanning dumps every static/unpilotable vehicle. Mortars match that filter,
-// so a defend/move plan would order gunners off the tubes. Skip STATIC_ARTILLERY.
-// Override EOnTaskSimulate: Testing_State is not marked override in vanilla and
-// may not bind, which is why gunners still hopped off immediately after boarding.
+// MovePlanning dumps every static/unpilotable vehicle. Mortars and IA site-owned
+// guns match that filter, so a defend/move plan would order gunners off.
+// Skip STATIC_ARTILLERY and IA_StaticGunComponent. Override EOnTaskSimulate:
+// Testing_State is not marked override in vanilla and may not bind, which is
+// why mortar gunners still hopped off immediately after boarding.
 
 modded class SCR_AILeaveStaticVehicles
 {
@@ -9,13 +10,16 @@ modded class SCR_AILeaveStaticVehicles
 
 	override ENodeResult EOnTaskSimulate(AIAgent owner, float dt)
 	{
+		if (GroupHasPostedGunner(owner))
+			return ENodeResult.SUCCESS;
+
 		if (m_Utility && m_Utility.m_VehicleMgr)
 		{
 			ref array<ref SCR_AIGroupVehicle> used = new array<ref SCR_AIGroupVehicle>();
 			m_Utility.m_VehicleMgr.GetAllVehicles(used);
 			foreach (SCR_AIGroupVehicle groupVehicle : used)
 			{
-				if (GroupVehicleIsStaticArtillery(groupVehicle))
+				if (GroupVehicleIsStaticArtillery(groupVehicle) || GroupVehicleIsIaStaticGun(groupVehicle))
 					return ENodeResult.SUCCESS;
 			}
 		}
@@ -50,6 +54,28 @@ modded class SCR_AILeaveStaticVehicles
 		if (found && found.GetVehicleType() == EAIVehicleType.STATIC_ARTILLERY)
 			return true;
 
+		return false;
+	}
+
+	protected bool GroupVehicleIsIaStaticGun(SCR_AIGroupVehicle groupVehicle)
+	{
+		if (!groupVehicle)
+			return false;
+		return IA_StaticGunComponent.FindOnNearestParent(groupVehicle.GetEntity()) != null;
+	}
+
+	protected bool GroupHasPostedGunner(AIAgent owner)
+	{
+		SCR_AIGroup group = SCR_AIGroup.Cast(owner);
+		if (!group)
+			return false;
+		array<AIAgent> agents = {};
+		group.GetAgents(agents);
+		foreach (AIAgent agent : agents)
+		{
+			if (IA_StaticGunAssignment.IsPostedAgent(agent))
+				return true;
+		}
 		return false;
 	}
 };

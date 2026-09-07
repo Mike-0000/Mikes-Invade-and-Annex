@@ -1,14 +1,23 @@
 // One-person assignment, ticked by the owning site (never a per-gun call queue).
 // Terminal release is idempotent. An accepted GetIn is not another retry.
+// After a successful mount, an unexpected hop-off remounts while the site and
+// gun remain usable. Capture, death, a player in the seat, a wrecked gun and
+// exhausted ammunition still release once.
 class IA_StaticGunAssignment
 {
+	protected static const int INITIAL_ATTEMPTS = 3;
+	protected static const int INITIAL_WINDOW_MS = 5000;
+	protected static const int REMOUNT_ATTEMPTS = 8;
+	protected static const int REMOUNT_RETRY_MS = 500;
+	protected static const int ACCEPTED_WAIT_MS = 4000;
+
 	protected IA_AiGroup m_Group;
 	protected IA_StaticGunComponent m_Gun;
 	protected AIAgent m_Agent;
 	protected IEntity m_Pawn;
 	protected TurretCompartmentSlot m_Seat;
 	protected int m_iSerial;
-	protected int m_iState; // 0 spawn, 1 initial boarding, 2 mounted, 3 exit, 4 done
+	protected int m_iState; // 0 spawn, 1 boarding, 2 mounted, 3 exit, 4 done
 	protected int m_iReadyMs;
 	protected int m_iNextAttemptMs;
 	protected int m_iAttempts;
@@ -16,11 +25,14 @@ class IA_StaticGunAssignment
 	protected int m_iExitDeadlineMs;
 	protected bool m_bAccepted;
 	protected bool m_bPinned;
+	protected bool m_bWasMounted;
 	protected bool m_bRestoreDefense = true;
 	protected bool m_bExitRequested;
 	protected bool m_bBoardingCancelled;
+	protected bool m_bPosted;
 	protected vector m_vDefend;
 	protected float m_fRadius;
+	protected static ref array<IEntity> s_PostedPawns;
 
 	void Setup(IA_AiGroup group, IA_StaticGunComponent gun, int serial, vector defend, float radius)
 	{
@@ -34,13 +46,63 @@ class IA_StaticGunAssignment
 	}
 
 	bool BlocksOrders() { return m_iState < 4; }
-	bool InitialPending() { return m_iState < 2; }
+	bool InitialPending() { return m_iState < 2 && !m_bWasMounted; }
 	bool IsMounted() { return m_iState == 2; }
+
+	static bool IsPostedPawn(IEntity pawn)
+	{
+		return pawn && s_PostedPawns && s_PostedPawns.Find(pawn) >= 0;
+	}
+
+	static bool IsPostedAgent(AIAgent agent)
+	{
+		if (!agent)
+			return false;
+		return IsPostedPawn(agent.GetControlledEntity());
+	}
+
+	protected void RegisterPosted()
+	{
+		if (m_bPosted || !m_Pawn)
+			return;
+		if (!s_PostedPawns)
+			s_PostedPawns = new array<IEntity>();
+		if (s_PostedPawns.Find(m_Pawn) < 0)
+			s_PostedPawns.Insert(m_Pawn);
+		m_bPosted = true;
+	}
+
+	protected void UnregisterPosted()
+	{
+		if (!m_bPosted)
+			return;
+		if (s_PostedPawns && m_Pawn)
+			s_PostedPawns.RemoveItem(m_Pawn);
+		m_bPosted = false;
+	}
 
 	void OnSpawnReady()
 	{
 		if (!m_iReadyMs)
 			m_iReadyMs = System.GetTickCount();
+		if (m_Pawn)
+		{
+			RegisterPosted();
+			return;
+		}
+		if (!m_Group)
+			return;
+		array<AIAgent> agents = {};
+		SCR_AIGroup nativeGroup = m_Group.GetSCR_AIGroup();
+		if (nativeGroup)
+			nativeGroup.GetAgents(agents);
+		if (agents.IsEmpty())
+			return;
+		m_Agent = agents[0];
+		if (m_Agent)
+			m_Pawn = m_Agent.GetControlledEntity();
+		if (m_Pawn)
+			RegisterPosted();
 	}
 
 	void Tick(bool permitInitialMount, bool siteLive)
@@ -80,6 +142,8 @@ class IA_StaticGunAssignment
 					m_Pawn = m_Agent.GetControlledEntity();
 			}
 		}
+		if (m_Pawn && m_iState < 3)
+			RegisterPosted();
 		ChimeraCharacter character = ChimeraCharacter.Cast(m_Pawn);
 		if (!character || !character.GetCharacterController() || character.GetCharacterController().GetLifeState() != ECharacterLifeState.ALIVE || IsPlayer())
 		{
@@ -94,45 +158,77 @@ class IA_StaticGunAssignment
 		}
 		if (m_iState == 2)
 		{
-			if (m_Seat.GetOccupant() != m_Pawn || !access.IsInCompartment())
+			if (m_Seat.GetOccupant() == m_Pawn && access.IsInCompartment())
+			{
+				if (m_Gun.GetLoadedRounds() > 0)
+				{
+					m_iEmptySinceMs = 0;
+					return;
+				}
+				if (!m_iEmptySinceMs)
+					m_iEmptySinceMs = now;
+				int allowance = 10000;
+				if (m_Gun.GetUsableRounds() > 0 && m_Gun.GetController())
+					allowance = Math.Max(10000, Math.Ceil(m_Gun.GetController().GetReloadDuration() * 1000) + 5000);
+				if (now - m_iEmptySinceMs >= allowance)
+					Release(true);
+				return;
+			}
+			if (access.IsGettingIn() || access.IsGettingOut())
+				return;
+			if (m_Seat.GetOccupant() && m_Seat.GetOccupant() != m_Pawn)
 			{
 				Release(true);
 				return;
 			}
-			if (m_Gun.GetLoadedRounds() > 0)
+			if (m_Gun.GetUsableRounds() <= 0)
 			{
-				m_iEmptySinceMs = 0;
+				Release(true);
 				return;
 			}
-			if (!m_iEmptySinceMs)
-				m_iEmptySinceMs = now;
-			int allowance = 10000;
-			if (m_Gun.GetUsableRounds() > 0 && m_Gun.GetController())
-				allowance = Math.Max(10000, Math.Ceil(m_Gun.GetController().GetReloadDuration() * 1000) + 5000);
-			if (now - m_iEmptySinceMs >= allowance)
-				Release(true);
+			BeginRemount(now);
 			return;
 		}
-		if (!permitInitialMount || now - m_iReadyMs >= 5000)
+		if (!m_bWasMounted)
 		{
-			Release(true);
-			return;
+			if (!permitInitialMount || now - m_iReadyMs >= INITIAL_WINDOW_MS)
+			{
+				Release(true);
+				return;
+			}
 		}
 		if (m_Seat.GetOccupant() == m_Pawn && access.IsInCompartment())
 		{
 			m_iState = 2;
+			m_bWasMounted = true;
+			m_iAttempts = 0;
+			m_bAccepted = false;
 			ClearReservation();
 			return;
 		}
-		if (m_bAccepted || now < m_iNextAttemptMs)
+		if (access.IsGettingOut())
 			return;
-		if (m_iAttempts >= 3 || access.IsInCompartment() || access.IsGettingOut())
+		if (m_bAccepted)
+		{
+			if (now < m_iNextAttemptMs + ACCEPTED_WAIT_MS)
+				return;
+			m_bAccepted = false;
+		}
+		if (now < m_iNextAttemptMs)
+			return;
+		int attemptCap = INITIAL_ATTEMPTS;
+		if (m_bWasMounted)
+			attemptCap = REMOUNT_ATTEMPTS;
+		if (m_iAttempts >= attemptCap || access.IsInCompartment())
 		{
 			Release(true);
 			return;
 		}
 		m_iAttempts++;
-		m_iNextAttemptMs = now + 1000;
+		int retryMs = 1000;
+		if (m_bWasMounted)
+			retryMs = REMOUNT_RETRY_MS;
+		m_iNextAttemptMs = now + retryMs;
 		if (m_Seat.GetOccupant() || (m_Seat.IsReserved() && !m_Seat.IsReservedBy(m_Pawn)))
 			return;
 		m_iState = 1;
@@ -149,10 +245,26 @@ class IA_StaticGunAssignment
 			ClearReservation();
 	}
 
+	protected void BeginRemount(int now)
+	{
+		m_iState = 1;
+		m_bAccepted = false;
+		m_bBoardingCancelled = false;
+		m_iAttempts = 0;
+		m_iEmptySinceMs = 0;
+		m_iNextAttemptMs = now + REMOUNT_RETRY_MS;
+		ClearReservation();
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][Emplacements] remount serial=%1", m_iSerial), LogLevel.NORMAL);
+		}
+	}
+
 	void Release(bool restoreDefense)
 	{
 		if (!Replication.IsServer() || m_iState == 4)
 			return;
+		UnregisterPosted();
 		if (!restoreDefense)
 			m_bRestoreDefense = false;
 		ClearReservation();

@@ -5884,10 +5884,41 @@ class IA_AreaInstance
         return GetMortarPitDefenseTarget(unused);
     }
 
+    bool HasLiveMortarCrew()
+    {
+        if (m_mortarCrewGroups && !m_mortarCrewGroups.IsEmpty())
+        {
+            foreach (IA_AiGroup crew : m_mortarCrewGroups)
+            {
+                if (crew && crew.IsSpawned() && crew.GetAliveCount() > 0)
+                    return true;
+            }
+            return false;
+        }
+        if (!m_mortarCrewGroup || !m_mortarCrewGroup.IsSpawned())
+            return false;
+        return m_mortarCrewGroup.GetAliveCount() > 0;
+    }
+
+    void RegisterDefenseMortar(IA_AiGroup crew, IEntity gun)
+    {
+        if (gun)
+            m_mortarEntity = gun;
+        if (!crew)
+            return;
+        if (m_mortarCrewGroups.Find(crew) == -1)
+            m_mortarCrewGroups.Insert(crew);
+        if (!m_mortarCrewGroup)
+            m_mortarCrewGroup = crew;
+        m_assignedGroupStates.Set(crew, IA_GroupTacticalState.InVehicle);
+    }
+
     bool GetMortarPitDefenseTarget(out vector outTarget)
     {
         outTarget = vector.Zero;
-        if (!IsMortarPitArea() || !m_area)
+        if (!m_area)
+            return false;
+        if (!IsMortarPitArea() && !HasLiveMortarCrew())
             return false;
 
         array<ref IA_AiGroup> groups = GetMilitaryGroups();
@@ -5964,31 +5995,10 @@ class IA_AreaInstance
     {
         if (m_bShutDown)
             return false;
-        if (!IsMortarPitArea())
+        if (IsMortarPitArea() && IsMortarPitCaptured())
             return false;
-        if (IsMortarPitCaptured())
+        if (!HasLiveMortarCrew())
             return false;
-        if (!m_mortarCrewGroups || m_mortarCrewGroups.IsEmpty())
-        {
-            if (!m_mortarCrewGroup || !m_mortarCrewGroup.IsSpawned())
-                return false;
-            if (m_mortarCrewGroup.GetAliveCount() <= 0)
-                return false;
-        }
-        else
-        {
-            bool anyCrew = false;
-            foreach (IA_AiGroup crew : m_mortarCrewGroups)
-            {
-                if (crew && crew.IsSpawned() && crew.GetAliveCount() > 0)
-                {
-                    anyCrew = true;
-                    break;
-                }
-            }
-            if (!anyCrew)
-                return false;
-        }
         if (!m_mortarEntity && !m_mortarCrewGroup)
             return false;
         return true;

@@ -45,6 +45,19 @@ class IA_StaticGunComponent : ScriptComponent
 		return null;
 	}
 
+	static IA_StaticGunComponent FindOnNearestParent(IEntity entity)
+	{
+		IEntity walk = entity;
+		while (walk)
+		{
+			IA_StaticGunComponent gun = Find(walk);
+			if (gun)
+				return gun;
+			walk = walk.GetParent();
+		}
+		return null;
+	}
+
 	TurretCompartmentSlot GetSeat() { return m_Seat; }
 	IEntity GetWeapon() { return m_Weapon; }
 	int GetSiteSerial() { return m_iSiteSerial; }
