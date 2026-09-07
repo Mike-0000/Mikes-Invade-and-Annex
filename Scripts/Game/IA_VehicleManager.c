@@ -287,7 +287,10 @@ class IA_VehicleManager: GenericEntity
             }
             
             // Automatically create AI units for the vehicle
-            if (faction != IA_Faction.CIV && IA_Game.CurrentAreaInstance) // Only for military vehicles
+            IA_AreaInstance crewArea = IA_Game.CurrentAreaInstance;
+            if (!crewArea || crewArea.IsShutDown())
+                crewArea = FindLiveAreaInstanceForGroup(m_currentActiveGroup);
+            if (faction != IA_Faction.CIV && crewArea && !crewArea.IsShutDown())
             {
                 //// Print(("[DEBUG] IA_VehicleManager.SpawnVehicle: Automatically creating AI crew for vehicle", LogLevel.NORMAL);
                 
@@ -300,14 +303,18 @@ class IA_VehicleManager: GenericEntity
                 float groupRadius = IA_AreaMarker.CalculateGroupRadius(m_currentActiveGroup);
                 if (groupCenter != vector.Zero)
                     originPoint = groupCenter;
+                else if (crewArea.GetArea())
+                    originPoint = crewArea.GetArea().GetOrigin();
                 else
-                    originPoint = IA_Game.CurrentAreaInstance.m_area.GetOrigin();
+                    originPoint = position;
                 
                 float radiusToUse;
                 if (groupRadius > 0)
                     radiusToUse = groupRadius * 0.8;
+                else if (crewArea.GetArea())
+                    radiusToUse = crewArea.GetArea().GetRadius() * 0.8;
                 else
-                    radiusToUse = IA_Game.CurrentAreaInstance.m_area.GetRadius() * 0.8;
+                    radiusToUse = 80.0;
                 
                 // Directly find a random road entity in the area
                 vector roadPos = FindRandomRoadPointForVehiclePatrol(originPoint, radiusToUse, m_currentActiveGroup); 
@@ -322,7 +329,7 @@ class IA_VehicleManager: GenericEntity
                 }
                 
                 // Create AI and assign to vehicle
-                PlaceUnitsInVehicle(vehicle, faction, destination, IA_Game.CurrentAreaInstance, AreaFaction);
+                PlaceUnitsInVehicle(vehicle, faction, destination, crewArea, AreaFaction);
             }
         }
         else
@@ -828,6 +835,44 @@ class IA_VehicleManager: GenericEntity
         return SpawnRandomVehicle(faction, false, true, position, AreaFaction);
     }
     
+    //! AreaInstance that can own spawn-point crews for this AO group.
+    //! Prefers a non-mortar host. IA_Game.CurrentAreaInstance is never set after
+    //! delayed AO spawn (8dcaae9), so callers must not rely on that static.
+    static IA_AreaInstance FindLiveAreaInstanceForGroup(int groupId)
+    {
+        if (groupId < 0)
+            return null;
+
+        IA_Game game = IA_Game.Instantiate();
+        if (!game)
+            return null;
+
+        array<IA_AreaInstance> areas = game.GetAreaInstances();
+        if (!areas)
+            return null;
+
+        IA_AreaInstance fallback = null;
+        foreach (IA_AreaInstance inst : areas)
+        {
+            if (!inst || inst.IsShutDown())
+                continue;
+            if (inst.GetAreaGroup() != groupId)
+                continue;
+
+            IA_Area area = inst.GetArea();
+            if (area && area.GetAreaType() == IA_AreaType.MortarPit)
+            {
+                if (!fallback)
+                    fallback = inst;
+                continue;
+            }
+
+            return inst;
+        }
+
+        return fallback;
+    }
+
     // Spawn vehicles at all available spawn points for the active group with occupants
     static void SpawnVehiclesAtAllSpawnPoints(IA_Faction faction, Faction AreaFaction)
     {
@@ -841,6 +886,13 @@ class IA_VehicleManager: GenericEntity
         if (spawnPoints.IsEmpty())
         {
             //// Print(("[DEBUG] IA_VehicleManager.SpawnVehiclesAtAllSpawnPoints: No spawn points found in group " + targetGroup, LogLevel.WARNING);
+            return;
+        }
+
+        IA_AreaInstance areaInst = FindLiveAreaInstanceForGroup(targetGroup);
+        if (!areaInst)
+        {
+            Print(string.Format("[IA][Vehicle] Group %1 has spawn points but no live area instance; skipping crewed spawn-point vehicles.", targetGroup), LogLevel.WARNING);
             return;
         }
         
@@ -864,7 +916,7 @@ class IA_VehicleManager: GenericEntity
             float areaRadius = IA_AreaMarker.CalculateGroupRadius(m_currentActiveGroup);
             
             // Directly place units inside the vehicle and set them in motion
-            PlaceUnitsInVehicle(vehicle, faction, areaCenter, IA_Game.CurrentAreaInstance, AreaFaction);
+            PlaceUnitsInVehicle(vehicle, faction, areaCenter, areaInst, AreaFaction);
         }
     }
     
@@ -1029,6 +1081,12 @@ class IA_VehicleManager: GenericEntity
         if (!vehicle || !areaInstance)
         {
            //// Print(("[DEBUG_VEHICLE_UNITS] PlaceUnitsInVehicle: Missing vehicle or area instance", LogLevel.WARNING);
+            return null;
+        }
+
+        if (areaInstance.IsShutDown())
+        {
+            Print("[IA][Vehicle] PlaceUnitsInVehicle skipped: area instance is shut down.", LogLevel.WARNING);
             return null;
         }
         
