@@ -6,7 +6,7 @@ class IA_BaseEmplacementTest : IA_BaseFoundationProbe
 	{
 		for (int budget = 0; budget <= 100; budget++)
 		{
-			for (int installed = 0; installed <= 4; installed++)
+			for (int installed = 0; installed <= 6; installed++)
 			{
 				int crew = IA_EmplacementProfile.CrewBudget(installed, budget);
 				Check(crew >= 0 && crew <= installed && crew <= Math.Floor(budget / 4.0), "crew allocation caps");

@@ -26,6 +26,14 @@ class IA_BaseDesignTest : IA_BaseFoundationProbe
 				layout.PrepareEmplacements();
 				Check(layout.m_aEmplacements.Count() == guns, "no legacy socket duplication");
 				Check(guns <= IA_EmplacementProfile.GunCap(size), "shared weapon cap");
+				Check(guns >= 4, "at least one gun socket per wall");
+				array<int> armed = {0, 0, 0, 0};
+				foreach (IA_DynamicBaseEmplacementSpec spec : layout.m_aEmplacements)
+				{
+					if (spec.m_iSide >= 0)
+						armed[spec.m_iSide] = armed[spec.m_iSide] + 1;
+				}
+				Check(armed[0] >= 1 && armed[1] >= 1 && armed[2] >= 1 && armed[3] >= 1, "each sandbag face has a gun");
 				Check(expanded + guns * 12 <= IA_DynamicSitePlacer.MAX_EXPANDED, "expanded hardware budget");
 				foreach (vector post : layout.m_aGuardPosts)
 				{

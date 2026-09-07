@@ -8,14 +8,14 @@ The runtime uses 120 deterministic recipes: twenty per size, across Strongpoint,
 
 | Size | Footprint (m) | Base guard ceiling* | Maximum guns |
 |---|---:|---:|---:|
-| Full | 180 x 140 | 36 | 4 |
-| Compact | 140 x 116 | 36 | 3 |
-| Courtyard | 120 x 104 | 24 | 2 |
-| Roadside | 100 x 120 | 20 | 2 |
-| Command post | 92 x 88 | 16 | 1 |
-| Rally post | 76 x 76 | 12 | 1 |
+| Full | 180 x 140 | 36 | 6 |
+| Compact | 140 x 116 | 36 | 5 |
+| Courtyard | 120 x 104 | 24 | 4 |
+| Roadside | 100 x 120 | 20 | 4 |
+| Command post | 92 x 88 | 16 | 4 |
+| Rally post | 76 x 76 | 12 | 4 |
 
-*Existing settings and the existing 1.75x garrison scaling still apply. Gun crews are deducted from that total, not added to it. One heavy position (NSV, scoped NSV or AA) is allowed on Full/Compact only; AA shares that allowance. Installed counts may be lower, including zero after optional access/firing validation.
+*Existing settings and the existing 1.75x garrison scaling still apply. Gun crews are deducted from that total, not added to it. Every recipe places at least one socketed weapon on each sandbag face. One heavy position (NSV, scoped NSV or AA) is allowed on Full/Compact only; AA shares that allowance. Live installation can still omit a socket after access/firing validation.
 
 The catalog contains 28 composition types. Large living quarters are the default accommodation on every size, including Command and Rally posts, with extra LivingSmall / LivingLarge clusters and more hospital, maintenance, ammo, fuel and supply pieces filling the courtyard. The previous 820-entity authoring cap and full-width empty crossing are what kept LivingLarge unused; recipes now budget 2000 expanded entities against a 2200 runtime ceiling. Small living areas, HQ, hospital/medical, maintenance, supplies/ammunition/fuel, towers, bunkers, MG nests, four infantry sandbag positions and three sizes of checkpoint/barricade appear across the library. RoadControl describes an internal approach design; it does not promise alignment with an existing map road.
 
@@ -27,7 +27,7 @@ Three reserved approaches join an outdoor capture point and the central crossing
 - Physical props normally retain their vanilla inheritance. Service-bearing physical hierarchies are adapted using mesh/rigid-body data and physical children rather than inheriting their service scripts. Consequently these adapted objects do not promise vanilla service actions or destruction behavior. Living/service compositions are scenery, not functional Conflict facilities.
 - Native Preview measurements cover mesh bounds and expanded hierarchy counts, not campaign interaction boxes. The generated runtime catalog adds count headroom; recipes reserve up to twelve hardware entities per socket and stay at or below 2000 expanded entities. Existing absolute ceilings remain 256 roots / 2200 expanded entities. Wall infill still reserves its budget, but accommodation is chosen first so LivingLarge is no longer starved by the sandbag ring. Optional service selection yields to walls when necessary.
 - Composition roots follow the terrain plane. The first survey pass allows an 8 m whole-base height bowl and a twelve-degree inclination; if that finds nothing, a last-resort pass retries the same anchors at 12 m / sixteen degrees. Shortlisted sites still prefer the flatter bowl. Size-scaled support residual stays 0.8 m typical, up to 1.6 m on LivingLarge. Water, obstruction and openness checks are unchanged. Complete authored support arrangements carry the guns; the obsolete three-centimetre tripod-foot test is not used for composition sockets.
-- Guns are separate site-owned roots. Checkpoint/nest weapons are extracted into the **same** socket and budget system, preventing hidden extra guns. Failed gun checks retain the fortification and continue construction.
+- Guns are separate site-owned roots. Checkpoint/nest weapons are extracted into the **same** socket and budget system, preventing hidden extra guns. Recipes reserve one socket per wall before extras, so the front pair cannot consume the whole cap. Failed gun checks retain the fortification and continue construction.
 - Optional installation is sliced and deadline-bounded. Access tries at most five outdoor positions. Firing checks require the central ray and at least three of five useful lanes, excluding only the gun's own hierarchy—not its sandbags or the base. This is not certification of every angle or every barrel sweep.
 - Scenery/nav/guns finish before normal garrison readiness and reveal. Elevated seats use a checked outdoor crew access point rather than requiring navmesh on the seat platform itself.
 

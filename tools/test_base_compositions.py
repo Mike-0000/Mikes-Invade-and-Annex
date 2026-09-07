@@ -84,9 +84,11 @@ class CompositionTests(unittest.TestCase):
         self.assertLess(first['PKM']/first['Position1'],1.65)
         for r in self.recipes:
             gunned=sum(1 for m in r['modules'] if m['role']=='Cover' and self.catalog[m['key']]['sockets'])
-            self.assertGreaterEqual(r['guns'],1,(r['name'],r['guns']))
+            self.assertGreaterEqual(r['guns'],4,(r['name'],r['guns']))
+            armed=Counter(m['side'] for m in r['modules'] if self.catalog[m['key']]['sockets'])
+            self.assertTrue(all(armed[s]>=1 for s in range(4)),(r['name'],dict(armed)))
             if r['size']<3:
-                self.assertGreaterEqual(gunned,2,(r['name'],gunned,r['guns']))
+                self.assertGreaterEqual(gunned,4,(r['name'],gunned,r['guns']))
 
     def test_geometry_budgets_lanes_and_guard_posts(self):
         for r in self.recipes:

@@ -14,7 +14,8 @@ from author_base_compositions import parse, REF, Node
 ROOT=Path(__file__).resolve().parents[1]
 THEMES=['Strongpoint','Encampment','RoadControl','Logistics','Camouflaged']
 SIZES=[('Full',90,70,36),('Compact',70,58,36),('Courtyard',60,52,24),('Roadside',50,60,20),('CommandPost',46,44,16),('RallyPost',38,38,12)]
-CAPS=[4,3,2,2,1,1]
+# At least one static weapon per sandbag face. Larger yards keep extras.
+CAPS=[6,5,4,4,4,4]
 # LivingLarge is ~544 expanded entities. The old 820 cap plus a reserved
 # wall ring made that cluster impossible even on Full. Runtime ceiling is 2200.
 RECIPE_EXPANDED_BUDGET=2000
@@ -387,31 +388,33 @@ def build(size_id,variant,catalog,measure):
               ['Bunker','Position4','PKMNest','Position3','Tower','Position2','Position1']]
     gunned=[[key for key in pal if catalog[key]['sockets']] for pal in palettes]
     bare=[[key for key in pal if not catalog[key]['sockets']] for pal in palettes]
-    slots=[(2,-.48),(2,.48),(1,.55),(3,.55),(0,-.52),(0,.52),(1,-.63),(3,-.63)]
-    if size_id>=5:
-        # Corner-hug the smallest yard so LivingLarge can occupy the middle.
-        slots=[(2,-.72),(2,.72),(1,.70),(3,.70),(0,-.62),(0,.62)]
-    if size_id<2:
-        slots.insert(4,(0,0))
     used={}
-    for index,(side,fraction) in enumerate(slots):
-        # Socketed guns first so a wall of sandbag positions is the fallback,
-        # not the default. Weight still prefers gunned pieces 1.5x among peers.
-        options=weighted_cover_order(rng,gunned[theme],catalog)+weighted_cover_order(rng,bare[theme],catalog)
-        if index==0:
-            options=['CheckpointM' if theme==2 and size_id<4 else 'PKMNest','PKM']+options
-        if size_id>=5:
-            options=['PKM','BarricadeS','Position1','CheckpointS']+options
-        if index==2 and size_id<2:
-            options=[['NSV','AA','ScopedNest','CheckpointL','NSVNest'][(theme+variant%4)%5]]+options
-        # Preserve at least one of each side: small bare positions are fallbacks.
-        options += ['PKM','Position1','Position3','BarricadeS','CheckpointS']
+    def try_cover(side,fraction,gunned_only):
+        options=weighted_cover_order(rng,gunned[theme],catalog)
+        if not gunned_only:
+            options += weighted_cover_order(rng,bare[theme],catalog)
+        if gunned_only:
+            options=['PKMNest','PKM']+options
+            if theme==2 and size_id<4:
+                options=['CheckpointM']+options
+            if size_id<2 and side==1:
+                options=[['NSV','AA','ScopedNest','CheckpointL','NSVNest'][(theme+variant%4)%5]]+options
+            if size_id>=5:
+                options=['PKM','PKMNest']+options
+            options += ['PKM','PKMNest']
+        else:
+            if size_id>=5:
+                options=['PKM','BarricadeS','Position1','CheckpointS']+options
+            options += ['PKM','Position1','Position3','BarricadeS','CheckpointS']
         for key in dict.fromkeys(options):
-            if used.get(key,0)>=2:
+            socks=catalog[key]['sockets']
+            if gunned_only and not socks:
+                continue
+            light=bool(socks) and all(s['kind']==0 for s in socks)
+            if used.get(key,0)>=(4 if light else 2):
                 continue
             m=measure[key]
             w=max(abs(m['mins'][0]),abs(m['maxs'][0]))+1
-            d=max(abs(m['mins'][2]),abs(m['maxs'][2]))+1
             yaw=[0,90,180,270][side]
             if side in (0,2):
                 x=W*fraction
@@ -424,7 +427,23 @@ def build(size_id,variant,catalog,measure):
             x,z=snap_outward_face(x,z,side,key,catalog,measure,W,D)
             if insert(key,x,z,yaw,'Cover',side):
                 used[key]=used.get(key,0)+1
-                break
+                return True
+        return False
+    # One socketed gun on each face before extras, or the front pair eats the cap.
+    required_guns=[(2,-.48),(1,.55),(3,.55),(0,-.52)]
+    extra_slots=[(2,.48),(0,.52),(1,-.63),(3,-.63)]
+    if size_id>=5:
+        required_guns=[(2,-.72),(1,.70),(3,.70),(0,-.62)]
+        extra_slots=[(2,.72),(0,.62)]
+    if size_id<2:
+        extra_slots.insert(0,(0,0))
+    for side,fraction in required_guns:
+        assert try_cover(side,fraction,True),(name,variant,'gun side',side)
+    for side,fraction in extra_slots:
+        try_cover(side,fraction,False)
+    armed={m['side'] for m in modules if catalog[m['key']]['sockets']}
+    assert all(side in armed for side in range(4)),(name,variant,'unarmed side',armed)
+    assert guns>=4,(name,variant,'guns',guns)
     sides={x['side'] for x in modules}
     assert all(side in sides for side in range(4)),(name,variant,'side missing',sides)
     walls=perimeter_walls(W,D,modules,catalog,measure)

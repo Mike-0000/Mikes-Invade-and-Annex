@@ -61,12 +61,10 @@ class IA_EmplacementProfile
 	static int GunCap(int layoutId)
 	{
 		if (layoutId == IA_DynamicSiteLayout.LAYOUT_FULL)
-			return 4;
+			return 6;
 		if (layoutId == IA_DynamicSiteLayout.LAYOUT_COMPACT)
-			return 3;
-		if (layoutId <= IA_DynamicSiteLayout.LAYOUT_ROADSIDE)
-			return 2;
-		return 1;
+			return 5;
+		return 4;
 	}
 
 	static int CrewBudget(int installed, int budget)
