@@ -382,9 +382,9 @@ def build(size_id,variant,catalog,measure):
     # Secure each side before packing the courtyard. LivingLarge on Rally
     # must not steal the south wall slots.
     palettes=[['Bunker','Tower','PKMNest','Position2','Position3','Position1','PKM'],
-              ['PKM','Position1','Position3','Position4','Tower','Position2'],
-              ['CheckpointM','CheckpointS','PKMNest','BarricadeM','BarricadeL','Position2','Position3','Tower','Position1'],
-              ['Tower','PKM','Position2','BarricadeS','Position1','Position3'],
+              ['Bunker','PKM','Position1','Position3','Position4','Tower','Position2'],
+              ['Bunker','CheckpointM','CheckpointS','PKMNest','BarricadeM','BarricadeL','Position2','Position3','Tower','Position1'],
+              ['Bunker','Tower','PKM','Position2','BarricadeS','Position1','Position3'],
               ['Bunker','Position4','PKMNest','Position3','Tower','Position2','Position1']]
     gunned=[[key for key in pal if catalog[key]['sockets']] for pal in palettes]
     bare=[[key for key in pal if not catalog[key]['sockets']] for pal in palettes]
@@ -403,9 +403,10 @@ def build(size_id,variant,catalog,measure):
                 options=['PKM','PKMNest']+options
             options += ['PKM','PKMNest']
         else:
+            options=['Bunker']+options
             if size_id>=5:
                 options=['PKM','BarricadeS','Position1','CheckpointS']+options
-            options += ['PKM','Position1','Position3','BarricadeS','CheckpointS']
+            options += ['Bunker','PKM','Position1','Position3','BarricadeS','CheckpointS']
         for key in dict.fromkeys(options):
             socks=catalog[key]['sockets']
             if gunned_only and not socks:

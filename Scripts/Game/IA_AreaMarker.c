@@ -1561,9 +1561,8 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         return offset;
     }
 
-    protected ResourceName ResolveDefaultMortarPitPrefab()
+    static ResourceName GetMortarPlacementPrefab()
     {
-        // Prefer USSR; FIA if that is the configured enemy faction key.
         ResourceName ussrPit = "{28D63631873AA636}Prefabs/Compositions/Slotted/SlotFlatSmall/MortarPlacement_S_USSR_01.et";
         ResourceName fiaPit = "{2DE0838804526A10}Prefabs/Compositions/Slotted/SlotFlatSmall/MortarPlacement_S_FIA_01.et";
 
@@ -1575,6 +1574,11 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
                 return fiaPit;
         }
         return ussrPit;
+    }
+
+    protected ResourceName ResolveDefaultMortarPitPrefab()
+    {
+        return GetMortarPlacementPrefab();
     }
 
     static IEntity FindStaticArtilleryInHierarchy(IEntity root)

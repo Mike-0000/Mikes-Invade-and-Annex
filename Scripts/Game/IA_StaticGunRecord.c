@@ -11,6 +11,7 @@ class IA_StaticGunRecord
 	float m_fYaw;
 	bool m_bAuthoredAccess;
 	vector m_vAccess;
+	bool m_bAssemblyOwned;
 
 	bool ContainsReservedPoint(vector position, float margin = 0)
 	{

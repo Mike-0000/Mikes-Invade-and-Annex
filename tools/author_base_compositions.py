@@ -214,6 +214,18 @@ class Author:
                     if 'SPP' in target:
                         kind=2
                     sockets.append({'kind':kind,'chain':[pose]})
+                    # Keep the stock tripod in the shell. Runtime only registers
+                    # it for crew; stripping left nests as bags and camo.
+                    child.body=[x for x in child.body if isinstance(x,str) and x.split(' ',1)[0] in ('ID','coords','angles','scale')]
+                    gun_id='{'+guid(out+'/gun/'+child.prop('ID'))+'}'
+                    rpl_id=self.component_id(target,'RplComponent')
+                    hierarchy=self.component_id(target,'Hierarchy')
+                    child.body.append(Node('components',[
+                        Node('IA_StaticGunComponent "'+gun_id+'"'),
+                        Node('RplComponent "'+rpl_id+'"',['"Parent Node From Parent Entity" 1']),
+                        Node('Hierarchy "'+hierarchy+'"',['Enabled 1'])
+                    ]))
+                    body.append(child)
                 continue
             adapted=self.composition(target) or self.needs_clean(target)
             if adapted:

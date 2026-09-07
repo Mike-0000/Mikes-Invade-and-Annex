@@ -118,5 +118,19 @@ GenericEntity {
     }
    }
   }
+  Turret : "{29F0CC704A582154}Prefabs/Weapons/Tripods/6T7/Tripod_6T7_NSV.et" {
+   ID "5CCCBEDD771835C6"
+   coords 0.016 0.656 -0.677
+   components {
+    IA_StaticGunComponent "{26DC6EDA9A925B1F}" {
+    }
+    RplComponent "{51ACD09DAD530767}" {
+     "Parent Node From Parent Entity" 1
+    }
+    Hierarchy "{51ACD09C446C017C}" {
+     Enabled 1
+    }
+   }
+  }
  }
 }
