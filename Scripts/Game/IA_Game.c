@@ -628,6 +628,15 @@ class IA_Game
     // --- END ADDED ---
 
     // --- BEGIN ADDED: Transient Area Management ---
+    void CollectTransientAreas(notnull array<IA_AreaInstance> outAreas)
+    {
+        foreach (IA_AreaInstance inst : m_transientAreaInstances)
+        {
+            if (inst)
+                outAreas.Insert(inst);
+        }
+    }
+
     void AddTransientArea(IA_AreaInstance inst)
     {
         if (inst && m_transientAreaInstances.Find(inst) == -1)
