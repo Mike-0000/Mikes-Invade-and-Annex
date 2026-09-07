@@ -218,7 +218,7 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('TryBeginRelaxedTerrainPass',placer)
         self.assertIn('TERRAIN_SPAN_SCORE_PER_M',placer)
         profile=read('Scripts/Game/IA_EmplacementProfile.c')
-        self.assertIn('BARREN_WALL_CHANCE = 0.4',profile)
+        self.assertIn('BARREN_WALL_CHANCE = 0.7',profile)
         self.assertIn('ChooseBarrenSide',profile)
         builder=read('Scripts/Game/IA_EmplacementBuilder.c')
         self.assertIn('IsBarrenSide',builder)

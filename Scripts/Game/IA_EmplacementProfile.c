@@ -58,7 +58,7 @@ class IA_EmplacementProfile
 		return profile;
 	}
 
-	static const float BARREN_WALL_CHANCE = 0.4;
+	static const float BARREN_WALL_CHANCE = 0.7;
 
 	static int GunCap(int layoutId)
 	{

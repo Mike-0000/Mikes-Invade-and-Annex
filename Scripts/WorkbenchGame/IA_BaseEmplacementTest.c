@@ -25,7 +25,7 @@ class IA_BaseEmplacementTest : IA_BaseFoundationProbe
 			if (side >= 0)
 				barrenHits++;
 		}
-		Check(barrenHits > 50 && barrenHits < 110, "about two in five bases leave one wall empty");
+		Check(barrenHits > 115 && barrenHits < 165, "about seven in ten bases leave one wall empty");
 		for (int id = 0; id < 6; id++)
 		{
 			ref IA_DynamicSiteLayout layout = IA_DynamicSiteLayout.CreateById(id);
