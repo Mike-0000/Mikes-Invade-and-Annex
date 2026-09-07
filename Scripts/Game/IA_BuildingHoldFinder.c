@@ -1,6 +1,6 @@
 // IA_BuildingHoldFinder.c
-// Picks a few interior standing positions per objective so dedicated Hold
-// groups can spawn in buildings. Does not retask occupying patrols.
+// Picks interior standing positions per objective so dedicated Hold groups
+// can spawn on the road and march in. Occupying patrols are not retasked.
 
 class IA_BuildingHoldSpot
 {
@@ -40,30 +40,45 @@ class IA_BuildingQueryCallback
 
 class IA_BuildingHoldFinder
 {
-	static const int MAX_QUERY = 48;
+	static const int MAX_QUERY = 96;
+	static const int MAX_GROUPS_PER_BUILDING = 6;
 	static const float MIN_FOOTPRINT_M = 5;
 	static const float MIN_HEIGHT_M = 2.4;
-	static const float MIN_SEP_M = 12;
+	static const float MIN_SEP_M = 5;
 
 	static int CountForAreaType(IA_AreaType areaType)
 	{
 		if (areaType == IA_AreaType.City)
-			return 4;
+			return 8;
 		if (areaType == IA_AreaType.Town)
-			return 3;
+			return 6;
 		if (areaType == IA_AreaType.Military)
-			return 3;
+			return 6;
 		if (areaType == IA_AreaType.Docks)
-			return 2;
+			return 4;
 		if (areaType == IA_AreaType.SmallMilitary)
-			return 2;
+			return 4;
 		if (areaType == IA_AreaType.Property)
-			return 2;
+			return 4;
 		if (areaType == IA_AreaType.Airport)
-			return 2;
+			return 4;
 		if (areaType == IA_AreaType.DefendObjective)
-			return 2;
+			return 4;
 		return 0;
+	}
+
+	static int GroupsForBuilding(float w, float l)
+	{
+		float area = w * l;
+		if (area >= 500)
+			return 5;
+		if (area >= 280)
+			return 4;
+		if (area >= 160)
+			return 3;
+		if (area >= 80)
+			return 2;
+		return 1;
 	}
 
 	static void FindInteriorSpots(vector center, float radius, int maxCount, notnull array<ref IA_BuildingHoldSpot> outSpots)
@@ -95,15 +110,33 @@ class IA_BuildingHoldFinder
 				return;
 
 			IEntity building = ranked[r];
-			ref IA_BuildingHoldSpot spot = MakeSpotForBuilding(building, coverPosts);
-			if (!spot)
-				continue;
-			if (IA_GmHoldPost.HasHoldNear(spot.m_holdPos, MIN_SEP_M))
-				continue;
-			if (IsNearExistingSpot(spot.m_holdPos, outSpots, MIN_SEP_M))
+			if (!building)
 				continue;
 
-			outSpots.Insert(spot);
+			vector mins;
+			vector maxs;
+			building.GetWorldBounds(mins, maxs);
+			float w = maxs[0] - mins[0];
+			float l = maxs[2] - mins[2];
+
+			int stillNeed = maxCount - outSpots.Count();
+			int wantHere = GroupsForBuilding(w, l);
+			int buildingsLeft = rankedCount - r;
+			if (buildingsLeft < 1)
+				buildingsLeft = 1;
+			int share = stillNeed / buildingsLeft;
+			if ((stillNeed % buildingsLeft) != 0)
+				share = share + 1;
+			if (share > wantHere)
+				wantHere = share;
+			if (wantHere > MAX_GROUPS_PER_BUILDING)
+				wantHere = MAX_GROUPS_PER_BUILDING;
+			if (wantHere > stillNeed)
+				wantHere = stillNeed;
+			if (wantHere < 1)
+				wantHere = 1;
+
+			AddSpotsForBuilding(mins, maxs, coverPosts, wantHere, outSpots);
 		}
 
 		if (outSpots.Count() >= maxCount)
@@ -160,7 +193,7 @@ class IA_BuildingHoldFinder
 			if (minSide > 0.1)
 			{
 				float aspect = maxSide / minSide;
-				if (maxSide > 35 && aspect > 3.5)
+				if (minSide < 6 && aspect > 6)
 					continue;
 			}
 			int insertAt = ranked.Count();
@@ -189,27 +222,113 @@ class IA_BuildingHoldFinder
 		return ranked;
 	}
 
+	protected static void AddSpotsForBuilding(vector mins, vector maxs, array<vector> coverPosts, int maxForBuilding, notnull array<ref IA_BuildingHoldSpot> outSpots)
+	{
+		if (maxForBuilding <= 0)
+			return;
+
+		ref array<vector> candidates = new array<vector>();
+		CollectHoldCandidates(mins, maxs, coverPosts, candidates);
+		float radius = RadiusFromBounds(mins, maxs);
+
+		int addedHere = 0;
+		int i;
+		int count = candidates.Count();
+		for (i = 0; i < count; i++)
+		{
+			if (addedHere >= maxForBuilding)
+				return;
+
+			vector holdPos = candidates[i];
+			if (holdPos == vector.Zero)
+				continue;
+			if (IA_GmHoldPost.HasHoldNear(holdPos, MIN_SEP_M))
+				continue;
+			if (IsNearExistingSpot(holdPos, outSpots, MIN_SEP_M))
+				continue;
+
+			ref IA_BuildingHoldSpot spot = new IA_BuildingHoldSpot();
+			spot.m_holdPos = holdPos;
+			spot.m_spawnPos = holdPos;
+			spot.m_radius = radius;
+			outSpots.Insert(spot);
+			addedHere = addedHere + 1;
+		}
+	}
+
+	protected static void CollectHoldCandidates(vector mins, vector maxs, array<vector> coverPosts, notnull array<vector> outPos)
+	{
+		outPos.Clear();
+		CollectCoverPostsInBuilding(mins, maxs, coverPosts, outPos);
+		CollectInteriorSamples(mins, maxs, outPos);
+	}
+
+	protected static void CollectCoverPostsInBuilding(vector mins, vector maxs, array<vector> coverPosts, notnull array<vector> outPos)
+	{
+		if (!coverPosts)
+			return;
+
+		int i;
+		int count = coverPosts.Count();
+		for (i = 0; i < count; i++)
+		{
+			vector post = coverPosts[i];
+			if (!PosInBuildingBounds(post, mins, maxs))
+				continue;
+			if (!IA_SpawnPlacement.HasStandRoom(post))
+				continue;
+			if (IA_SpawnPlacement.HasOpenSky(post))
+				continue;
+			outPos.Insert(post);
+		}
+	}
+
+	protected static void CollectInteriorSamples(vector mins, vector maxs, notnull array<vector> outPos)
+	{
+		float midX = (mins[0] + maxs[0]) * 0.5;
+		float midZ = (mins[2] + maxs[2]) * 0.5;
+		float insetX = (maxs[0] - mins[0]) * 0.30;
+		float insetZ = (maxs[2] - mins[2]) * 0.30;
+		if (insetX < 1.2)
+			insetX = 1.2;
+		if (insetZ < 1.2)
+			insetZ = 1.2;
+
+		int ox;
+		for (ox = -1; ox <= 1; ox++)
+		{
+			int oz;
+			for (oz = -1; oz <= 1; oz++)
+			{
+				float oxF = ox;
+				float ozF = oz;
+				float x = midX + (oxF * insetX);
+				float z = midZ + (ozF * insetZ);
+				vector holdPos;
+				if (IA_SpawnPlacement.TryInteriorStandPos(x, z, maxs[1], mins[1], holdPos))
+				{
+					outPos.Insert(holdPos);
+					continue;
+				}
+				if (IA_SpawnPlacement.TryGroundFloorStandPos(x, z, holdPos))
+					outPos.Insert(holdPos);
+			}
+		}
+	}
+
 	protected static ref IA_BuildingHoldSpot MakeSpotForBuilding(IEntity building, array<vector> coverPosts)
 	{
 		if (!building)
 			return null;
 
+		ref array<ref IA_BuildingHoldSpot> spots = new array<ref IA_BuildingHoldSpot>();
 		vector mins;
 		vector maxs;
 		building.GetWorldBounds(mins, maxs);
-
-		vector holdPos;
-		if (!TryCoverPostInBuilding(mins, maxs, coverPosts, holdPos))
-		{
-			if (!TrySampleInterior(mins, maxs, holdPos))
-				return null;
-		}
-
-		ref IA_BuildingHoldSpot spot = new IA_BuildingHoldSpot();
-		spot.m_holdPos = holdPos;
-		spot.m_spawnPos = holdPos;
-		spot.m_radius = RadiusFromBounds(mins, maxs);
-		return spot;
+		AddSpotsForBuilding(mins, maxs, coverPosts, 1, spots);
+		if (spots.IsEmpty())
+			return null;
+		return spots[0];
 	}
 
 	protected static float RadiusFromBounds(vector mins, vector maxs)

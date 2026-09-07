@@ -38,6 +38,8 @@ class IA_SelectionTestPlacer : IA_DynamicSitePlacer
 		m_iHeadingIndex = 0;
 		m_bSurveyAnchorActive = false;
 		m_bSurveyDone = false;
+		m_iTerrainPass = 0;
+		m_fLastFootprintSpanM = 0;
 	}
 
 	void SurveyUntilCandidate()
@@ -190,6 +192,12 @@ class IA_SelectionTestPlacer : IA_DynamicSitePlacer
 		Check(super.ValidateTerrain(vector.Zero, 0, layout, true), "survey reuses immediate HQ screening");
 		Check(m_iPadChecks == checkedModules - 1, "only duplicate HQ check is removed");
 		Check(requiredPassed == m_iTerrainModulesPassed, "HQ reuse preserves refinement ranking");
+		m_aShortlist.Clear();
+		m_iTerrainPass = 0;
+		m_bSurveyDone = true;
+		Check(TryBeginRelaxedTerrainPass(), "empty strict survey starts relaxed last-resort pass");
+		Check(m_iTerrainPass == 1 && !m_bSurveyDone, "relaxed pass resumes the same anchors");
+		Check(!TryBeginRelaxedTerrainPass(), "only one relaxed terrain pass");
 	}
 
 	void CheckSampling()

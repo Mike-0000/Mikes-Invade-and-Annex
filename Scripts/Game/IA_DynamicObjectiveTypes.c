@@ -116,7 +116,9 @@ class IA_BaseObjectiveSettings
 	//------------------------------------------------------------------------------------------------
 	int ComputeGarrisonBudget()
 	{
-		float scaled = 24.0 * IA_Game.GetAIScaleFactor() * m_fGarrisonMultiplier;
+		// Occupying garrison is locked at 1x player/admin AI scale. Defense
+		// reinforcements and QRF still use IA_Game.GetAIScaleFactor().
+		float scaled = 24.0 * m_fGarrisonMultiplier;
 		int budget = Math.Round(scaled);
 		if (budget < 4)
 			budget = 4;
@@ -126,7 +128,7 @@ class IA_BaseObjectiveSettings
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Initial occupying spawn is 1.75x the scaled+layout-capped budget so every
+	//! Initial occupying spawn is 1.75x the layout-capped 1x budget so every
 	//! layout (Full through Rally post) fields more guards than the previous baseline.
 	int ComputeInitialGarrison(int layoutMax)
 	{
@@ -149,6 +151,8 @@ class IA_DynamicSiteCandidate
 	int m_iLayoutId;
 	int m_iSeed;
 	float m_fScore = 999999;
+	float m_fHeightSpanM;
+	int m_iTerrainPass;
 	bool m_bRoadAligned;
 	bool m_bVehicleAccess;
 	int m_iInfantryEntries;

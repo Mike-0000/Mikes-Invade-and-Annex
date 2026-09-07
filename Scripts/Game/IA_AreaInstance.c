@@ -6006,13 +6006,48 @@ class IA_AreaInstance
             {
                 if (!crew || !crew.IsSpawned() || crew.GetAliveCount() <= 0)
                     continue;
-                if (crew.IssueArtilleryFireMission(targetPos, shotCount))
+                if (crew.IssueArtilleryFireMission(ScatterMortarFireAim(targetPos), shotCount))
                     fired = true;
             }
             return fired;
         }
 
-        return m_mortarCrewGroup.IssueArtilleryFireMission(targetPos, shotCount);
+        return m_mortarCrewGroup.IssueArtilleryFireMission(ScatterMortarFireAim(targetPos), shotCount);
+    }
+
+    //! Vanilla artillery waypoints land on their origin with no CEP. Offset each tube
+    //! so a battery sheafs instead of stacking on the shooter's exact position.
+    protected vector ScatterMortarFireAim(vector center)
+    {
+        const float SCATTER_MIN_M = 18.0;
+        const float SCATTER_MAX_M = 45.0;
+        const float MIN_PIT_RANGE_M = 35.0;
+
+        vector aim = center;
+        if (center != vector.Zero)
+            aim = IA_Game.rng.GenerateRandomPointInRadius(SCATTER_MIN_M, SCATTER_MAX_M, center);
+
+        if (m_area)
+        {
+            vector pitOrigin = m_area.GetOrigin();
+            float distXZ = vector.DistanceXZ(pitOrigin, aim);
+            if (distXZ < MIN_PIT_RANGE_M)
+            {
+                vector dir = aim - pitOrigin;
+                dir[1] = 0;
+                float len = dir.Length();
+                if (len < 0.1)
+                    dir = Vector(1, 0, 0);
+                else
+                    dir = dir * (1.0 / len);
+                aim = pitOrigin + (dir * MIN_PIT_RANGE_M);
+            }
+        }
+
+        World world = GetGame().GetWorld();
+        if (world)
+            aim[1] = world.GetSurfaceY(aim[0], aim[2]);
+        return aim;
     }
     
     int GetAliveCivilianCount()
@@ -6121,7 +6156,8 @@ class IA_AreaInstance
         return true;
     }
 
-    //! Extra fireteams that Hold inside a few buildings. Occupying patrols are untouched.
+    //! Extra fireteams that spawn on the road, walk to a building, then Hold inside.
+    //! Occupying patrols are untouched.
     protected void SpawnBuildingGarrisonGroups(Faction areaFactionForGroupTask)
     {
         if (m_bBuildingGarrisonSpawned)

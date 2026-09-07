@@ -10,7 +10,7 @@ import unittest
 
 sys.dont_write_bytecode=True
 from author_base_compositions import Author,REF,parse
-from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW,RECIPE_EXPANDED_BUDGET
+from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,connection_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW,RECIPE_EXPANDED_BUDGET
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('D:/ReforgerGameSources/data/data007')
@@ -84,9 +84,11 @@ class CompositionTests(unittest.TestCase):
         self.assertLess(first['PKM']/first['Position1'],1.65)
         for r in self.recipes:
             gunned=sum(1 for m in r['modules'] if m['role']=='Cover' and self.catalog[m['key']]['sockets'])
-            self.assertGreaterEqual(r['guns'],1,(r['name'],r['guns']))
+            self.assertGreaterEqual(r['guns'],4,(r['name'],r['guns']))
+            armed=Counter(m['side'] for m in r['modules'] if self.catalog[m['key']]['sockets'])
+            self.assertTrue(all(armed[s]>=1 for s in range(4)),(r['name'],dict(armed)))
             if r['size']<3:
-                self.assertGreaterEqual(gunned,2,(r['name'],gunned,r['guns']))
+                self.assertGreaterEqual(gunned,4,(r['name'],gunned,r['guns']))
 
     def test_geometry_budgets_lanes_and_guard_posts(self):
         for r in self.recipes:
@@ -146,7 +148,7 @@ class CompositionTests(unittest.TestCase):
                 elif w['side'] in (1,3):
                     self.assertTrue(z+1.483<=-13+0.001 or z-1.483>=-3-0.001)
                 a=(x-1.47,z-.62,x+1.47,z+.62) if w['side'] in (0,2) else (x-.62,z-1.47,x+.62,z+1.47)
-                self.assertFalse(any(overlap(a,mesh_box(m,self.measure)) for m in r['modules'] if m['side']==w['side']),(r['name'],w))
+                self.assertFalse(any(overlap(a,connection_box(m,self.catalog,self.measure),-0.55) for m in r['modules'] if m['side']==w['side']),(r['name'],w))
         source=read('Scripts/Game/IA_ComposedSiteLayout.c')
         self.assertIn('AddCover("infill_"',source)
         self.assertIn('m_bRequired = true',source)
@@ -155,6 +157,9 @@ class CompositionTests(unittest.TestCase):
     def test_fighting_positions_sit_on_the_wall_line(self):
         pos1=fighting_face_z('Position1',self.catalog,self.measure)
         self.assertLess(pos1,self.measure['Position1']['maxs'][2]-1.0)
+        nest=fighting_face_z('PKMNest',self.catalog,self.measure)
+        self.assertLess(nest,1.5)
+        self.assertLess(nest,self.measure['PKMNest']['maxs'][2]-2.0)
         for r in self.recipes:
             W,D=r['half_width'],r['half_depth']
             for m in r['modules']:
@@ -207,7 +212,18 @@ class CompositionTests(unittest.TestCase):
         self.assertIn('required = true',composed)
         self.assertIn('module.m_bFollowTerrainPlane = side < 0',composed)
         self.assertIn('COMPOSITION_MIN_UP_Y',placer)
+        self.assertIn('COMPOSITION_MIN_UP_Y_RELAXED',placer)
         self.assertIn('FOOTPRINT_HEIGHT_SPAN_M',placer)
+        self.assertIn('FOOTPRINT_HEIGHT_SPAN_RELAXED_M',placer)
+        self.assertIn('TryBeginRelaxedTerrainPass',placer)
+        self.assertIn('TERRAIN_SPAN_SCORE_PER_M',placer)
+        profile=read('Scripts/Game/IA_EmplacementProfile.c')
+        self.assertIn('BARREN_WALL_CHANCE = 0.7',profile)
+        self.assertIn('ChooseBarrenSide',profile)
+        builder=read('Scripts/Game/IA_EmplacementBuilder.c')
+        self.assertIn('IsBarrenSide',builder)
+        self.assertIn('barren_wall',builder)
+        self.assertIn('barren_wall',read('Scripts/Game/IA_CompositionGunBuilder.c'))
 
     def test_aa_retains_vanilla_limits_without_campaign_disassembly(self):
         aa=read('Prefabs/Emplacements/IA_Emplacement_AA.et')

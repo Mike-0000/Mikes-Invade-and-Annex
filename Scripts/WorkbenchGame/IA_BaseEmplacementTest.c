@@ -6,7 +6,7 @@ class IA_BaseEmplacementTest : IA_BaseFoundationProbe
 	{
 		for (int budget = 0; budget <= 100; budget++)
 		{
-			for (int installed = 0; installed <= 4; installed++)
+			for (int installed = 0; installed <= 6; installed++)
 			{
 				int crew = IA_EmplacementProfile.CrewBudget(installed, budget);
 				Check(crew >= 0 && crew <= installed && crew <= Math.Floor(budget / 4.0), "crew allocation caps");
@@ -15,6 +15,17 @@ class IA_BaseEmplacementTest : IA_BaseFoundationProbe
 					Check(budget - crew >= 4, "four ordinary infantry minimum");
 			}
 		}
+		int barrenHits;
+		int lastBarren = IA_EmplacementProfile.ChooseBarrenSide(7);
+		Check(IA_EmplacementProfile.ChooseBarrenSide(7) == lastBarren, "barren wall roll is seeded");
+		for (int seed = 0; seed < 200; seed++)
+		{
+			int side = IA_EmplacementProfile.ChooseBarrenSide(seed);
+			Check(side >= -1 && side <= 3, "barren side is a wall or none");
+			if (side >= 0)
+				barrenHits++;
+		}
+		Check(barrenHits > 115 && barrenHits < 165, "about seven in ten bases leave one wall empty");
 		for (int id = 0; id < 6; id++)
 		{
 			ref IA_DynamicSiteLayout layout = IA_DynamicSiteLayout.CreateById(id);
