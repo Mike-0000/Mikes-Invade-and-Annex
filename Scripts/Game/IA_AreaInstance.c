@@ -5995,13 +5995,13 @@ class IA_AreaInstance
     {
         if (m_bShutDown)
             return false;
-        if (IsMortarPitArea() && IsMortarPitCaptured())
-            return false;
-        if (!HasLiveMortarCrew())
-            return false;
-        if (!m_mortarEntity && !m_mortarCrewGroup)
-            return false;
-        return true;
+        if (IsMortarPitArea())
+            return !IsMortarPitCaptured();
+        if (m_mortarCrewGroups && !m_mortarCrewGroups.IsEmpty())
+            return true;
+        if (m_mortarCrewGroup || m_mortarEntity)
+            return true;
+        return false;
     }
 
     bool IssueMortarFireMission(vector targetPos, int shotCount)
@@ -6019,10 +6019,47 @@ class IA_AreaInstance
                 if (crew.IssueArtilleryFireMission(ScatterMortarFireAim(targetPos), shotCount))
                     fired = true;
             }
-            return fired;
+        }
+        else if (m_mortarCrewGroup && m_mortarCrewGroup.IsSpawned() && m_mortarCrewGroup.GetAliveCount() > 0)
+        {
+            fired = m_mortarCrewGroup.IssueArtilleryFireMission(ScatterMortarFireAim(targetPos), shotCount);
         }
 
-        return m_mortarCrewGroup.IssueArtilleryFireMission(ScatterMortarFireAim(targetPos), shotCount);
+        if (!fired)
+            fired = SpawnScriptedMortarBarrage(targetPos, shotCount);
+
+        return fired;
+    }
+
+    //! Player capture of the pit is what silences the battery. Dead gunners
+    //! still deliver a warned AO strike through the existing barrage module.
+    protected bool SpawnScriptedMortarBarrage(vector center, int shotCount)
+    {
+        if (shotCount < 1)
+            shotCount = 1;
+
+        ResourceName barrageRes = "{11B2A636F321AD68}PrefabsEditable/EffectsModules/Mortar/IA_EffectModule_Zoned_MortarBarrage_Large.et";
+        Resource res = Resource.Load(barrageRes);
+        if (!res)
+        {
+            Print("[IA][MortarPit] Failed to load scripted mortar barrage prefab", LogLevel.ERROR);
+            return false;
+        }
+
+        vector pos = center;
+        World world = GetGame().GetWorld();
+        if (world)
+            pos[1] = world.GetSurfaceY(pos[0], pos[2]);
+
+        IEntity barrage = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(pos));
+        if (!barrage)
+            return false;
+
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][MortarPit] Scripted barrage at %1 (%2 rounds requested)", pos, shotCount), LogLevel.NORMAL);
+        }
+        return true;
     }
 
     //! Vanilla artillery waypoints land on their origin with no CEP. Offset each tube
