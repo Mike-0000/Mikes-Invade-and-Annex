@@ -1228,6 +1228,50 @@ class IA_AreaGroupManager
         ref array<IA_AreaInstance> batteries = new array<IA_AreaInstance>();
         CollectArtilleryBatteries(batteries);
 
+        // Pending AO fire after warning smoke wins over local defense.
+        // Capture of the pit cancels it; dead gunners do not.
+        if (m_artillerySmokeSpawned)
+        {
+            int remaining = m_artilleryStrikeImpactDelay - (currentTime - m_artilleryStrikeSmokeTime);
+            if (remaining > 0)
+            {
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[ArtilleryStrike] Waiting for smoke-to-impact delay. %1s remaining.", remaining), LogLevel.NORMAL);
+                }
+                return;
+            }
+
+            if (batteries.IsEmpty())
+            {
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print("[ArtilleryStrike] Fire mission skipped: mortar pit captured.", LogLevel.NORMAL);
+                }
+                ClearPendingArtilleryStrike();
+                m_lastArtilleryStrikeEndTime = currentTime;
+                return;
+            }
+
+            int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
+            bool fired = IssueMortarFireOnBatteries(batteries, m_artilleryStrikeCenter, shotCount);
+            if (!fired)
+            {
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print("[ArtilleryStrike] Fire mission skipped: mortar pit captured.", LogLevel.NORMAL);
+                }
+            }
+            else if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, m_artilleryStrikeCenter, cooldown), LogLevel.NORMAL);
+            }
+
+            ClearPendingArtilleryStrike();
+            m_lastArtilleryStrikeEndTime = currentTime;
+            return;
+        }
+
         if (!batteries.IsEmpty())
         {
             bool haveLocalDefense = false;
@@ -1267,45 +1311,11 @@ class IA_AreaGroupManager
             }
         }
 
-        if (m_artillerySmokeSpawned)
-        {
-            int remaining = m_artilleryStrikeImpactDelay - (currentTime - m_artilleryStrikeSmokeTime);
-            if (remaining > 0)
-            {
-                if (IA_Log.IsDebugEnabled())
-                {
-                    Print(string.Format("[ArtilleryStrike] Waiting for smoke-to-impact delay. %1s remaining.", remaining), LogLevel.NORMAL);
-                }
-                return;
-            }
-
-            if (batteries.IsEmpty())
-            {
-                Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
-                ClearPendingArtilleryStrike();
-                m_lastArtilleryStrikeEndTime = currentTime;
-                return;
-            }
-
-            int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
-            bool fired = IssueMortarFireOnBatteries(batteries, m_artilleryStrikeCenter, shotCount);
-            if (!fired)
-                Print("[ArtilleryStrike] Fire mission skipped: pit captured, crew dead, or mortar unavailable.", LogLevel.WARNING);
-            else if (IA_Log.IsDebugEnabled())
-            {
-                Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, m_artilleryStrikeCenter, cooldown), LogLevel.NORMAL);
-            }
-
-            ClearPendingArtilleryStrike();
-            m_lastArtilleryStrikeEndTime = currentTime;
-            return;
-        }
-
         if (batteries.IsEmpty())
         {
             if (IA_Log.IsDebugEnabled())
             {
-                Print("[ArtilleryStrike] Check failed: No usable mortar crew in this AO group.", LogLevel.NORMAL);
+                Print("[ArtilleryStrike] Check failed: No uncaptured mortar pit in this AO group.", LogLevel.NORMAL);
             }
             return;
         }

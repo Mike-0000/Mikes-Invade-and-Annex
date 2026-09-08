@@ -5958,15 +5958,27 @@ class IA_AiGroup
         ConfigureArtilleryWaypoint(wp, shotCount, false);
         wp.SetActive(true, false);
         RemoveAllOrders();
-        m_group.AddWaypointToGroup(wp);
         m_artilleryFireWaypoint = wp;
         GiftMortarMissionAmmo(shotCount);
+        // Group.bt re-reads the current waypoint every 0.3s. Adding a typed
+        // artillery WP in the same frame as RemoveAllOrders leaves the old tree
+        // running and the fire mission never starts.
+        GetGame().GetCallqueue().CallLater(this.AttachPendingArtilleryWaypoint, 400, false);
 
         if (IA_Log.IsDebugEnabled())
         {
             Print(string.Format("[IA_AiGroup] Fire mission issued: %1 rounds at %2", shotCount, targetPos), LogLevel.NORMAL);
         }
         return true;
+    }
+
+    protected void AttachPendingArtilleryWaypoint()
+    {
+        if (!m_group || !m_artilleryFireWaypoint)
+            return;
+        if (m_group.GetCurrentWaypoint() == m_artilleryFireWaypoint)
+            return;
+        m_group.AddWaypointToGroup(m_artilleryFireWaypoint);
     }
 
     protected void ConfigureArtilleryWaypoint(notnull SCR_AIWaypointArtillerySupport wp, int shotCount, bool invokeEvent)
