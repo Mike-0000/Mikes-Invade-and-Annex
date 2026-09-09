@@ -21,7 +21,7 @@ enum IA_GroupTacticalState
     InVehicle,       // Group is currently assigned to a vehicle
 	Escaping,      // Unconditionally moving to an escape point, ignoring combat
     Approaching,   // Counter-attack staging approach: following arc routing to jump-off point before assaulting
-    Holding,       // Vanilla Wait waypoint: stay at a post (building CoverPost / ObservationPost)
+    Holding,       // Pinned garrison: walk in on Defend, optionally Wait after arrival.
 }
 
 enum IA_TypedWpTree
@@ -239,8 +239,9 @@ class IA_AiGroup
     private bool m_bDefendPost = false;
     private bool m_bHoldEntered = false;
     private bool m_bHoldMarchScheduled = false;
+    private bool m_bHoldAfterEntry = false;
     private vector m_holdPost = vector.Zero;
-    private vector m_vHoldApproach = vector.Zero;
+    private IEntity m_HoldBuilding;
     private float m_holdRadius = 0;
     private int m_iAirborneInFlight = 0;
     private vector m_vAirDropTarget = vector.Zero;
@@ -874,14 +875,12 @@ class IA_AiGroup
                 origin = m_holdPost;
                 order = IA_AiOrder.DefendSmall;
             }
-            else if (m_bHoldEntered)
+            else
             {
-                if (order != IA_AiOrder.Hold)
+                if (order != IA_AiOrder.Hold && order != IA_AiOrder.Defend && order != IA_AiOrder.DefendSmall)
                     return;
-            }
-            else if (order != IA_AiOrder.Hold && order != IA_AiOrder.Move && order != IA_AiOrder.PriorityMove)
-            {
-                return;
+                origin = m_holdPost;
+                order = IA_BuildingGarrison.OrderFor(m_bHoldAfterEntry, m_bHoldEntered);
             }
         }
 
@@ -1209,7 +1208,7 @@ class IA_AiGroup
             // --- END MODIFIED ---
         }
 
-        if (order == IA_AiOrder.Hold || m_bDefendPost)
+        if (order == IA_AiOrder.Hold || m_isHoldingPost)
         {
             SCR_TimedWaypoint waitWp = SCR_TimedWaypoint.Cast(w);
             if (waitWp)
@@ -1220,11 +1219,15 @@ class IA_AiGroup
                     holdR = 5;
                 waitWp.SetCompletionRadius(holdR);
             }
-            if (m_bDefendPost)
+            if (m_isHoldingPost)
             {
                 SCR_DefendWaypoint postWaypoint = SCR_DefendWaypoint.Cast(w);
                 if (postWaypoint)
+                {
                     postWaypoint.SetCurrentDefendPreset(1); // CoverPost, not loitering.
+                    if (!m_bDefendPost)
+                        IA_BuildingGarrison.ConfigureDefend(postWaypoint);
+                }
                 w.SetPriorityLevel(WP_PRIORITY_DEFEND_POST);
             }
         }
@@ -1292,6 +1295,13 @@ class IA_AiGroup
                 continue;
             if (m_bDefendPost && !SCR_DefendWaypoint.Cast(wp))
                 continue;
+            if (IsBuildingGarrison())
+            {
+                bool wantsDefend = IA_BuildingGarrison.OrderFor(m_bHoldAfterEntry, m_bHoldEntered) == IA_AiOrder.DefendSmall;
+                bool isDefend = SCR_DefendWaypoint.Cast(wp) != null;
+                if (wantsDefend != isDefend)
+                    continue;
+            }
             if (SCR_TimedWaypoint.Cast(wp))
                 return true;
         }
@@ -3597,7 +3607,10 @@ class IA_AiGroup
         {
             queue.Remove(this.SpawnNextUnit);
             queue.Remove(this.SpawnNextHostileCivilianUnit);
+            queue.Remove(this.OnHoldMarchTick);
         }
+        m_bHoldMarchScheduled = false;
+        UnpinInboundSimulation();
     }
 
     void Despawn()
@@ -3699,11 +3712,11 @@ class IA_AiGroup
         
         // Apply orders based on the state.
         // Approaching is the exception: arc routing waypoints were already queued externally,
-        // so we must NOT wipe them here. Hold posts keep their Wait even if a
+        // so we must NOT wipe them here. Garrison posts keep their assignment even if a
         // caller asked for Attacking/Defending.
         if (m_tacticalState != IA_GroupTacticalState.Approaching)
         {
-            if (!(m_isHoldingPost && HasHoldWaypoint()))
+            if (!(m_isHoldingPost && (HasHoldWaypoint() || m_typedClearScheduled)))
             {
                 CancelPendingTypedClear();
                 RemoveAllOrders();
@@ -4095,13 +4108,25 @@ class IA_AiGroup
         m_holdPost = pos;
         m_bKeepAltitude = true;
         m_holdRadius = radius;
-        m_vHoldApproach = vector.Zero;
-        if (pos != vector.Zero)
-            m_vHoldApproach = IA_SpawnPlacement.FindHoldApproach(pos);
+        m_bHoldAfterEntry = false;
+        m_HoldBuilding = null;
     }
 
-    //! Wait at an interior post is not a Move. Groups spawn on the road, walk to
-    //! an outdoor approach, then enter the validated hold pose.
+    bool IsBuildingGarrison()
+    {
+        return m_isHoldingPost && !m_bDefendPost;
+    }
+
+    void SetHoldAfterBuildingEntry(bool enabled)
+    {
+        if (!IsBuildingGarrison())
+            return;
+        m_bHoldAfterEntry = enabled;
+        m_HoldBuilding = IA_BuildingGarrison.FindBuilding(m_holdPost);
+    }
+
+    //! Defend drives the entire walk into the building. Wait is only a final
+    //! assignment for the alternating teams whose living members are inside.
     protected void StartHoldMarch()
     {
         if (m_bDefendPost)
@@ -4111,67 +4136,43 @@ class IA_AiGroup
 
     protected void TickHoldMarch()
     {
-        if (m_bDefendPost)
+        if (!IsBuildingGarrison() || m_bSpawnAborted || !m_group)
             return;
         if (m_holdPost == vector.Zero)
             return;
-
-        if (m_bHoldEntered)
+        if (!m_isSpawned || HasPendingUnitSpawns())
+            return;
+        if (GetAliveCount() == 0)
         {
-            if (!HasHoldWaypoint())
-                AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+            UnpinInboundSimulation();
             return;
         }
 
-        if (!m_isSpawned)
-            return;
-
-        vector here = GetOrigin();
-        if (here == vector.Zero)
-            here = m_staggeredSpawnPos;
-
-        if (here != vector.Zero)
+        if (!m_bHoldEntered)
         {
-            if (vector.Distance(here, m_holdPost) <= IA_SpawnPlacement.HOLD_ENTER_M)
+            if (IA_BuildingGarrison.HasReachedInterior(m_group, m_HoldBuilding, m_holdPost, m_holdRadius))
             {
+                // Arrival changes orders only. Never reposition the group or pawns.
                 EnterHoldPost();
                 return;
             }
+            if (!m_bInboundSimPinned)
+                EnableInboundSimulation(m_holdPost);
+            ScheduleHoldMarchTick();
         }
 
-        if (m_vHoldApproach == vector.Zero)
-            m_vHoldApproach = IA_SpawnPlacement.FindHoldApproach(m_holdPost);
-
-        if (m_vHoldApproach == vector.Zero)
-        {
-            EnterHoldPost();
-            return;
-        }
-
-        if (here != vector.Zero)
-        {
-            if (vector.Distance(here, m_vHoldApproach) <= IA_SpawnPlacement.HOLD_APPROACH_ARRIVE_M)
-            {
-                EnterHoldPost();
-                return;
-            }
-        }
-
-        if (HasActiveWaypoint())
+        // Let ActivityDefend finish before the queued Wait is installed.
+        if (m_typedClearScheduled || HasHoldWaypoint())
             return;
 
-        AddOrder(m_vHoldApproach, IA_AiOrder.PriorityMove, true);
-        EnableInboundSimulation(m_vHoldApproach);
-        ScheduleHoldMarchTick();
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print(string.Format("[IA][Hold] March %1 then enter %2", m_vHoldApproach.ToString(), m_holdPost.ToString()), LogLevel.NORMAL);
-        }
+        AddOrder(m_holdPost, IA_BuildingGarrison.OrderFor(m_bHoldAfterEntry, m_bHoldEntered), true);
     }
 
     protected void ScheduleHoldMarchTick()
     {
         if (m_bHoldMarchScheduled)
+            return;
+        if (m_bSpawnAborted || !m_group || GetAliveCount() == 0)
             return;
         if (m_bHoldEntered)
             return;
@@ -4181,7 +4182,7 @@ class IA_AiGroup
             return;
 
         m_bHoldMarchScheduled = true;
-        GetGame().GetCallqueue().CallLater(this.OnHoldMarchTick, 1000, false);
+        GetGame().GetCallqueue().CallLater(this.OnHoldMarchTick, 2000, false);
     }
 
     protected void OnHoldMarchTick()
@@ -4200,57 +4201,16 @@ class IA_AiGroup
             return;
 
         m_bHoldEntered = true;
-        RelocateHoldUnits(m_holdPost);
-        RemoveAllOrders();
-        AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+        if (m_bHoldAfterEntry)
+        {
+            // HasHoldWaypoint now expects Wait, so it permits clearing Defend.
+            // AddOrder uses the existing typed-tree handoff before adding Wait.
+            AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+        }
         UnpinInboundSimulation();
         if (IA_Log.IsDebugEnabled())
         {
-            Print(string.Format("[IA][Hold] Entered post at %1", m_holdPost.ToString()), LogLevel.NORMAL);
-        }
-    }
-
-    protected void RelocateHoldUnits(vector holdPos)
-    {
-        if (!m_group)
-            return;
-        if (holdPos == vector.Zero)
-            return;
-
-        m_group.SetOrigin(holdPos);
-
-        array<AIAgent> agents = {};
-        m_group.GetAgents(agents);
-        int count = agents.Count();
-        int i;
-        for (i = 0; i < count; i++)
-        {
-            AIAgent agent = agents[i];
-            if (!agent)
-                continue;
-
-            IEntity pawn = agent.GetControlledEntity();
-            if (!pawn)
-                continue;
-
-            vector pos = holdPos;
-            if (i > 0)
-            {
-                float iF = i;
-                float countF = count;
-                float ang = Math.PI2 * (iF / countF);
-                vector probe;
-                probe[0] = holdPos[0] + Math.Cos(ang) * 0.9;
-                probe[1] = holdPos[1];
-                probe[2] = holdPos[2] + Math.Sin(ang) * 0.9;
-                if (IA_SpawnPlacement.HasStandRoom(probe))
-                    pos = probe;
-            }
-
-            pawn.SetOrigin(pos);
-            Physics phys = pawn.GetPhysics();
-            if (phys)
-                phys.SetVelocity(vector.Zero);
+            Print(string.Format("[IA][Garrison] Walked into post at %1 wait=%2", m_holdPost.ToString(), m_bHoldAfterEntry), LogLevel.NORMAL);
         }
     }
 
@@ -4849,6 +4809,11 @@ class IA_AiGroup
             // The one-person station access point is already standing-checked.
             // Do not scatter its operator outside that certified spawn envelope.
             unitSpawnPos = m_staggeredSpawnPos;
+        }
+        else if (IsBuildingGarrison())
+        {
+            vector buildingScatter = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(0.3, 0.9, vector.Zero);
+            unitSpawnPos = IA_SpawnPlacement.OutdoorOrOrigin(m_staggeredSpawnPos, buildingScatter);
         }
         else if (m_isHoldingPost || m_bKeepAltitude)
         {

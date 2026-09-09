@@ -1,6 +1,6 @@
 // IA_GmHoldPost.c
 // GM-placeable building hold. Dedicated building-garrison groups (not occupying
-// patrols) claim these and get IA_AiOrder.Hold (vanilla Wait, infinite).
+// patrols) claim these and walk in on Defend. Alternating teams Wait after arrival.
 
 class IA_GmHoldPostClass : ScriptedGameTriggerEntityClass
 {
@@ -13,7 +13,7 @@ class IA_GmHoldPost : ScriptedGameTriggerEntity
 	static const float MAX_RADIUS = 40;
 	static const ResourceName PREFAB = "{1A6D47B0E6C35C01}Prefabs/IA_AreaMarkers/IA_GmHoldPost.et";
 
-	[Attribute(defvalue: "8", UIWidgets.EditBox, "Hold radius (m). Occupying AI stay inside this sphere. Small on purpose for a single building.", category: "Hold", params: "3 40")]
+	[Attribute(defvalue: "8", UIWidgets.EditBox, "Building defense radius (m). Keep small for a single building.", category: "Hold", params: "3 40")]
 	protected float m_fHoldRadius;
 
 	protected bool m_bClaimed;

@@ -154,6 +154,7 @@ class IA_AreaInstance
     private bool m_garrisonPostsLoaded = false;
     private ref array<vector> m_availableGarrisonPosts;
     private bool m_bBuildingGarrisonSpawned = false;
+    private int m_iBuildingGarrisonAssignments = 0;
     
     // --- BEGIN ADDED: Radio Tower Defense Mode ---
     private bool m_isRadioTowerDefenseActive = false;
@@ -6203,7 +6204,8 @@ class IA_AreaInstance
         return true;
     }
 
-    //! Extra fireteams that spawn on the road, walk to a building, then Hold inside.
+    //! Extra fireteams spawn outside and walk in on Defend; alternating teams
+    //! switch to Wait only after their living members reach the interior.
     //! Occupying patrols are untouched.
     protected void SpawnBuildingGarrisonGroups(Faction areaFactionForGroupTask)
     {
@@ -6385,6 +6387,12 @@ class IA_AreaInstance
 
         if (m_area && m_area.GetAreaType() == IA_AreaType.MortarPit && grp.GetInitialUnitCount() != 1)
             AssignMortarPitGuardPost(grp);
+
+        if (grp.IsBuildingGarrison())
+        {
+            grp.SetHoldAfterBuildingEntry(IA_BuildingGarrison.UsesHold(m_iBuildingGarrisonAssignments));
+            m_iBuildingGarrisonAssignments++;
+        }
 
         // AddMilitaryGroup will also assign initial state (e.g., DefendPatrol or Attacking if area is under attack)
         AddMilitaryGroup(grp);
