@@ -720,7 +720,7 @@ class IA_AreaGroupManager
             {
                 ref array<vector> players = new array<vector>();
                 IA_SpawnPlacement.CollectPlayerPositions(players);
-                if (IA_SpawnPlacement.IsNearAnyPlayer(spawnPos, players, IA_SpawnPlacement.DEFEND_WAVE_PLAYER_MIN_M))
+                if (IA_SpawnPlacement.IsNearAnyPlayer(spawnPos, players, IA_SpawnPlacement.DEFEND_WAVE_PLAYER_FLOOR_M))
                     spawnPos = IA_SpawnPlacement.FindDefendWaveInfantryOrigin(targetPos, -1);
             }
         }
