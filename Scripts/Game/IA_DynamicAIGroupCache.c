@@ -1,9 +1,9 @@
-// Single cache/wake cycle for a pristine stationary garrison. The owner stays alive.
+// Repeated cache/wake cycles of the current garrison survivors. The owner stays alive.
 class IA_DynamicAIGroupCache
 {
 	protected IA_AiGroup m_Owner;
 	protected ref array<ref IA_DynamicAIUnit> m_aUnits = {};
-	protected int m_iCreatedMs;
+	protected ref IA_DynamicAIActivityGate m_ActivityGate = new IA_DynamicAIActivityGate();
 	protected int m_iNextUnit;
 	protected bool m_bCached;
 	protected bool m_bWaking;
@@ -12,7 +12,11 @@ class IA_DynamicAIGroupCache
 	void Init(IA_AiGroup owner)
 	{
 		m_Owner = owner;
-		m_iCreatedMs = System.GetTickCount();
+	}
+
+	void ResetQuietPeriod()
+	{
+		m_ActivityGate.Reset();
 	}
 
 	IA_AiGroup GetOwner()
@@ -116,70 +120,119 @@ class IA_DynamicAIGroupCache
 	{
 		if (m_bFinished || m_bCached || !IsOwnerLive())
 			return false;
-		if (m_Owner.GetLastDangerEventTime() > 0 || m_Owner.IsEngagedWithEnemy())
-		{
-			m_bFinished = true;
-			return false;
-		}
 		SCR_AIGroup group = m_Owner.GetSCR_AIGroup();
 		ref array<AIAgent> agents = {};
 		group.GetAgents(agents);
+		bool blocked = !m_Owner.IsDynamicAICacheReady();
 		foreach (AIAgent member : agents)
 		{
 			if (!member || !member.GetControlledEntity())
-				continue;
+			{
+				blocked = true;
+				break;
+			}
 			vector transform[4];
 			member.GetControlledEntity().GetWorldTransform(transform);
 			if (IA_SpawnPlacement.IsNearAnyPlayer(transform[3], players, IA_DynamicAISpawning.CACHE_DISTANCE_M))
 			{
-				m_bFinished = true;
-				return false;
+				blocked = true;
+				break;
+			}
+			SCR_AICombatComponent combat = SCR_AICombatComponent.Cast(member.GetControlledEntity().FindComponent(SCR_AICombatComponent));
+			if (combat && combat.GetCurrentTarget() && combat.GetCurrentTarget().GetTimeSinceSeen() < IA_DynamicAISpawning.COMBAT_QUIET_SEC)
+			{
+				blocked = true;
+				break;
 			}
 		}
-		if (now - m_iCreatedMs < IA_DynamicAISpawning.SETTLE_DELAY_MS)
+		// The addon's engaged-faction flag is historical; recent danger can expire.
+		if (!m_ActivityGate.CanCache(blocked, now, m_Owner.GetLastDangerEventTime(), System.GetUnixTime()))
 			return false;
-		if (!m_Owner.IsDynamicAICacheReady())
-		{
-			// Slow/blocked placement stays on the established live path.
-			if (now - m_iCreatedMs >= IA_DynamicAISpawning.SETTLE_TIMEOUT_MS)
-				m_bFinished = true;
-			return false;
-		}
 
 		PlayerManager manager = GetGame().GetPlayerManager();
 		if (!allowCapture || !manager || agents.IsEmpty())
 			return false;
-		m_aUnits.Clear();
+		ref array<ref IA_DynamicAIUnit> survivors = {};
+		ref array<SCR_CharacterDamageManagerComponent> downed = {};
 		foreach (AIAgent agent : agents)
 		{
 			if (!agent)
 			{
-				m_aUnits.Clear();
-				m_bFinished = true;
+				ResetQuietPeriod();
 				return false;
 			}
 			SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
-			if (!IsPristineInfantry(pawn, manager) || agent.GetPermanentLOD() != -1)
+			if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0 || agent.GetPermanentLOD() != -1)
 			{
-				m_aUnits.Clear();
-				m_bFinished = true;
+				ResetQuietPeriod();
+				return false;
+			}
+			CharacterControllerComponent controller = pawn.GetCharacterController();
+			SCR_CharacterDamageManagerComponent damage = SCR_CharacterDamageManagerComponent.Cast(pawn.FindComponent(SCR_CharacterDamageManagerComponent));
+			if (!controller || !damage)
+			{
+				ResetQuietPeriod();
+				return false;
+			}
+			// Only the current living roster can become a new spawn record.
+			if (controller.GetLifeState() == ECharacterLifeState.DEAD)
+				continue;
+			if (controller.IsUnconscious())
+			{
+				downed.Insert(damage);
+				continue;
+			}
+			if (!CanRecreateHealthyInfantry(pawn, manager))
+			{
+				ResetQuietPeriod();
 				return false;
 			}
 			ref IA_DynamicAIUnit record = new IA_DynamicAIUnit();
 			if (!record.Capture(pawn))
 			{
-				m_aUnits.Clear();
-				m_bFinished = true;
+				ResetQuietPeriod();
 				return false;
 			}
 			if (pawn == group.GetLeaderEntity())
-				m_aUnits.InsertAt(record, 0);
+				survivors.InsertAt(record, 0);
 			else
-				m_aUnits.Insert(record);
+				survivors.Insert(record);
 		}
 
 		// Publish the logical roster before any member/empty-group callbacks.
+		m_aUnits = survivors;
+		m_iNextUnit = 0;
 		m_bCached = true;
+		foreach (SCR_CharacterDamageManagerComponent casualty : downed)
+		{
+			// Use the original instigator and normal death path exactly once.
+			if (casualty)
+				casualty.Kill(casualty.GetInstigator());
+		}
+		if (!IsOwnerLive() || !m_bCached)
+			return false;
+		foreach (SCR_CharacterDamageManagerComponent checkedCasualty : downed)
+		{
+			if (!checkedCasualty)
+				continue;
+			SCR_ChimeraCharacter casualtyPawn = SCR_ChimeraCharacter.Cast(checkedCasualty.GetOwner());
+			if (casualtyPawn && casualtyPawn.GetCharacterController() && casualtyPawn.GetCharacterController().GetLifeState() != ECharacterLifeState.DEAD)
+			{
+				// Damage can be disabled externally. Keep every unremoved survivor
+				// live rather than dropping a still-living downed unit from accounting.
+				m_bCached = false;
+				m_aUnits.Clear();
+				ResetQuietPeriod();
+				return false;
+			}
+		}
+		if (m_aUnits.IsEmpty())
+		{
+			m_bFinished = true;
+			m_bCached = false;
+			m_Owner.ResumeAfterDynamicAI();
+			return false;
+		}
 		m_Owner.SuspendForDynamicAI();
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
@@ -194,7 +247,7 @@ class IA_DynamicAIGroupCache
 		return true;
 	}
 
-	protected bool IsPristineInfantry(SCR_ChimeraCharacter pawn, PlayerManager manager)
+	protected bool CanRecreateHealthyInfantry(SCR_ChimeraCharacter pawn, PlayerManager manager)
 	{
 		if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0)
 			return false;
@@ -203,6 +256,12 @@ class IA_DynamicAIGroupCache
 			return false;
 		SCR_CharacterDamageManagerComponent damage = SCR_CharacterDamageManagerComponent.Cast(pawn.FindComponent(SCR_CharacterDamageManagerComponent));
 		if (!damage)
+			return false;
+		// Injury/status serialization is intentionally deferred; never heal a survivor
+		// merely by recreating its prefab. These teams remain live until recovered.
+		ref array<ref SCR_PersistentDamageEffect> effects = {};
+		damage.GetPersistentEffects(effects);
+		if (!effects.IsEmpty())
 			return false;
 		ref array<HitZone> zones = {};
 		damage.GetAllHitZones(zones);
@@ -245,7 +304,7 @@ class IA_DynamicAIGroupCache
 	{
 		m_bCached = false;
 		m_bWaking = false;
-		m_bFinished = true;
+		ResetQuietPeriod();
 		m_Owner.ResumeAfterDynamicAI();
 		m_aUnits.Clear();
 	}

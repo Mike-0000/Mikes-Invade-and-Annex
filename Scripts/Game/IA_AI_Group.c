@@ -6053,7 +6053,8 @@ class IA_AiGroup
             return false;
         if (IsBuildingGarrison() && !m_bHoldEntered)
             return false;
-        return m_unitsSpawnedCount == m_initialUnitCount && m_group.GetAgentsCount() == m_initialUnitCount;
+        // Re-cache the current survivors; casualties must never refill initial slots.
+        return m_group.GetAgentsCount() > 0;
     }
 
     void SuspendForDynamicAI()

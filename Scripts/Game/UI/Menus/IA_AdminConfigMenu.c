@@ -176,7 +176,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageScaling.AddChild(m_MilVehField);
 		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
 		m_PageScaling.AddChild(m_DynamicAISpawningToggle);
-		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Temporarily cache untouched stationary garrisons far from every player, then restore each soldier at its saved position as players approach. Each garrison is cached once and stays active after restoration. Turning this off restores all cached soldiers.");
+		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Cache supported stationary garrisons after 60 seconds beyond 1500 m and out of combat. Restore survivors at their latest saved positions within 1000 m; teams can cache again. Equipment/ammo reset. Caching kills downed AI and never revives corpses. Turning this off restores cached survivors.");
 		m_Hints.AddHint(m_Tabs, "Settings pages", "Choose a tab to view a different group of settings. Help updates to explain the open tab.");
 		m_Hints.AddHint(m_AIField, "Enemy strength", "Changes how many enemy soldiers appear as the player count rises. 1 is normal, 0.5 is about half, and 2 is about double.");
 		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "Set this above 0 to ignore the player count and keep enemy numbers at a fixed level. Leave it at 0 for normal player scaling.");

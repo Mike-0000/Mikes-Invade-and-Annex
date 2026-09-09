@@ -1,6 +1,6 @@
 # AI virtualization investigation
 
-2026-09-08. Investigation and broader design proposal based on the experimental addon and local GameSources. An initial optional implementation now exists; see [Dynamic AI Spawning](dynamic-ai-spawning.md) for its actual scope, controls and live-test procedure. The visibility-aware restoration, indirect-fire protection and fuller persistence described below remain future design work, not implemented guarantees. No live performance or multiplayer validation is claimed here; proposed distances and budgets below are experiments to tune, not proven settings.
+2026-09-08. Historical investigation and broader design proposal based on the experimental addon and local GameSources. The current optional implementation is a **repeated positional/casualty cache**: it snapshots the latest surviving roster and world poses on each cycle, resets equipment/ammo from character prefabs, keeps conscious wounded/status-affected teams live, and kills downed AI only when caching commits. See [Dynamic AI Spawning](dynamic-ai-spawning.md) for current behavior, controls and validation status. The one-time activation recommendations below describe the original exploration, not the current lifecycle. Visibility-aware restoration, indirect-fire protection and full inventory/health persistence remain future design work. No live performance or multiplayer validation is claimed here; proposed distances and budgets below are not proven settings.
 
 ## Recommendation
 

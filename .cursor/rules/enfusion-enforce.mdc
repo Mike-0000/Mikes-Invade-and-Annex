@@ -211,6 +211,8 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 
 ## Prefabs, configs, resources
 
+- **Native persistence serializers are constructed by the persistence system.** `PersistenceSerializerBase` has private constructor/destructor and an internal `GetSystem()` link; do not assume a script-created serializer wrapper can provide standalone character snapshots. Use the configured system's public API or a bounded custom snapshot. Evidence: `Game/generated/Plugins/Persistence/System/Serializers/PersistenceSerializerBase.c:22-27` (source inspection).
+- **Arsenal loadout JSON is not an ammunition or injury snapshot.** `SCR_PlayerArsenalLoadout.ReadLoadoutString` / `ApplyLoadoutString` rebuild the inventory tree and active weapon, but their per-entity custom-data hooks are empty. Reusing this path alone resets partially spent magazines and cannot preserve wounds. Evidence: `Game/GameMode/Loadout/SCR_PlayerArsenalLoadout.c:200-230,383-438` (source inspection).
 - **Deploy-menu delay belongs to `SCR_MenuSpawnLogic`, and mission saving uses `m_eSaveTypes`.** Put `m_fDeployMenuOpenDelay` inside the respawn component's `m_SpawnLogic` container. `SCR_MissionHeader` exposes a save-type flags field (default 15), not `m_bIsSavingEnabled`. Evidence: `Game/Respawn/Logic/SCR_MenuSpawnLogic.c:7-8`; `Game/Mission/SCR_MissionHeader.c:33-34`; Workbench IA_Everon load reported both old locations/names as unknown data (2026-09-08).
 - **Preview-world damage can be uninitialized even on stock turrets.** PKM/NSV stock and addon variants reported destroyed state with health 0/0 in a bare `Preview` world. Keep real gameplay usability checks; do not diagnose a broken live damage setup from that preview alone. Evidence: native `IA_BaseEmplacementProbe`, `logs_2026-09-05_23-33-30` and `logs_2026-09-06_01-18-44`.
 - **Verify inventory user-lock state rather than assuming the request return value is the resulting state.** `RequestUserLock(null, true)` reported false while `IsUserLocked()` became true in the authority Preview test. Evidence: native emplacement probe, `logs_2026-09-05_23-30-12`; mounted item remained locked and belt locks untouched in `logs_2026-09-06_01-18-44`. Live removal/reload behavior is a separate test.
@@ -256,6 +258,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-09-08 — Arsenal JSON omits ammunition/injury custom state; standalone native persistence-serializer construction is unsupported by the exposed private-constructor contract.
 - 2026-09-08 — Workbench command-line regressions need a plugin result marker; equals-form module/plugin arguments executed a test that spaced plugin arguments left uninvoked.
 - 2026-09-08 — Native AddAIEntityToGroup returns true for an agent already parented to a different group; restoration must verify the resulting parent.
 - 2026-09-08 — Source inspection distinguishes count-only native group dormancy and Scenario Framework group-position restore from exact per-soldier snapshot fidelity; native dormancy still emits the empty-group event.

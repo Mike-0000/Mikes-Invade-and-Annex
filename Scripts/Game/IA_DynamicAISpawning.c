@@ -3,8 +3,8 @@ class IA_DynamicAISpawning
 {
 	static const float WAKE_DISTANCE_M = 1000;
 	static const float CACHE_DISTANCE_M = 1500;
-	static const int SETTLE_DELAY_MS = 30000;
-	static const int SETTLE_TIMEOUT_MS = 180000;
+	static const int CACHE_QUIET_MS = 60000;
+	static const int COMBAT_QUIET_SEC = 60;
 	static const int SCAN_INTERVAL_MS = 1000;
 	static const int TICK_INTERVAL_MS = 100;
 	static const int RESTORE_ATTEMPTS_PER_TICK = 4;
@@ -64,13 +64,13 @@ class IA_DynamicAISpawning
 	{
 		if (!Replication.IsServer())
 			return;
-		if (!IsEnabled())
+		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
 		{
-			foreach (IA_DynamicAIGroupCache cache : s_aGroups)
-			{
-				if (cache)
-					cache.RequestWake();
-			}
+			if (!cache)
+				continue;
+			cache.ResetQuietPeriod();
+			if (!IsEnabled())
+				cache.RequestWake();
 		}
 		if (!s_aGroups.IsEmpty())
 			Start();
