@@ -45,6 +45,8 @@ Dormant characters cannot be hit by ordinary bullets or explosions. This version
 
 Caching saves distant simulation work but adds repeated deletion and creation costs. Native LOD already reduces some distant work. Measure a full objective before increasing nearby AI density, including split squads and repeated withdrawals/returns.
 
+The [2026-09-09 performance investigation](F:/Mikes-Invade-and-Annex-Exp/docs/dynamic-ai-performance-investigation.md) separates the observed building-arrival delays from the one-group-per-second queue, compares native alternatives, and specifies a bounded scheduling update. Those recommendations are not yet runtime behavior.
+
 ## Validation status
 
 The native `IA_DynamicAISpawningConfigTest` passed with exit code 0 and `failures=0`, including departure, combat-quiet and repeat-cycle timelines plus 15 wrapper checks for ordinary patrol eligibility, retained exclusions, paused orders, defense wake/cancellation, and restored tactical assignment. These wrapper checks exercise stored state without preview-world soldiers; they do not prove live waypoint or engine entity behavior. Final scripts validated for WORKBENCH, PC, XBOX, PS4 and PS5 without compiler errors. The runtime logging scan passed across 127 scripts, and the logging, building-garrison and dynamic-base-flow suites passed 20 Python checks. These results do not establish live state fidelity, multiplayer continuity or performance gains.
