@@ -22,8 +22,13 @@ class IA_SpawnPlacement
 	static const float DEFEND_WAVE_MIN_M = 280.0;
 	static const float DEFEND_WAVE_MAX_M = 520.0;
 	static const float DEFEND_WAVE_PLAYER_MIN_M = 280.0;
+	//! Last-resort player floors. Keep the 280 m hold ring; never spawn in 80-180 m.
+	static const float DEFEND_WAVE_PLAYER_RELAX_M = 160.0;
+	static const float DEFEND_WAVE_PLAYER_FLOOR_M = 100.0;
 	static const float DEFEND_DROP_PLAYER_MIN_M = 200.0;
 	static const float DEFEND_DROP_HOT_PLAYER_MIN_M = 150.0;
+	static const float DEFEND_DROP_PLAYER_RELAX_M = 120.0;
+	static const float DEFEND_DROP_PLAYER_FLOOR_M = 80.0;
 	static const int SAFE_ORIGIN_ROAD_TRIES = 8;
 	static const int SAFE_ORIGIN_MESH_TRIES = 20;
 	static const float SAFE_ORIGIN_REACH_M = 16.0;
@@ -824,30 +829,56 @@ class IA_SpawnPlacement
 	}
 
 	//! Defense / radio-tower / side-objective waves. Players already hold the
-	//! objective, so the 80-180 m reinforcement ring lands on them. Stay at least
-	//! PLAYER_MIN outside the flag and every living pawn; fail closed if none.
+	//! objective, so the 80-180 m reinforcement ring lands on them. Prefer 280 m
+	//! from the flag and from players. If a spread fireteam occupies that
+	//! annulus, relax the player floor rather than returning Zero. Callers have
+	//! no airborne fallback and the hold would otherwise get inbound cues with
+	//! no AI. Never reopen the 80-180 m ring.
 	static vector FindDefendWaveInfantryOrigin(vector fightPos, int sectorIndex = -1)
 	{
 		if (fightPos == vector.Zero)
 			return vector.Zero;
 
-		vector found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, DEFEND_WAVE_MAX_M, DEFEND_WAVE_PLAYER_MIN_M, sectorIndex);
+		vector found = TryDefendWaveOriginWithPlayerMin(fightPos, sectorIndex, DEFEND_WAVE_PLAYER_MIN_M);
 		if (found != vector.Zero)
 			return found;
 
-		found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, DEFEND_WAVE_MAX_M, DEFEND_WAVE_PLAYER_MIN_M, -1);
+		found = TryDefendWaveOriginWithPlayerMin(fightPos, -1, DEFEND_WAVE_PLAYER_RELAX_M);
 		if (found != vector.Zero)
 			return found;
 
-		found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, HARD_CAP_FROM_CENTER_M, DEFEND_WAVE_PLAYER_MIN_M, -1);
+		found = TryDefendWaveOriginWithPlayerMin(fightPos, -1, DEFEND_WAVE_PLAYER_FLOOR_M);
 		if (found != vector.Zero)
 			return found;
 
-		found = FindSafeInfantryOrigin(fightPos, CENTER_MIN_M, HARD_CAP_FROM_CENTER_M, DEFEND_WAVE_PLAYER_MIN_M, -1);
+		// Coastal / blocked 280 m ring: allow 220 m from the flag only after the
+		// player floor is already relaxed. A 220 m sample with a 280 m player
+		// min is impossible while anyone stands on the hold.
+		found = FindSafeInfantryOrigin(fightPos, CENTER_MIN_M, HARD_CAP_FROM_CENTER_M, DEFEND_WAVE_PLAYER_FLOOR_M, -1);
 		if (found != vector.Zero)
 			return found;
 
 		Print(string.Format("[IA][SpawnPlacement] miss defend wave origin anchor=%1", fightPos.ToString()), LogLevel.WARNING);
+		return vector.Zero;
+	}
+
+	protected static vector TryDefendWaveOriginWithPlayerMin(vector fightPos, int sectorIndex, float playerMin)
+	{
+		vector found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, DEFEND_WAVE_MAX_M, playerMin, sectorIndex);
+		if (found != vector.Zero)
+			return found;
+
+		if (sectorIndex >= 0)
+		{
+			found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, DEFEND_WAVE_MAX_M, playerMin, -1);
+			if (found != vector.Zero)
+				return found;
+		}
+
+		found = FindSafeInfantryOrigin(fightPos, DEFEND_WAVE_MIN_M, HARD_CAP_FROM_CENTER_M, playerMin, -1);
+		if (found != vector.Zero)
+			return found;
+
 		return vector.Zero;
 	}
 
@@ -1430,6 +1461,8 @@ class IA_SpawnPlacement
 	//------------------------------------------------------------------------------------------------
 	//! Air Assault LZ: hot drop stays off living pawns (150 m), otherwise 200-400 m
 	//! perimeter with a 200 m player floor. Never falls back onto the defend point.
+	//! If a spread hold occupies that floor, relax player distance rather than
+	//! returning false after the inbound cue already fired.
 	//! `avoidLzs` keeps later waves off a pad already used this defend.
 	static bool TryFindDefendDropLz(vector center, bool preferHotDrop, out vector outLz, array<vector> avoidLzs = null)
 	{
@@ -1453,6 +1486,10 @@ class IA_SpawnPlacement
 		if (TrySampleAnnulusDropLz(center, 180, 450, 16, players, DEFEND_DROP_PLAYER_MIN_M, avoidLzs, 40, outLz))
 			return true;
 		if (TrySampleAnnulusDropLz(center, 160, 500, 16, players, DEFEND_DROP_PLAYER_MIN_M, null, 0, outLz))
+			return true;
+		if (TrySampleAnnulusDropLz(center, 160, 520, 16, players, DEFEND_DROP_PLAYER_RELAX_M, null, 0, outLz))
+			return true;
+		if (TrySampleAnnulusDropLz(center, 160, 520, 20, players, DEFEND_DROP_PLAYER_FLOOR_M, null, 0, outLz))
 			return true;
 
 		return false;
