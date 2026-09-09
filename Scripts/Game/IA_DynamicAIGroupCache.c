@@ -8,6 +8,9 @@ class IA_DynamicAIGroupCache
 	protected bool m_bCached;
 	protected bool m_bWaking;
 	protected bool m_bFinished;
+	protected ref array<IEntity> m_aDeletionAudit;
+	protected int m_iAuditActiveBefore;
+	protected int m_iAuditBudgetBefore;
 
 	void Init(IA_AiGroup owner)
 	{
@@ -233,6 +236,17 @@ class IA_DynamicAIGroupCache
 			m_Owner.ResumeAfterDynamicAI();
 			return false;
 		}
+		if (IA_Log.IsDebugEnabled())
+		{
+			// Weak entity references survive in the array only while the originals exist.
+			m_aDeletionAudit = new array<IEntity>();
+			foreach (IA_DynamicAIUnit auditUnit : m_aUnits)
+			{
+				m_aDeletionAudit.Insert(auditUnit.m_Entity);
+			}
+			m_iAuditActiveBefore = GetActiveAICount();
+			m_iAuditBudgetBefore = GetEditorAIBudget();
+		}
 		m_Owner.SuspendForDynamicAI();
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
@@ -243,8 +257,46 @@ class IA_DynamicAIGroupCache
 		if (IA_Log.IsDebugEnabled())
 		{
 			Print(string.Format("[IA][DynamicAI] Cached %1 soldiers at %2.", m_aUnits.Count(), m_Owner.GetOrigin()), LogLevel.NORMAL);
+			GetGame().GetCallqueue().CallLater(ReportDeletionAudit, 250, false);
 		}
 		return true;
+	}
+
+	// The cache record is not evidence of physical removal. Check the old entities
+	// after deletion callbacks and editor budget updates have had time to run.
+	protected void ReportDeletionAudit()
+	{
+		if (IA_Log.IsDebugEnabled())
+		{
+			if (m_aDeletionAudit)
+			{
+				int remaining;
+				foreach (IEntity original : m_aDeletionAudit)
+				{
+					if (original && !original.IsDeleted())
+						remaining++;
+				}
+				Print(string.Format("[IA][DynamicAI] Removal audit: originals=%1 remaining=%2; activeAI=%3->%4; editorAIBudget=%5->%6. Global counts can include concurrent spawns.", m_aDeletionAudit.Count(), remaining, m_iAuditActiveBefore, GetActiveAICount(), m_iAuditBudgetBefore, GetEditorAIBudget()), LogLevel.NORMAL);
+			}
+		}
+		m_aDeletionAudit = null;
+	}
+
+	protected int GetActiveAICount()
+	{
+		AIWorld world = GetGame().GetAIWorld();
+		if (!world)
+			return -1;
+		return world.GetCurrentNumOfActiveAIs();
+	}
+
+	protected int GetEditorAIBudget()
+	{
+		SCR_EditableEntityCore core = SCR_EditableEntityCore.Cast(SCR_EditableEntityCore.GetInstance(SCR_EditableEntityCore));
+		SCR_EditableEntityCoreBudgetSetting budget;
+		if (!core || !core.GetBudget(EEditableEntityBudget.AI, budget) || !budget)
+			return -1;
+		return budget.GetCurrentBudget();
 	}
 
 	protected bool CanRecreateHealthyInfantry(SCR_ChimeraCharacter pawn, PlayerManager manager)
