@@ -13,6 +13,7 @@ class IA_DynamicAISpawning
 	protected static bool s_bRunning;
 	protected static int s_iNextScanMs;
 	protected static int s_iRestoreCursor;
+	protected static int s_iNextDiagnosticMs;
 
 	static bool IsEnabled()
 	{
@@ -40,6 +41,7 @@ class IA_DynamicAISpawning
 		s_bRunning = false;
 		s_iNextScanMs = 0;
 		s_iRestoreCursor = 0;
+		s_iNextDiagnosticMs = 0;
 	}
 
 	static void RetireForArea(IA_AreaInstance area)
@@ -141,6 +143,15 @@ class IA_DynamicAISpawning
 			}
 		}
 
+		if (IA_Log.IsDebugEnabled())
+		{
+			if (enabled && now >= s_iNextDiagnosticMs)
+			{
+				s_iNextDiagnosticMs = now + 30000;
+				ReportCoverage();
+			}
+		}
+
 		// Shared work limit, not a population cap. Every queued group gets turns.
 		int total = s_aGroups.Count();
 		int attempts;
@@ -166,5 +177,36 @@ class IA_DynamicAISpawning
 		}
 		GetGame().GetCallqueue().Remove(Tick);
 		s_bRunning = false;
+	}
+
+	protected static void ReportCoverage()
+	{
+		if (IA_Log.IsDebugEnabled())
+		{
+			ref array<string> statuses = {};
+			ref array<int> groupCounts = {};
+			ref array<int> soldierCounts = {};
+			foreach (IA_DynamicAIGroupCache cache : s_aGroups)
+			{
+				if (!cache || !cache.IsOwnerLive() || cache.IsFinished())
+					continue;
+				string status = cache.GetDiagnosticStatus();
+				int index = statuses.Find(status);
+				if (index < 0)
+				{
+					index = statuses.Insert(status);
+					groupCounts.Insert(0);
+					soldierCounts.Insert(0);
+				}
+				groupCounts[index] = groupCounts[index] + 1;
+				soldierCounts[index] = soldierCounts[index] + cache.GetOwner().GetAliveCount();
+			}
+			string report = "[IA][DynamicAI] Coverage (registered area groups; groups/soldiers):";
+			foreach (int category, string label : statuses)
+			{
+				report += string.Format(" %1=%2/%3;", label, groupCounts[category], soldierCounts[category]);
+			}
+			Print(report, LogLevel.NORMAL);
+		}
 	}
 }

@@ -1,4 +1,4 @@
-// Repeated cache/wake cycles of the current garrison survivors. The owner stays alive.
+// Repeated cache/wake cycles of the current infantry survivors. The owner stays alive.
 class IA_DynamicAIGroupCache
 {
 	protected IA_AiGroup m_Owner;
@@ -11,6 +11,8 @@ class IA_DynamicAIGroupCache
 	protected ref array<IEntity> m_aDeletionAudit;
 	protected int m_iAuditActiveBefore;
 	protected int m_iAuditBudgetBefore;
+	protected string m_sLiveStatus = "awaiting scan";
+	protected string m_sSnapshotBlockReason;
 
 	void Init(IA_AiGroup owner)
 	{
@@ -45,6 +47,25 @@ class IA_DynamicAIGroupCache
 	bool IsOwnerLive()
 	{
 		return m_Owner && m_Owner.IsDynamicAIOwnerLive();
+	}
+
+	string GetDiagnosticStatus()
+	{
+		if (IsWaking())
+			return "restoring";
+		if (m_bCached)
+			return "cached";
+		if (m_sLiveStatus == "quiet period" && m_sSnapshotBlockReason != "")
+			return m_sSnapshotBlockReason;
+		return m_sLiveStatus;
+	}
+
+	protected bool BlockSnapshot(string reason)
+	{
+		m_sLiveStatus = reason;
+		m_sSnapshotBlockReason = reason;
+		ResetQuietPeriod();
+		return false;
 	}
 
 	int GetUnrestoredCount()
@@ -127,11 +148,21 @@ class IA_DynamicAIGroupCache
 		ref array<AIAgent> agents = {};
 		group.GetAgents(agents);
 		bool blocked = !m_Owner.IsDynamicAICacheReady();
+		m_sLiveStatus = m_Owner.GetDynamicAIRoleBlockReason();
+		if (m_sLiveStatus == "")
+		{
+			m_sLiveStatus = "quiet period";
+			if (blocked)
+				m_sLiveStatus = "initialization";
+		}
 		foreach (AIAgent member : agents)
 		{
+			if (blocked)
+				break;
 			if (!member || !member.GetControlledEntity())
 			{
 				blocked = true;
+				m_sLiveStatus = "missing character";
 				break;
 			}
 			vector transform[4];
@@ -139,44 +170,42 @@ class IA_DynamicAIGroupCache
 			if (IA_SpawnPlacement.IsNearAnyPlayer(transform[3], players, IA_DynamicAISpawning.CACHE_DISTANCE_M))
 			{
 				blocked = true;
+				m_sLiveStatus = "player nearby";
 				break;
 			}
 			SCR_AICombatComponent combat = SCR_AICombatComponent.Cast(member.GetControlledEntity().FindComponent(SCR_AICombatComponent));
 			if (combat && combat.GetCurrentTarget() && combat.GetCurrentTarget().GetTimeSinceSeen() < IA_DynamicAISpawning.COMBAT_QUIET_SEC)
 			{
 				blocked = true;
+				m_sLiveStatus = "recent combat";
 				break;
 			}
 		}
 		// The addon's engaged-faction flag is historical; recent danger can expire.
+		int lastDanger = m_Owner.GetLastDangerEventTime();
+		if (!blocked && lastDanger > 0 && System.GetUnixTime() - lastDanger < IA_DynamicAISpawning.COMBAT_QUIET_SEC)
+			m_sLiveStatus = "recent combat";
 		if (!m_ActivityGate.CanCache(blocked, now, m_Owner.GetLastDangerEventTime(), System.GetUnixTime()))
 			return false;
 
+		m_sLiveStatus = "queued to despawn";
 		PlayerManager manager = GetGame().GetPlayerManager();
 		if (!allowCapture || !manager || agents.IsEmpty())
 			return false;
+		m_sSnapshotBlockReason = "";
 		ref array<ref IA_DynamicAIUnit> survivors = {};
 		ref array<SCR_CharacterDamageManagerComponent> downed = {};
 		foreach (AIAgent agent : agents)
 		{
 			if (!agent)
-			{
-				ResetQuietPeriod();
-				return false;
-			}
+				return BlockSnapshot("missing character");
 			SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
 			if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0 || agent.GetPermanentLOD() != -1)
-			{
-				ResetQuietPeriod();
-				return false;
-			}
+				return BlockSnapshot("ownership, attachment or forced LOD");
 			CharacterControllerComponent controller = pawn.GetCharacterController();
 			SCR_CharacterDamageManagerComponent damage = SCR_CharacterDamageManagerComponent.Cast(pawn.FindComponent(SCR_CharacterDamageManagerComponent));
 			if (!controller || !damage)
-			{
-				ResetQuietPeriod();
-				return false;
-			}
+				return BlockSnapshot("missing character state");
 			// Only the current living roster can become a new spawn record.
 			if (controller.GetLifeState() == ECharacterLifeState.DEAD)
 				continue;
@@ -186,16 +215,10 @@ class IA_DynamicAIGroupCache
 				continue;
 			}
 			if (!CanRecreateHealthyInfantry(pawn, manager))
-			{
-				ResetQuietPeriod();
-				return false;
-			}
+				return BlockSnapshot("injury or status (last snapshot check)");
 			ref IA_DynamicAIUnit record = new IA_DynamicAIUnit();
 			if (!record.Capture(pawn))
-			{
-				ResetQuietPeriod();
-				return false;
-			}
+				return BlockSnapshot("prefab unavailable (last snapshot check)");
 			if (pawn == group.GetLeaderEntity())
 				survivors.InsertAt(record, 0);
 			else
@@ -225,8 +248,7 @@ class IA_DynamicAIGroupCache
 				// live rather than dropping a still-living downed unit from accounting.
 				m_bCached = false;
 				m_aUnits.Clear();
-				ResetQuietPeriod();
-				return false;
+				return BlockSnapshot("downed death refused (last snapshot check)");
 			}
 		}
 		if (m_aUnits.IsEmpty())

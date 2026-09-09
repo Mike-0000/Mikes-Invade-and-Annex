@@ -52,6 +52,7 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		TestDepartureTimeline();
 		TestCombatTimeline();
 		TestCycleResetTimeline();
+		m_iFailures += IA_AiGroup.RunDynamicAIGroupRegression();
 
 		Print(string.Format("[IA][DynamicAISpawningConfigTest] failures=%1", m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);

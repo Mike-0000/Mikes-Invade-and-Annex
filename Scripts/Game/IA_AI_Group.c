@@ -101,6 +101,7 @@ class IA_AiGroup
     private SCR_AIGroup m_group;
     private ref IA_DynamicAIGroupCache m_DynamicAICache;
     private IA_AreaInstance m_DynamicAIOwner;
+    private bool m_bDynamicAIDefendPending;
     private bool        m_isSpawned = false;
     private bool        m_isCivilian = false;
     private IA_SquadType m_squadType;
@@ -842,6 +843,8 @@ class IA_AiGroup
     // Add a pre-existing waypoint to the group
     void AddWaypoint(SCR_AIWaypoint waypoint)
     {
+        if (IsDynamicAICached())
+            return;
         if (!m_group || !waypoint)
         {
             ////Print("[IA_AiGroup.AddWaypoint] Group or waypoint is null.", LogLevel.WARNING);
@@ -864,6 +867,8 @@ class IA_AiGroup
 
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
+        if (IsDynamicAICached())
+            return;
         if (HasStaticGunAssignment())
             return;
         if (m_isHoldingPost)
@@ -1317,6 +1322,8 @@ class IA_AiGroup
 
     void RemoveAllOrders(bool resetLastOrderTime = false)
     {
+        if (IsDynamicAICached())
+            return;
         if (m_isHoldingPost && m_bDefendPost && HasHoldWaypoint())
             return;
         if (m_isHoldingPost && m_bHoldEntered && HasHoldWaypoint())
@@ -2333,6 +2340,9 @@ class IA_AiGroup
 
     bool ShouldSkipInfantryOrders()
     {
+        // Cached soldiers retain their roster, but cannot accept live assignments.
+        if (IsDynamicAICached())
+            return true;
         if (m_isDriving || m_isVehicleCrewGroup)
             return true;
 
@@ -2347,6 +2357,8 @@ class IA_AiGroup
 
     bool ShouldKeepOwnOrders()
     {
+        if (IsDynamicAICached())
+            return true;
         if (IsPinnedGarrison())
             return true;
         if (IsDefendHunter())
@@ -3673,6 +3685,8 @@ class IA_AiGroup
     // Add a public SetTacticalState method to replace the one we accidentally removed
     void SetTacticalState(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null, bool fromAuthority = false)
     {
+        if (IsDynamicAICached())
+            return;
         if (HasStaticGunAssignment())
             return;
         if (m_isHoldingPost)
@@ -4076,6 +4090,14 @@ class IA_AiGroup
 
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
+        if (IsDynamicAICached())
+        {
+            // Objective transitions must wake these troops. Apply the latest
+            // requested mode once all survivors exist, including a later OFF.
+            m_bDynamicAIDefendPending = true;
+            m_DynamicAICache.RequestWake();
+            return;
+        }
         
         if (enable && defendPoint != vector.Zero)
         {
@@ -5202,6 +5224,8 @@ class IA_AiGroup
     // Add this new method before SetTacticalState method
     void RequestTacticalStateChange(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null)
     {
+        if (IsDynamicAICached())
+            return;
         if (m_isHoldingPost)
             return;
 
@@ -6034,7 +6058,7 @@ class IA_AiGroup
     protected void TryRegisterDynamicAI()
     {
         // Registration retains no soldier entities and is inert while disabled.
-        if (!Replication.IsServer() || !m_isHoldingPost || !IsDynamicAIOwnerLive() || m_DynamicAICache)
+        if (!Replication.IsServer() || !IsDynamicAIOwnerLive() || m_DynamicAICache)
             return;
         m_DynamicAICache = new IA_DynamicAIGroupCache();
         m_DynamicAICache.Init(this);
@@ -6043,18 +6067,36 @@ class IA_AiGroup
 
     bool IsDynamicAICacheReady()
     {
-        if (!IsDynamicAIOwnerLive() || !m_isHoldingPost || m_isCivilian || m_isMortarCrew || HasStaticGunAssignment())
-            return false;
-        if (m_HVTGroup || IsObjectiveUnit() || m_bEliteProfile || m_isVehicleCrewGroup || m_isVehiclePassengerGroup)
-            return false;
-        if (m_referencedEntity || m_isDriving || m_pendingSeatTeleport || m_bAirborneDrop || m_bInboundSimPinned)
-            return false;
-        if (m_isDefendWaveGroup || m_isInDefendMode || m_bSweepPatrol || m_typedClearScheduled || HasPendingUnitSpawns())
-            return false;
-        if (IsBuildingGarrison() && !m_bHoldEntered)
+        if (!IsDynamicAIOwnerLive() || GetDynamicAIRoleBlockReason() != "")
             return false;
         // Re-cache the current survivors; casualties must never refill initial slots.
         return m_group.GetAgentsCount() > 0;
+    }
+
+    string GetDynamicAIRoleBlockReason()
+    {
+        if (m_isCivilian)
+            return "civilian";
+        if (m_isMortarCrew || HasStaticGunAssignment())
+            return "emplacement crew";
+        if (m_HVTGroup || IsObjectiveUnit())
+            return "objective unit";
+        if (m_isVehicleCrewGroup || m_isVehiclePassengerGroup || m_referencedEntity || m_isDriving || m_pendingSeatTeleport)
+            return "vehicle assignment";
+        if (m_bAirborneDrop)
+            return "airborne";
+        if (m_isDefendWaveGroup || m_isInDefendMode)
+            return "active defense";
+        if (m_bEliteProfile || m_bSweepPatrol)
+            return "special patrol";
+        if (IsBuildingGarrison() && !m_bHoldEntered)
+            return "building arrival";
+        if (m_bInboundSimPinned)
+            return "simulation pin";
+        if (m_typedClearScheduled || HasPendingUnitSpawns())
+            return "initialization";
+        // Ordinary area infantry and their normal patrol orders are supported.
+        return "";
     }
 
     void SuspendForDynamicAI()
@@ -6100,12 +6142,76 @@ class IA_AiGroup
             return;
         }
         m_group.ActivateAI();
+        if (m_bDynamicAIDefendPending)
+        {
+            m_bDynamicAIDefendPending = false;
+            SetDefendMode(m_isInDefendMode, m_defendTarget);
+        }
         ScheduleNextStateEvaluation();
         SetupDeathListener();
         if (IA_Log.IsDebugEnabled())
         {
-            Print(string.Format("[IA][DynamicAI] Restored garrison at %1.", GetOrigin()), LogLevel.NORMAL);
+            Print(string.Format("[IA][DynamicAI] Restored infantry at %1.", GetOrigin()), LogLevel.NORMAL);
         }
     }
 
+#ifdef WORKBENCH
+    // Native wrapper regression; the private constructor stays in its own class.
+	static int RunDynamicAIGroupRegression()
+	{
+		int failures;
+		ref IA_AiGroup group = new IA_AiGroup("100 20 100", IA_SquadType.Riflemen, IA_Faction.USSR, 4);
+		group.m_tacticalState = IA_GroupTacticalState.DefendPatrol;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "ordinary patrols qualify without a hold-post assignment", failures);
+		group.m_isHoldingPost = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "building arrival", "building placement still needs to finish", failures);
+		group.m_bHoldEntered = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "settled building garrisons remain supported", failures);
+		group.m_isHoldingPost = false;
+		group.m_isVehicleCrewGroup = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle assignment", "vehicle crews remain live", failures);
+		group.m_isVehicleCrewGroup = false;
+		group.m_isDefendWaveGroup = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "active defense", "defense waves remain live", failures);
+		group.m_isDefendWaveGroup = false;
+		group.m_bInboundSimPinned = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "simulation pin", "inbound simulation ownership is respected", failures);
+		group.m_bInboundSimPinned = false;
+
+		ref IA_DynamicAIGroupCacheFixture cache = new IA_DynamicAIGroupCacheFixture();
+		cache.Init(group);
+		group.m_DynamicAICache = cache;
+		cache.SetCachedForTest(true);
+		DynamicAIRegressionCheck(group.ShouldSkipInfantryOrders() && group.ShouldKeepOwnOrders(), "cached infantry cannot enter live tactical reassignment", failures);
+		group.m_lastOrderPosition = "100 20 100";
+		group.m_lastOrderTime = 123;
+		group.AddOrder("200 20 200", IA_AiOrder.Move, true);
+		DynamicAIRegressionCheck(group.m_lastOrderPosition == "100 20 100" && group.m_lastOrderTime == 123, "cached patrol orders retain their destination and time", failures);
+		group.SetTacticalState(IA_GroupTacticalState.Approaching, "200 20 200", null, true);
+		DynamicAIRegressionCheck(group.GetTacticalState() == IA_GroupTacticalState.DefendPatrol, "an external tactical update cannot replace a cached patrol state", failures);
+		group.RequestTacticalStateChange(IA_GroupTacticalState.Attacking, "200 20 200");
+		DynamicAIRegressionCheck(!group.HasPendingStateRequest(), "absent soldiers cannot submit fresh combat requests", failures);
+
+		group.SetDefendMode(true, "300 20 300");
+		DynamicAIRegressionCheck(cache.IsWaking() && group.m_bDynamicAIDefendPending && group.IsInDefendMode(), "defense assignment requests restoration and defers its orders", failures);
+		DynamicAIRegressionCheck(!group.m_bInboundSimPinned && group.GetTacticalState() == IA_GroupTacticalState.DefendPatrol, "defense does not start movement on an empty group", failures);
+		group.SetDefendMode(false);
+		DynamicAIRegressionCheck(!group.IsInDefendMode() && group.m_bDynamicAIDefendPending && cache.IsWaking(), "a later defense cancellation wins without cancelling restoration", failures);
+
+		cache.SetCachedForTest(false);
+		DynamicAIRegressionCheck(!group.ShouldSkipInfantryOrders() && !group.ShouldKeepOwnOrders(), "restored ordinary infantry rejoin tactical assignment", failures);
+		group.SetTacticalState(IA_GroupTacticalState.Approaching, "200 20 200", null, true);
+		DynamicAIRegressionCheck(group.GetTacticalState() == IA_GroupTacticalState.Approaching, "the live legacy tactical path still accepts state changes", failures);
+		return failures;
+	}
+
+	protected static void DynamicAIRegressionCheck(bool passed, string description, inout int failures)
+	{
+		if (passed)
+			return;
+		failures++;
+		Print("[IA][DynamicAISpawningConfigTest] " + description, LogLevel.ERROR);
+	}
+
+#endif
 };  

@@ -112,6 +112,7 @@ modded enum ChimeraMenuPreset
 
 - Always **`super`** unless the method is an intentional full replacement.
 - **`modded class` merges** into the original. `super.Method()` calls the original implementation of that same class, not its original parent. Validate exception-prone inputs before delegating; a guard after `super` cannot prevent the original method's exception. Keep overrides tiny. Do not paste GameSources bodies. Evidence: `runtime:` `SCR_AIGetInNearestWaypointParameters` raised `Wrong class of provided Waypoint!` from the modded guard's initial `super` call (`logs_2026-09-08_19-42-41`, 20:03:24).
+- **A `modded class` is not a private-field test-access shim.** Placing a merge of a Game class in WorkbenchGame failed `Unknown type`; moving it to Game then broke private-field access in the original class's static factories as well as the shim. Keep tests needing those private internals inside the original class under `#ifdef WORKBENCH`, called by a Workbench plugin. Evidence: compiler `IA_DynamicAIGroupRegression.c`, logs `23-14-30` / `23-15-28`; original-class regression compiled and passed in `23-16-23` (2026-09-08).
 - **`modded enum`** adds values. Do not re-list existing values.
 - Generated files (`Do not modify, this script is generated`) are bindings. Mod them only when there is no scripted `SCR_` wrapper.
 
@@ -259,6 +260,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-09-08 — A modded test-access class broke private-field static factories; WORKBENCH-guarded tests inside the original class compiled and ran successfully.
 - 2026-09-08 — GM editor budgets subtract costs through editable-entity unregister callbacks; mission logical survivor counts do not control that accounting.
 - 2026-09-08 — Arsenal JSON omits ammunition/injury custom state; standalone native persistence-serializer construction is unsupported by the exposed private-constructor contract.
 - 2026-09-08 — Workbench command-line regressions need a plugin result marker; equals-form module/plugin arguments executed a test that spaced plugin arguments left uninvoked.
