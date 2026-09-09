@@ -4,6 +4,8 @@
 
 This investigation covers the implementation at `01444cb`, the user's current Workbench log, local read-only GameSources, and Bohemia's public documentation. It proposes the next implementation; runtime behavior was not changed in this pass. Engine C++ dispatch internals and multiplayer frame-time measurements are unavailable in the supplied evidence.
 
+**Implementation follow-up:** the subsequently authorized fix implements the custom work queue and pre-arrival caching. See [current behavior and validation](dynamic-ai-spawning.md). The investigation and arithmetic below describe the earlier implementation and the decision, not a benchmark of the updated code.
+
 **What the live log proves**
 
 The running session recompiled at 23:57:15 with Game CRC `87851bc8`, matching the expanded infantry implementation. Evidence comes from [console.log](<C:/Users/'admin'/Documents/My Games/ArmaReforgerWorkbench/logs/logs_2026-09-08_22-44-10/console.log:6343>); the file continues across midnight.

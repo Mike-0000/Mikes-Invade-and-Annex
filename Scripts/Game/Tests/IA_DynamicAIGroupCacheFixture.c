@@ -6,5 +6,13 @@ class IA_DynamicAIGroupCacheFixture : IA_DynamicAIGroupCache
 	{
 		m_bCached = cached;
 	}
+
+	void AddPendingForTest(IA_DynamicAIUnit unit)
+	{
+		m_aUnits.Insert(unit);
+		m_bCached = true;
+		m_bWaking = true;
+		m_bUrgentWake = true;
+	}
 }
 #endif

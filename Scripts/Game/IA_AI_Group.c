@@ -235,6 +235,8 @@ class IA_AiGroup
     private bool m_isDefendWaveGroup = false;
     private bool m_bDefendHunter = false;
     private bool m_bInboundSimPinned = false;
+    // Only the building walk owns a pin that dynamic AI may suspend.
+    private bool m_bBuildingMarchSimPinned = false;
     private vector m_vInboundTarget = vector.Zero;
     private bool m_bAirborneDrop = false;
     private bool m_bKeepAltitude = false;
@@ -4201,7 +4203,7 @@ class IA_AiGroup
                 return;
             }
             if (!m_bInboundSimPinned)
-                EnableInboundSimulation(m_holdPost);
+                EnableBuildingMarchSimulation();
             ScheduleHoldMarchTick();
         }
 
@@ -4214,6 +4216,8 @@ class IA_AiGroup
 
     protected void ScheduleHoldMarchTick()
     {
+        if (IsDynamicAICached())
+            return;
         if (m_bHoldMarchScheduled)
             return;
         if (m_bSpawnAborted || !m_group || GetAliveCount() == 0)
@@ -4232,6 +4236,8 @@ class IA_AiGroup
     protected void OnHoldMarchTick()
     {
         m_bHoldMarchScheduled = false;
+        if (IsDynamicAICached())
+            return;
         TickHoldMarch();
         if (!m_bHoldEntered && m_isHoldingPost && !m_bDefendPost)
             ScheduleHoldMarchTick();
@@ -4239,6 +4245,9 @@ class IA_AiGroup
 
     protected void EnterHoldPost()
     {
+        // A partially restored roster cannot prove that the whole team arrived.
+        if (IsDynamicAICached())
+            return;
         if (m_bHoldEntered)
             return;
         if (m_holdPost == vector.Zero)
@@ -4696,6 +4705,8 @@ class IA_AiGroup
 
     void EnableInboundSimulation(vector target)
     {
+        // Explicit mission callers take ownership, even over an existing march pin.
+        m_bBuildingMarchSimPinned = false;
         m_bInboundSimPinned = true;
         m_vInboundTarget = target;
         RequestInboundNavmeshLoad();
@@ -4705,6 +4716,25 @@ class IA_AiGroup
         {
             Print(string.Format("[IA][InboundSim] pin target=%1", target.ToString()), LogLevel.NORMAL);
         }
+    }
+
+    protected void EnableBuildingMarchSimulation()
+    {
+        if (m_bInboundSimPinned || IsDynamicAICached())
+            return;
+        EnableInboundSimulation(m_holdPost);
+        m_bBuildingMarchSimPinned = true;
+    }
+
+    protected bool IsBuildingMarchSimulationPinned()
+    {
+        return m_bInboundSimPinned && m_bBuildingMarchSimPinned && IsBuildingGarrison() && !m_bHoldEntered;
+    }
+
+    protected void SuspendBuildingMarchSimulation()
+    {
+        if (IsBuildingMarchSimulationPinned())
+            UnpinInboundSimulation();
     }
 
     protected void RequestInboundNavmeshLoad()
@@ -4748,6 +4778,7 @@ class IA_AiGroup
 
     protected void UnpinInboundSimulation()
     {
+        m_bBuildingMarchSimPinned = false;
         if (!m_bInboundSimPinned)
             return;
 
@@ -6089,9 +6120,9 @@ class IA_AiGroup
             return "active defense";
         if (m_bEliteProfile || m_bSweepPatrol)
             return "special patrol";
-        if (IsBuildingGarrison() && !m_bHoldEntered)
-            return "building arrival";
-        if (m_bInboundSimPinned)
+        // Unfinished building walks resume from the saved physical positions.
+        // Other mission-owned simulation pins must remain live.
+        if (m_bInboundSimPinned && !IsBuildingMarchSimulationPinned())
             return "simulation pin";
         if (m_typedClearScheduled || HasPendingUnitSpawns())
             return "initialization";
@@ -6101,13 +6132,20 @@ class IA_AiGroup
 
     void SuspendForDynamicAI()
     {
+        if (!IsDynamicAICached() || !IsDynamicAIOwnerLive())
+            return;
+        SCR_AIGroup group = m_group;
         GetGame().GetCallqueue().Remove(this.EvaluateGroupState);
         GetGame().GetCallqueue().Remove(this.SetupDeathListener);
         GetGame().GetCallqueue().Remove(this.OnHoldMarchTick);
+        GetGame().GetCallqueue().Remove(this.ApplyDynamicAICombatProfile);
         m_isStateEvaluationScheduled = false;
         m_bHoldMarchScheduled = false;
+        SuspendBuildingMarchSimulation();
+        if (!IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+            return;
         array<AIAgent> agents = {};
-        m_group.GetAgents(agents);
+        group.GetAgents(agents);
         foreach (AIAgent agent : agents)
         {
             if (agent)
@@ -6120,35 +6158,63 @@ class IA_AiGroup
                         controller.GetOnPlayerDeathWithParam().Remove(OnMemberDeath);
                 }
                 agent.DeactivateAI();
+                // Behavior aborts can synchronously retire the owning area.
+                if (!IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+                    return;
             }
         }
-        m_group.DeactivateAI();
+        group.DeactivateAI();
     }
 
     void SetupDynamicAIUnit(IEntity entity)
     {
         SetupDeathListenerForUnit(entity);
-        GetGame().GetCallqueue().CallLater(ApplyCombatProfile, 2000, false);
+        // Character init can overwrite the immediate profile. Reapply only this
+        // replacement, instead of rescanning the whole group once per soldier.
+        GetGame().GetCallqueue().CallLater(ApplyDynamicAICombatProfile, 2000, false, entity);
+    }
+
+    protected void ApplyDynamicAICombatProfile(IEntity entity)
+    {
+        if (!entity || !IsDynamicAIOwnerLive())
+            return;
+        PlayerManager manager = GetGame().GetPlayerManager();
+        if (manager && manager.GetPlayerIdFromControlledEntity(entity) > 0)
+            return;
+        ApplyCombatToEntity(entity);
     }
 
     void ResumeAfterDynamicAI()
     {
-        if (!IsDynamicAIOwnerLive())
+        if (IsDynamicAICached() || !IsDynamicAIOwnerLive())
             return;
+        SCR_AIGroup group = m_group;
         // The last soldier can be killed while other restoration work is pending.
-        if (m_group.GetPlayerAndAgentCount() == 0)
+        if (group.GetPlayerAndAgentCount() == 0)
         {
-            m_group.OnEmpty();
+            group.OnEmpty();
             return;
         }
-        m_group.ActivateAI();
+        group.ActivateAI();
+        if (IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+            return;
         if (m_bDynamicAIDefendPending)
         {
             m_bDynamicAIDefendPending = false;
             SetDefendMode(m_isInDefendMode, m_defendTarget);
+            if (IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+                return;
         }
         ScheduleNextStateEvaluation();
         SetupDeathListener();
+        if (IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+            return;
+        // All saved survivors now exist. Reacquire navmesh/LOD support for the
+        // new agents and retain the original building post and arrival intent.
+        if (IsBuildingGarrison())
+            TickHoldMarch();
+        if (IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+            return;
         if (IA_Log.IsDebugEnabled())
         {
             Print(string.Format("[IA][DynamicAI] Restored infantry at %1.", GetOrigin()), LogLevel.NORMAL);
@@ -6164,10 +6230,29 @@ class IA_AiGroup
 		group.m_tacticalState = IA_GroupTacticalState.DefendPatrol;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "ordinary patrols qualify without a hold-post assignment", failures);
 		group.m_isHoldingPost = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "building arrival", "building placement still needs to finish", failures);
+		group.m_holdPost = "110 25 110";
+		group.m_bHoldAfterEntry = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "unfinished building walks can cache their current positions", failures);
+		group.m_bInboundSimPinned = true;
+		group.m_bBuildingMarchSimPinned = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "an arrival-owned simulation pin permits caching", failures);
+		group.SuspendBuildingMarchSimulation();
+		DynamicAIRegressionCheck(!group.m_bInboundSimPinned && !group.m_bBuildingMarchSimPinned, "suspension releases the old soldiers' arrival pin", failures);
+		DynamicAIRegressionCheck(!group.m_bHoldEntered && group.m_bHoldAfterEntry && group.m_holdPost == "110 25 110", "suspension preserves the destination and pending interior arrival", failures);
+		group.m_bInboundSimPinned = true;
+		group.m_vInboundTarget = "300 20 300";
+		group.EnableBuildingMarchSimulation();
+		group.SuspendBuildingMarchSimulation();
+		DynamicAIRegressionCheck(group.m_bInboundSimPinned && !group.m_bBuildingMarchSimPinned && group.m_vInboundTarget == "300 20 300", "building march cannot take over or suspend a mission-owned pin", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "simulation pin", "mission pin still excludes a building garrison", failures);
+		group.UnpinInboundSimulation();
 		group.m_bHoldEntered = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "settled building garrisons remain supported", failures);
 		group.m_isHoldingPost = false;
+		group.m_bInboundSimPinned = true;
+		group.m_bBuildingMarchSimPinned = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "simulation pin", "an obsolete arrival tag cannot exempt another role's pin", failures);
+		group.UnpinInboundSimulation();
 		group.m_isVehicleCrewGroup = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle assignment", "vehicle crews remain live", failures);
 		group.m_isVehicleCrewGroup = false;
@@ -6182,6 +6267,14 @@ class IA_AiGroup
 		cache.Init(group);
 		group.m_DynamicAICache = cache;
 		cache.SetCachedForTest(true);
+		group.m_isHoldingPost = true;
+		group.m_bHoldEntered = false;
+		group.m_bHoldMarchScheduled = true;
+		group.OnHoldMarchTick();
+		group.EnterHoldPost();
+		group.EnableBuildingMarchSimulation();
+		DynamicAIRegressionCheck(!group.m_bHoldMarchScheduled && !group.m_bHoldEntered && !group.m_bInboundSimPinned, "cached or partially restored buildings cannot reschedule, arrive, or repin", failures);
+		group.m_isHoldingPost = false;
 		DynamicAIRegressionCheck(group.ShouldSkipInfantryOrders() && group.ShouldKeepOwnOrders(), "cached infantry cannot enter live tactical reassignment", failures);
 		group.m_lastOrderPosition = "100 20 100";
 		group.m_lastOrderTime = 123;

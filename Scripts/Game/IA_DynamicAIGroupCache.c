@@ -8,6 +8,10 @@ class IA_DynamicAIGroupCache
 	protected bool m_bCached;
 	protected bool m_bWaking;
 	protected bool m_bFinished;
+	protected bool m_bUrgentWake;
+	protected int m_iWakeRequestedMs;
+	protected int m_iLastSnapshotMs;
+	protected int m_iLastRemovalMs;
 	protected ref array<IEntity> m_aDeletionAudit;
 	protected int m_iAuditActiveBefore;
 	protected int m_iAuditBudgetBefore;
@@ -47,6 +51,11 @@ class IA_DynamicAIGroupCache
 	bool IsOwnerLive()
 	{
 		return m_Owner && m_Owner.IsDynamicAIOwnerLive();
+	}
+
+	protected bool IsTransactionLive()
+	{
+		return m_bCached && !m_bFinished && IsOwnerLive();
 	}
 
 	string GetDiagnosticStatus()
@@ -92,6 +101,8 @@ class IA_DynamicAIGroupCache
 
 	void OnUnitKilled(IEntity entity)
 	{
+		if (!entity)
+			return;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			if (unit.m_Entity != entity)
@@ -114,21 +125,53 @@ class IA_DynamicAIGroupCache
 		return false;
 	}
 
-	void RequestWake()
+	void RequestWake(bool urgent = true)
 	{
-		if (m_bCached)
-			m_bWaking = true;
+		if (!m_bCached || m_bFinished)
+			return;
+		if (!m_bWaking)
+			m_iWakeRequestedMs = System.GetTickCount();
+		m_bWaking = true;
+		m_bUrgentWake = m_bUrgentWake || urgent;
+		IA_DynamicAISpawning.EnqueueWake(this);
+	}
+
+	int GetWakeRequestedMs()
+	{
+		return m_iWakeRequestedMs;
+	}
+
+	bool HasUrgentWake()
+	{
+		return m_bUrgentWake;
+	}
+
+	int GetCandidateSoldierCount()
+	{
+		if (!IsOwnerLive())
+			return 0;
+		return m_Owner.GetSCR_AIGroup().GetAgentsCount();
+	}
+
+	int GetLastSnapshotMs()
+	{
+		return m_iLastSnapshotMs;
+	}
+
+	int GetLastRemovalMs()
+	{
+		return m_iLastRemovalMs;
 	}
 
 	void CheckWake(array<vector> players, bool enabled)
 	{
-		if (!m_bCached || m_bWaking)
+		if (!m_bCached)
 			return;
 		if (!enabled)
-		{
-			RequestWake();
+			RequestWake(false);
+		// A background OFF request must still become urgent when players approach.
+		if (m_bUrgentWake)
 			return;
-		}
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			if (IA_SpawnPlacement.IsNearAnyPlayer(unit.GetPosition(), players, IA_DynamicAISpawning.WAKE_DISTANCE_M))
@@ -145,16 +188,19 @@ class IA_DynamicAIGroupCache
 		if (m_bFinished || m_bCached || !IsOwnerLive())
 			return false;
 		SCR_AIGroup group = m_Owner.GetSCR_AIGroup();
+		m_sLiveStatus = m_Owner.GetDynamicAIRoleBlockReason();
+		// Most exclusions need no member/component traversal.
+		if (m_sLiveStatus != "" || !m_Owner.IsDynamicAICacheReady())
+		{
+			if (m_sLiveStatus == "")
+				m_sLiveStatus = "initialization";
+			ResetQuietPeriod();
+			return false;
+		}
 		ref array<AIAgent> agents = {};
 		group.GetAgents(agents);
-		bool blocked = !m_Owner.IsDynamicAICacheReady();
-		m_sLiveStatus = m_Owner.GetDynamicAIRoleBlockReason();
-		if (m_sLiveStatus == "")
-		{
-			m_sLiveStatus = "quiet period";
-			if (blocked)
-				m_sLiveStatus = "initialization";
-		}
+		bool blocked;
+		m_sLiveStatus = "quiet period";
 		foreach (AIAgent member : agents)
 		{
 			if (blocked)
@@ -189,9 +235,16 @@ class IA_DynamicAIGroupCache
 			return false;
 
 		m_sLiveStatus = "queued to despawn";
+		// The scan queues references only. The worker repeats this entire check
+		// with fresh player positions and the current roster before any mutation.
+		if (!allowCapture)
+			return !agents.IsEmpty();
 		PlayerManager manager = GetGame().GetPlayerManager();
-		if (!allowCapture || !manager || agents.IsEmpty())
+		if (!manager || agents.IsEmpty())
 			return false;
+		int snapshotStarted;
+		if (IA_Log.IsDebugEnabled())
+			snapshotStarted = System.GetTickCount();
 		m_sSnapshotBlockReason = "";
 		ref array<ref IA_DynamicAIUnit> survivors = {};
 		ref array<SCR_CharacterDamageManagerComponent> downed = {};
@@ -225,6 +278,8 @@ class IA_DynamicAIGroupCache
 				survivors.Insert(record);
 		}
 
+		if (IA_Log.IsDebugEnabled())
+			m_iLastSnapshotMs = System.GetTickCount() - snapshotStarted;
 		// Publish the logical roster before any member/empty-group callbacks.
 		m_aUnits = survivors;
 		m_iNextUnit = 0;
@@ -234,8 +289,10 @@ class IA_DynamicAIGroupCache
 			// Use the original instigator and normal death path exactly once.
 			if (casualty)
 				casualty.Kill(casualty.GetInstigator());
+			if (!IsTransactionLive())
+				return false;
 		}
-		if (!IsOwnerLive() || !m_bCached)
+		if (!IsTransactionLive())
 			return false;
 		foreach (SCR_CharacterDamageManagerComponent checkedCasualty : downed)
 		{
@@ -247,6 +304,8 @@ class IA_DynamicAIGroupCache
 				// Damage can be disabled externally. Keep every unremoved survivor
 				// live rather than dropping a still-living downed unit from accounting.
 				m_bCached = false;
+				m_bWaking = false;
+				m_bUrgentWake = false;
 				m_aUnits.Clear();
 				return BlockSnapshot("downed death refused (last snapshot check)");
 			}
@@ -269,15 +328,23 @@ class IA_DynamicAIGroupCache
 			m_iAuditActiveBefore = GetActiveAICount();
 			m_iAuditBudgetBefore = GetEditorAIBudget();
 		}
+		int removalStarted;
+		if (IA_Log.IsDebugEnabled())
+			removalStarted = System.GetTickCount();
 		m_Owner.SuspendForDynamicAI();
+		if (!IsTransactionLive())
+			return false;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			IEntity original = unit.m_Entity;
 			unit.m_Entity = null;
 			RplComponent.DeleteRplEntity(original, false);
+			if (!IsTransactionLive())
+				return false;
 		}
 		if (IA_Log.IsDebugEnabled())
 		{
+			m_iLastRemovalMs = System.GetTickCount() - removalStarted;
 			Print(string.Format("[IA][DynamicAI] Cached %1 soldiers at %2.", m_aUnits.Count(), m_Owner.GetOrigin()), LogLevel.NORMAL);
 			GetGame().GetCallqueue().CallLater(ReportDeletionAudit, 250, false);
 		}
@@ -362,12 +429,13 @@ class IA_DynamicAIGroupCache
 		{
 			if (m_iNextUnit >= count)
 				m_iNextUnit = 0;
-			IA_DynamicAIUnit unit = m_aUnits[m_iNextUnit];
+			// Native spawn/member callbacks may retire and detach the whole roster.
+			ref IA_DynamicAIUnit unit = m_aUnits[m_iNextUnit];
 			m_iNextUnit++;
 			if (unit.m_bRestored || now < unit.m_iNextAttemptMs)
 				continue;
 			RestoreUnit(unit, now);
-			if (GetUnrestoredCount() == 0)
+			if (IsWaking() && IsTransactionLive() && GetUnrestoredCount() == 0)
 				FinishWake();
 			return true;
 		}
@@ -378,9 +446,11 @@ class IA_DynamicAIGroupCache
 	{
 		m_bCached = false;
 		m_bWaking = false;
+		m_bUrgentWake = false;
 		ResetQuietPeriod();
-		m_Owner.ResumeAfterDynamicAI();
 		m_aUnits.Clear();
+		if (IsOwnerLive())
+			m_Owner.ResumeAfterDynamicAI();
 	}
 
 	protected void RestoreUnit(IA_DynamicAIUnit unit, int now)
@@ -397,13 +467,22 @@ class IA_DynamicAIGroupCache
 			ref EntitySpawnParams params = new EntitySpawnParams();
 			params.TransformMode = ETransformMode.WORLD;
 			Math3D.MatrixCopy(unit.m_aTransform, params.Transform);
-			unit.m_Entity = GetGame().SpawnEntityPrefab(unit.m_Resource, GetGame().GetWorld(), params);
-			if (!unit.m_Entity)
+			IEntity spawned = GetGame().SpawnEntityPrefab(unit.m_Resource, GetGame().GetWorld(), params);
+			if (!IsWaking() || !IsTransactionLive())
+			{
+				// Retirement ran before Spawn returned, so it could not see this pawn.
+				DeletePendingEntity(spawned);
+				return;
+			}
+			unit.m_Entity = spawned;
+			if (!spawned)
 			{
 				unit.RecordFailure(now);
 				return;
 			}
 			m_Owner.SetupDynamicAIUnit(unit.m_Entity);
+			if (!IsWaking() || !IsTransactionLive())
+				return;
 		}
 
 		// A soldier killed during attachment is a casualty, never a new spawn attempt.
@@ -423,10 +502,7 @@ class IA_DynamicAIGroupCache
 			return;
 		}
 		SCR_AIGroup group = m_Owner.GetSCR_AIGroup();
-		AIControlComponent control = AIControlComponent.Cast(unit.m_Entity.FindComponent(AIControlComponent));
-		AIAgent agent;
-		if (control)
-			agent = control.GetControlAIAgent();
+		AIAgent agent = GetRestoreAgent(unit);
 		if (!agent)
 		{
 			unit.RecordFailure(now);
@@ -435,7 +511,29 @@ class IA_DynamicAIGroupCache
 		AIGroup previousGroup = agent.GetParentGroup();
 		if (previousGroup && previousGroup != group)
 			previousGroup.RemoveAgent(agent);
-		if (!group.AddAIEntityToGroup(unit.m_Entity) || agent.GetParentGroup() != group)
+		if (!CanContinueAttachment(unit, manager))
+			return;
+		if (!group || m_Owner.GetSCR_AIGroup() != group)
+		{
+			unit.RecordFailure(now);
+			return;
+		}
+		agent = GetRestoreAgent(unit);
+		if (!agent)
+		{
+			unit.RecordFailure(now);
+			return;
+		}
+		bool attached = group.AddAIEntityToGroup(unit.m_Entity);
+		if (!CanContinueAttachment(unit, manager))
+			return;
+		if (!group || m_Owner.GetSCR_AIGroup() != group)
+		{
+			unit.RecordFailure(now);
+			return;
+		}
+		agent = GetRestoreAgent(unit);
+		if (!attached || !agent || agent.GetParentGroup() != group)
 		{
 			unit.RecordFailure(now);
 			return;
@@ -445,23 +543,66 @@ class IA_DynamicAIGroupCache
 		group.ActivateAI();
 	}
 
+	protected AIAgent GetRestoreAgent(IA_DynamicAIUnit unit)
+	{
+		if (!unit.m_Entity)
+			return null;
+		AIControlComponent control = AIControlComponent.Cast(unit.m_Entity.FindComponent(AIControlComponent));
+		if (control)
+			return control.GetControlAIAgent();
+		return null;
+	}
+
+	protected bool CanContinueAttachment(IA_DynamicAIUnit unit, PlayerManager manager)
+	{
+		if (!IsWaking() || !IsTransactionLive() || !unit.m_Entity || unit.m_bRestored)
+			return false;
+		ChimeraCharacter pawn = ChimeraCharacter.Cast(unit.m_Entity);
+		if (pawn && pawn.GetCharacterController() && pawn.GetCharacterController().GetLifeState() == ECharacterLifeState.DEAD)
+		{
+			unit.m_bDead = true;
+			unit.m_bRestored = true;
+			return false;
+		}
+		if (manager && manager.GetPlayerIdFromControlledEntity(unit.m_Entity) > 0)
+		{
+			unit.m_bRestored = true;
+			return false;
+		}
+		return true;
+	}
+
+	protected void DeletePendingEntity(IEntity entity)
+	{
+		if (!entity || !GetGame())
+			return;
+		PlayerManager manager = GetGame().GetPlayerManager();
+		if (manager && manager.GetPlayerIdFromControlledEntity(entity) <= 0)
+			RplComponent.DeleteRplEntity(entity, false);
+	}
+
 	void Retire()
 	{
-		if (m_bCached)
+		if (m_bFinished)
+			return;
+		bool wasCached = m_bCached;
+		// Latch retirement and detach before the first native callback. Keep the
+		// detached records alive while recursive notifications see an empty cache.
+		m_bCached = false;
+		m_bWaking = false;
+		m_bUrgentWake = false;
+		m_bFinished = true;
+		ref array<ref IA_DynamicAIUnit> retiredUnits = m_aUnits;
+		m_aUnits = new array<ref IA_DynamicAIUnit>();
+		if (wasCached)
 		{
-			foreach (IA_DynamicAIUnit unit : m_aUnits)
+			foreach (IA_DynamicAIUnit unit : retiredUnits)
 			{
 				// Attached/live soldiers belong to ordinary objective cleanup.
 				if (unit.m_bRestored || !unit.m_Entity)
 					continue;
-				PlayerManager manager = GetGame().GetPlayerManager();
-				if (manager && manager.GetPlayerIdFromControlledEntity(unit.m_Entity) <= 0)
-					RplComponent.DeleteRplEntity(unit.m_Entity, false);
+				DeletePendingEntity(unit.m_Entity);
 			}
 		}
-		m_bCached = false;
-		m_bWaking = false;
-		m_bFinished = true;
-		m_aUnits.Clear();
 	}
 }

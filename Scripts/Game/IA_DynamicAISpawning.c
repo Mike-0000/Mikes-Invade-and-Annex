@@ -8,11 +8,21 @@ class IA_DynamicAISpawning
 	static const int SCAN_INTERVAL_MS = 1000;
 	static const int TICK_INTERVAL_MS = 100;
 	static const int RESTORE_ATTEMPTS_PER_TICK = 4;
-	static const int RESTORE_WORK_MS = 4;
+	static const int WORK_BUDGET_MS = 4;
+	static const int SCAN_WORK_MS = 2;
+	static const int CACHE_SOLDIERS_PER_TICK = 8;
+	static const int CACHE_AGING_MS = 2000;
+	static const int WAKE_AGING_MS = 5000;
 	protected static ref array<IA_DynamicAIGroupCache> s_aGroups = {};
+	protected static ref IA_DynamicAIWorkQueue s_Work = new IA_DynamicAIWorkQueue();
 	protected static bool s_bRunning;
 	protected static int s_iNextScanMs;
-	protected static int s_iRestoreCursor;
+	protected static int s_iNextWakeScanMs;
+	protected static int s_iScanCursor;
+	protected static int s_iScanRemaining;
+	protected static int s_iScanQuota;
+	protected static int s_iScanMaxMs;
+	protected static int s_iWakeScanMaxMs;
 	protected static int s_iNextDiagnosticMs;
 
 	static bool IsEnabled()
@@ -38,9 +48,14 @@ class IA_DynamicAISpawning
 			return;
 		GetGame().GetCallqueue().Remove(Tick);
 		s_aGroups.Clear();
+		s_Work.Clear();
 		s_bRunning = false;
 		s_iNextScanMs = 0;
-		s_iRestoreCursor = 0;
+		s_iNextWakeScanMs = 0;
+		s_iScanCursor = 0;
+		s_iScanRemaining = 0;
+		s_iScanMaxMs = 0;
+		s_iWakeScanMaxMs = 0;
 		s_iNextDiagnosticMs = 0;
 	}
 
@@ -49,7 +64,10 @@ class IA_DynamicAISpawning
 		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
 		{
 			if (cache && cache.GetOwner() && cache.GetOwner().GetDynamicAIOwner() == area)
+			{
+				s_Work.Forget(cache);
 				cache.Retire();
+			}
 		}
 	}
 
@@ -59,20 +77,33 @@ class IA_DynamicAISpawning
 			return;
 		s_bRunning = true;
 		s_iNextScanMs = 0;
+		s_iNextWakeScanMs = 0;
+		s_Work.BeginReportWindow(System.GetTickCount());
+		s_iNextDiagnosticMs = System.GetTickCount() + 30000;
 		GetGame().GetCallqueue().CallLater(Tick, TICK_INTERVAL_MS, true);
+	}
+
+	static void EnqueueWake(IA_DynamicAIGroupCache cache)
+	{
+		if (!Replication.IsServer())
+			return;
+		s_Work.EnqueueWake(cache);
+		Start();
 	}
 
 	static void OnSettingsChanged()
 	{
 		if (!Replication.IsServer())
 			return;
+		bool enabled = IsEnabled();
+		s_Work.ClearCacheWork();
 		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
 		{
 			if (!cache)
 				continue;
 			cache.ResetQuietPeriod();
-			if (!IsEnabled())
-				cache.RequestWake();
+			if (!enabled)
+				cache.RequestWake(false);
 		}
 		if (!s_aGroups.IsEmpty())
 			Start();
@@ -112,63 +143,33 @@ class IA_DynamicAISpawning
 			return;
 		int now = System.GetTickCount();
 		bool enabled = IsEnabled();
-		if (now >= s_iNextScanMs)
+		ref array<vector> players = {};
+		// One fresh player sample per worker invocation, including the commit tick.
+		IA_SpawnPlacement.CollectPlayerPositions(players);
+		if (now >= s_iNextWakeScanMs)
 		{
-			s_iNextScanMs = now + SCAN_INTERVAL_MS;
-			ref array<vector> players = {};
-			IA_SpawnPlacement.CollectPlayerPositions(players);
-			bool cachedThisScan;
-			for (int i = s_aGroups.Count() - 1; i >= 0; i--)
-			{
-				IA_DynamicAIGroupCache cache = s_aGroups[i];
-				if (!cache)
-				{
-					s_aGroups.Remove(i);
-					continue;
-				}
-				if (!cache.IsOwnerLive())
-					cache.Retire();
-				if (cache.IsFinished())
-				{
-					s_aGroups.Remove(i);
-					continue;
-				}
-				if (cache.IsCached())
-					cache.CheckWake(players, enabled);
-				else if (enabled)
-				{
-					if (cache.TryCache(players, now, !cachedThisScan))
-						cachedThisScan = true;
-				}
-			}
+			s_iNextWakeScanMs = now + SCAN_INTERVAL_MS;
+			CheckWakes(players, enabled);
 		}
+		ScanSlice(players, enabled, now);
+		s_Work.Service(players, now, enabled);
 
 		if (IA_Log.IsDebugEnabled())
 		{
-			if (enabled && now >= s_iNextDiagnosticMs)
+			if (now >= s_iNextDiagnosticMs)
 			{
 				s_iNextDiagnosticMs = now + 30000;
 				ReportCoverage();
+				s_Work.Report(now, s_iScanMaxMs);
+				Print(string.Format("[IA][DynamicAI] Wake census maxMs=%1. Cached-position checks run independently of live eligibility slices.", s_iWakeScanMaxMs), LogLevel.NORMAL);
+				s_iScanMaxMs = 0;
+				s_iWakeScanMaxMs = 0;
 			}
 		}
 
-		// Shared work limit, not a population cap. Every queued group gets turns.
-		int total = s_aGroups.Count();
-		int attempts;
-		int startMs = System.GetTickCount();
-		for (int inspected = 0; inspected < total && attempts < RESTORE_ATTEMPTS_PER_TICK; inspected++)
-		{
-			if (s_iRestoreCursor >= total)
-				s_iRestoreCursor = 0;
-			IA_DynamicAIGroupCache pending = s_aGroups[s_iRestoreCursor];
-			s_iRestoreCursor++;
-			if (pending && pending.RestoreNext(now))
-				attempts++;
-			if (System.GetTickCount() - startMs >= RESTORE_WORK_MS)
-				break;
-		}
-
-		if (enabled && total > 0)
+		if (enabled && !s_aGroups.IsEmpty())
+			return;
+		if (s_Work.GetWakeCount() > 0)
 			return;
 		foreach (IA_DynamicAIGroupCache remaining : s_aGroups)
 		{
@@ -177,6 +178,67 @@ class IA_DynamicAISpawning
 		}
 		GetGame().GetCallqueue().Remove(Tick);
 		s_bRunning = false;
+	}
+
+	protected static void CheckWakes(array<vector> players, bool enabled)
+	{
+		int started = System.GetTickCount();
+		// Only saved positions: no live components, placement checks or snapshots.
+		// This census cannot sit behind a slowly progressing live eligibility scan.
+		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
+		{
+			if (!cache || !cache.IsCached() || !cache.IsOwnerLive())
+				continue;
+			cache.CheckWake(players, enabled);
+			s_Work.EnqueueWake(cache);
+		}
+		if (IA_Log.IsDebugEnabled())
+			s_iWakeScanMaxMs = Math.Max(s_iWakeScanMaxMs, System.GetTickCount() - started);
+	}
+
+	protected static void ScanSlice(array<vector> players, bool enabled, int now)
+	{
+		if (s_iScanRemaining == 0 && now >= s_iNextScanMs)
+		{
+			s_iNextScanMs = now + SCAN_INTERVAL_MS;
+			s_iScanCursor = 0;
+			s_iScanRemaining = s_aGroups.Count();
+			// Spread a nominal one-second census over ten ticks. Heavy individual
+			// groups may exceed a slice; continue next tick instead of rescanning.
+			s_iScanQuota = Math.Max(1, Math.Ceil(s_iScanRemaining / 10.0));
+		}
+		int started = System.GetTickCount();
+		for (int inspected = 0; inspected < s_iScanQuota && s_iScanRemaining > 0 && !s_aGroups.IsEmpty(); inspected++)
+		{
+			if (s_iScanCursor >= s_aGroups.Count())
+				s_iScanCursor = 0;
+			ref IA_DynamicAIGroupCache cache = s_aGroups[s_iScanCursor];
+			s_iScanRemaining--;
+			if (cache && !cache.IsOwnerLive())
+				cache.Retire();
+			if (!cache || cache.IsFinished())
+			{
+				s_Work.Forget(cache);
+				s_aGroups.Remove(s_iScanCursor);
+			}
+			else
+			{
+				s_iScanCursor++;
+				if (!cache.IsCached() && enabled)
+				{
+					if (cache.TryCache(players, now, false))
+						s_Work.EnqueueCache(cache, now);
+					else
+						s_Work.CancelCache(cache);
+				}
+			}
+			if (System.GetTickCount() - started >= SCAN_WORK_MS)
+				break;
+		}
+		if (s_aGroups.IsEmpty())
+			s_iScanRemaining = 0;
+		if (IA_Log.IsDebugEnabled())
+			s_iScanMaxMs = Math.Max(s_iScanMaxMs, System.GetTickCount() - started);
 	}
 
 	protected static void ReportCoverage()

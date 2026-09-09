@@ -52,6 +52,7 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		TestDepartureTimeline();
 		TestCombatTimeline();
 		TestCycleResetTimeline();
+		TestWorkQueue();
 		m_iFailures += IA_AiGroup.RunDynamicAIGroupRegression();
 
 		Print(string.Format("[IA][DynamicAISpawningConfigTest] failures=%1", m_iFailures), LogLevel.NORMAL);
@@ -98,6 +99,254 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(!gate.CanCache(false, 2300000, 0, 1700000500), "settings reset cannot inherit elapsed time from the previous cycle");
 		Check(!gate.CanCache(false, 2359999, 0, 1700000559), "settings reset preserves the new quiet-period boundary");
 		Check(gate.CanCache(false, 2360000, 0, 1700000560), "settings reset still permits later recaching");
+	}
+
+	protected void TestWorkQueue()
+	{
+		int failuresBefore = m_iFailures;
+		TestQueueDeduplication();
+		TestSingleGroupThroughput();
+		TestWorkerTimeBudget();
+		TestWakeRoundRobin();
+		TestWakePriorityAndAging();
+		TestWakeRetryBackoff();
+		TestStaleCacheCandidate();
+		TestDisabledAndRetiredWork();
+		TestOversizedCacheFairness();
+		TestCacheFairnessCadence();
+		TestCacheRetirementAndNullCasualty();
+		Print(string.Format("[IA][DynamicAIWorkQueueTest] failures=%1", m_iFailures - failuresBefore), LogLevel.NORMAL);
+	}
+
+	protected void TestQueueDeduplication()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture candidate = new IA_DynamicAIWorkCacheFixture();
+		candidate.ConfigureCandidate(queue, 3);
+		queue.EnqueueCache(candidate, 1000);
+		queue.EnqueueCache(candidate, 2000);
+		Check(queue.GetReadyCount() == 1, "cache requests deduplicate");
+		Check(queue.GetOldestCacheAge(2500) == 1500, "duplicate scans preserve the original cache request age");
+		ref IA_DynamicAIWorkCacheFixture second = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture third = new IA_DynamicAIWorkCacheFixture();
+		second.ConfigureCandidate(queue, 2);
+		third.ConfigureCandidate(queue, 2);
+		queue.EnqueueCache(second, 2000);
+		queue.EnqueueCache(third, 3000);
+		queue.CancelCache(candidate);
+		Check(queue.GetOldestCacheAge(3500) == 1500, "cancelling the oldest of three candidates preserves FIFO age rather than swapping in the newest");
+		ref IA_DynamicAIWorkCacheFixture waking = new IA_DynamicAIWorkCacheFixture();
+		waking.ConfigureWake(queue, 8, false, 1000);
+		queue.EnqueueWake(waking);
+		queue.EnqueueWake(waking);
+		Check(queue.GetWakeCount() == 1 && waking.GetWakeRequestedMs() == 1000, "wake deduplication preserves the original request timestamp");
+		queue.Forget(candidate);
+		queue.Forget(second);
+		queue.Forget(third);
+		queue.Forget(waking);
+		Check(queue.GetReadyCount() == 0 && queue.GetWakeCount() == 0, "forgotten owners leave both queues");
+	}
+
+	protected void TestSingleGroupThroughput()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture waking = new IA_DynamicAIWorkCacheFixture();
+		waking.ConfigureWake(queue, 10, true, 1000);
+		queue.EnqueueWake(waking);
+		ref array<vector> players = {};
+		queue.Service(players, 1000, true);
+		Check(waking.m_iRestoredSoldiers == 4 && waking.GetUnrestoredCount() == 6, "one waking group can use all four attempt slots in a tick");
+		queue.Service(players, 1100, true);
+		Check(waking.m_iRestoredSoldiers == 8, "unfinished restoration continues on the next tick");
+		queue.Service(players, 1200, true);
+		Check(waking.m_iRestoredSoldiers == 10 && queue.GetWakeCount() == 0, "completed restoration is removed without extra spawn attempts");
+	}
+
+	protected void TestWorkerTimeBudget()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture waking = new IA_DynamicAIWorkCacheFixture();
+		waking.ConfigureWake(queue, 20, true, 1000);
+		waking.m_iRestoreCostMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+		queue.EnqueueWake(waking);
+		ref IA_DynamicAIWorkCacheFixture candidate = new IA_DynamicAIWorkCacheFixture();
+		candidate.ConfigureCandidate(queue, 2);
+		queue.EnqueueCache(candidate, 1000);
+		ref array<vector> players = {};
+		queue.Service(players, 1000, true);
+		Check(waking.m_iRestoredSoldiers == 1 && candidate.m_iCacheCalls == 0, "an operation reaching the elapsed budget prevents additional spawns and cache work");
+		waking.m_iRestoreCostMs = IA_DynamicAISpawning.WORK_BUDGET_MS + 7;
+		queue.Service(players, 1100, true);
+		Check(waking.m_iRestoredSoldiers == 2 && candidate.m_iCacheCalls == 0, "one indivisible expensive spawn can overrun but no second operation follows");
+	}
+
+	protected void TestWakeRoundRobin()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref array<string> trace = {};
+		ref IA_DynamicAIWorkCacheFixture first = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture second = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture third = new IA_DynamicAIWorkCacheFixture();
+		first.ConfigureWake(queue, 10, true, 1000);
+		second.ConfigureWake(queue, 10, true, 1000);
+		third.ConfigureWake(queue, 10, true, 1000);
+		first.m_aTrace = trace;
+		second.m_aTrace = trace;
+		third.m_aTrace = trace;
+		first.m_sLabel = "A";
+		second.m_sLabel = "B";
+		third.m_sLabel = "C";
+		queue.EnqueueWake(first);
+		queue.EnqueueWake(second);
+		queue.EnqueueWake(third);
+		ref array<vector> players = {};
+		queue.Service(players, 1000, true);
+		Check(trace.Count() == 4 && trace[0] == "A" && trace[1] == "B" && trace[2] == "C" && trace[3] == "A", "three equally urgent groups receive round-robin attempts without starving the middle group");
+		queue.Service(players, 1100, true);
+		Check(trace.Count() == 8 && trace[4] == "B" && trace[5] == "C" && trace[6] == "A" && trace[7] == "B", "round-robin position survives the worker tick boundary");
+	}
+
+	protected void TestWakePriorityAndAging()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture background = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture urgent = new IA_DynamicAIWorkCacheFixture();
+		background.ConfigureWake(queue, 20, false, 1000);
+		urgent.ConfigureWake(queue, 100, true, 1000);
+		background.m_iRestoreCostMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+		urgent.m_iRestoreCostMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+		queue.EnqueueWake(background);
+		queue.EnqueueWake(urgent);
+		ref array<vector> players = {};
+		for (int now = 1000; now < 6000; now += 100)
+		{
+			queue.EnqueueWake(background);
+			queue.Service(players, now, true);
+		}
+		Check(urgent.m_iRestoredSoldiers == 50 && background.m_iRestoredSoldiers == 0, "urgent work wins while background requests are younger than five seconds");
+		queue.Service(players, 6000, true);
+		Check(background.m_iRestoredSoldiers == 1, "a five-second-old background request progresses despite only one slow attempt fitting per tick");
+		queue.Service(players, 6100, true);
+		queue.Service(players, 6200, true);
+		Check(background.m_iRestoredSoldiers == 2 && urgent.m_iRestoredSoldiers == 51, "aged background and urgent work continue to alternate without resetting request age");
+	}
+
+	protected void TestWakeRetryBackoff()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture urgent = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture background = new IA_DynamicAIWorkCacheFixture();
+		urgent.ConfigureWake(queue, 2, true, 1000);
+		urgent.m_bRestoreBackoff = true;
+		background.ConfigureWake(queue, 8, false, 1000);
+		queue.EnqueueWake(urgent);
+		queue.EnqueueWake(background);
+		ref array<vector> players = {};
+		queue.Service(players, 1000, true);
+		Check(urgent.m_iRestoreCalls == 1 && urgent.m_iRestoredSoldiers == 0 && background.m_iRestoredSoldiers == 4, "an urgent request in retry backoff does not consume attempts or hide ready background work");
+		Check(queue.GetWakeCount() == 2, "retry backoff retains the unresolved urgent request");
+		urgent.m_bRestoreBackoff = false;
+		queue.Service(players, 1100, true);
+		Check(urgent.m_iRestoredSoldiers == 2 && background.m_iRestoredSoldiers == 6, "an urgent request resumes first after its retry becomes available");
+	}
+
+	protected void TestStaleCacheCandidate()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture candidate = new IA_DynamicAIWorkCacheFixture();
+		candidate.ConfigureCandidate(queue, 5);
+		queue.EnqueueCache(candidate, 1000);
+		// Eligibility changes after scanning: the production queue must ask again.
+		candidate.m_bCaptureAllowed = false;
+		ref array<vector> players = {"100 20 100"};
+		queue.Service(players, 1100, true);
+		Check(candidate.m_iCacheCalls == 1 && !candidate.IsCached() && candidate.m_iLastPlayerCount == 1, "stale cache candidates are revalidated with current players instead of deleted from old eligibility");
+		Check(queue.GetReadyCount() == 0, "a rejected transaction returns to normal eligibility scanning");
+		candidate.m_bCaptureAllowed = true;
+		queue.EnqueueCache(candidate, 1200);
+		candidate.m_iCandidateSoldiers = 3;
+		queue.Service(players, 1300, true);
+		Check(candidate.m_iCapturedSoldiers == 3, "capture consumes the current survivor roster rather than its earlier scan count");
+	}
+
+	protected void TestDisabledAndRetiredWork()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture candidate = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture waking = new IA_DynamicAIWorkCacheFixture();
+		candidate.ConfigureCandidate(queue, 3);
+		waking.ConfigureWake(queue, 8, false, 1000);
+		queue.EnqueueCache(candidate, 1000);
+		queue.EnqueueWake(waking);
+		ref array<vector> players = {};
+		queue.Service(players, 1000, false);
+		Check(queue.GetReadyCount() == 0 && candidate.m_iCacheCalls == 0 && waking.m_iRestoredSoldiers == 4, "turning OFF cancels pending cache work while existing soldiers keep restoring");
+		waking.m_bOwnerLive = false;
+		candidate.m_bOwnerLive = false;
+		queue.EnqueueCache(candidate, 1100);
+		queue.Service(players, 1100, true);
+		Check(waking.m_iRestoredSoldiers == 4 && waking.m_iRetireCalls == 1, "retired wake owners are removed before another spawn attempt");
+		Check(candidate.m_iCacheCalls == 0 && candidate.m_iRetireCalls == 1, "retired cache owners are removed before capture");
+		Check(queue.GetReadyCount() == 0 && queue.GetWakeCount() == 0, "retired owners leave no pending work");
+	}
+
+	protected void TestOversizedCacheFairness()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture large = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture waking = new IA_DynamicAIWorkCacheFixture();
+		large.ConfigureCandidate(queue, IA_DynamicAISpawning.CACHE_SOLDIERS_PER_TICK + 1);
+		waking.ConfigureWake(queue, 100, true, 1000);
+		queue.EnqueueCache(large, 1000);
+		queue.EnqueueWake(waking);
+		ref array<vector> players = {};
+		queue.Service(players, 1000, true);
+		Check(!large.IsCached() && waking.m_iRestoredSoldiers == 4, "oversized cache work cannot be appended after restore work");
+		queue.Service(players, 2999, true);
+		Check(!large.IsCached() && waking.m_iRestoredSoldiers == 8, "continuous waking can defer an oversized group only until its aging boundary");
+		queue.Service(players, 3000, true);
+		Check(large.IsCached() && large.m_iCapturedSoldiers == IA_DynamicAISpawning.CACHE_SOLDIERS_PER_TICK + 1 && waking.m_iRestoredSoldiers == 8, "an aged oversized squad gets one exclusive atomic transaction without starving indefinitely");
+		queue.Service(players, 3100, true);
+		Check(waking.m_iRestoredSoldiers == 12, "urgent waking resumes on the tick following oversized cache work");
+	}
+
+	protected void TestCacheFairnessCadence()
+	{
+		ref IA_DynamicAIWorkQueueFixture queue = new IA_DynamicAIWorkQueueFixture();
+		ref IA_DynamicAIWorkCacheFixture first = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture second = new IA_DynamicAIWorkCacheFixture();
+		ref IA_DynamicAIWorkCacheFixture waking = new IA_DynamicAIWorkCacheFixture();
+		first.ConfigureCandidate(queue, 2);
+		second.ConfigureCandidate(queue, 2);
+		first.m_iCacheCostMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+		second.m_iCacheCostMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+		waking.ConfigureWake(queue, 100, true, 1000);
+		waking.m_iRestoreCostMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+		queue.EnqueueCache(first, 1000);
+		queue.EnqueueCache(second, 1000);
+		queue.EnqueueWake(waking);
+		ref array<vector> players = {};
+		queue.Service(players, 3000, true);
+		Check(first.IsCached() && !second.IsCached() && waking.m_iRestoredSoldiers == 0, "an aged cache candidate receives a reserved turn under a saturated wake budget");
+		queue.Service(players, 3999, true);
+		Check(!second.IsCached() && waking.m_iRestoredSoldiers == 1, "cache fairness cannot reserve another tick before one second passes");
+		queue.Service(players, 4000, true);
+		Check(second.IsCached() && waking.m_iRestoredSoldiers == 1, "another aged cache candidate receives its turn at the one-second boundary");
+	}
+
+	protected void TestCacheRetirementAndNullCasualty()
+	{
+		ref IA_DynamicAIGroupCacheFixture cache = new IA_DynamicAIGroupCacheFixture();
+		ref IA_DynamicAIUnit first = new IA_DynamicAIUnit();
+		ref IA_DynamicAIUnit second = new IA_DynamicAIUnit();
+		cache.AddPendingForTest(first);
+		cache.AddPendingForTest(second);
+		cache.OnUnitKilled(null);
+		Check(cache.GetUnrestoredCount() == 2 && cache.GetLogicalAliveCount() == 2 && !first.m_bDead && !second.m_bDead, "a null casualty callback cannot consume pending soldiers whose entity references are also null");
+		cache.Retire();
+		Check(cache.IsFinished() && !cache.IsCached() && !cache.IsWaking() && !cache.HasUrgentWake() && cache.GetUnrestoredCount() == 0 && cache.GetLogicalAliveCount() == 0, "retirement latches finished state and detaches the synthetic pending roster");
+		cache.Retire();
+		Check(cache.IsFinished() && !cache.IsCached() && cache.GetUnrestoredCount() == 0, "repeated retirement is idempotent");
 	}
 
 	protected void Check(bool passed, string description)
