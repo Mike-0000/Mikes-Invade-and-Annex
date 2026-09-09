@@ -10,6 +10,8 @@ class IA_AdminOverrides
 
 	float m_fCivilianCountMultiplier = 1.0;
 	float m_fAIScaleMultiplier = 1.0;
+	bool m_bHasDynamicAISpawningOverride;
+	bool m_bDynamicAISpawningEnabled = false;
 	bool m_bDisableHQHelipads;
 	bool m_bDisableHQGroundVehicles;
 	int m_iArtilleryCooldown = 300;
@@ -149,6 +151,8 @@ class IA_AdminOverrides
 	{
 		m_fCivilianCountMultiplier = config.m_fCivilianCountMultiplier;
 		m_fAIScaleMultiplier = config.m_fAIScaleMultiplier;
+		m_bHasDynamicAISpawningOverride = true;
+		m_bDynamicAISpawningEnabled = config.m_bDynamicAISpawningEnabled;
 		m_bDisableHQHelipads = config.m_bDisableHQHelipads;
 		m_bDisableHQGroundVehicles = config.m_bDisableHQGroundVehicles;
 		m_iArtilleryCooldown = config.m_iArtilleryCooldown;
@@ -221,6 +225,8 @@ class IA_AdminOverrides
 	{
 		config.m_fCivilianCountMultiplier = m_fCivilianCountMultiplier;
 		config.m_fAIScaleMultiplier = m_fAIScaleMultiplier;
+		if (m_bHasDynamicAISpawningOverride)
+			config.m_bDynamicAISpawningEnabled = m_bDynamicAISpawningEnabled;
 		config.m_bDisableHQHelipads = m_bDisableHQHelipads;
 		config.m_bDisableHQGroundVehicles = m_bDisableHQGroundVehicles;
 		config.m_iArtilleryCooldown = m_iArtilleryCooldown;
@@ -350,6 +356,10 @@ class IA_AdminOverrides
 		json = json + "\"v\":2";
 		json = json + ",\"civCount\":" + m_fCivilianCountMultiplier.ToString();
 		json = json + ",\"aiScale\":" + m_fAIScaleMultiplier.ToString();
+		int dynamicAISpawningI = 0;
+		if (m_bDynamicAISpawningEnabled)
+			dynamicAISpawningI = 1;
+		json = json + ",\"dynamicAISpawning\":" + dynamicAISpawningI.ToString();
 		json = json + ",\"disableHeli\":" + heliI.ToString();
 		json = json + ",\"disableGround\":" + groundI.ToString();
 		json = json + ",\"artyCooldown\":" + m_iArtilleryCooldown.ToString();
@@ -441,6 +451,16 @@ class IA_AdminOverrides
 			m_fCivilianCountMultiplier = ExtractValue(json, "civCount").ToFloat();
 		if (HasKey(json, "aiScale"))
 			m_fAIScaleMultiplier = ExtractValue(json, "aiScale").ToFloat();
+		m_bHasDynamicAISpawningOverride = false;
+		if (HasKey(json, "dynamicAISpawning"))
+		{
+			string dynamicAISpawningValue = ExtractValue(json, "dynamicAISpawning");
+			if (dynamicAISpawningValue == "0" || dynamicAISpawningValue == "1")
+			{
+				m_bHasDynamicAISpawningOverride = true;
+				m_bDynamicAISpawningEnabled = dynamicAISpawningValue == "1";
+			}
+		}
 		if (HasKey(json, "disableHeli"))
 			m_bDisableHQHelipads = ExtractValue(json, "disableHeli").ToInt() != 0;
 		if (HasKey(json, "disableGround"))

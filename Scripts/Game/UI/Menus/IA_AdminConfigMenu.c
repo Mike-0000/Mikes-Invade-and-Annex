@@ -31,6 +31,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 
 	protected ref MUI_NumericField m_AIField;
 	protected ref MUI_NumericField m_StaticAIField;
+	protected ref MUI_Toggle m_DynamicAISpawningToggle;
 	protected ref MUI_NumericField m_MilVehField;
 	protected ref MUI_Dropdown m_NormalSkillDrop;
 	protected ref MUI_Dropdown m_EliteSkillDrop;
@@ -173,6 +174,9 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageScaling.AddChild(m_AIField);
 		m_PageScaling.AddChild(m_StaticAIField);
 		m_PageScaling.AddChild(m_MilVehField);
+		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
+		m_PageScaling.AddChild(m_DynamicAISpawningToggle);
+		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Temporarily cache untouched stationary garrisons far from every player, then restore each soldier at its saved position as players approach. Each garrison is cached once and stays active after restoration. Turning this off restores all cached soldiers.");
 		m_Hints.AddHint(m_Tabs, "Settings pages", "Choose a tab to view a different group of settings. Help updates to explain the open tab.");
 		m_Hints.AddHint(m_AIField, "Enemy strength", "Changes how many enemy soldiers appear as the player count rises. 1 is normal, 0.5 is about half, and 2 is about double.");
 		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "Set this above 0 to ignore the player count and keep enemy numbers at a fixed level. Leave it at 0 for normal player scaling.");
@@ -1005,6 +1009,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_AIField.SetValue(cfg.m_fAIScaleMultiplier);
 		if (m_StaticAIField)
 			m_StaticAIField.SetValue(cfg.m_fStaticAIScaleOverride);
+		if (m_DynamicAISpawningToggle)
+			m_DynamicAISpawningToggle.SetChecked(cfg.m_bDynamicAISpawningEnabled);
 		if (m_MilVehField)
 			m_MilVehField.SetValue(cfg.m_fMilitaryVehicleCountMultiplier);
 		if (m_CivVehField)
@@ -1369,6 +1375,16 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		if (m_DynamicBaseSizeDrop)
 			basePack.m_iDynamicBaseSizeMode = m_DynamicBaseSizeDrop.GetIndex();
 		packed = packed + "|" + IA_Config.PackDynamicBaseExtras(basePack);
+
+		bool dynamicAISpawning = false;
+		if (live)
+			dynamicAISpawning = live.m_bDynamicAISpawningEnabled;
+		if (m_DynamicAISpawningToggle)
+			dynamicAISpawning = m_DynamicAISpawningToggle.IsChecked();
+		if (dynamicAISpawning)
+			packed = packed + "|1";
+		else
+			packed = packed + "|0";
 
 		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
 	}

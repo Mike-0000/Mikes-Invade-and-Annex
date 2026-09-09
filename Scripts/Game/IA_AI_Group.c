@@ -99,6 +99,8 @@ class IA_RoadSearchState
 class IA_AiGroup
 {
     private SCR_AIGroup m_group;
+    private ref IA_DynamicAIGroupCache m_DynamicAICache;
+    private IA_AreaInstance m_DynamicAIOwner;
     private bool        m_isSpawned = false;
     private bool        m_isCivilian = false;
     private IA_SquadType m_squadType;
@@ -1362,6 +1364,8 @@ class IA_AiGroup
 
     int GetAliveCount()
     {
+        if (IsDynamicAICached())
+            return m_DynamicAICache.GetLogicalAliveCount();
         if (!m_isSpawned)
         {
             if (m_isCivilian)
@@ -1576,6 +1580,8 @@ class IA_AiGroup
         }
 
         m_isSpawned = true; // Set spawned to true only after successful creation/validation of entities and group
+
+        TryRegisterDynamicAI();
 
         vector groundPos;
         if (m_initialPosition != vector.Zero) { 
@@ -1856,6 +1862,8 @@ class IA_AiGroup
 
     private void SetupDeathListener()
     {
+        if (IsDynamicAICached())
+            return;
 
               
         if (!m_group)
@@ -2953,6 +2961,8 @@ class IA_AiGroup
 
     private void OnMemberDeath(notnull SCR_CharacterControllerComponent memberCtrl, IEntity killerEntity, Instigator killer)
     {
+        if (IsDynamicAICached())
+            m_DynamicAICache.OnUnitKilled(memberCtrl.GetOwner());
 
         IEntity victimEntity = memberCtrl.GetOwner();
         vector deathPosition = victimEntity.GetOrigin();
@@ -3087,6 +3097,8 @@ class IA_AiGroup
     // Evaluate and potentially change tactical state based on situation
     void EvaluateTacticalState()
     {
+        if (IsDynamicAICached())
+            return;
         if (HasStaticGunAssignment())
             return;
         if (m_isMortarCrew)
@@ -3600,6 +3612,8 @@ class IA_AiGroup
     // Stop deferred creation without deleting soldiers who are still near players.
     void CancelPendingUnitSpawns()
     {
+        if (m_DynamicAICache)
+            m_DynamicAICache.Retire();
         m_bSpawnAborted = true;
         m_pendingUnitsToSpawn = 0;
         ScriptCallQueue queue = GetGame().GetCallqueue();
@@ -3885,6 +3899,8 @@ class IA_AiGroup
     // Make sure CheckDangerEvents is defined as a public method
     void CheckDangerEvents()
     {
+        if (IsDynamicAICached() && !m_DynamicAICache.IsWaking())
+            return;
         // Throttle the main check logic per group
         int currentTime_check = GetGame().GetWorld().GetWorldTime();
         if (currentTime_check - m_lastAgentEventCheckTime < AGENT_EVENT_CHECK_INTERVAL_MS)
@@ -4018,6 +4034,9 @@ class IA_AiGroup
     void EvaluateGroupState()
     {
         m_isStateEvaluationScheduled = false;
+
+        if (IsDynamicAICached())
+            return;
         
         if (!IsSpawned() || !m_group)
             return;
@@ -4110,6 +4129,7 @@ class IA_AiGroup
         m_holdRadius = radius;
         m_bHoldAfterEntry = false;
         m_HoldBuilding = null;
+        TryRegisterDynamicAI();
     }
 
     bool IsBuildingGarrison()
@@ -4136,6 +4156,8 @@ class IA_AiGroup
 
     protected void TickHoldMarch()
     {
+        if (IsDynamicAICached())
+            return;
         if (!IsBuildingGarrison() || m_bSpawnAborted || !m_group)
             return;
         if (m_holdPost == vector.Zero)
@@ -5987,5 +6009,102 @@ class IA_AiGroup
 	{
 		m_owningAreaInstance = owner;
 	}
+
+    bool IsDynamicAICached()
+    {
+        return m_DynamicAICache && m_DynamicAICache.IsCached();
+    }
+
+    bool IsDynamicAIOwnerLive()
+    {
+        return m_isSpawned && !m_bSpawnAborted && m_group && m_DynamicAIOwner && !m_DynamicAIOwner.IsShutDown();
+    }
+
+    void SetDynamicAIOwner(IA_AreaInstance owner)
+    {
+        m_DynamicAIOwner = owner;
+        TryRegisterDynamicAI();
+    }
+
+    IA_AreaInstance GetDynamicAIOwner()
+    {
+        return m_DynamicAIOwner;
+    }
+
+    protected void TryRegisterDynamicAI()
+    {
+        // Registration retains no soldier entities and is inert while disabled.
+        if (!Replication.IsServer() || !m_isHoldingPost || !IsDynamicAIOwnerLive() || m_DynamicAICache)
+            return;
+        m_DynamicAICache = new IA_DynamicAIGroupCache();
+        m_DynamicAICache.Init(this);
+        IA_DynamicAISpawning.Register(m_DynamicAICache);
+    }
+
+    bool IsDynamicAICacheReady()
+    {
+        if (!IsDynamicAIOwnerLive() || !m_isHoldingPost || m_isCivilian || m_isMortarCrew || HasStaticGunAssignment())
+            return false;
+        if (m_HVTGroup || IsObjectiveUnit() || m_bEliteProfile || m_isVehicleCrewGroup || m_isVehiclePassengerGroup)
+            return false;
+        if (m_referencedEntity || m_isDriving || m_pendingSeatTeleport || m_bAirborneDrop || m_bInboundSimPinned)
+            return false;
+        if (m_isDefendWaveGroup || m_isInDefendMode || m_bSweepPatrol || m_typedClearScheduled || HasPendingUnitSpawns())
+            return false;
+        if (IsBuildingGarrison() && !m_bHoldEntered)
+            return false;
+        return m_unitsSpawnedCount == m_initialUnitCount && m_group.GetAgentsCount() == m_initialUnitCount;
+    }
+
+    void SuspendForDynamicAI()
+    {
+        GetGame().GetCallqueue().Remove(this.EvaluateGroupState);
+        GetGame().GetCallqueue().Remove(this.SetupDeathListener);
+        GetGame().GetCallqueue().Remove(this.OnHoldMarchTick);
+        m_isStateEvaluationScheduled = false;
+        m_bHoldMarchScheduled = false;
+        array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            if (agent)
+            {
+                SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
+                if (pawn)
+                {
+                    SCR_CharacterControllerComponent controller = SCR_CharacterControllerComponent.Cast(pawn.GetCharacterController());
+                    if (controller)
+                        controller.GetOnPlayerDeathWithParam().Remove(OnMemberDeath);
+                }
+                agent.DeactivateAI();
+            }
+        }
+        m_group.DeactivateAI();
+    }
+
+    void SetupDynamicAIUnit(IEntity entity)
+    {
+        SetupDeathListenerForUnit(entity);
+        GetGame().GetCallqueue().CallLater(ApplyCombatProfile, 2000, false);
+    }
+
+    void ResumeAfterDynamicAI()
+    {
+        if (!IsDynamicAIOwnerLive())
+            return;
+        // The last soldier can be killed while other restoration work is pending.
+        if (m_group.GetPlayerAndAgentCount() == 0)
+        {
+            m_group.OnEmpty();
+            return;
+        }
+        m_group.ActivateAI();
+        ScheduleNextStateEvaluation();
+        SetupDeathListener();
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][DynamicAI] Restored garrison at %1.", GetOrigin()), LogLevel.NORMAL);
+        }
+    }
 
 };  

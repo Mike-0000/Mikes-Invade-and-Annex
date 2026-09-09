@@ -1,6 +1,6 @@
 # AI virtualization investigation
 
-2026-09-08. Design proposal based on the current experimental addon and local GameSources. No gameplay implementation or performance measurement accompanies this document. Distances and budgets below are experiments to tune, not proven settings.
+2026-09-08. Investigation and broader design proposal based on the experimental addon and local GameSources. An initial optional implementation now exists; see [Dynamic AI Spawning](dynamic-ai-spawning.md) for its actual scope, controls and live-test procedure. The visibility-aware restoration, indirect-fire protection and fuller persistence described below remain future design work, not implemented guarantees. No live performance or multiplayer validation is claimed here; proposed distances and budgets below are experiments to tune, not proven settings.
 
 ## Recommendation
 

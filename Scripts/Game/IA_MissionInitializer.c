@@ -50,6 +50,9 @@ class IA_MissionInitializer : GenericEntity
 	
 	[RplProp()]
 	float m_fAIScaleMultiplier_Rpl = 1.0;
+
+	[RplProp()]
+	bool m_bDynamicAISpawningEnabled_Rpl = false;
 	
 	[RplProp()]
 	bool m_bDisableHQHelipads_Rpl = false;
@@ -1328,6 +1331,7 @@ class IA_MissionInitializer : GenericEntity
 
 		// Set static instance for global access
 		s_instance = this;
+		IA_DynamicAISpawning.ResetForMission();
 
 		// Load config file if specified
 		LoadConfig();
@@ -2099,10 +2103,14 @@ class IA_MissionInitializer : GenericEntity
 				IA_Config.UnpackAiCombatExtras(m_config, tokens[23]);
 			if (tokens.Count() > 24)
 				IA_Config.UnpackDynamicBaseExtras(m_config, tokens[24]);
+			// Appended token: old or malformed payloads leave the current setting unchanged.
+			if (tokens.Count() > 25 && (tokens[25] == "0" || tokens[25] == "1"))
+				m_config.m_bDynamicAISpawningEnabled = tokens[25] == "1";
 		}
 
 		PushConfigToReplication();
 		ReapplyAiCombatProfiles();
+		IA_DynamicAISpawning.OnSettingsChanged();
 	}
 
 	protected void ReapplyAiCombatProfiles()
@@ -2123,6 +2131,7 @@ class IA_MissionInitializer : GenericEntity
 		{
 			m_fCivilianCountMultiplier_Rpl = m_config.m_fCivilianCountMultiplier;
 			m_fAIScaleMultiplier_Rpl = m_config.m_fAIScaleMultiplier;
+			m_bDynamicAISpawningEnabled_Rpl = m_config.m_bDynamicAISpawningEnabled;
 			m_bDisableHQHelipads_Rpl = m_config.m_bDisableHQHelipads;
 			m_bDisableHQGroundVehicles_Rpl = m_config.m_bDisableHQGroundVehicles;
 			m_iArtilleryCooldown_Rpl = m_config.m_iArtilleryCooldown;
@@ -3154,6 +3163,7 @@ class IA_MissionInitializer : GenericEntity
 				ref IA_Config clientConfig = new IA_Config();
 				clientConfig.m_fCivilianCountMultiplier = s_instance.m_fCivilianCountMultiplier_Rpl;
 				clientConfig.m_fAIScaleMultiplier = s_instance.m_fAIScaleMultiplier_Rpl;
+				clientConfig.m_bDynamicAISpawningEnabled = s_instance.m_bDynamicAISpawningEnabled_Rpl;
 				clientConfig.m_bDisableHQHelipads = s_instance.m_bDisableHQHelipads_Rpl;
 				clientConfig.m_bDisableHQGroundVehicles = s_instance.m_bDisableHQGroundVehicles_Rpl;
 				clientConfig.m_iArtilleryCooldown = s_instance.m_iArtilleryCooldown_Rpl;

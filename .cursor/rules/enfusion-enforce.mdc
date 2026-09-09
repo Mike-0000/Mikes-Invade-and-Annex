@@ -196,6 +196,7 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 
 ## AI / behavior trees
 
+- **`SCR_AIGroup.AddAIEntityToGroup` success does not prove membership in that group.** It activates the control agent, adds it only if `GetParentGroup()` is null, then returns true even when the agent already belongs to another group. Validate the resulting parent before counting a restored soldier as attached; preserve player ownership when repairing affiliation. Evidence: `Game/Entities/SCR_AIGroup.c:1920-1937` (source inspection).
 - **Group dormancy is not a per-soldier state snapshot.** In the local GameSources revision, `SCR_AIGroup.DespawnMembers()` retains aggregate alive/dead counts and deletes member entities; `SpawnMembers()` rebuilds prefab slots using group formation placement. Scenario Framework `SlotAI.DynamicDespawn()` also stores one `m_vPosition`, and `InitGroupComponents()` reforms agents around it. Exact individual positions, casualty identities, loadouts and combat state require a separate verified snapshot/restore path; do not infer that fidelity from the dynamic-spawn API names. Evidence: `Game/Entities/SCR_AIGroup.c:1657-1757,2777-2792,2864-2906`; `Game/ScenarioFramework/Components/SCR_ScenarioFrameworkSlotAI.c:91-126,323-362` (source inspection, not a live round-trip test).
 - **Native group dormancy still notifies empty-group listeners.** `SCR_AIGroup.OnEmpty()` invokes `Event_OnEmpty` before checking `IsDormant()`. Consumers must distinguish intentional virtualization from elimination before deleting members; the native dormant guard only prevents the later automatic group-entity deletion. Evidence: `Game/Entities/SCR_AIGroup.c:2442-2454` (source inspection).
 - **Defend waypoint fast init teleports soldiers to smart actions or turret seats.** Call `SCR_DefendWaypoint.SetFastInit(false)` for garrisons that must walk into position. `SCR_AIAllocateActionsForDefendActivity` reads `GetFastInit()` and passes it to `OccupySA` / `OccupyTurret`; false still reserves and messages the action so native movement handles entry. Evidence: `Game/AI/Group/SCR_DefendWaypoint.c`; `Game/AI/ScriptedNodes/Groups/SCR_AIAllocateActionsForDefendActivity.c:67,135-165`.
@@ -243,6 +244,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## In-game validation handoff
 
+- **Use `-wbModule=ResourceManager -plugin=ClassName -run` for a command-line Workbench regression.** Verify the plugin's own result marker and exit status; a successful Game module compilation alone does not prove the plugin ran. In this session the spaced plugin argument appeared in the OS command line but disappeared from the engine's parsed CLI, while the equals form executed the test. Evidence: Workbench `logs_2026-09-08_22-13-00` versus `logs_2026-09-08_22-19-54`, `[IA][DynamicAISpawningConfigTest] failures=0`.
 - **Stop and hand off to the user when the next required evidence needs an in-game test.** Finish bounded source, compiler, and suitable Workbench checks, then state what is implemented, what passed, what remains unverified, and the smallest concrete in-game test the user should run. Do not continue speculative edits, add increasingly elaborate preview probes, or repeat review/test cycles to substitute for live gameplay evidence. Resume the affected work after the user supplies results or explicitly authorizes further investigation. Clearly distinguish preview-world limitations from confirmed gameplay bugs; never claim live behavior is validated by compilation or asset previews.
 
 ## Safety
@@ -254,6 +256,8 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-09-08 — Workbench command-line regressions need a plugin result marker; equals-form module/plugin arguments executed a test that spaced plugin arguments left uninvoked.
+- 2026-09-08 — Native AddAIEntityToGroup returns true for an agent already parented to a different group; restoration must verify the resulting parent.
 - 2026-09-08 — Source inspection distinguishes count-only native group dormancy and Scenario Framework group-position restore from exact per-soldier snapshot fidelity; native dormancy still emits the empty-group event.
 - 2026-09-08 — Defend fast init directly teleports soldiers to allocated cover/turret positions; walking garrisons must explicitly disable it.
 - 2026-09-08 — A modded override's `super` reaches the original same-class implementation; waypoint exception guards must validate before delegation.

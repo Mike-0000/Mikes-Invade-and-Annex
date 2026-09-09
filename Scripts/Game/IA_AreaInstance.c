@@ -971,6 +971,7 @@ class IA_AreaInstance
         // Latch before OnHostAreaForceFinish. Ending a defend mission re-enters
         // ForceFinish on this same host while the first call is still open.
         m_bShutDown = true;
+        IA_DynamicAISpawning.RetireForArea(this);
         m_canSpawn = false;
         m_mortarCrewSetupDone = true;
         m_reinforcements = IA_ReinforcementState.Done;
@@ -1009,6 +1010,7 @@ class IA_AreaInstance
 
         if (group && m_military.Find(group) == -1) // Avoid duplicates
         {
+            group.SetDynamicAIOwner(this);
             m_military.Insert(group);
             // Optionally update strength immediately?
             // OnStrengthChange(m_strength + group.GetAliveCount());

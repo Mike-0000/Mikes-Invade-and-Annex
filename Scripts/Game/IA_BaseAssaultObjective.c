@@ -17,6 +17,7 @@ class IA_BaseAssaultObjective
 	protected bool m_bCaptureAwarded;
 	protected bool m_bDefenseStarted;
 	protected bool m_bResultSent;
+	protected bool m_bCaptureRosterReady = true;
 	protected ref map<string, int> m_CaptureLedger;
 	protected ref IA_DefendMission m_Defend;
 	protected IA_DynamicObjectiveDirector m_Director;
@@ -47,6 +48,7 @@ class IA_BaseAssaultObjective
 		m_bCaptureAwarded = false;
 		m_bDefenseStarted = false;
 		m_bResultSent = false;
+		m_bCaptureRosterReady = true;
 		m_Sampler = sampler;
 	}
 
@@ -201,6 +203,15 @@ class IA_BaseAssaultObjective
 		vector cap = m_Site.GetCapturePoint();
 		float radius = m_Site.GetCaptureRadius();
 		bool friendly = m_Sampler.HasLivingFriendlyInZone(cap, radius);
+		m_bCaptureRosterReady = true;
+		if (friendly)
+			m_bCaptureRosterReady = IA_DynamicAISpawning.EnsureReadyInRadius(cap, radius);
+		if (!m_bCaptureRosterReady)
+		{
+			// Missing cached defenders cannot grant seize time or capture credit.
+			PublishStatus(false);
+			return;
+		}
 		bool hostile = m_Sampler.HasHostileInZone(cap, radius);
 		if (friendly && !hostile)
 		{
@@ -349,7 +360,7 @@ class IA_BaseAssaultObjective
 			capPos = m_Site.GetCapturePoint();
 			capR = m_Site.GetCaptureRadius();
 			siteId = m_Site.GetSiteId().ToString();
-			if (m_ePhase == IA_BaseObjectivePhase.Seize && m_Sampler.HasHostileInZone(capPos, capR))
+			if (m_ePhase == IA_BaseObjectivePhase.Seize && (!m_bCaptureRosterReady || m_Sampler.HasHostileInZone(capPos, capR)))
 				reason = IA_BaseStatusReason.ClearCommand;
 		}
 
