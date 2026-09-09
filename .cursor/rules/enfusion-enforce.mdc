@@ -111,7 +111,7 @@ modded enum ChimeraMenuPreset
 ```
 
 - Always **`super`** unless the method is an intentional full replacement.
-- **`modded class` merges** into the original. Keep overrides tiny. Do not paste GameSources bodies.
+- **`modded class` merges** into the original. `super.Method()` calls the original implementation of that same class, not its original parent. Validate exception-prone inputs before delegating; a guard after `super` cannot prevent the original method's exception. Keep overrides tiny. Do not paste GameSources bodies. Evidence: `runtime:` `SCR_AIGetInNearestWaypointParameters` raised `Wrong class of provided Waypoint!` from the modded guard's initial `super` call (`logs_2026-09-08_19-42-41`, 20:03:24).
 - **`modded enum`** adds values. Do not re-list existing values.
 - Generated files (`Do not modify, this script is generated`) are bindings. Mod them only when there is no scripted `SCR_` wrapper.
 
@@ -251,6 +251,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-09-08 — A modded override's `super` reaches the original same-class implementation; waypoint exception guards must validate before delegation.
 - 2026-09-08 — A factionless GM map crashes on newly registered tasks because vanilla `OnTaskAdded` dereferences the local faction; initial GM task population already supports all factions.
 
 - 2026-09-08 — IA_Everon load exposed stale respawn delay placement and mission saving field; GameSources places the delay on `SCR_MenuSpawnLogic` and saving flags on `SCR_MissionHeader.m_eSaveTypes`.

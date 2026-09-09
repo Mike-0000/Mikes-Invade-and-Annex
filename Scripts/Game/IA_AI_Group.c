@@ -5295,83 +5295,19 @@ class IA_AiGroup
     }
     // --- END ADDED ---
 
-    // NEW PRIVATE HELPER METHOD
     private void TryFindAndSetAssignedArea()
     {
-        if (m_lastAssignedArea) // Already have an area, no need to search
-        {
-            // Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 already has m_lastAssignedArea: %2. Skipping search.", this, m_lastAssignedArea.ToString()), LogLevel.NORMAL);
+        if (m_lastAssignedArea)
             return;
-        }
 
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 attempting to find its area (m_lastAssignedArea is currently NULL).", 
-                this, m_initialPosition.ToString()), LogLevel.NORMAL);
-        }
+        // Objective and mortar markers can overlap an AO without owning an area.
+        IA_AreaInstance areaInstance = m_owningAreaInstance;
+        if (!areaInstance)
+            areaInstance = IA_Game.GetAreaForPosition(m_initialPosition);
 
-        IA_AreaMarker foundMarker = null;
-        array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
-        int markersSearchedCount = 0;
-        
-        if (allMarkers)
-            markersSearchedCount = allMarkers.Count();
-        else 
-            markersSearchedCount = -1; // Indicate null array if that happens
-
-        if (allMarkers && !allMarkers.IsEmpty())
-        {
-            if (IA_Log.IsDebugEnabled())
-            {
-                Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1: Found %2 total area markers to check.", this, markersSearchedCount), LogLevel.NORMAL);
-            }
-            foreach (IA_AreaMarker marker : allMarkers)
-            {
-                if (marker && marker.IsPositionInside(m_initialPosition))
-                {
-                    foundMarker = marker;
-                    if (IA_Log.IsDebugEnabled())
-                    {
-                        Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 found to be INSIDE marker %3 (Center: %4, Radius: %5)",
-                            this, m_initialPosition.ToString(), marker.ToString(), marker.GetOrigin().ToString(), marker.GetRadius()), LogLevel.NORMAL);
-                    }
-                    break;
-                }
-            }
-        }
-        else
-        {
-             Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1: IA_AreaMarker.GetAllMarkers() returned null or empty array. Count: %2", this, markersSearchedCount), LogLevel.WARNING);
-        }
-
-        if (foundMarker)
-        {
-            IA_Area areaToAssign;
-            foreach (IA_Area registeredArea : IA_Game.s_allAreas)
-            {
-                if (registeredArea && registeredArea.GetName() == foundMarker.GetAreaName())
-                {
-                    areaToAssign = registeredArea;
-                    break;
-                }
-            }
-            if (areaToAssign)
-            {
-                SetAssignedArea(areaToAssign); // This will use the updated SetAssignedArea with logging
-            }
-            else
-            {
-                Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Found marker %2, but its area is not registered.",
-                    this, foundMarker.ToString()), LogLevel.WARNING);
-            }
-        }
-        else if (IA_Log.IsDebugEnabled())
-        {
-            Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Could NOT find an area marker that its initial position %2 is inside. (Searched %3 markers)",
-                this, m_initialPosition.ToString(), markersSearchedCount), LogLevel.NORMAL);
-        }
+        if (areaInstance)
+            SetAssignedArea(areaInstance.GetArea());
     }
-    // END NEW PRIVATE HELPER METHOD
     //------------------------------------------------------------------------------------------------
 
     // Removed OnUnitAdded, OnAllVehicleGroupMembersSpawned, and OnAllHostileCiviliansSpawned callbacks

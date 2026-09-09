@@ -9,15 +9,17 @@ modded class SCR_AIGetInNearestWaypointParameters
 {
 	override ENodeResult EOnTaskSimulate(AIAgent owner, float dt)
 	{
-		if (ENodeResult.FAIL == super.EOnTaskSimulate(owner, dt))
+		IEntity waypointEntity;
+		if (!GetVariableIn(PORT_WAYPOINT_IN, waypointEntity))
+		{
+			AIGroup group = AIGroup.Cast(owner);
+			if (!group)
+				return ENodeResult.FAIL;
+			waypointEntity = group.GetCurrentWaypoint();
+		}
+		if (!SCR_BoardingTimedWaypoint.Cast(waypointEntity))
 			return ENodeResult.FAIL;
 
-		SCR_BoardingTimedWaypoint wp = SCR_BoardingTimedWaypoint.Cast(m_Waypoint);
-		if (!wp)
-			return ENodeResult.FAIL;
-
-		SetVariableOut(PORT_BOARDING_PARAMS, wp.GetAllowance());
-		SetVariableOut(PORT_WAYPOINT_HOLDING_TIME, wp.GetHoldingTime());
-		return ENodeResult.SUCCESS;
+		return super.EOnTaskSimulate(owner, dt);
 	}
 };
