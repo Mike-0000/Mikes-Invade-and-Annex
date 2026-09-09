@@ -5346,22 +5346,29 @@ class IA_AiGroup
 
         if (foundMarker)
         {
-            IA_Area areaToAssign = IA_Area.Cast(foundMarker.FindComponent(IA_Area));
+            IA_Area areaToAssign;
+            foreach (IA_Area registeredArea : IA_Game.s_allAreas)
+            {
+                if (registeredArea && registeredArea.GetName() == foundMarker.GetAreaName())
+                {
+                    areaToAssign = registeredArea;
+                    break;
+                }
+            }
             if (areaToAssign)
             {
                 SetAssignedArea(areaToAssign); // This will use the updated SetAssignedArea with logging
-                // Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 SUCCESS: Found marker %2 and IA_Area component %3. Area set.", this, foundMarker.ToString(), areaToAssign.ToString()), LogLevel.NORMAL);
             }
             else
             {
-                Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Found marker %2, but FAILED TO FIND/CAST IA_Area component on it.",
+                Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Found marker %2, but its area is not registered.",
                     this, foundMarker.ToString()), LogLevel.WARNING);
             }
         }
-        else
+        else if (IA_Log.IsDebugEnabled())
         {
             Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Could NOT find an area marker that its initial position %2 is inside. (Searched %3 markers)",
-                this, m_initialPosition.ToString(), markersSearchedCount), LogLevel.WARNING);
+                this, m_initialPosition.ToString(), markersSearchedCount), LogLevel.NORMAL);
         }
     }
     // END NEW PRIVATE HELPER METHOD

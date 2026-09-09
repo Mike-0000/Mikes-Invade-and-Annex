@@ -150,6 +150,9 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			case IA_VehicleSpawnType.MEDICAL_CAR:
 				vehicleArray = config.m_aMedicalCarOverridePrefabs;
 				break;
+			case IA_VehicleSpawnType.TRUCK_CONSTRUCTION:
+				// Construction trucks use the prefab's catalog labels; no config override exists.
+				return string.Empty;
 			default:
 				Print(string.Format("IA_VehicleRespawner %1: Unknown vehicle spawn type: %2", m_RespawnerOwnerEntity, m_eVehicleSpawnType), LogLevel.ERROR);
 				return string.Empty;

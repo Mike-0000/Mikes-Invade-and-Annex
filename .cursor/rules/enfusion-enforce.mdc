@@ -224,6 +224,8 @@ Gameplay is **server-authoritative**. Guard world mutation with `Replication.IsS
 
 ## UI (engine)
 
+- **`SCR_MapUIElementContainer.OnTaskAdded` assumes the local player has a faction.** A factionless Game Master can open the map, then crash when a later task is registered because `SGetLocalPlayerFaction()` is null. Preserve normal faction filtering when assigned; handle factionless editor icons without dereferencing a faction, consistent with `InitTaskMarkers` showing all GM tasks. Evidence: `Game/Map/ComponentsUI/SCR_MapUIElementContainer.c:387`; `runtime:` IA_Everon side-objective task creation in GM (`logs_2026-09-08_19-42-41`, 19:52:58).
+
 Enfusion has **no WebView**. Widgets are the compositor (Canvas, text, EditBox). Feature menus belong in the **consuming addon**, subclassing `MUI_MenuBase`. HUD: `MUI_HudHost` + pass-through overlay. Do not use `MenuWithEditorContext` on HUD. Native `MapWidget` stays in a layout; Mike's UI does not host it.
 
 - **`EditBoxWidget.ActivateWriteMode` keeps native widget focus.** A visible EditBox without `IGNORE_CURSOR` sits above the compositor and can eat every later click. `OnWriteModeLeave` from hiding / re-activating the same shared box can Detach a field you just attached. Shared IME bridges must `IGNORE_CURSOR`, switch fields without hiding, ignore stale leave for a frame, and re-`BeginEditing` when the already-focused field is clicked again. Evidence: `EditBoxWidget.c`; `WidgetFlags.IGNORE_CURSOR`; `runtime: HALO planner` second numeric field unclickable until menu reopen.
@@ -248,6 +250,8 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 - Do not leave `TODO` stubs. Implement or omit.
 
 ## Changelog
+
+- 2026-09-08 — A factionless GM map crashes on newly registered tasks because vanilla `OnTaskAdded` dereferences the local faction; initial GM task population already supports all factions.
 
 - 2026-09-08 — IA_Everon load exposed stale respawn delay placement and mission saving field; GameSources places the delay on `SCR_MenuSpawnLogic` and saving flags on `SCR_MissionHeader.m_eSaveTypes`.
 - 2026-09-08 — An implicit `IEntity` to `AIWaypoint` argument blocks the Game module; retaining the waypoint subtype also clears downstream vanilla missing-class diagnostics (`compiler: IA_AI_Group.c:5981`, successful Workbench reload at 19:45:12).
