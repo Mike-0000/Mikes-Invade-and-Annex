@@ -309,8 +309,8 @@ SCR_BaseGameMode : "{0F307326459A1395}Prefabs/MP/Modes/GameMode_Base.et" {
   }
   SCR_RespawnSystemComponent "{56B2B4793051E7C9}" {
    m_SpawnLogic SCR_MenuSpawnLogic "{654F7B2E826DD03D}" {
+    m_fDeployMenuOpenDelay 3
    }
-   m_fDeployMenuOpenDelay 3
   }
   SCR_SpawnProtectionComponent "{655A18587681A104}" {
    m_fProtectionTime 10

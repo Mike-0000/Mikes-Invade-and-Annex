@@ -1,5 +1,6 @@
 // DefendWaypoint.OnDeselected broadcasts GetOut directly, not through
 // SendDismountMessage. Drop that goal for a posted IA gunner.
+[BaseContainerProps()]
 modded class SCR_AIGoalReaction_GetOutVehicle
 {
 	override void PerformReaction(notnull SCR_AIUtilityComponent utility, SCR_AIMessageBase message)

@@ -110,7 +110,7 @@ class IA_AiGroup
     private float m_defendWaypointRadiusOverride = 0;
     private ref array<IEntity> m_assignedMortars = new array<IEntity>();
     private ref array<AIAgent> m_claimedMortarGunners = new array<AIAgent>();
-    private IEntity m_artilleryFireWaypoint;
+    private SCR_AIWaypointArtillerySupport m_artilleryFireWaypoint;
     
     private vector      m_initialPosition;
     private vector      m_lastOrderPosition;
