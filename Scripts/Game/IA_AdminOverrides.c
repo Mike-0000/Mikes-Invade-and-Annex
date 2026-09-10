@@ -14,6 +14,8 @@ class IA_AdminOverrides
 	bool m_bDynamicAISpawningEnabled = false;
 	bool m_bHasDynamicAIBudgetOverride;
 	int m_iDynamicAIBudget = IA_Config.DYNAMIC_AI_BUDGET_DEFAULT;
+	bool m_bHasDynamicAIExtrasOverride;
+	string m_sDynamicAIExtrasPacked;
 	bool m_bDisableHQHelipads;
 	bool m_bDisableHQGroundVehicles;
 	int m_iArtilleryCooldown = 300;
@@ -158,6 +160,8 @@ class IA_AdminOverrides
 		config.ClampDynamicAISettings();
 		m_bHasDynamicAIBudgetOverride = true;
 		m_iDynamicAIBudget = config.m_iDynamicAIBudget;
+		m_bHasDynamicAIExtrasOverride = true;
+		m_sDynamicAIExtrasPacked = IA_Config.PackDynamicAIExtras(config);
 		m_bDisableHQHelipads = config.m_bDisableHQHelipads;
 		m_bDisableHQGroundVehicles = config.m_bDisableHQGroundVehicles;
 		m_iArtilleryCooldown = config.m_iArtilleryCooldown;
@@ -234,6 +238,8 @@ class IA_AdminOverrides
 			config.m_bDynamicAISpawningEnabled = m_bDynamicAISpawningEnabled;
 		if (m_bHasDynamicAIBudgetOverride)
 			config.m_iDynamicAIBudget = m_iDynamicAIBudget;
+		if (m_bHasDynamicAIExtrasOverride)
+			IA_Config.UnpackDynamicAIExtras(config, m_sDynamicAIExtrasPacked);
 		config.ClampDynamicAISettings();
 		config.m_bDisableHQHelipads = m_bDisableHQHelipads;
 		config.m_bDisableHQGroundVehicles = m_bDisableHQGroundVehicles;
@@ -369,6 +375,8 @@ class IA_AdminOverrides
 			dynamicAISpawningI = 1;
 		json = json + ",\"dynamicAISpawning\":" + dynamicAISpawningI.ToString();
 		json = json + ",\"dynamicAIBudget\":" + IA_Config.ClampDynamicAIBudget(m_iDynamicAIBudget).ToString();
+		if (m_bHasDynamicAIExtrasOverride)
+			json = json + ",\"dynamicAIExtras\":\"" + m_sDynamicAIExtrasPacked + "\"";
 		json = json + ",\"disableHeli\":" + heliI.ToString();
 		json = json + ",\"disableGround\":" + groundI.ToString();
 		json = json + ",\"artyCooldown\":" + m_iArtilleryCooldown.ToString();
@@ -478,6 +486,17 @@ class IA_AdminOverrides
 			{
 				m_bHasDynamicAIBudgetOverride = true;
 				m_iDynamicAIBudget = dynamicAIBudget;
+			}
+		}
+		m_bHasDynamicAIExtrasOverride = false;
+		m_sDynamicAIExtrasPacked = "";
+		if (HasKey(json, "dynamicAIExtras"))
+		{
+			ref IA_Config dynamicAIParsed = new IA_Config();
+			if (IA_Config.UnpackDynamicAIExtras(dynamicAIParsed, ExtractValue(json, "dynamicAIExtras")))
+			{
+				m_bHasDynamicAIExtrasOverride = true;
+				m_sDynamicAIExtrasPacked = IA_Config.PackDynamicAIExtras(dynamicAIParsed);
 			}
 		}
 		if (HasKey(json, "disableHeli"))

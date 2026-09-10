@@ -23,6 +23,35 @@ class IA_DynamicAIBudgetCacheFixture : IA_DynamicAIBudgetCache
 		return m_bForceFull;
 	}
 
+	void SeedSettingsStateForTest()
+	{
+		m_bClose = true;
+		m_iEvictSince = 100;
+		m_iPlanAt = 200;
+		m_iRetryEvictAt = 9000;
+		m_iLastCasualtyMs = 77;
+	}
+
+	bool IsCloseForTest()
+	{
+		return m_bClose;
+	}
+
+	bool IsPlanInvalidForTest()
+	{
+		return m_iPlanAt == 0 && m_iEvictSince == -1;
+	}
+
+	int GetEvictionRetryAtForTest()
+	{
+		return m_iRetryEvictAt;
+	}
+
+	int GetLastCasualtyForTest()
+	{
+		return m_iLastCasualtyMs;
+	}
+
 	override int GetBudgetCost()
 	{
 		return m_Owner.GetDynamicAIPhysicalAliveCount();

@@ -52,6 +52,8 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		TestDepartureTimeline();
 		TestCombatTimeline();
 		TestCycleResetTimeline();
+		TestConfiguredGateTimeline();
+		TestGateReconfiguration();
 		TestWorkQueue();
 		m_iFailures += IA_AiGroup.RunDynamicAIGroupRegression();
 
@@ -99,6 +101,41 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(!gate.CanCache(false, 2300000, 0, 1700000500), "settings reset cannot inherit elapsed time from the previous cycle");
 		Check(!gate.CanCache(false, 2359999, 0, 1700000559), "settings reset preserves the new quiet-period boundary");
 		Check(gate.CanCache(false, 2360000, 0, 1700000560), "settings reset still permits later recaching");
+	}
+
+	protected void TestConfiguredGateTimeline()
+	{
+		ref IA_DynamicAIActivityGate gate = new IA_DynamicAIActivityGate();
+		gate.Configure(12, 25);
+		Check(!gate.CanCache(false, 1000, 0, 1700000001), "custom distant quiet duration starts a new departure timer");
+		Check(!gate.CanCache(false, 12999, 0, 1700000012), "custom quiet duration still blocks one millisecond before its boundary");
+		Check(gate.CanCache(false, 13000, 0, 1700000013), "custom quiet seconds convert to the exact millisecond boundary");
+		Check(!gate.CanCache(false, 20000, 1700000015, 1700000020), "custom combat duration protects a distant group whose quiet timer already elapsed");
+		Check(!gate.CanCache(false, 39000, 1700000015, 1700000039), "custom combat duration blocks until its complete seconds boundary");
+		Check(gate.CanCache(false, 40000, 1700000015, 1700000040), "custom combat protection expires at its configured duration");
+		gate.Configure(0, 25);
+		Check(gate.CanCache(false, 41000, 0, 1700000041), "zero distant quiet duration permits immediate entry when otherwise eligible");
+		Check(!gate.CanCache(false, 41000, 1700000040, 1700000041), "zero distant quiet duration does not disable recent-combat protection");
+	}
+
+	protected void TestGateReconfiguration()
+	{
+		ref IA_DynamicAIActivityGate gate = new IA_DynamicAIActivityGate();
+		gate.Configure(12, 25);
+		Check(!gate.CanCache(false, 500000, 0, 1700000500), "reconfiguration test starts a fresh custom quiet period");
+		gate.Configure(12, 25);
+		Check(!gate.CanCache(false, 511999, 0, 1700000511), "reapplying unchanged values preserves the current boundary");
+		gate.Configure(12, 25);
+		Check(gate.CanCache(false, 512000, 0, 1700000512), "reapplying unchanged values cannot keep restarting the quiet period");
+		gate.Configure(20, 25);
+		Check(!gate.CanCache(false, 512000, 0, 1700000512), "changing quiet duration cannot inherit elapsed time under the previous setting");
+		Check(!gate.CanCache(false, 531999, 0, 1700000531), "a changed quiet duration requires its complete new interval");
+		Check(gate.CanCache(false, 532000, 0, 1700000532), "a changed quiet duration still permits eventual caching");
+		gate.Configure(20, 40);
+		Check(!gate.CanCache(false, 532000, 0, 1700000532), "changing only combat duration also resets the old entry eligibility");
+		gate.Configure(20, 40);
+		Check(!gate.CanCache(false, 552000, 1700000520, 1700000552), "the expanded combat window protects a threat older than the previous setting");
+		Check(gate.CanCache(false, 560000, 1700000520, 1700000560), "the expanded combat window eventually expires without resetting each scan");
 	}
 
 	protected void TestWorkQueue()

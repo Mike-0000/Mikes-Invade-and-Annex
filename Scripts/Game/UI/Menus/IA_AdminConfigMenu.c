@@ -13,6 +13,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Panel m_PageQrf;
 	protected ref MUI_Panel m_PageDirector;
 	protected ref MUI_Panel m_PageDefense;
+	protected ref MUI_Panel m_PageDynamicAI;
 
 	protected ref MUI_Toggle m_GmModeToggle;
 	protected ref MUI_Toggle m_GmAutoActivateToggle;
@@ -33,6 +34,15 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_NumericField m_StaticAIField;
 	protected ref MUI_Toggle m_DynamicAISpawningToggle;
 	protected ref MUI_NumericField m_DynamicAIBudgetField;
+	protected ref MUI_NumericField m_DynamicAIWakeField;
+	protected ref MUI_NumericField m_DynamicAICacheField;
+	protected ref MUI_NumericField m_DynamicAICloseField;
+	protected ref MUI_NumericField m_DynamicAIReleaseField;
+	protected ref MUI_NumericField m_DynamicAICacheQuietField;
+	protected ref MUI_NumericField m_DynamicAICombatQuietField;
+	protected ref MUI_NumericField m_DynamicAIMinLiveField;
+	protected ref MUI_NumericField m_DynamicAIEvictDelayField;
+	protected ref MUI_NumericField m_DynamicAIRetentionField;
 	protected ref MUI_NumericField m_MilVehField;
 	protected ref MUI_Dropdown m_NormalSkillDrop;
 	protected ref MUI_Dropdown m_EliteSkillDrop;
@@ -141,6 +151,15 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Tabs.AddTab("QRF");
 		m_Tabs.AddTab("Director");
 		m_Tabs.AddTab("Defense");
+		m_Tabs.AddTab("Dynamic AI");
+		// Nine pages fit the existing card using the library's compact tab buttons.
+		int tabCount = m_Tabs.GetChildCount();
+		for (int tabIndex = 0; tabIndex < tabCount; tabIndex++)
+		{
+			MUI_Button tabButton = MUI_Button.Cast(m_Tabs.GetChild(tabIndex));
+			if (tabButton)
+				tabButton.SetCompact();
+		}
 		m_Tabs.GetOnChanged().Insert(OnAdminTabChanged);
 
 		ref MUI_ScrollView scroll = runtime.CreateScrollView("scroll");
@@ -156,6 +175,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageQrf = MakePage(runtime, "pageQrf");
 		m_PageDirector = MakePage(runtime, "pageDirector");
 		m_PageDefense = MakePage(runtime, "pageDefense");
+		m_PageDynamicAI = MakePage(runtime, "pageDynamicAI");
 
 		m_AIField = runtime.CreateNumericField("AI scale multiplier", "ai");
 		m_AIField.SetRange(0.1, 10);
@@ -175,20 +195,6 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageScaling.AddChild(m_AIField);
 		m_PageScaling.AddChild(m_StaticAIField);
 		m_PageScaling.AddChild(m_MilVehField);
-		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
-		m_PageScaling.AddChild(m_DynamicAISpawningToggle);
-		m_DynamicAIBudgetField = runtime.CreateNumericField("Dynamic AI Budget", "dynamicAiBudget");
-		m_DynamicAIBudgetField.SetRange(0, IA_Config.DYNAMIC_AI_BUDGET_MAX);
-		m_DynamicAIBudgetField.SetStep(10);
-		m_DynamicAIBudgetField.SetDecimals(0);
-		m_DynamicAIBudgetField.SetValue(IA_Config.DYNAMIC_AI_BUDGET_DEFAULT);
-		m_PageScaling.AddChild(m_DynamicAIBudgetField);
-		ref MUI_Label dynamicAiBudgetHelp = runtime.CreateLabel("Dynamic AI Spawning fixes AI scale at 1.0. Saved scale settings resume when OFF. Budget: soft target for supported area soldiers; 0 = distance only. Nearby troops and combat may exceed it.", "dynamicAiBudgetHelp");
-		dynamicAiBudgetHelp.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		dynamicAiBudgetHelp.SetMuted(true);
-		m_PageScaling.AddChild(dynamicAiBudgetHelp);
-		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Pause supported area infantry, ordinary patrols and garrisons while distant and quiet, then restore survivors as needed. While ON, effective AI scale is fixed at 1.0, including with budget 0. Stored scale multiplier and static override resume when OFF. Equipment/ammo reset. Caching kills downed AI and never revives corpses. Turning this off restores cached survivors.");
-		m_Hints.AddHint(m_DynamicAIBudgetField, "Dynamic AI Budget", "Target number of supported area soldiers present while Dynamic AI Spawning is on. Closest groups get priority. Nearby troops and combat are protected and may exceed the target. 0 restores distance-only spawning, with caching after 60 quiet seconds beyond 1500 m and restoration within 1000 m. This setting is separate from the Game Master budget.");
 		m_Hints.AddHint(m_Tabs, "Settings pages", "Choose a tab to view a different group of settings. Help updates to explain the open tab.");
 		m_Hints.AddHint(m_AIField, "Enemy strength", "Multiplies player-based AI scaling while Dynamic AI Spawning is OFF and no static override is set. Dynamic AI Spawning ON fixes the effective scale at 1.0; this saved value is kept for when it is switched OFF.");
 		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "When Dynamic AI Spawning is OFF, a value above 0 replaces player-based AI scaling; 0 uses normal scaling. Dynamic AI Spawning ON fixes the effective scale at 1.0 and keeps this saved override for when it is switched OFF.");
@@ -432,6 +438,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(openDirBtn, "Open the Director map", "Closes this menu and opens the map used to place, stage, and control objectives.");
 
 		BuildDefensePage(runtime);
+		BuildDynamicAIPage(runtime);
 
 		scroll.AddChild(m_PageScaling);
 		scroll.AddChild(m_PageCiv);
@@ -441,6 +448,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		scroll.AddChild(m_PageQrf);
 		scroll.AddChild(m_PageDirector);
 		scroll.AddChild(m_PageDefense);
+		scroll.AddChild(m_PageDynamicAI);
 
 		ref MUI_Panel footerBtns = runtime.CreatePanel("footerBtns");
 		footerBtns.GetStyle().m_Fill = Color.FromInt(0);
@@ -526,6 +534,61 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	{
 		if (m_Hints)
 			m_Hints.Toggle();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void BuildDynamicAIPage(notnull MUI_Runtime runtime)
+	{
+		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
+		m_PageDynamicAI.AddChild(m_DynamicAISpawningToggle);
+		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON fixes effective AI scale at 1.0, even with budget 0. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
+		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Positive values prioritize the closest squads under a shared soft target. Nearby troops and combat may exceed it. 0 uses distance-only caching. Independent of the Game Master budget.");
+
+		ref MUI_Label modes = runtime.CreateLabel("Budget 0: distance only. Positive budget: nearest squads first. AI scale is 1.0 while ON. Save applies now; Save for restart also remembers changes.", "dynamicAiModes");
+		modes.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		modes.SetMuted(true);
+		m_PageDynamicAI.AddChild(modes);
+
+		ref MUI_Label distances = runtime.CreateLabel("Distances (meters)  |  Applies to every player", "dynamicAiDistances");
+		distances.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		distances.SetBold(true);
+		m_PageDynamicAI.AddChild(distances);
+		m_DynamicAIWakeField = MakeDynamicAIField(runtime, "Wake / eligibility distance (m)", "dynamicAiWake", 100, 5000, 50, 1000, "Distance only: requests the whole squad. Budget mode: admits squads to nearest-first allocation; close protection can force a full wake. Larger values provide more approach time.");
+		m_DynamicAICacheField = MakeDynamicAIField(runtime, "Cache / outer retention distance (m)", "dynamicAiCache", 150, 7500, 50, 1500, "Distance only: all soldiers must remain beyond this distance for the quiet period. Budget mode: an existing allocation remains eligible out to this distance.");
+		m_DynamicAICloseField = MakeDynamicAIField(runtime, "Full-squad protection distance (m; budget)", "dynamicAiClose", 50, 2000, 50, 300, "Inside this distance, the squad's surviving reserves restore even if the budget is full. Larger values preserve more nearby enemies but may exceed the target more often.");
+		m_DynamicAIReleaseField = MakeDynamicAIField(runtime, "Protection release distance (m; budget)", "dynamicAiRelease", 100, 3000, 50, 400, "Close protection ends beyond this distance. Individual live soldiers inside it cannot be removed. Keeping it wider than protection prevents repeated transitions at the boundary.");
+
+		ref MUI_Label distanceOrder = runtime.CreateLabel("Save keeps release at least 50 m beyond protection, wake at least as far as release, and cache at least 50 m beyond wake.", "dynamicAiDistanceOrder");
+		distanceOrder.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		distanceOrder.SetMuted(true);
+		m_PageDynamicAI.AddChild(distanceOrder);
+
+		ref MUI_Label timing = runtime.CreateLabel("Timing (seconds)", "dynamicAiTiming");
+		timing.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		timing.SetBold(true);
+		m_PageDynamicAI.AddChild(timing);
+		m_DynamicAICacheQuietField = MakeDynamicAIField(runtime, "Departure quiet time (s; distance only)", "dynamicAiCacheQuiet", 0, 600, 5, 60, "How long a squad must remain outside cache distance before distance-only removal. Returning players restart the timer. 0 removes the departure delay; other safety checks still apply.");
+		m_DynamicAICombatQuietField = MakeDynamicAIField(runtime, "Combat quiet time (s; both modes)", "dynamicAiCombatQuiet", 10, 300, 5, 60, "Protects recent combat targets and danger for this long. Applies in both modes. Lower values release quiet troops sooner after fighting.");
+		m_DynamicAIMinLiveField = MakeDynamicAIField(runtime, "Minimum live time (s; budget)", "dynamicAiMinLive", 5, 300, 5, 30, "Newly observed or restored soldiers stay live for at least this long. Prevents rapid removal immediately after a spawn.");
+		m_DynamicAIEvictDelayField = MakeDynamicAIField(runtime, "Allocation reduction delay (s; budget)", "dynamicAiEvictDelay", 1, 120, 1, 10, "A lower squad allocation must remain pending for this long before removals begin. Higher values smooth brief priority changes; lower values free capacity sooner.");
+		ref MUI_Label stability = runtime.CreateLabel("Allocation stability (meters)", "dynamicAiStability");
+		stability.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		stability.SetBold(true);
+		m_PageDynamicAI.AddChild(stability);
+		m_DynamicAIRetentionField = MakeDynamicAIField(runtime, "Existing allocation preference (m; budget)", "dynamicAiRetention", 0, 500, 10, 50, "Subtracts this distance from the ranking of already allocated squads. Reduces swapping between similar distances. 0 uses nearest distance without this preference.");
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected MUI_NumericField MakeDynamicAIField(notnull MUI_Runtime runtime, string label, string name, int minimum, int maximum, int step, int initialValue, string hint)
+	{
+		ref MUI_NumericField field = runtime.CreateNumericField(label, name);
+		field.SetRange(minimum, maximum);
+		field.SetStep(step);
+		field.SetDecimals(0);
+		field.SetValue(initialValue);
+		m_PageDynamicAI.AddChild(field);
+		m_Hints.AddHint(field, label, hint);
+		return field;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -994,6 +1057,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_PageDirector.SetVisible(index == 6);
 		if (m_PageDefense)
 			m_PageDefense.SetVisible(index == 7);
+		if (m_PageDynamicAI)
+			m_PageDynamicAI.SetVisible(index == 8);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1025,6 +1090,24 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_DynamicAISpawningToggle.SetChecked(cfg.m_bDynamicAISpawningEnabled);
 		if (m_DynamicAIBudgetField)
 			m_DynamicAIBudgetField.SetValue(IA_Config.ClampDynamicAIBudget(cfg.m_iDynamicAIBudget));
+		if (m_DynamicAIWakeField)
+			m_DynamicAIWakeField.SetValue(cfg.m_iDynamicAIWakeDistanceM);
+		if (m_DynamicAICacheField)
+			m_DynamicAICacheField.SetValue(cfg.m_iDynamicAICacheDistanceM);
+		if (m_DynamicAICloseField)
+			m_DynamicAICloseField.SetValue(cfg.m_iDynamicAICloseDistanceM);
+		if (m_DynamicAIReleaseField)
+			m_DynamicAIReleaseField.SetValue(cfg.m_iDynamicAIReleaseDistanceM);
+		if (m_DynamicAICacheQuietField)
+			m_DynamicAICacheQuietField.SetValue(cfg.m_iDynamicAICacheQuietSec);
+		if (m_DynamicAICombatQuietField)
+			m_DynamicAICombatQuietField.SetValue(cfg.m_iDynamicAICombatQuietSec);
+		if (m_DynamicAIMinLiveField)
+			m_DynamicAIMinLiveField.SetValue(cfg.m_iDynamicAIMinLiveSec);
+		if (m_DynamicAIEvictDelayField)
+			m_DynamicAIEvictDelayField.SetValue(cfg.m_iDynamicAIEvictDelaySec);
+		if (m_DynamicAIRetentionField)
+			m_DynamicAIRetentionField.SetValue(cfg.m_iDynamicAIRetentionBiasM);
 		if (m_MilVehField)
 			m_MilVehField.SetValue(cfg.m_fMilitaryVehicleCountMultiplier);
 		if (m_CivVehField)
@@ -1401,10 +1484,32 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			packed = packed + "|0";
 		ref IA_Config dynamicAiPack = new IA_Config();
 		if (live)
+		{
 			dynamicAiPack.m_iDynamicAIBudget = live.m_iDynamicAIBudget;
+			IA_Config.UnpackDynamicAIExtras(dynamicAiPack, IA_Config.PackDynamicAIExtras(live));
+		}
 		if (m_DynamicAIBudgetField)
 			dynamicAiPack.m_iDynamicAIBudget = Math.Round(m_DynamicAIBudgetField.GetValue());
+		if (m_DynamicAIWakeField)
+			dynamicAiPack.m_iDynamicAIWakeDistanceM = Math.Round(m_DynamicAIWakeField.GetValue());
+		if (m_DynamicAICacheField)
+			dynamicAiPack.m_iDynamicAICacheDistanceM = Math.Round(m_DynamicAICacheField.GetValue());
+		if (m_DynamicAICloseField)
+			dynamicAiPack.m_iDynamicAICloseDistanceM = Math.Round(m_DynamicAICloseField.GetValue());
+		if (m_DynamicAIReleaseField)
+			dynamicAiPack.m_iDynamicAIReleaseDistanceM = Math.Round(m_DynamicAIReleaseField.GetValue());
+		if (m_DynamicAICacheQuietField)
+			dynamicAiPack.m_iDynamicAICacheQuietSec = Math.Round(m_DynamicAICacheQuietField.GetValue());
+		if (m_DynamicAICombatQuietField)
+			dynamicAiPack.m_iDynamicAICombatQuietSec = Math.Round(m_DynamicAICombatQuietField.GetValue());
+		if (m_DynamicAIMinLiveField)
+			dynamicAiPack.m_iDynamicAIMinLiveSec = Math.Round(m_DynamicAIMinLiveField.GetValue());
+		if (m_DynamicAIEvictDelayField)
+			dynamicAiPack.m_iDynamicAIEvictDelaySec = Math.Round(m_DynamicAIEvictDelayField.GetValue());
+		if (m_DynamicAIRetentionField)
+			dynamicAiPack.m_iDynamicAIRetentionBiasM = Math.Round(m_DynamicAIRetentionField.GetValue());
 		packed = packed + "|" + IA_Config.PackDynamicAIBudget(dynamicAiPack);
+		packed = packed + "|" + IA_Config.PackDynamicAIExtras(dynamicAiPack);
 
 		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
 	}

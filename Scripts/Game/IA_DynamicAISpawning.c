@@ -1,6 +1,7 @@
 // Opt-in authority-side cache. Distance requests are unconditional and never expire.
 class IA_DynamicAISpawning
 {
+	// Compatibility defaults. Runtime distances/timing come from GetTuning().
 	static const float WAKE_DISTANCE_M = 1000;
 	static const float CACHE_DISTANCE_M = 1500;
 	static const int CACHE_QUIET_MS = 60000;
@@ -16,6 +17,7 @@ class IA_DynamicAISpawning
 	protected static ref array<IA_DynamicAIGroupCache> s_aGroups = {};
 	protected static ref IA_DynamicAIWorkQueue s_Work = new IA_DynamicAIWorkQueue();
 	protected static ref IA_DynamicAIBudgetController s_Budget = new IA_DynamicAIBudgetController();
+	protected static ref IA_Config s_DefaultTuning = new IA_Config();
 	protected static bool s_bRunning;
 	protected static int s_iNextScanMs;
 	protected static int s_iNextWakeScanMs;
@@ -32,6 +34,16 @@ class IA_DynamicAISpawning
 		if (!init || !init.GetConfig())
 			return false;
 		return init.GetConfig().m_bDynamicAISpawningEnabled;
+	}
+
+	// Authority-side callers use the validated mission config directly, without
+	// allocating a replicated client copy during each soldier eligibility check.
+	static IA_Config GetTuning()
+	{
+		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
+		if (init && init.GetConfig())
+			return init.GetConfig();
+		return s_DefaultTuning;
 	}
 
 	static int GetBudgetLimit()

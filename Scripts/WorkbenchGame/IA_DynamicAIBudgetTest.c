@@ -11,11 +11,28 @@ class IA_DynamicAIBudgetTest : WorkbenchPlugin
 		TestProtectedReservation();
 		TestStableRanking();
 		TestRetentionBoundary();
+		TestConfiguredRetention();
 		TestSplitPlayersAndCasualties();
 		TestUnlimitedAndInvalidCounts();
 		TestBudgetSweep();
 		Print(string.Format("[IA][DynamicAIBudgetTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
+	}
+
+	protected void TestConfiguredRetention()
+	{
+		ref array<ref IA_DynamicAIBudgetEntry> entries = {};
+		IA_DynamicAIBudgetEntry closer = AddEntry(entries, 8, 500);
+		IA_DynamicAIBudgetEntry retained = AddEntry(entries, 8, 550, 0, true, 8);
+		retained.m_iRetentionBiasM = 100;
+		IA_DynamicAIBudgetAllocator.Allocate(entries, 8);
+		Check(retained.m_iDesired == 8 && closer.m_iDesired == 0, "a configured retention margin keeps the already allocated squad stable");
+		retained.m_iRetentionBiasM = 0;
+		IA_DynamicAIBudgetAllocator.Allocate(entries, 8);
+		Check(closer.m_iDesired == 8 && retained.m_iDesired == 0, "zero retention chooses the nearer squad without a previous-allocation preference");
+		retained.m_iRetentionBiasM = -50;
+		IA_DynamicAIBudgetAllocator.Allocate(entries, 8);
+		Check(closer.m_iDesired == 8 && retained.m_iDesired == 0, "an invalid negative retention value cannot invert the ranking preference");
 	}
 
 	protected IA_DynamicAIBudgetEntry AddEntry(array<ref IA_DynamicAIBudgetEntry> entries, int alive, float distance, int protectedCount = 0, bool inRange = true, int previous = 0)

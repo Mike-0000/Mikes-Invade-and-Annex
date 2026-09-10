@@ -11,4 +11,5 @@ class IA_DynamicAIBudgetEntry
 	float m_fDistance;
 	bool m_bInRange;
 	int m_iOrder;
+	int m_iRetentionBiasM = IA_DynamicAIBudgetAllocator.RETENTION_BIAS_M;
 }

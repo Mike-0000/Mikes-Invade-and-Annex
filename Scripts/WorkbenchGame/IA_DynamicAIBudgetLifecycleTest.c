@@ -10,6 +10,7 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		TestHybridTransitions();
 		TestDisableWaitsForReserves();
 		TestCasualtyLedger();
+		TestRetuningPreservesAdmittedWork();
 		Print(string.Format("[IA][DynamicAIBudgetLifecycleTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -120,6 +121,38 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		owner.SetDynamicAIPhysicalForTest(1);
 		cache.ReconcileForTest();
 		Check(!cache.IsBudgetActive() && casualty.m_bDead && owner.GetDynamicAIPhysicalAliveCount() == 1, "the OFF drain cannot refill a dead original squad slot");
+	}
+
+	protected void TestRetuningPreservesAdmittedWork()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 1);
+		cache.Init(owner);
+		ref IA_DynamicAIBudgetUnitFixture live = new IA_DynamicAIBudgetUnitFixture();
+		ref IA_DynamicAIBudgetUnitFixture admitted = new IA_DynamicAIBudgetUnitFixture();
+		live.m_bRestored = true;
+		live.m_iBudgetLiveSinceMs = 1234;
+		admitted.m_bBudgetAdmitted = true;
+		admitted.m_iNextAttemptMs = 9000;
+		admitted.m_iFailures = 2;
+		cache.AddForTest(live);
+		cache.AddForTest(admitted);
+		cache.EnableBudget();
+		cache.ReconcileForTest();
+		cache.RequestWake();
+		int requestedAt = cache.GetWakeRequestedMs();
+		cache.SeedSettingsStateForTest();
+		cache.ResetQuietPeriod();
+		Check(!cache.IsCloseForTest() && cache.IsPlanInvalidForTest(), "settings changes clear prior close hysteresis and queued eviction eligibility");
+		Check(cache.IsBudgetActive() && cache.IsCached() && !cache.IsPaused() && cache.GetLogicalAliveCount() == 2, "retuning preserves a hybrid roster and its live owner");
+		Check(cache.IsWaking() && cache.IsFullRequiredForTest() && cache.HasUrgentWake() && cache.HasMandatoryWork() && cache.GetWakeRequestedMs() == requestedAt, "retuning cannot cancel or re-age an existing mandatory wake");
+		Check(admitted.m_bBudgetAdmitted && !admitted.m_bRestored && admitted.m_iNextAttemptMs == 9000 && admitted.m_iFailures == 2, "retuning preserves admission and restoration retry history");
+		Check(live.m_iBudgetLiveSinceMs == 1234, "retuning retains the soldier's actual live age");
+		Check(cache.GetEvictionRetryAtForTest() == 9000 && cache.GetLastCasualtyForTest() == 77, "retuning keeps failure backoff and casualty event time");
+		cache.DisableBudget();
+		cache.SeedSettingsStateForTest();
+		cache.ResetQuietPeriod();
+		Check(cache.IsExitPendingForTest() && cache.IsFullRequiredForTest() && cache.HasMandatoryWork() && cache.GetUnrestoredCount() == 1, "retuning cannot interrupt an unfinished OFF drain");
 	}
 
 	protected void Check(bool passed, string description)

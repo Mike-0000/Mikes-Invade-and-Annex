@@ -56,6 +56,9 @@ class IA_MissionInitializer : GenericEntity
 
 	[RplProp()]
 	int m_iDynamicAIBudget_Rpl = IA_Config.DYNAMIC_AI_BUDGET_DEFAULT;
+
+	[RplProp()]
+	string m_sDynamicAIExtrasPacked_Rpl;
 	
 	[RplProp()]
 	bool m_bDisableHQHelipads_Rpl = false;
@@ -2111,6 +2114,8 @@ class IA_MissionInitializer : GenericEntity
 				m_config.m_bDynamicAISpawningEnabled = tokens[25] == "1";
 			if (tokens.Count() > 26)
 				IA_Config.UnpackDynamicAIBudget(m_config, tokens[26]);
+			if (tokens.Count() > 27)
+				IA_Config.UnpackDynamicAIExtras(m_config, tokens[27]);
 		}
 
 		PushConfigToReplication();
@@ -2139,6 +2144,7 @@ class IA_MissionInitializer : GenericEntity
 			m_bDynamicAISpawningEnabled_Rpl = m_config.m_bDynamicAISpawningEnabled;
 			m_config.ClampDynamicAISettings();
 			m_iDynamicAIBudget_Rpl = m_config.m_iDynamicAIBudget;
+			m_sDynamicAIExtrasPacked_Rpl = IA_Config.PackDynamicAIExtras(m_config);
 			m_bDisableHQHelipads_Rpl = m_config.m_bDisableHQHelipads;
 			m_bDisableHQGroundVehicles_Rpl = m_config.m_bDisableHQGroundVehicles;
 			m_iArtilleryCooldown_Rpl = m_config.m_iArtilleryCooldown;
@@ -3172,6 +3178,7 @@ class IA_MissionInitializer : GenericEntity
 				clientConfig.m_fAIScaleMultiplier = s_instance.m_fAIScaleMultiplier_Rpl;
 				clientConfig.m_bDynamicAISpawningEnabled = s_instance.m_bDynamicAISpawningEnabled_Rpl;
 				clientConfig.m_iDynamicAIBudget = IA_Config.ClampDynamicAIBudget(s_instance.m_iDynamicAIBudget_Rpl);
+				IA_Config.UnpackDynamicAIExtras(clientConfig, s_instance.m_sDynamicAIExtrasPacked_Rpl);
 				clientConfig.m_bDisableHQHelipads = s_instance.m_bDisableHQHelipads_Rpl;
 				clientConfig.m_bDisableHQGroundVehicles = s_instance.m_bDisableHQGroundVehicles_Rpl;
 				clientConfig.m_iArtilleryCooldown = s_instance.m_iArtilleryCooldown_Rpl;

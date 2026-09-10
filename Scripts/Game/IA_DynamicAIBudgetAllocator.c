@@ -42,7 +42,7 @@ class IA_DynamicAIBudgetAllocator
 	{
 		float distance = entry.m_fDistance;
 		if (entry.m_iPreviousDesired > 0)
-			distance -= RETENTION_BIAS_M;
+			distance -= Math.Max(0, entry.m_iRetentionBiasM);
 		return Math.Max(0, distance);
 	}
 
