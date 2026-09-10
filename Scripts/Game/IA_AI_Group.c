@@ -4740,6 +4740,27 @@ class IA_AiGroup
         return m_bInboundSimPinned && m_bBuildingMarchSimPinned && IsBuildingGarrison() && !m_bHoldEntered;
     }
 
+    // PinInboundAgent uses PreventMaxLOD. That is visible as GetPermanentLOD() != -1
+    // and must not veto the cache path that already permits this arrival-owned pin.
+    bool OwnsBuildingMarchForcedLod()
+    {
+        return IsBuildingMarchSimulationPinned();
+    }
+
+    bool BlocksDynamicAIForcedLod(AIAgent agent)
+    {
+        if (!agent)
+            return false;
+        return BlocksDynamicAIForcedLodValue(agent.GetPermanentLOD());
+    }
+
+    bool BlocksDynamicAIForcedLodValue(int permanentLod)
+    {
+        if (permanentLod == -1)
+            return false;
+        return !OwnsBuildingMarchForcedLod();
+    }
+
     protected void SuspendBuildingMarchSimulation()
     {
         if (IsBuildingMarchSimulationPinned())
@@ -6355,6 +6376,9 @@ class IA_AiGroup
 		group.m_bInboundSimPinned = true;
 		group.m_bBuildingMarchSimPinned = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "an arrival-owned simulation pin permits caching", failures);
+		DynamicAIRegressionCheck(group.OwnsBuildingMarchForcedLod(), "unfinished building walks own their PreventMaxLOD pin", failures);
+		DynamicAIRegressionCheck(!group.BlocksDynamicAIForcedLodValue(0), "arrival-owned PreventMaxLOD does not veto snapshot or eviction", failures);
+		DynamicAIRegressionCheck(!group.BlocksDynamicAIForcedLodValue(-1), "an unforced LOD never vetoes cache", failures);
 		group.SuspendBuildingMarchSimulation();
 		DynamicAIRegressionCheck(!group.m_bInboundSimPinned && !group.m_bBuildingMarchSimPinned, "suspension releases the old soldiers' arrival pin", failures);
 		DynamicAIRegressionCheck(!group.m_bHoldEntered && group.m_bHoldAfterEntry && group.m_holdPost == "110 25 110", "suspension preserves the destination and pending interior arrival", failures);
@@ -6364,6 +6388,7 @@ class IA_AiGroup
 		group.SuspendBuildingMarchSimulation();
 		DynamicAIRegressionCheck(group.m_bInboundSimPinned && !group.m_bBuildingMarchSimPinned && group.m_vInboundTarget == "300 20 300", "building march cannot take over or suspend a mission-owned pin", failures);
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "simulation pin", "mission pin still excludes a building garrison", failures);
+		DynamicAIRegressionCheck(!group.OwnsBuildingMarchForcedLod() && group.BlocksDynamicAIForcedLodValue(0), "mission-owned PreventMaxLOD still vetoes cache", failures);
 		group.UnpinInboundSimulation();
 		group.m_bHoldEntered = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "settled building garrisons remain supported", failures);

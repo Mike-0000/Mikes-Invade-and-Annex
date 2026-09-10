@@ -25,7 +25,8 @@ class IA_BuildingGarrisonTest : WorkbenchPlugin
 		Check(!IA_BuildingGarrison.NearPost(post + Vector(0, 3, 0), post, 5), "wrong floor cannot trigger Hold");
 		Check(!IA_BuildingGarrison.NearPost(post + Vector(8, 0, 0), post, 5), "outdoor approach distance cannot trigger Hold");
 		Check(!IA_BuildingGarrison.WithinBounds(Vector(5, 1, 0), Vector(-5, 0, -5), Vector(5, 6, 5)), "exterior wall is not inside");
-		Check(!IA_BuildingGarrison.HasReachedInterior(null, null, post, 5), "missing group/building never triggers Hold");
+		Check(!IA_BuildingGarrison.HasReachedOpenPost(null, post, 5), "open cover posts still require a living roster");
+		Check(!IA_BuildingGarrison.HasReachedInterior(null, null, post, 5), "missing group never triggers Hold");
 
 		Resource resource = Resource.Load(IA_AiOrderResource(IA_AiOrder.DefendSmall));
 		Check(resource != null, "load stock DefendSmall");

@@ -182,9 +182,10 @@ class IA_DynamicAIGroupCache
 		// A background OFF request must still become urgent when players approach.
 		if (m_bUrgentWake)
 			return;
+		int wakeDistance = IA_DynamicAISpawning.GetTuning().m_iDynamicAIWakeDistanceM;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
-			if (IA_SpawnPlacement.IsNearAnyPlayer(unit.GetPosition(), players, IA_DynamicAISpawning.WAKE_DISTANCE_M))
+			if (IA_SpawnPlacement.IsNearAnyPlayer(unit.GetPosition(), players, wakeDistance))
 			{
 				RequestWake();
 				return;
@@ -197,6 +198,8 @@ class IA_DynamicAIGroupCache
 	{
 		if (m_bFinished || m_bCached || !IsOwnerLive())
 			return false;
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+		m_ActivityGate.Configure(tuning.m_iDynamicAICacheQuietSec, tuning.m_iDynamicAICombatQuietSec);
 		SCR_AIGroup group = m_Owner.GetSCR_AIGroup();
 		m_sLiveStatus = m_Owner.GetDynamicAIRoleBlockReason();
 		// Most exclusions need no member/component traversal.
@@ -223,14 +226,14 @@ class IA_DynamicAIGroupCache
 			}
 			vector transform[4];
 			member.GetControlledEntity().GetWorldTransform(transform);
-			if (IA_SpawnPlacement.IsNearAnyPlayer(transform[3], players, IA_DynamicAISpawning.CACHE_DISTANCE_M))
+			if (IA_SpawnPlacement.IsNearAnyPlayer(transform[3], players, tuning.m_iDynamicAICacheDistanceM))
 			{
 				blocked = true;
 				m_sLiveStatus = "player nearby";
 				break;
 			}
 			SCR_AICombatComponent combat = SCR_AICombatComponent.Cast(member.GetControlledEntity().FindComponent(SCR_AICombatComponent));
-			if (combat && combat.GetCurrentTarget() && combat.GetCurrentTarget().GetTimeSinceSeen() < IA_DynamicAISpawning.COMBAT_QUIET_SEC)
+			if (combat && combat.GetCurrentTarget() && combat.GetCurrentTarget().GetTimeSinceSeen() < tuning.m_iDynamicAICombatQuietSec)
 			{
 				blocked = true;
 				m_sLiveStatus = "recent combat";
@@ -239,7 +242,7 @@ class IA_DynamicAIGroupCache
 		}
 		// The addon's engaged-faction flag is historical; recent danger can expire.
 		int lastDanger = m_Owner.GetLastDangerEventTime();
-		if (!blocked && lastDanger > 0 && System.GetUnixTime() - lastDanger < IA_DynamicAISpawning.COMBAT_QUIET_SEC)
+		if (!blocked && lastDanger > 0 && System.GetUnixTime() - lastDanger < tuning.m_iDynamicAICombatQuietSec)
 			m_sLiveStatus = "recent combat";
 		if (!m_ActivityGate.CanCache(blocked, now, m_Owner.GetLastDangerEventTime(), System.GetUnixTime()))
 			return false;
@@ -263,7 +266,7 @@ class IA_DynamicAIGroupCache
 			if (!agent)
 				return BlockSnapshot("missing character");
 			SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
-			if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0 || agent.GetPermanentLOD() != -1)
+			if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0 || m_Owner.BlocksDynamicAIForcedLod(agent))
 				return BlockSnapshot("ownership, attachment or forced LOD");
 			CharacterControllerComponent controller = pawn.GetCharacterController();
 			SCR_CharacterDamageManagerComponent damage = SCR_CharacterDamageManagerComponent.Cast(pawn.FindComponent(SCR_CharacterDamageManagerComponent));

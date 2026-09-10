@@ -68,11 +68,39 @@ class IA_BuildingGarrison
 		return vector.DistanceXZ(pos, post) <= radius && Math.AbsFloat(pos[1] - post[1]) <= FLOOR_TOLERANCE_M;
 	}
 
+	static bool HasReachedOpenPost(SCR_AIGroup group, vector post, float radius)
+	{
+		if (!group)
+			return false;
+
+		ref array<AIAgent> agents = {};
+		group.GetAgents(agents);
+		int living = 0;
+		foreach (AIAgent agent : agents)
+		{
+			if (!agent)
+				continue;
+			ChimeraCharacter pawn = ChimeraCharacter.Cast(agent.GetControlledEntity());
+			if (!pawn || !pawn.GetCharacterController())
+				return false;
+			if (pawn.GetCharacterController().GetLifeState() == ECharacterLifeState.DEAD)
+				continue;
+			living++;
+			if (pawn.IsInVehicle() || !NearPost(pawn.GetOrigin(), post, radius))
+				return false;
+		}
+		return living > 0;
+	}
+
 	static bool HasReachedInterior(SCR_AIGroup group, IEntity building, vector post, float radius)
 	{
 		BaseWorld world = GetGame().GetWorld();
-		if (!group || !building || !world)
+		if (!group || !world)
 			return false;
+		// Cover/observation posts often have no enclosing building. Require the
+		// same living-member post check so those teams can unpin and cache.
+		if (!building)
+			return HasReachedOpenPost(group, post, radius);
 
 		vector mins;
 		vector maxs;

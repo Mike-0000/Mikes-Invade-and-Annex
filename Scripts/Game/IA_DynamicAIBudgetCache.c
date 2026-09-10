@@ -19,7 +19,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	protected int m_iEvictSince = -1;
 	protected int m_iPlanAt;
 	protected int m_iRetryEvictAt;
-	protected int m_iCombatUntilMs;
+	protected int m_iLastCasualtyMs = -1;
 	protected float m_fNearest = 10000000;
 
 	override void Init(IA_AiGroup owner)
@@ -73,6 +73,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	override void ResetQuietPeriod()
 	{
 		super.ResetQuietPeriod();
+		m_bClose = false;
 		m_iEvictSince = -1;
 		m_iPlanAt = 0;
 	}
@@ -132,15 +133,16 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	{
 		if (!IsOwnerLive() || m_bFinished)
 			return;
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
 		m_fNearest = 10000000;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			if (unit.IsLogicallyAlive())
 				m_fNearest = Math.Min(m_fNearest, NearestDistance(CurrentPosition(unit), players));
 		}
-		if (m_fNearest <= CLOSE_M)
+		if (m_fNearest <= tuning.m_iDynamicAICloseDistanceM)
 			m_bClose = true;
-		else if (m_fNearest > RELEASE_M)
+		else if (m_fNearest > tuning.m_iDynamicAIReleaseDistanceM)
 			m_bClose = false;
 		string reason = m_Owner.GetDynamicAIRoleBlockReason();
 		if (m_bClose || HasRecentCombat() || (reason != "" && reason != "initialization"))
@@ -149,17 +151,18 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 
 	protected bool HasRecentCombat()
 	{
-		if (System.GetTickCount() < m_iCombatUntilMs)
+		int combatQuietSec = IA_DynamicAISpawning.GetTuning().m_iDynamicAICombatQuietSec;
+		if (m_iLastCasualtyMs >= 0 && System.GetTickCount() - m_iLastCasualtyMs < combatQuietSec * 1000)
 			return true;
 		int danger = m_Owner.GetLastDangerEventTime();
-		if (danger > 0 && System.GetUnixTime() - danger < IA_DynamicAISpawning.COMBAT_QUIET_SEC)
+		if (danger > 0 && System.GetUnixTime() - danger < combatQuietSec)
 			return true;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			if (!unit.m_Entity || unit.m_bDead)
 				continue;
 			SCR_AICombatComponent combat = SCR_AICombatComponent.Cast(unit.m_Entity.FindComponent(SCR_AICombatComponent));
-			if (combat && combat.GetCurrentTarget() && combat.GetCurrentTarget().GetTimeSinceSeen() < IA_DynamicAISpawning.COMBAT_QUIET_SEC)
+			if (combat && combat.GetCurrentTarget() && combat.GetCurrentTarget().GetTimeSinceSeen() < combatQuietSec)
 				return true;
 		}
 		return false;
@@ -226,13 +229,13 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 
 	protected bool CanRemoveUnit(IA_DynamicAIUnit unit, int now, PlayerManager manager)
 	{
-		if (!unit.m_bRestored || unit.m_bDead || !unit.m_Entity || !manager || now - unit.m_iBudgetLiveSinceMs < MIN_LIVE_MS)
+		if (!unit.m_bRestored || unit.m_bDead || !unit.m_Entity || !manager || now - unit.m_iBudgetLiveSinceMs < IA_DynamicAISpawning.GetTuning().m_iDynamicAIMinLiveSec * 1000)
 			return false;
 		SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(unit.m_Entity);
 		if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0)
 			return false;
 		AIAgent agent = GetRestoreAgent(unit);
-		if (!agent || agent.GetParentGroup() != m_Owner.GetSCR_AIGroup() || agent.GetPermanentLOD() != -1)
+		if (!agent || agent.GetParentGroup() != m_Owner.GetSCR_AIGroup() || m_Owner.BlocksDynamicAIForcedLod(agent))
 			return false;
 		CharacterControllerComponent controller = pawn.GetCharacterController();
 		if (!controller || controller.GetLifeState() == ECharacterLifeState.DEAD)
@@ -248,12 +251,14 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		if (!IsOwnerLive() || m_bFinished)
 			return;
 		CheckProtection(players);
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
 		entry.m_iAlive = GetLogicalAliveCount();
 		entry.m_iPreviousDesired = m_iDesired;
 		entry.m_fDistance = m_fNearest;
 		entry.m_iOrder = m_iOrder;
-		entry.m_bInRange = m_fNearest <= IA_DynamicAISpawning.WAKE_DISTANCE_M;
-		if (m_iDesired > 0 && m_fNearest <= IA_DynamicAISpawning.CACHE_DISTANCE_M)
+		entry.m_iRetentionBiasM = tuning.m_iDynamicAIRetentionBiasM;
+		entry.m_bInRange = m_fNearest <= tuning.m_iDynamicAIWakeDistanceM;
+		if (m_iDesired > 0 && m_fNearest <= tuning.m_iDynamicAICacheDistanceM)
 			entry.m_bInRange = true;
 		string reason = m_Owner.GetDynamicAIRoleBlockReason();
 		bool full = m_bForceFull || m_bClose || HasRecentCombat() || (reason != "" && reason != "initialization");
@@ -266,7 +271,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			if (unit.m_bRestored)
 				entry.m_iPhysical++;
 			unit.m_bBudgetProtected = full || unit.m_bBudgetAdmitted;
-			if (unit.m_bRestored && (reason == "initialization" || NearestDistance(CurrentPosition(unit), players) <= RELEASE_M || !CanRemoveUnit(unit, now, manager)))
+			if (unit.m_bRestored && (reason == "initialization" || NearestDistance(CurrentPosition(unit), players) <= tuning.m_iDynamicAIReleaseDistanceM || !CanRemoveUnit(unit, now, manager)))
 				unit.m_bBudgetProtected = true;
 			if (unit.m_bBudgetProtected)
 				entry.m_iProtected++;
@@ -364,7 +369,8 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	{
 		if (!m_bBudgetActive || m_bExitBudget || !IsOwnerLive() || m_bFinished || m_bForceFull || m_iPlanAt == 0 || now - m_iPlanAt > 5000)
 			return false;
-		if (now < m_iRetryEvictAt || m_iEvictSince < 0 || now - m_iEvictSince < EVICT_DELAY_MS || GetBudgetCost() <= m_iDesired)
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+		if (now < m_iRetryEvictAt || m_iEvictSince < 0 || now - m_iEvictSince < tuning.m_iDynamicAIEvictDelaySec * 1000 || GetBudgetCost() <= m_iDesired)
 			return false;
 		// Revalidate current players, combat, role, membership and health at commit.
 		CheckProtection(players);
@@ -382,7 +388,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			if (!CanRemoveUnit(unit, now, manager))
 				continue;
 			float distance = NearestDistance(CurrentPosition(unit), players);
-			if (distance <= RELEASE_M)
+			if (distance <= tuning.m_iDynamicAIReleaseDistanceM)
 				continue;
 			// Prefer retaining the leader, but never let it hold an extra slot
 			// when another protected member already keeps the group alive.
@@ -482,7 +488,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			// its combat component can report a target. Wake its surviving reserves.
 			if (entity && !m_bConvertingDowned && !m_bBudgetDeleting)
 			{
-				m_iCombatUntilMs = System.GetTickCount() + IA_DynamicAISpawning.COMBAT_QUIET_SEC * 1000;
+				m_iLastCasualtyMs = System.GetTickCount();
 				RequestWake();
 			}
 			UpdateState();

@@ -37,12 +37,17 @@ class BuildingGarrisonTests(unittest.TestCase):
         tick = method(source("IA_AI_Group.c"), "TickHoldMarch")
         self.assertRegex(tick, r"if \(!IsDynamicAICached\(\) && IA_BuildingGarrison.HasReachedInterior\([^\n]+\)\)\s*\{[\s\S]*?EnterHoldPost\(\)")
         arrival = method(source("IA_BuildingGarrison.c"), "HasReachedInterior")
+        open_post = method(source("IA_BuildingGarrison.c"), "HasReachedOpenPost")
         self.assertIn("foreach (AIAgent agent : agents)", arrival)
         self.assertIn("!NearPost(pos, post, radius)", arrival)
         self.assertIn("!WithinBounds(pos, mins, maxs)", arrival)
         self.assertIn("roof.ExcludeArray = excluded", arrival)
         self.assertIn("if (hit != building)", arrival)
         self.assertIn("return living > 0", arrival)
+        self.assertIn("if (!building)", arrival)
+        self.assertIn("return HasReachedOpenPost(group, post, radius)", arrival)
+        self.assertIn("NearPost(pawn.GetOrigin(), post, radius)", open_post)
+        self.assertIn("return living > 0", open_post)
 
     def test_defend_to_wait_uses_existing_typed_tree_handoff(self):
         group = source("IA_AI_Group.c")
