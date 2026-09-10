@@ -43,19 +43,28 @@ class IA_StaticGunAssignment
 			m_iReadyMs = System.GetTickCount();
 	}
 
+	bool ShouldDeferGroupDespawn()
+	{
+		if (m_iState == 4)
+			return false;
+		if (IsPlayer())
+			return true;
+		return IsPawnCompartmentBound();
+	}
+
 	void Tick(bool permitInitialMount, bool siteLive)
 	{
 		if (!Replication.IsServer() || m_iState == 4)
 			return;
 		int now = System.GetTickCount();
-		if (!m_Group || !m_Group.IsSpawned())
-		{
-			Release(false);
-			return;
-		}
 		if (m_iState == 3)
 		{
 			FinishExit(now);
+			return;
+		}
+		if (!m_Group || !m_Group.IsSpawned())
+		{
+			Release(false);
 			return;
 		}
 		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
@@ -179,6 +188,45 @@ class IA_StaticGunAssignment
 			m_Seat.SetReserved(null);
 	}
 
+	protected bool IsCompartmentBound(CompartmentAccessComponent access)
+	{
+		if (!access)
+			return false;
+		if (access.IsInCompartment())
+			return true;
+		if (access.IsGettingIn())
+			return true;
+		if (access.IsGettingOut())
+			return true;
+		return false;
+	}
+
+	protected bool IsPawnCompartmentBound()
+	{
+		ChimeraCharacter character = ChimeraCharacter.Cast(m_Pawn);
+		if (!character)
+			return false;
+		return IsCompartmentBound(character.GetCompartmentAccessComponent());
+	}
+
+	// Same sequence as IA_AiGroup.ForceEjectSeatedMembers: ANIMATED GetOut from a
+	// sandbag nest often never leaves the turret.
+	protected bool RequestAiEject(CompartmentAccessComponent access, ChimeraCharacter character)
+	{
+		if (!access || !character)
+			return false;
+		bool left = false;
+		if (access.CanGetOutVehicleViaDoor(-1))
+			left = access.GetOutVehicle(EGetOutType.TELEPORT, -1, ECloseDoorAfterActions.INVALID, false);
+		if (!left)
+		{
+			vector mat[4];
+			character.GetWorldTransform(mat);
+			left = access.GetOutVehicle_NoDoor(mat, false, false);
+		}
+		return left;
+	}
+
 	protected void FinishExit(int now)
 	{
 		ChimeraCharacter character = ChimeraCharacter.Cast(m_Pawn);
@@ -200,15 +248,23 @@ class IA_StaticGunAssignment
 				access.InterruptVehicleActionQueue(true, true, true);
 				m_bBoardingCancelled = true;
 			}
-			if (access && (access.IsInCompartment() || access.IsGettingIn() || access.IsGettingOut()))
+			if (IsCompartmentBound(access))
 			{
-				if (!m_bExitRequested && !access.IsGettingIn() && !access.IsGettingOut())
-					m_bExitRequested = access.GetOutVehicle(EGetOutType.ANIMATED, -1, ECloseDoorAfterActions.INVALID, false);
-				if (now < m_iExitDeadlineMs)
+				if (access.IsGettingIn() || access.IsGettingOut())
 					return;
-				// Never force a pawn pose or repeatedly teleport a failed exit.
-				// Normal host cleanup owns the remaining AI; do not remount it.
-				m_bRestoreDefense = false;
+				if (now < m_iExitDeadlineMs)
+				{
+					if (!m_bExitRequested)
+						m_bExitRequested = access.GetOutVehicle(EGetOutType.ANIMATED, -1, ECloseDoorAfterActions.INVALID, false);
+					if (IsCompartmentBound(access))
+						return;
+				}
+				else
+				{
+					RequestAiEject(access, character);
+					if (IsCompartmentBound(access))
+						return;
+				}
 			}
 		}
 		m_iState = 4;
