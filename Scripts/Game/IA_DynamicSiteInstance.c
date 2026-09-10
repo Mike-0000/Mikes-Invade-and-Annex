@@ -324,6 +324,16 @@ class IA_DynamicSiteInstance
 		return false;
 	}
 
+	bool HasEmplacementOccupant()
+	{
+		foreach (IA_StaticGunRecord record : m_Emplacements)
+		{
+			if (record && record.HasOccupant())
+				return true;
+		}
+		return false;
+	}
+
 	void TickEmplacements(bool constructing = false)
 	{
 		if (!Replication.IsServer() || m_Emplacements.IsEmpty())
@@ -685,7 +695,10 @@ class IA_DynamicSiteInstance
 	bool DeleteRoots()
 	{
 		// Independent final guard protects direct/abort callers as well as TickCleanup.
+		// Players and AI: deleting a turret under a seated occupant is an rpl/crash risk.
 		if (HasEmplacementPlayerOccupant())
+			return false;
+		if (HasEmplacementOccupant())
 			return false;
 		StopEmplacementAssignments(false);
 		int count = m_aRoots.Count();

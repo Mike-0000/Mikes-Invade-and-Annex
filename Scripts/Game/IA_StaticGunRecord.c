@@ -22,6 +22,18 @@ class IA_StaticGunRecord
 		return Math.AbsFloat(x) < 1.5 + margin && z > -4 - margin && z < 1.25 + margin;
 	}
 
+	bool HasOccupant()
+	{
+		TurretCompartmentSlot seat;
+		if (m_Gun)
+			seat = m_Gun.GetSeat();
+		if (seat && seat.GetOccupant())
+			return true;
+		if (m_Crew && m_Crew.HasStaticGunAssignment())
+			return true;
+		return false;
+	}
+
 	bool HasPlayerOccupantOrTransition()
 	{
 		if (!m_Root)
