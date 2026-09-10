@@ -8,11 +8,13 @@ Open **Admin configuration → Scaling**.
 
 | Setting | Behavior |
 | --- | --- |
-| **Dynamic AI Spawning OFF** | Default. Uses the original spawning path. If soldiers are already cached, restores all surviving records through the worker before becoming inactive. |
-| **Dynamic AI Spawning ON, Dynamic AI Budget 1–2000** | Uses the shared soldier budget described below. The budget defaults to **160**. |
-| **Dynamic AI Spawning ON, Dynamic AI Budget 0** | Removes the budget policy. Existing budget reserves first restore, then the previous distance-only Dynamic AI path takes over. |
+| **Dynamic AI Spawning OFF** | Default. Uses the original spawning path and stored AI scaling settings. If soldiers are already cached, restores all surviving records through the worker before becoming inactive. |
+| **Dynamic AI Spawning ON, Dynamic AI Budget 1–2000** | Uses the shared soldier budget described below and fixes effective AI scale at **1.0**. The budget defaults to **160**. |
+| **Dynamic AI Spawning ON, Dynamic AI Budget 0** | Removes the budget policy while keeping effective AI scale at **1.0**. Existing budget reserves first restore, then the previous distance-only Dynamic AI path takes over. |
 
-The budget is an **absolute target number of managed soldiers**, independent of the Game Master percentage, vanilla editor limits, and AI scaling settings. It does not change how many soldiers an objective is originally assigned. Settings are saved with the admin configuration; existing profiles without a budget retain the configured/default value.
+The budget is an **absolute target number of managed soldiers**, independent of the Game Master percentage and vanilla editor limits. The target itself controls how many assigned soldiers remain physical; it does not multiply an objective's initial roster. Settings are saved with the admin configuration; existing profiles without a budget retain the configured/default value.
+
+While the **Dynamic AI Spawning master toggle is ON**, the shared AI scale function returns **1.0** before applying the player-count curve, AI scale multiplier, or static AI scale override. This applies with **any budget value, including 0**, and to every spawning/count calculation that uses that function. The stored multiplier and static override remain editable and are not overwritten; switching the master toggle OFF resumes those stored settings and the previous player-scaling behavior. Separate settings such as the military vehicle count multiplier still apply. Changing the scale affects subsequent calculations; it does not rebuild an already assigned roster.
 
 The target is **soft**. Nearby fighting, protected roles, injuries, fresh spawns, and already admitted restoration work can exceed it. Mandatory soldiers still restore when the target is full. A strict cap would require withholding close enemies or removing soldiers during a firefight; this system preserves those gameplay protections and reports the overage.
 
@@ -75,7 +77,7 @@ Once any budget-mode drain finishes, the previous Dynamic AI path remains availa
 - Any saved member inside **1000 m** requests the whole team's restoration unconditionally. Capture, defense assignment, and OFF can also request it.
 - The existing queue handles one whole-group cache transaction per 100 ms tick, subject to its limits, alongside prioritized restoration. Large groups receive an exclusive turn. A complete restoration starts a fresh quiet period for the next cycle.
 
-This mode still saves current positions and casualties and resets equipment/ammo. It intentionally has no population target, so clustered objectives can all become live together as before.
+This mode still saves current positions and casualties and resets equipment/ammo. It intentionally has no population target, so clustered objectives can all become live together as before. The master toggle remains ON, so effective AI scale stays fixed at **1.0**; budget 0 does not reactivate stored scale overrides.
 
 ## Why this design
 
@@ -87,7 +89,7 @@ Distance does not prove invisibility. Long-range optics, aircraft, HALO, telepor
 
 ## Validation status
 
-The final native Workbench run on 2026-09-09 passed all five plugins with exit code **0** and their own zero-failure result markers:
+The budget implementation regression run on 2026-09-09 passed all five native Workbench plugins with exit code **0** and their own zero-failure result markers:
 
 | Plugin | Coverage | Evidence |
 | --- | --- | --- |
@@ -101,6 +103,8 @@ All runs loaded Game CRC `31c637d3` and WorkbenchGame CRC `bec56788`. Scripts al
 
 These tests exercise production policy and state transitions with deterministic fixtures replacing engine/world effects. They do not establish live entity lifecycle, multiplayer continuity, pathfinding, or frame-time improvement. No live budget performance benchmark is claimed; the clustered-city comparison below remains required.
 
+The subsequent fixed-1.0-scale change compiled successfully and passed the existing Dynamic AI configuration/work-queue regression with exit code 0 ([follow-up log](<C:/Users/'admin'/AppData/Local/Temp/IA_DynamicAI_Scale_20260909_232145/logs/logs_2026-09-09_23-21-45/console.log:187>)). The logging scan and its eight tests passed. Source inspection confirmed that the master-toggle check precedes both the static override and player-based scaling, and that gameplay callers use this shared scale function.
+
 ## Focused live acceptance check
 
 Restart the mission with the updated scripts. Use a dedicated server and a second observing client, with **-iaDebug 1** on the server for diagnostics. Budget mode reports **[IA][DynamicAI] Budget** every 30 seconds: target, physical-and-reserved cost, protected demand, planned demand, virtual members, partial groups, overage, and plan age. **Budget work** reports operations and maximum script work times. These are custom managed counts; GM budget percentage is not the acceptance metric. The original coverage/queue/removal-audit diagnostics apply to distance-only mode.
@@ -108,7 +112,7 @@ Restart the mission with the updated scripts. Use a dedicated server and a secon
 1. **Clustered city:** use several overlapping objectives, set a target well below their combined rosters, and initially stay 450–900 m from the troops. After live dwell and eviction delays, verify the closest squads fill first, a boundary squad can be partial, and farther squads reduce. Move laterally across the city and check priorities migrate without constant back-and-forth spawning.
 2. **Protection and split players:** approach within 300 m or engage a partial squad. Its missing survivors should return even if this temporarily exceeds the target. Move a second player to another front. Neither player should lose close enemies merely to satisfy the target. After withdrawal and expired combat protection, capacity should become available again.
 3. **Casualties and movement:** kill members, down another, wound a conscious survivor, and move healthy survivors to distinct valid positions. After eligible removal and restoration, killed/downed casualties must stay dead, the wounded survivor must not be healed by caching, and only actual surviving records may return. Move a partly cached patrol and verify live members continue acting while reserves retain their last positions. Repeat the cycle.
-4. **Modes during queued work:** lower and raise the target; set budget 0 during partial restoration; then switch Dynamic AI Spawning off while reserves remain. Verify admitted retries persist, budget 0 completes its drain and uses the old distance thresholds, and OFF restores every remaining survivor without duplication. Re-enable and repeat a cycle.
+4. **Modes during queued work:** lower and raise the target; set budget 0 during partial restoration; then switch Dynamic AI Spawning off while reserves remain. Verify admitted retries persist, budget 0 completes its drain and uses the old distance thresholds, and OFF restores every remaining survivor without duplication. Effective AI scale should remain 1.0 in both ON modes, then resume the stored scale multiplier/static override when OFF. Re-enable and repeat a cycle.
 5. **Mission lifecycle:** begin capture with virtual defenders, assign/cancel defense mode during restoration, and complete/cancel an area while work remains pending. Capture must wait for relevant defenders; deferred orders must use the latest request; retired areas must not respawn soldiers afterward.
 6. **Performance and visibility:** compare the same mission/player count with OFF, distance-only, and budget mode. Record server frame times and transition spikes alongside managed live counts. Observe distant optics, fast arrivals, and indirect fire separately; report remaining pop-in and absent-target limitations rather than treating compiler checks as live validation.
 

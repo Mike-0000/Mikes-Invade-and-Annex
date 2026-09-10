@@ -192,8 +192,13 @@ class IA_Game
     // Calculate scale factor for AI spawning based on player count
     static float GetAIScaleFactor()
     {
-        // Check for config override first
         IA_Config config = IA_MissionInitializer.GetGlobalConfig();
+        // Dynamic spawning owns live population; seed its roster at baseline
+        // strength without changing the settings used by the legacy path.
+        if (config && config.m_bDynamicAISpawningEnabled)
+            return 1.0;
+
+        // The configured scale applies again when dynamic spawning is off.
         if (config && config.m_fStaticAIScaleOverride > 0)
         {
             if (IA_Log.IsDebugEnabled())

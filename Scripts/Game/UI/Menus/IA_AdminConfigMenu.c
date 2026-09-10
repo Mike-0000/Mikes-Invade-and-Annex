@@ -183,15 +183,15 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_DynamicAIBudgetField.SetDecimals(0);
 		m_DynamicAIBudgetField.SetValue(IA_Config.DYNAMIC_AI_BUDGET_DEFAULT);
 		m_PageScaling.AddChild(m_DynamicAIBudgetField);
-		ref MUI_Label dynamicAiBudgetHelp = runtime.CreateLabel("Supported area soldiers present: soft target. 0 = distance only. Nearby troops and combat may exceed the target.", "dynamicAiBudgetHelp");
+		ref MUI_Label dynamicAiBudgetHelp = runtime.CreateLabel("Dynamic AI Spawning fixes AI scale at 1.0. Saved scale settings resume when OFF. Budget: soft target for supported area soldiers; 0 = distance only. Nearby troops and combat may exceed it.", "dynamicAiBudgetHelp");
 		dynamicAiBudgetHelp.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		dynamicAiBudgetHelp.SetMuted(true);
 		m_PageScaling.AddChild(dynamicAiBudgetHelp);
-		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Pause supported area infantry, ordinary patrols and garrisons while distant and quiet, then restore survivors at their latest saved positions as players approach. The budget prioritizes nearby groups. Equipment/ammo reset. Caching kills downed AI and never revives corpses. Turning this off restores cached survivors and returns to normal spawning.");
+		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Pause supported area infantry, ordinary patrols and garrisons while distant and quiet, then restore survivors as needed. While ON, effective AI scale is fixed at 1.0, including with budget 0. Stored scale multiplier and static override resume when OFF. Equipment/ammo reset. Caching kills downed AI and never revives corpses. Turning this off restores cached survivors.");
 		m_Hints.AddHint(m_DynamicAIBudgetField, "Dynamic AI Budget", "Target number of supported area soldiers present while Dynamic AI Spawning is on. Closest groups get priority. Nearby troops and combat are protected and may exceed the target. 0 restores distance-only spawning, with caching after 60 quiet seconds beyond 1500 m and restoration within 1000 m. This setting is separate from the Game Master budget.");
 		m_Hints.AddHint(m_Tabs, "Settings pages", "Choose a tab to view a different group of settings. Help updates to explain the open tab.");
-		m_Hints.AddHint(m_AIField, "Enemy strength", "Changes how many enemy soldiers appear as the player count rises. 1 is normal, 0.5 is about half, and 2 is about double.");
-		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "Set this above 0 to ignore the player count and keep enemy numbers at a fixed level. Leave it at 0 for normal player scaling.");
+		m_Hints.AddHint(m_AIField, "Enemy strength", "Multiplies player-based AI scaling while Dynamic AI Spawning is OFF and no static override is set. Dynamic AI Spawning ON fixes the effective scale at 1.0; this saved value is kept for when it is switched OFF.");
+		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "When Dynamic AI Spawning is OFF, a value above 0 replaces player-based AI scaling; 0 uses normal scaling. Dynamic AI Spawning ON fixes the effective scale at 1.0 and keeps this saved override for when it is switched OFF.");
 		m_Hints.AddHint(m_MilVehField, "Enemy vehicle count", "Changes how many enemy military vehicles appear. 1 is normal, 0.5 is about half, and 2 is about double.");
 
 		ref MUI_Label combatLbl = runtime.CreateLabel("AI combat  •  Skill is aim accuracy only. Fire rate and spotting are separate.", "combatLbl");
