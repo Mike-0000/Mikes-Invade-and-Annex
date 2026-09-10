@@ -102,6 +102,12 @@ class IA_AiGroup
     private ref IA_DynamicAIGroupCache m_DynamicAICache;
     private IA_AreaInstance m_DynamicAIOwner;
     private bool m_bDynamicAIDefendPending;
+#ifdef WORKBENCH
+    private bool m_bDynamicAIOwnerTest;
+    private int m_iDynamicAIPhysicalTest;
+    private int m_iDynamicAISuspendTest;
+    private int m_iDynamicAIResumeTest;
+#endif
     private bool        m_isSpawned = false;
     private bool        m_isCivilian = false;
     private IA_SquadType m_squadType;
@@ -845,7 +851,7 @@ class IA_AiGroup
     // Add a pre-existing waypoint to the group
     void AddWaypoint(SCR_AIWaypoint waypoint)
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (!m_group || !waypoint)
         {
@@ -869,7 +875,7 @@ class IA_AiGroup
 
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (HasStaticGunAssignment())
             return;
@@ -1324,7 +1330,7 @@ class IA_AiGroup
 
     void RemoveAllOrders(bool resetLastOrderTime = false)
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (m_isHoldingPost && m_bDefendPost && HasHoldWaypoint())
             return;
@@ -1871,7 +1877,7 @@ class IA_AiGroup
 
     private void SetupDeathListener()
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
 
               
@@ -2342,8 +2348,8 @@ class IA_AiGroup
 
     bool ShouldSkipInfantryOrders()
     {
-        // Cached soldiers retain their roster, but cannot accept live assignments.
-        if (IsDynamicAICached())
+        // A reduced squad's live members continue to accept ordinary assignments.
+        if (IsDynamicAIPaused())
             return true;
         if (m_isDriving || m_isVehicleCrewGroup)
             return true;
@@ -2359,7 +2365,7 @@ class IA_AiGroup
 
     bool ShouldKeepOwnOrders()
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return true;
         if (IsPinnedGarrison())
             return true;
@@ -2975,7 +2981,9 @@ class IA_AiGroup
 
     private void OnMemberDeath(notnull SCR_CharacterControllerComponent memberCtrl, IEntity killerEntity, Instigator killer)
     {
-        if (IsDynamicAICached())
+        // Budget mode tracks live squads too, so a first casualty must protect
+        // their survivors even before any member has been virtualized.
+        if (m_DynamicAICache)
             m_DynamicAICache.OnUnitKilled(memberCtrl.GetOwner());
 
         IEntity victimEntity = memberCtrl.GetOwner();
@@ -3111,7 +3119,7 @@ class IA_AiGroup
     // Evaluate and potentially change tactical state based on situation
     void EvaluateTacticalState()
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (HasStaticGunAssignment())
             return;
@@ -3687,7 +3695,7 @@ class IA_AiGroup
     // Add a public SetTacticalState method to replace the one we accidentally removed
     void SetTacticalState(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null, bool fromAuthority = false)
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (HasStaticGunAssignment())
             return;
@@ -3915,7 +3923,7 @@ class IA_AiGroup
     // Make sure CheckDangerEvents is defined as a public method
     void CheckDangerEvents()
     {
-        if (IsDynamicAICached() && !m_DynamicAICache.IsWaking())
+        if (IsDynamicAIPaused() && !m_DynamicAICache.IsWaking())
             return;
         // Throttle the main check logic per group
         int currentTime_check = GetGame().GetWorld().GetWorldTime();
@@ -4051,7 +4059,7 @@ class IA_AiGroup
     {
         m_isStateEvaluationScheduled = false;
 
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         
         if (!IsSpawned() || !m_group)
@@ -4180,7 +4188,7 @@ class IA_AiGroup
 
     protected void TickHoldMarch()
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (!IsBuildingGarrison() || m_bSpawnAborted || !m_group)
             return;
@@ -4196,7 +4204,8 @@ class IA_AiGroup
 
         if (!m_bHoldEntered)
         {
-            if (IA_BuildingGarrison.HasReachedInterior(m_group, m_HoldBuilding, m_holdPost, m_holdRadius))
+            // Live members keep walking, but absent reserves cannot prove arrival.
+            if (!IsDynamicAICached() && IA_BuildingGarrison.HasReachedInterior(m_group, m_HoldBuilding, m_holdPost, m_holdRadius))
             {
                 // Arrival changes orders only. Never reposition the group or pawns.
                 EnterHoldPost();
@@ -4216,7 +4225,7 @@ class IA_AiGroup
 
     protected void ScheduleHoldMarchTick()
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (m_bHoldMarchScheduled)
             return;
@@ -4236,7 +4245,7 @@ class IA_AiGroup
     protected void OnHoldMarchTick()
     {
         m_bHoldMarchScheduled = false;
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         TickHoldMarch();
         if (!m_bHoldEntered && m_isHoldingPost && !m_bDefendPost)
@@ -4720,7 +4729,7 @@ class IA_AiGroup
 
     protected void EnableBuildingMarchSimulation()
     {
-        if (m_bInboundSimPinned || IsDynamicAICached())
+        if (m_bInboundSimPinned || IsDynamicAIPaused())
             return;
         EnableInboundSimulation(m_holdPost);
         m_bBuildingMarchSimPinned = true;
@@ -4759,21 +4768,23 @@ class IA_AiGroup
 
         array<AIAgent> agents = {};
         m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            PinInboundAgent(agent);
+        }
+    }
+
+    protected void PinInboundAgent(AIAgent agent)
+    {
+        if (!agent)
+            return;
         int maxLod = AIAgent.GetMaxLOD();
         int nextToLast = maxLod - 1;
         if (nextToLast < 0)
             nextToLast = 0;
-
-        foreach (AIAgent agent : agents)
-        {
-            if (!agent)
-                continue;
-
-            if (agent.GetLOD() == maxLod)
-                agent.SetLOD(nextToLast);
-
-            agent.PreventMaxLOD();
-        }
+        if (agent.GetLOD() == maxLod)
+            agent.SetLOD(nextToLast);
+        agent.PreventMaxLOD();
     }
 
     protected void UnpinInboundSimulation()
@@ -5255,7 +5266,7 @@ class IA_AiGroup
     // Add this new method before SetTacticalState method
     void RequestTacticalStateChange(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null)
     {
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (m_isHoldingPost)
             return;
@@ -6070,8 +6081,48 @@ class IA_AiGroup
         return m_DynamicAICache && m_DynamicAICache.IsCached();
     }
 
+    bool IsDynamicAIPaused()
+    {
+        return m_DynamicAICache && m_DynamicAICache.IsPaused();
+    }
+
+    // Budget accounting measures living physical AI, including downed soldiers.
+    // Native membership can still include a dying pawn during its death callback.
+    int GetDynamicAIPhysicalAliveCount()
+    {
+#ifdef WORKBENCH
+        if (m_bDynamicAIOwnerTest)
+            return m_iDynamicAIPhysicalTest;
+#endif
+        if (!m_group)
+            return 0;
+        PlayerManager manager;
+        if (GetGame())
+            manager = GetGame().GetPlayerManager();
+        ref array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        int count;
+        foreach (AIAgent agent : agents)
+        {
+            if (!agent)
+                continue;
+            ChimeraCharacter pawn = ChimeraCharacter.Cast(agent.GetControlledEntity());
+            if (!pawn || (manager && manager.GetPlayerIdFromControlledEntity(pawn) > 0))
+                continue;
+            CharacterControllerComponent controller = pawn.GetCharacterController();
+            if (controller && controller.GetLifeState() == ECharacterLifeState.DEAD)
+                continue;
+            count++;
+        }
+        return count;
+    }
+
     bool IsDynamicAIOwnerLive()
     {
+#ifdef WORKBENCH
+        if (m_bDynamicAIOwnerTest)
+            return true;
+#endif
         return m_isSpawned && !m_bSpawnAborted && m_group && m_DynamicAIOwner && !m_DynamicAIOwner.IsShutDown();
     }
 
@@ -6091,7 +6142,7 @@ class IA_AiGroup
         // Registration retains no soldier entities and is inert while disabled.
         if (!Replication.IsServer() || !IsDynamicAIOwnerLive() || m_DynamicAICache)
             return;
-        m_DynamicAICache = new IA_DynamicAIGroupCache();
+        m_DynamicAICache = new IA_DynamicAIBudgetCache();
         m_DynamicAICache.Init(this);
         IA_DynamicAISpawning.Register(m_DynamicAICache);
     }
@@ -6132,7 +6183,14 @@ class IA_AiGroup
 
     void SuspendForDynamicAI()
     {
-        if (!IsDynamicAICached() || !IsDynamicAIOwnerLive())
+#ifdef WORKBENCH
+        if (m_bDynamicAIOwnerTest)
+        {
+            m_iDynamicAISuspendTest++;
+            return;
+        }
+#endif
+        if (!IsDynamicAIPaused() || !IsDynamicAIOwnerLive())
             return;
         SCR_AIGroup group = m_group;
         GetGame().GetCallqueue().Remove(this.EvaluateGroupState);
@@ -6142,7 +6200,7 @@ class IA_AiGroup
         m_isStateEvaluationScheduled = false;
         m_bHoldMarchScheduled = false;
         SuspendBuildingMarchSimulation();
-        if (!IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+        if (!IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
             return;
         array<AIAgent> agents = {};
         group.GetAgents(agents);
@@ -6159,11 +6217,25 @@ class IA_AiGroup
                 }
                 agent.DeactivateAI();
                 // Behavior aborts can synchronously retire the owning area.
-                if (!IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+                if (!IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
                     return;
             }
         }
         group.DeactivateAI();
+    }
+
+    // Selective removal must leave the surviving squad's listeners and behavior
+    // running. The cache publishes its record before calling this helper.
+    void PrepareDynamicAIUnitRemoval(IEntity entity)
+    {
+        if (!entity || !IsDynamicAIOwnerLive())
+            return;
+        ChimeraCharacter pawn = ChimeraCharacter.Cast(entity);
+        if (!pawn)
+            return;
+        SCR_CharacterControllerComponent controller = SCR_CharacterControllerComponent.Cast(pawn.GetCharacterController());
+        if (controller)
+            controller.GetOnPlayerDeathWithParam().Remove(OnMemberDeath);
     }
 
     void SetupDynamicAIUnit(IEntity entity)
@@ -6172,6 +6244,20 @@ class IA_AiGroup
         // Character init can overwrite the immediate profile. Reapply only this
         // replacement, instead of rescanning the whole group once per soldier.
         GetGame().GetCallqueue().CallLater(ApplyDynamicAICombatProfile, 2000, false, entity);
+    }
+
+    // The first restored member resumes the wrapper. Later members still need
+    // the current arrival pin without traversing or resetting their teammates.
+    void OnDynamicAIUnitAttached(IEntity entity)
+    {
+        if (!entity || IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || !m_bInboundSimPinned)
+            return;
+        AIControlComponent control = AIControlComponent.Cast(entity.FindComponent(AIControlComponent));
+        if (!control)
+            return;
+        AIAgent agent = control.GetControlAIAgent();
+        if (agent && agent.GetParentGroup() == m_group)
+            PinInboundAgent(agent);
     }
 
     protected void ApplyDynamicAICombatProfile(IEntity entity)
@@ -6186,7 +6272,14 @@ class IA_AiGroup
 
     void ResumeAfterDynamicAI()
     {
-        if (IsDynamicAICached() || !IsDynamicAIOwnerLive())
+#ifdef WORKBENCH
+        if (m_bDynamicAIOwnerTest)
+        {
+            m_iDynamicAIResumeTest++;
+            return;
+        }
+#endif
+        if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive())
             return;
         SCR_AIGroup group = m_group;
         // The last soldier can be killed while other restoration work is pending.
@@ -6196,24 +6289,24 @@ class IA_AiGroup
             return;
         }
         group.ActivateAI();
-        if (IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+        if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
             return;
-        if (m_bDynamicAIDefendPending)
+        if (m_bDynamicAIDefendPending && !IsDynamicAICached())
         {
             m_bDynamicAIDefendPending = false;
             SetDefendMode(m_isInDefendMode, m_defendTarget);
-            if (IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+            if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
                 return;
         }
         ScheduleNextStateEvaluation();
         SetupDeathListener();
-        if (IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+        if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
             return;
-        // All saved survivors now exist. Reacquire navmesh/LOD support for the
-        // new agents and retain the original building post and arrival intent.
+        // Reacquire movement support for the live roster. TickHoldMarch retains
+        // the original post and cannot finish arrival while reserves are absent.
         if (IsBuildingGarrison())
             TickHoldMarch();
-        if (IsDynamicAICached() || !IsDynamicAIOwnerLive() || m_group != group)
+        if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
             return;
         if (IA_Log.IsDebugEnabled())
         {
@@ -6222,6 +6315,32 @@ class IA_AiGroup
     }
 
 #ifdef WORKBENCH
+    // Substitute only the physical owner boundary for cache state regressions.
+    // No native group, soldier entity, call queue or preview world is created.
+    static IA_AiGroup CreateDynamicAIBudgetOwnerForTest(IA_DynamicAIGroupCache cache, int physical)
+    {
+        ref IA_AiGroup owner = new IA_AiGroup("100 20 100", IA_SquadType.Riflemen, IA_Faction.USSR, 4);
+        owner.m_bDynamicAIOwnerTest = true;
+        owner.m_iDynamicAIPhysicalTest = physical;
+        owner.m_DynamicAICache = cache;
+        return owner;
+    }
+
+    void SetDynamicAIPhysicalForTest(int physical)
+    {
+        m_iDynamicAIPhysicalTest = physical;
+    }
+
+    int GetDynamicAISuspendCountForTest()
+    {
+        return m_iDynamicAISuspendTest;
+    }
+
+    int GetDynamicAIResumeCountForTest()
+    {
+        return m_iDynamicAIResumeTest;
+    }
+
     // Native wrapper regression; the private constructor stays in its own class.
 	static int RunDynamicAIGroupRegression()
 	{
@@ -6273,7 +6392,7 @@ class IA_AiGroup
 		group.OnHoldMarchTick();
 		group.EnterHoldPost();
 		group.EnableBuildingMarchSimulation();
-		DynamicAIRegressionCheck(!group.m_bHoldMarchScheduled && !group.m_bHoldEntered && !group.m_bInboundSimPinned, "cached or partially restored buildings cannot reschedule, arrive, or repin", failures);
+		DynamicAIRegressionCheck(!group.m_bHoldMarchScheduled && !group.m_bHoldEntered && !group.m_bInboundSimPinned, "fully paused buildings cannot reschedule, arrive, or repin", failures);
 		group.m_isHoldingPost = false;
 		DynamicAIRegressionCheck(group.ShouldSkipInfantryOrders() && group.ShouldKeepOwnOrders(), "cached infantry cannot enter live tactical reassignment", failures);
 		group.m_lastOrderPosition = "100 20 100";
@@ -6290,6 +6409,19 @@ class IA_AiGroup
 		DynamicAIRegressionCheck(!group.m_bInboundSimPinned && group.GetTacticalState() == IA_GroupTacticalState.DefendPatrol, "defense does not start movement on an empty group", failures);
 		group.SetDefendMode(false);
 		DynamicAIRegressionCheck(!group.IsInDefendMode() && group.m_bDynamicAIDefendPending && cache.IsWaking(), "a later defense cancellation wins without cancelling restoration", failures);
+
+		cache.SetHybridForTest(true);
+		DynamicAIRegressionCheck(group.IsDynamicAICached() && !group.IsDynamicAIPaused(), "a hybrid roster retains virtual accounting without pausing live members", failures);
+		DynamicAIRegressionCheck(!group.ShouldSkipInfantryOrders() && !group.ShouldKeepOwnOrders(), "reduced ordinary infantry can accept tactical assignments", failures);
+		group.SetTacticalState(IA_GroupTacticalState.Approaching, "200 20 200", null, true);
+		DynamicAIRegressionCheck(group.GetTacticalState() == IA_GroupTacticalState.Approaching, "hybrid infantry remain on the live tactical path", failures);
+		group.RequestTacticalStateChange(IA_GroupTacticalState.Attacking, "220 20 220");
+		DynamicAIRegressionCheck(group.HasPendingStateRequest(), "hybrid soldiers can request combat reactions", failures);
+		group.m_isHoldingPost = true;
+		group.EnterHoldPost();
+		DynamicAIRegressionCheck(!group.m_bHoldEntered, "a hybrid building roster cannot finish arrival while reserves are virtual", failures);
+		group.m_isHoldingPost = false;
+		DynamicAIRegressionCheck(group.GetDynamicAIPhysicalAliveCount() == 0, "a wrapper without a native roster contributes no physical AI", failures);
 
 		cache.SetCachedForTest(false);
 		DynamicAIRegressionCheck(!group.ShouldSkipInfantryOrders() && !group.ShouldKeepOwnOrders(), "restored ordinary infantry rejoin tactical assignment", failures);

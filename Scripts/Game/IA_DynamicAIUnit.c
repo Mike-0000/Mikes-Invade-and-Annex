@@ -9,6 +9,10 @@ class IA_DynamicAIUnit
 	bool m_bDead;
 	int m_iFailures;
 	int m_iNextAttemptMs;
+	bool m_bBudgetAdmitted;
+	bool m_bBudgetProtected;
+	bool m_bBudgetLeader;
+	int m_iBudgetLiveSinceMs;
 
 	bool Capture(IEntity entity)
 	{

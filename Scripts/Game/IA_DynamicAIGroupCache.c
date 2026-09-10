@@ -38,6 +38,16 @@ class IA_DynamicAIGroupCache
 		return m_bCached;
 	}
 
+	bool IsPaused()
+	{
+		return IsCached();
+	}
+
+	bool ShouldPreserveGroup()
+	{
+		return IsCached();
+	}
+
 	bool IsWaking()
 	{
 		return m_bCached && m_bWaking;
@@ -539,6 +549,9 @@ class IA_DynamicAIGroupCache
 			return;
 		}
 		unit.m_bRestored = true;
+		m_Owner.OnDynamicAIUnitAttached(unit.m_Entity);
+		if (!IsTransactionLive())
+			return;
 		// Let successfully restored soldiers respond while the remainder is queued.
 		group.ActivateAI();
 	}

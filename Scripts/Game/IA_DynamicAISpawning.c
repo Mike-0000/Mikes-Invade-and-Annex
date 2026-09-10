@@ -15,6 +15,7 @@ class IA_DynamicAISpawning
 	static const int WAKE_AGING_MS = 5000;
 	protected static ref array<IA_DynamicAIGroupCache> s_aGroups = {};
 	protected static ref IA_DynamicAIWorkQueue s_Work = new IA_DynamicAIWorkQueue();
+	protected static ref IA_DynamicAIBudgetController s_Budget = new IA_DynamicAIBudgetController();
 	protected static bool s_bRunning;
 	protected static int s_iNextScanMs;
 	protected static int s_iNextWakeScanMs;
@@ -33,6 +34,13 @@ class IA_DynamicAISpawning
 		return init.GetConfig().m_bDynamicAISpawningEnabled;
 	}
 
+	static int GetBudgetLimit()
+	{
+		if (!IsEnabled())
+			return 0;
+		return IA_Config.ClampDynamicAIBudget(IA_MissionInitializer.GetInstance().GetConfig().m_iDynamicAIBudget);
+	}
+
 	static void Register(IA_DynamicAIGroupCache cache)
 	{
 		if (!Replication.IsServer() || !cache || s_aGroups.Contains(cache))
@@ -49,6 +57,7 @@ class IA_DynamicAISpawning
 		GetGame().GetCallqueue().Remove(Tick);
 		s_aGroups.Clear();
 		s_Work.Clear();
+		s_Budget = new IA_DynamicAIBudgetController();
 		s_bRunning = false;
 		s_iNextScanMs = 0;
 		s_iNextWakeScanMs = 0;
@@ -96,6 +105,10 @@ class IA_DynamicAISpawning
 		if (!Replication.IsServer())
 			return;
 		bool enabled = IsEnabled();
+		s_Budget.SettingsChanged();
+		s_iScanRemaining = 0;
+		s_iNextScanMs = 0;
+		s_iNextWakeScanMs = 0;
 		s_Work.ClearCacheWork();
 		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
 		{
@@ -114,7 +127,7 @@ class IA_DynamicAISpawning
 	{
 		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
 		{
-			if (cache && cache.IsCached() && cache.GetOwner() && cache.GetOwner().GetSCR_AIGroup() == group)
+			if (cache && cache.ShouldPreserveGroup() && cache.GetOwner() && cache.GetOwner().GetSCR_AIGroup() == group)
 				return true;
 		}
 		return false;
@@ -146,6 +159,23 @@ class IA_DynamicAISpawning
 		ref array<vector> players = {};
 		// One fresh player sample per worker invocation, including the commit tick.
 		IA_SpawnPlacement.CollectPlayerPositions(players);
+		int budget = GetBudgetLimit();
+		if (budget > 0 || s_Budget.IsActive())
+		{
+			// A single worker owns both directions during budget mode and its OFF
+			// drain; legacy queues cannot independently recreate the same records.
+			s_Work.Clear();
+			for (int index = s_aGroups.Count() - 1; index >= 0; index--)
+			{
+				IA_DynamicAIGroupCache registered = s_aGroups[index];
+				if (registered && !registered.IsOwnerLive())
+					registered.Retire();
+				if (!registered || registered.IsFinished())
+					s_aGroups.Remove(index);
+			}
+			s_Budget.Tick(s_aGroups, players, now, budget);
+			return;
+		}
 		if (now >= s_iNextWakeScanMs)
 		{
 			s_iNextWakeScanMs = now + SCAN_INTERVAL_MS;

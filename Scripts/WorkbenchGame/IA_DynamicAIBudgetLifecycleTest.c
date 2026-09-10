@@ -1,0 +1,134 @@
+#ifdef WORKBENCH
+[WorkbenchPluginAttribute(name: "IA dynamic AI budget lifecycle regression", wbModules: {"ResourceManager"})]
+class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
+{
+	protected int m_iChecks;
+	protected int m_iFailures;
+
+	override void RunCommandline()
+	{
+		TestHybridTransitions();
+		TestDisableWaitsForReserves();
+		TestCasualtyLedger();
+		Print(string.Format("[IA][DynamicAIBudgetLifecycleTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
+		Workbench.Exit(m_iFailures);
+	}
+
+	protected void TestHybridTransitions()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 3);
+		cache.Init(owner);
+		ref IA_DynamicAIBudgetUnitFixture first = new IA_DynamicAIBudgetUnitFixture();
+		ref IA_DynamicAIBudgetUnitFixture second = new IA_DynamicAIBudgetUnitFixture();
+		ref IA_DynamicAIBudgetUnitFixture third = new IA_DynamicAIBudgetUnitFixture();
+		first.m_bRestored = true;
+		second.m_bRestored = true;
+		third.m_bRestored = true;
+		cache.AddForTest(first);
+		cache.AddForTest(second);
+		cache.AddForTest(third);
+		cache.EnableBudget();
+		cache.ReconcileForTest();
+		Check(cache.IsBudgetActive() && !cache.IsCached() && !cache.IsPaused(), "an entirely live ledger enters budget mode without pausing its owner");
+		Check(cache.GetLogicalAliveCount() == 3 && owner.GetDynamicAISuspendCountForTest() == 0 && owner.GetDynamicAIResumeCountForTest() == 0, "enabling budget preserves the current roster without replaying lifecycle callbacks");
+
+		first.m_bRestored = false;
+		owner.SetDynamicAIPhysicalForTest(2);
+		cache.ReconcileForTest();
+		Check(cache.IsCached() && !cache.IsPaused() && cache.ShouldPreserveGroup(), "partial virtualization preserves the group while leaving physical members active");
+		Check(cache.GetLogicalAliveCount() == 3 && cache.GetUnrestoredCount() == 1 && owner.GetDynamicAISuspendCountForTest() == 0, "partial virtualization retains every survivor without suspending teammates");
+
+		second.m_bRestored = false;
+		third.m_bRestored = false;
+		owner.SetDynamicAIPhysicalForTest(0);
+		cache.ReconcileForTest();
+		Check(cache.IsPaused() && owner.IsDynamicAIPaused() && owner.GetDynamicAISuspendCountForTest() == 1, "removing the last physical soldier pauses the owner exactly once");
+		cache.ReconcileForTest();
+		Check(owner.GetDynamicAISuspendCountForTest() == 1 && cache.GetUnrestoredCount() == 3, "repeated dormant reconciliation neither repeats suspension nor loses reserve slots");
+
+		first.m_bRestored = true;
+		owner.SetDynamicAIPhysicalForTest(1);
+		cache.ReconcileForTest();
+		Check(cache.IsCached() && !cache.IsPaused() && owner.GetDynamicAIResumeCountForTest() == 1, "the first returning soldier resumes the owner before the full roster returns");
+		second.m_bRestored = true;
+		third.m_bRestored = true;
+		owner.SetDynamicAIPhysicalForTest(3);
+		cache.ReconcileForTest();
+		Check(!cache.IsCached() && !cache.IsPaused() && !cache.ShouldPreserveGroup(), "full restoration releases virtual empty-group protection");
+		Check(cache.GetLogicalAliveCount() == 3 && owner.GetDynamicAIResumeCountForTest() == 2, "full completion retains current survivors and resumes final deferred owner work once");
+		cache.ReconcileForTest();
+		Check(owner.GetDynamicAIResumeCountForTest() == 2, "a completed roster does not repeat final owner resumption");
+		first.m_bRestored = false;
+		owner.SetDynamicAIPhysicalForTest(2);
+		cache.ReconcileForTest();
+		Check(cache.IsCached() && !cache.IsPaused() && cache.GetLogicalAliveCount() == 3 && cache.GetUnrestoredCount() == 1, "the same surviving roster supports another partial cache cycle");
+		cache.Retire();
+		Check(cache.IsFinished() && !cache.IsBudgetActive() && !cache.ShouldPreserveGroup() && cache.GetUnrestoredCount() == 0, "retiring a hybrid roster clears its records and releases empty-group protection");
+	}
+
+	protected void TestDisableWaitsForReserves()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 1);
+		cache.Init(owner);
+		ref IA_DynamicAIBudgetUnitFixture live = new IA_DynamicAIBudgetUnitFixture();
+		ref IA_DynamicAIBudgetUnitFixture reserve = new IA_DynamicAIBudgetUnitFixture();
+		live.m_bRestored = true;
+		cache.AddForTest(live);
+		cache.AddForTest(reserve);
+		cache.EnableBudget();
+		cache.ReconcileForTest();
+		cache.DisableBudget();
+		Check(cache.IsBudgetActive() && cache.IsExitPendingForTest() && cache.IsFullRequiredForTest(), "budget zero retains its worker and ledger until reserves finish returning");
+		Check(cache.GetDesired() == 2 && cache.HasMandatoryWork() && cache.GetUnrestoredCount() == 1, "budget zero makes every current survivor mandatory instead of dropping queued reserves");
+		cache.DisableBudget();
+		Check(cache.IsBudgetActive() && cache.GetUnrestoredCount() == 1 && owner.GetDynamicAIResumeCountForTest() == 0, "repeated disable requests cannot clear an unfinished ledger");
+		reserve.m_bRestored = true;
+		owner.SetDynamicAIPhysicalForTest(2);
+		cache.ReconcileForTest();
+		Check(!cache.IsBudgetActive() && !cache.IsExitPendingForTest() && !cache.IsCached() && !cache.IsPaused(), "the completed disable drain returns to the legacy cache path");
+		Check(cache.GetUnrestoredCount() == 0 && cache.GetLogicalAliveCount() == 0 && owner.GetDynamicAIPhysicalAliveCount() == 2, "drain completion clears only the ledger and keeps the physical survivors");
+		Check(owner.GetDynamicAIResumeCountForTest() == 1 && !cache.HasMandatoryWork(), "the disable drain resumes final owner work once and removes its mandatory demand");
+	}
+
+	protected void TestCasualtyLedger()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 1);
+		cache.Init(owner);
+		ref IA_DynamicAIBudgetUnitFixture casualty = new IA_DynamicAIBudgetUnitFixture();
+		ref IA_DynamicAIBudgetUnitFixture survivor = new IA_DynamicAIBudgetUnitFixture();
+		casualty.m_bRestored = true;
+		cache.AddForTest(casualty);
+		cache.AddForTest(survivor);
+		cache.EnableBudget();
+		cache.ReconcileForTest();
+		cache.OnUnitKilled(null);
+		Check(cache.GetLogicalAliveCount() == 2 && cache.GetUnrestoredCount() == 1 && !casualty.m_bDead && !survivor.m_bDead, "a null casualty notification cannot alias records with null entity references");
+
+		// Simulate the state already written by the entity death boundary. Entity
+		// identity, damage events and native deletion need a live gameplay test.
+		casualty.m_bDead = true;
+		owner.SetDynamicAIPhysicalForTest(0);
+		cache.OnUnitKilled(null);
+		Check(cache.IsPaused() && cache.GetLogicalAliveCount() == 1 && cache.GetUnrestoredCount() == 1 && cache.ShouldPreserveGroup(), "loss of the last physical member pauses its surviving reserve without consuming it");
+		cache.RequestWake();
+		Check(cache.GetDesired() == 1 && cache.HasMandatoryWork(), "restoration demand includes only current survivors after a casualty");
+		cache.DisableBudget();
+		survivor.m_bRestored = true;
+		owner.SetDynamicAIPhysicalForTest(1);
+		cache.ReconcileForTest();
+		Check(!cache.IsBudgetActive() && casualty.m_bDead && owner.GetDynamicAIPhysicalAliveCount() == 1, "the OFF drain cannot refill a dead original squad slot");
+	}
+
+	protected void Check(bool passed, string description)
+	{
+		m_iChecks++;
+		if (passed)
+			return;
+		m_iFailures++;
+		Print("[IA][DynamicAIBudgetLifecycleTest] " + description, LogLevel.ERROR);
+	}
+}
+#endif

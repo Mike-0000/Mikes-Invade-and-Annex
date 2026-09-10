@@ -12,6 +12,8 @@ class IA_AdminOverrides
 	float m_fAIScaleMultiplier = 1.0;
 	bool m_bHasDynamicAISpawningOverride;
 	bool m_bDynamicAISpawningEnabled = false;
+	bool m_bHasDynamicAIBudgetOverride;
+	int m_iDynamicAIBudget = IA_Config.DYNAMIC_AI_BUDGET_DEFAULT;
 	bool m_bDisableHQHelipads;
 	bool m_bDisableHQGroundVehicles;
 	int m_iArtilleryCooldown = 300;
@@ -153,6 +155,9 @@ class IA_AdminOverrides
 		m_fAIScaleMultiplier = config.m_fAIScaleMultiplier;
 		m_bHasDynamicAISpawningOverride = true;
 		m_bDynamicAISpawningEnabled = config.m_bDynamicAISpawningEnabled;
+		config.ClampDynamicAISettings();
+		m_bHasDynamicAIBudgetOverride = true;
+		m_iDynamicAIBudget = config.m_iDynamicAIBudget;
 		m_bDisableHQHelipads = config.m_bDisableHQHelipads;
 		m_bDisableHQGroundVehicles = config.m_bDisableHQGroundVehicles;
 		m_iArtilleryCooldown = config.m_iArtilleryCooldown;
@@ -227,6 +232,9 @@ class IA_AdminOverrides
 		config.m_fAIScaleMultiplier = m_fAIScaleMultiplier;
 		if (m_bHasDynamicAISpawningOverride)
 			config.m_bDynamicAISpawningEnabled = m_bDynamicAISpawningEnabled;
+		if (m_bHasDynamicAIBudgetOverride)
+			config.m_iDynamicAIBudget = m_iDynamicAIBudget;
+		config.ClampDynamicAISettings();
 		config.m_bDisableHQHelipads = m_bDisableHQHelipads;
 		config.m_bDisableHQGroundVehicles = m_bDisableHQGroundVehicles;
 		config.m_iArtilleryCooldown = m_iArtilleryCooldown;
@@ -360,6 +368,7 @@ class IA_AdminOverrides
 		if (m_bDynamicAISpawningEnabled)
 			dynamicAISpawningI = 1;
 		json = json + ",\"dynamicAISpawning\":" + dynamicAISpawningI.ToString();
+		json = json + ",\"dynamicAIBudget\":" + IA_Config.ClampDynamicAIBudget(m_iDynamicAIBudget).ToString();
 		json = json + ",\"disableHeli\":" + heliI.ToString();
 		json = json + ",\"disableGround\":" + groundI.ToString();
 		json = json + ",\"artyCooldown\":" + m_iArtilleryCooldown.ToString();
@@ -459,6 +468,16 @@ class IA_AdminOverrides
 			{
 				m_bHasDynamicAISpawningOverride = true;
 				m_bDynamicAISpawningEnabled = dynamicAISpawningValue == "1";
+			}
+		}
+		m_bHasDynamicAIBudgetOverride = false;
+		if (HasKey(json, "dynamicAIBudget"))
+		{
+			int dynamicAIBudget;
+			if (IA_Config.TryParseDynamicAIBudget(ExtractValue(json, "dynamicAIBudget"), dynamicAIBudget))
+			{
+				m_bHasDynamicAIBudgetOverride = true;
+				m_iDynamicAIBudget = dynamicAIBudget;
 			}
 		}
 		if (HasKey(json, "disableHeli"))

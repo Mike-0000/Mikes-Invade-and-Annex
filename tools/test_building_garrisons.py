@@ -35,7 +35,7 @@ class BuildingGarrisonTests(unittest.TestCase):
 
     def test_actual_member_arrival_is_the_only_entry_trigger(self):
         tick = method(source("IA_AI_Group.c"), "TickHoldMarch")
-        self.assertRegex(tick, r"if \(IA_BuildingGarrison.HasReachedInterior\([^\n]+\)\)\s*\{[\s\S]*?EnterHoldPost\(\)")
+        self.assertRegex(tick, r"if \(!IsDynamicAICached\(\) && IA_BuildingGarrison.HasReachedInterior\([^\n]+\)\)\s*\{[\s\S]*?EnterHoldPost\(\)")
         arrival = method(source("IA_BuildingGarrison.c"), "HasReachedInterior")
         self.assertIn("foreach (AIAgent agent : agents)", arrival)
         self.assertIn("!NearPost(pos, post, radius)", arrival)

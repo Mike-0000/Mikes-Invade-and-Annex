@@ -55,6 +55,12 @@ class IA_Config{
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "AI Scaling", desc: "Dynamic AI Spawning: repeatedly cache supported area infantry, ordinary patrols and garrisons while distant and out of combat, then restore their latest saved positions as players approach. Equipment/ammo reset. Caching kills downed AI. Disabling restores cached survivors.")]
 	bool m_bDynamicAISpawningEnabled = false;
 
+	static const int DYNAMIC_AI_BUDGET_DEFAULT = 160;
+	static const int DYNAMIC_AI_BUDGET_MAX = 2000;
+
+	[Attribute(defvalue: "160", UIWidgets.EditBox, category: "AI Scaling", desc: "Dynamic AI Budget: target number of supported area soldiers present while Dynamic AI Spawning is enabled. Closest groups get priority. Protected nearby or fighting soldiers may exceed this target. 0 uses distance-only spawning. Independent of the Game Master budget.", params: "0 2000 1")]
+	int m_iDynamicAIBudget = DYNAMIC_AI_BUDGET_DEFAULT;
+
 	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "Multiplier for military vehicle count calculation (0.5 = half, 2.0 = double)")]
 	float m_fMilitaryVehicleCountMultiplier;
  
@@ -353,6 +359,50 @@ class IA_Config{
 			m_fDefendHotDropChance = 0;
 		if (m_fDefendHotDropChance > 1)
 			m_fDefendHotDropChance = 1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static int ClampDynamicAIBudget(int budget)
+	{
+		if (budget < 0)
+			return 0;
+		if (budget > DYNAMIC_AI_BUDGET_MAX)
+			return DYNAMIC_AI_BUDGET_MAX;
+		return budget;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void ClampDynamicAISettings()
+	{
+		m_iDynamicAIBudget = ClampDynamicAIBudget(m_iDynamicAIBudget);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool TryParseDynamicAIBudget(string token, out int budget)
+	{
+		budget = 0;
+		// Reject overflow-sized input instead of letting it wrap to the disabling value.
+		if (token.Length() > 9 || !IA_DynamicParse.TryParseIntToken(token, budget))
+			return false;
+		budget = ClampDynamicAIBudget(budget);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string PackDynamicAIBudget(notnull IA_Config cfg)
+	{
+		cfg.ClampDynamicAISettings();
+		return cfg.m_iDynamicAIBudget.ToString();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool UnpackDynamicAIBudget(notnull IA_Config cfg, string token)
+	{
+		int budget;
+		if (!TryParseDynamicAIBudget(token, budget))
+			return false;
+		cfg.m_iDynamicAIBudget = budget;
+		return true;
 	}
 
 	//------------------------------------------------------------------------------------------------

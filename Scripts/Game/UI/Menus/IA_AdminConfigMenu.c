@@ -32,6 +32,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_NumericField m_AIField;
 	protected ref MUI_NumericField m_StaticAIField;
 	protected ref MUI_Toggle m_DynamicAISpawningToggle;
+	protected ref MUI_NumericField m_DynamicAIBudgetField;
 	protected ref MUI_NumericField m_MilVehField;
 	protected ref MUI_Dropdown m_NormalSkillDrop;
 	protected ref MUI_Dropdown m_EliteSkillDrop;
@@ -176,7 +177,18 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageScaling.AddChild(m_MilVehField);
 		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
 		m_PageScaling.AddChild(m_DynamicAISpawningToggle);
-		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Cache supported area infantry, ordinary patrols and garrisons after 60 seconds beyond 1500 m and out of combat. Restore survivors at their latest saved positions within 1000 m; teams can cache again. Patrols pause while absent. Equipment/ammo reset. Caching kills downed AI and never revives corpses. Turning this off restores cached survivors.");
+		m_DynamicAIBudgetField = runtime.CreateNumericField("Dynamic AI Budget", "dynamicAiBudget");
+		m_DynamicAIBudgetField.SetRange(0, IA_Config.DYNAMIC_AI_BUDGET_MAX);
+		m_DynamicAIBudgetField.SetStep(10);
+		m_DynamicAIBudgetField.SetDecimals(0);
+		m_DynamicAIBudgetField.SetValue(IA_Config.DYNAMIC_AI_BUDGET_DEFAULT);
+		m_PageScaling.AddChild(m_DynamicAIBudgetField);
+		ref MUI_Label dynamicAiBudgetHelp = runtime.CreateLabel("Supported area soldiers present: soft target. 0 = distance only. Nearby troops and combat may exceed the target.", "dynamicAiBudgetHelp");
+		dynamicAiBudgetHelp.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		dynamicAiBudgetHelp.SetMuted(true);
+		m_PageScaling.AddChild(dynamicAiBudgetHelp);
+		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Pause supported area infantry, ordinary patrols and garrisons while distant and quiet, then restore survivors at their latest saved positions as players approach. The budget prioritizes nearby groups. Equipment/ammo reset. Caching kills downed AI and never revives corpses. Turning this off restores cached survivors and returns to normal spawning.");
+		m_Hints.AddHint(m_DynamicAIBudgetField, "Dynamic AI Budget", "Target number of supported area soldiers present while Dynamic AI Spawning is on. Closest groups get priority. Nearby troops and combat are protected and may exceed the target. 0 restores distance-only spawning, with caching after 60 quiet seconds beyond 1500 m and restoration within 1000 m. This setting is separate from the Game Master budget.");
 		m_Hints.AddHint(m_Tabs, "Settings pages", "Choose a tab to view a different group of settings. Help updates to explain the open tab.");
 		m_Hints.AddHint(m_AIField, "Enemy strength", "Changes how many enemy soldiers appear as the player count rises. 1 is normal, 0.5 is about half, and 2 is about double.");
 		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "Set this above 0 to ignore the player count and keep enemy numbers at a fixed level. Leave it at 0 for normal player scaling.");
@@ -1011,6 +1023,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_StaticAIField.SetValue(cfg.m_fStaticAIScaleOverride);
 		if (m_DynamicAISpawningToggle)
 			m_DynamicAISpawningToggle.SetChecked(cfg.m_bDynamicAISpawningEnabled);
+		if (m_DynamicAIBudgetField)
+			m_DynamicAIBudgetField.SetValue(IA_Config.ClampDynamicAIBudget(cfg.m_iDynamicAIBudget));
 		if (m_MilVehField)
 			m_MilVehField.SetValue(cfg.m_fMilitaryVehicleCountMultiplier);
 		if (m_CivVehField)
@@ -1385,6 +1399,12 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			packed = packed + "|1";
 		else
 			packed = packed + "|0";
+		ref IA_Config dynamicAiPack = new IA_Config();
+		if (live)
+			dynamicAiPack.m_iDynamicAIBudget = live.m_iDynamicAIBudget;
+		if (m_DynamicAIBudgetField)
+			dynamicAiPack.m_iDynamicAIBudget = Math.Round(m_DynamicAIBudgetField.GetValue());
+		packed = packed + "|" + IA_Config.PackDynamicAIBudget(dynamicAiPack);
 
 		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
 	}
