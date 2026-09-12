@@ -1257,6 +1257,19 @@ class IA_AreaGroupManager
             bool fired = IssueMortarFireOnBatteries(batteries, m_artilleryStrikeCenter, shotCount);
             if (!fired)
             {
+                foreach (IA_AreaInstance battery : batteries)
+                {
+                    if (!battery || !battery.CanIssueMortarFireMission())
+                        continue;
+                    if (battery.SpawnWarnedScriptedMortarBarrage(m_artilleryStrikeCenter, shotCount))
+                    {
+                        fired = true;
+                        break;
+                    }
+                }
+            }
+            if (!fired)
+            {
                 if (IA_Log.IsDebugEnabled())
                 {
                     Print("[ArtilleryStrike] Fire mission skipped: mortar pit captured.", LogLevel.NORMAL);
