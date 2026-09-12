@@ -503,6 +503,8 @@ class IA_DynamicSiteInstance
 			return;
 		if (m_bCleanupArmed)
 			return;
+		if (m_bEmplacementAssignmentsStopped)
+			return;
 		if (!m_MortarCrew)
 			return;
 
@@ -543,11 +545,25 @@ class IA_DynamicSiteInstance
 	void StopEmplacementAssignments(bool restoreDefense)
 	{
 		m_bEmplacementAssignmentsStopped = true;
+		StopDefenseMortar(restoreDefense);
 		foreach (IA_StaticGunRecord record : m_Emplacements)
 		{
 			if (record && record.m_Crew)
 				record.m_Crew.ReleaseStaticGunAssignment(restoreDefense);
 		}
+	}
+
+	protected void StopDefenseMortar(bool restoreDefense)
+	{
+		if (m_Host)
+			m_Host.SilenceDefenseMortar();
+		m_iMortarCrewAttempts = DEFENSE_MORTAR_CREW_TRIES + 1;
+		if (!m_MortarCrew)
+			return;
+
+		m_MortarCrew.ReleaseMortarAssignment(restoreDefense);
+		m_MortarCrew = null;
+		IA_Log.Info(string.Format("[IA][Base] Defense mortar silenced site=%1", m_iSiteId));
 	}
 
 	void AddGarrisonGroup(IA_AiGroup group)

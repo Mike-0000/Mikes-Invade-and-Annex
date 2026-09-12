@@ -5648,6 +5648,41 @@ class IA_AiGroup
         m_isMortarCrew = value;
     }
 
+    void ReleaseMortarAssignment(bool restoreDefense)
+    {
+        if (m_artilleryFireWaypoint)
+        {
+            IA_Game.AddEntityToGc(m_artilleryFireWaypoint);
+            m_artilleryFireWaypoint = null;
+        }
+
+        if (m_claimedMortarGunners)
+        {
+            foreach (AIAgent gunner : m_claimedMortarGunners)
+            {
+                if (gunner)
+                    gunner.AllowMaxLOD();
+            }
+            m_claimedMortarGunners.Clear();
+        }
+
+        vector restoreAt = GetOrigin();
+        if (m_assignedMortars && !m_assignedMortars.IsEmpty() && m_assignedMortars[0])
+            restoreAt = m_assignedMortars[0].GetOrigin();
+
+        ForceEjectSeatedMembers();
+
+        if (m_assignedMortars)
+            m_assignedMortars.Clear();
+
+        m_isMortarCrew = false;
+        m_referencedEntity = null;
+        RemoveAllOrders(true);
+
+        if (restoreDefense && IsSpawned() && GetAliveCount() > 0)
+            RestoreStaticGunInfantry(restoreAt, 25);
+    }
+
     bool IsMortarCrew()
     {
         return m_isMortarCrew;

@@ -116,6 +116,7 @@ class IA_AreaInstance
     private bool m_mortarCrewSetupDone = false;
     private int m_mortarCrewSetupAttempts = 0;
     private int m_mortarAiSpawnAttempts = 0;
+    private bool m_bDefenseMortarSilenced = false;
 
     // --- BEGIN ADDED: Forced Reinforcement S&D Tracking ---
     private ref array<ref IA_AiGroup> m_forcedReinforcementGroups = {}; 
@@ -5902,6 +5903,8 @@ class IA_AreaInstance
 
     void RegisterDefenseMortar(IA_AiGroup crew, IEntity gun)
     {
+        if (m_bDefenseMortarSilenced)
+            return;
         if (gun)
             m_mortarEntity = gun;
         if (!crew)
@@ -5911,6 +5914,17 @@ class IA_AreaInstance
         if (!m_mortarCrewGroup)
             m_mortarCrewGroup = crew;
         m_assignedGroupStates.Set(crew, IA_GroupTacticalState.InVehicle);
+    }
+
+    //! Capture / cleanup of a dynamic base: drop the battery so the hold is not
+    //! shelled by the original USSR tube (or a scripted barrage fallback).
+    void SilenceDefenseMortar()
+    {
+        m_bDefenseMortarSilenced = true;
+        if (m_mortarCrewGroups)
+            m_mortarCrewGroups.Clear();
+        m_mortarCrewGroup = null;
+        m_mortarEntity = null;
     }
 
     bool GetMortarPitDefenseTarget(out vector outTarget)
@@ -5995,13 +6009,11 @@ class IA_AreaInstance
     {
         if (m_bShutDown)
             return false;
+        if (m_bDefenseMortarSilenced)
+            return false;
         if (IsMortarPitArea())
             return !IsMortarPitCaptured();
-        if (m_mortarCrewGroups && !m_mortarCrewGroups.IsEmpty())
-            return true;
-        if (m_mortarCrewGroup || m_mortarEntity)
-            return true;
-        return false;
+        return HasLiveMortarCrew();
     }
 
     bool IssueMortarFireMission(vector targetPos, int shotCount)
@@ -6025,10 +6037,16 @@ class IA_AreaInstance
             fired = m_mortarCrewGroup.IssueArtilleryFireMission(ScatterMortarFireAim(targetPos), shotCount);
         }
 
-        if (!fired)
-            fired = SpawnScriptedMortarBarrage(targetPos, shotCount);
-
         return fired;
+    }
+
+    //! Dead gunners still deliver an AO strike that already spawned warning smoke.
+    //! Local-defense fire must not call this — that path has no smoke warning.
+    bool SpawnWarnedScriptedMortarBarrage(vector center, int shotCount)
+    {
+        if (!CanIssueMortarFireMission())
+            return false;
+        return SpawnScriptedMortarBarrage(center, shotCount);
     }
 
     //! Player capture of the pit is what silences the battery. Dead gunners
