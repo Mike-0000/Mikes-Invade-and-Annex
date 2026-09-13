@@ -489,7 +489,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		actionRow2.SetGap(12);
 		actionRow2.AddChild(completeDefendBtn);
 		actionRow2.AddChild(seizeBaseBtn);
-		m_Hints.AddHint(completeDefendBtn, "Complete and start field-base assault", "Finishes remaining required objectives and starts one field-base attempt. Seize the command area, then start the normal defense at that same site without an extra regroup or warning countdown. If a base job is already running, this leaves it alone. If placement fails, an authored defense is forced when a Defend marker remains.");
+		m_Hints.AddHint(completeDefendBtn, "Complete and start field-base assault", "Finishes remaining required objectives and starts one field-base attempt. If that base is already being seized, skip capture and start defense at the same site. If defense is already running, this does nothing. If placement is still in progress, wait for it. If the base failed, this recovers into a new attempt or an authored defense.");
 		m_Hints.AddHint(seizeBaseBtn, "Complete objectives and seize a base", "Finishes remaining required objectives and starts one validated field-base attempt. Geometry and AI limits still apply. If placement fails, an authored defense is forced when a Defend marker remains.");
 
 		footerBtns.AddChild(persistRow);
