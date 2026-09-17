@@ -6501,6 +6501,11 @@ class IA_AiGroup
         return m_iDynamicAIResumeTest;
     }
 
+    void SetVehicleCrewForTest(bool crew)
+    {
+        m_isVehicleCrewGroup = crew;
+    }
+
     // Native wrapper regression; the private constructor stays in its own class.
 	static int RunDynamicAIGroupRegression()
 	{

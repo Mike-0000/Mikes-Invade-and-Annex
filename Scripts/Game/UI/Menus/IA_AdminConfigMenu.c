@@ -541,8 +541,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	{
 		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
 		m_PageDynamicAI.AddChild(m_DynamicAISpawningToggle);
-		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON fixes effective AI scale at 1.0, even with budget 0. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
-		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Positive values prioritize the closest squads under a shared soft target. Nearby troops and combat may exceed it. 0 uses distance-only caching. Independent of the Game Master budget.");
+		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON fixes effective AI scale at 1.0, even with budget 0. Objectives still spawn fully, then far infantry cache after min-live and eviction delays. Vehicles stay spawned. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
+		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Soft cap on physical infantry after they spawn, using your pawn not the camera. Vehicles and anyone inside 400 m stay live and can exceed it. 0 is distance-only caching. Independent of the Game Master budget.");
 
 		ref MUI_Label modes = runtime.CreateLabel("Budget 0: distance only. Positive budget: nearest squads first. AI scale is 1.0 while ON. Save applies now; Save for restart also remembers changes.", "dynamicAiModes");
 		modes.SetFontSize(runtime.GetTheme().FONT_SMALL);

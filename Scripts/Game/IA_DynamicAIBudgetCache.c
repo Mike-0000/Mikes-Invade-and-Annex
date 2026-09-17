@@ -51,7 +51,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 
 	void EnableBudget()
 	{
-		if (IsCivilianCache() || m_bBudgetActive || m_bFinished)
+		if (IsCivilianCache() || IsVehicleCache() || m_bBudgetActive || m_bFinished)
 			return;
 		m_bBudgetActive = true;
 		m_bBudgetPaused = m_bCached;

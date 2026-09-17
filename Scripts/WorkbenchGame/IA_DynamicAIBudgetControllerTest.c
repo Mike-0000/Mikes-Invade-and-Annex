@@ -20,6 +20,7 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		TestBudgetOffDrain();
 		TestRetiredCost();
 		TestCivilianBudgetIsolation();
+		TestVehicleBudgetIsolation();
 		Print(string.Format("[IA][DynamicAIBudgetControllerTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -241,6 +242,16 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		ref array<IA_DynamicAIGroupCache> groups = {civilianService};
 		worker.RunTick(groups, 1, 160);
 		Check(!civilianService.IsBudgetActive() && civilianService.m_iTryCacheCalls > 0, "budget ticks service civilians on a separate pool after military work");
+	}
+
+	protected void TestVehicleBudgetIsolation()
+	{
+		ref IA_DynamicAIBudgetCacheFixture vehicle = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup crew = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(vehicle, 4);
+		crew.SetVehicleCrewForTest(true);
+		vehicle.Init(crew);
+		vehicle.EnableBudget();
+		Check(!vehicle.IsBudgetActive(), "vehicle crews cannot enter the military soldier budget");
 	}
 
 	protected void Check(bool condition, string description)

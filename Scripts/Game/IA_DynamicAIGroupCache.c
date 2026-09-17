@@ -35,6 +35,11 @@ class IA_DynamicAIGroupCache
 		return m_Owner && m_Owner.IsCivilian();
 	}
 
+	bool IsVehicleCache()
+	{
+		return m_Owner && m_Owner.ShouldKeepVehicleOccupantsPhysical();
+	}
+
 #ifdef WORKBENCH
 	void SetCivilianCacheForTest(bool civilian)
 	{

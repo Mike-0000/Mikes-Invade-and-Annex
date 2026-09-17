@@ -81,7 +81,7 @@ Building teams can cache before completing their walk indoors. The arrival-owned
 
 ## Scope and mission safety
 
-The budget covers registered **area-owned I&A groups**: military infantry, elites, HVT/objective units, finished defend waves, inbound-pinned QRF, foot civilians, static-gun crews, and mortar crews. Vehicles, vehicle crews, and vehicle passengers stay spawned. Civilians use a separate distance-only pool and never consume the military soldier budget. Arbitrary GM-placed troops and player-controlled pawns are not included. This is not a cap over every AI entity in the world.
+The budget covers registered **area-owned I&A groups**: military infantry, elites, HVT/objective units, finished defend waves, inbound-pinned QRF, foot civilians, static-gun crews, and mortar crews. Vehicles, vehicle crews, and vehicle passengers stay spawned and **do not consume the military soldier budget**. Civilians use a separate distance-only pool. Arbitrary GM-placed troops and player-controlled pawns are not included. This is not a cap over every AI entity in the world. Groups still spawn through their normal paths; the budget then caches far infantry down to the target. Distance is measured to player pawns, not the Game Master camera.
 
 Emplacement occupants (static guns and mortars) cache only while their host is stationary. Occupancy is all-or-nothing for one emplacement. Vehicles and anyone seated in a world vehicle are excluded from caching and keep their hulls fully crewed.
 

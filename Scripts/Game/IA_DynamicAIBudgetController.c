@@ -62,6 +62,15 @@ class IA_DynamicAIBudgetController
 				civilians.Insert(item);
 				continue;
 			}
+			if (item.IsVehicleCache())
+			{
+				ref IA_DynamicAIBudgetCache vehicleCache = IA_DynamicAIBudgetCache.Cast(item);
+				if (vehicleCache && vehicleCache.IsBudgetActive())
+					vehicleCache.DisableBudget();
+				if (vehicleCache && vehicleCache.IsBudgetActive())
+					active.Insert(vehicleCache);
+				continue;
+			}
 			ref IA_DynamicAIBudgetCache cache = IA_DynamicAIBudgetCache.Cast(item);
 			if (!cache)
 				continue;
