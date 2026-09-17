@@ -83,7 +83,7 @@ Building teams can cache before completing their walk indoors. The arrival-owned
 
 The budget covers registered **area-owned I&A groups**: military infantry, elites, HVT/objective units, finished defend waves, inbound-pinned QRF, foot civilians, and (when parked) vehicle crews, passengers, static-gun crews, and mortar crews. Civilians use a separate distance-only pool and never consume the military soldier budget. Arbitrary GM-placed troops and player-controlled pawns are not included. This is not a cap over every AI entity in the world.
 
-Vehicle crews, passengers, and emplacement occupants cache only while their host is stationary (under 0.5 m/s). Occupancy is all-or-nothing for one hull: a player, injured, close, or ineligible occupant anywhere on it keeps every occupant physical. Seated pawns are ejected, then deleted; they remount by force-teleport GetIn on restore. Moving QRF trucks keep driving until they park.
+Vehicle crews, passengers, and emplacement occupants cache only while their host is stationary (under 0.5 m/s). Occupancy is all-or-nothing for one hull: a player, injured, close, or ineligible occupant anywhere on it keeps every occupant physical. Healthy far seats are occupancy work, not protected budget squatters: `CanRemoveUnit` still refuses a seated delete, but those soldiers do not reserve military slots. Seated pawns are ejected, then deleted; they remount by force-teleport GetIn on restore. Moving QRF trucks keep driving until they park.
 
 In-flight airborne forces (`m_bAirborneDrop`) stay physical until they land. Pending seat teleport and staggered-spawn initialization still block caching. Player-controlled pawns are never intentionally removed or duplicated.
 

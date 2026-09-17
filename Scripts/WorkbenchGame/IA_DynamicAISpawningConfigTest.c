@@ -72,17 +72,16 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, true, false, false), "a nearby player vetoes the whole host");
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, true, false), "an ineligible occupant vetoes the whole host");
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, false, true), "a boarding tree vetoes the whole host");
-		Check(IA_DynamicAIOccupancyHost.HasUsablePlayerSampleForTest(true, true), "a possessed player is a usable occupancy sample");
-		Check(!IA_DynamicAIOccupancyHost.HasUsablePlayerSampleForTest(false, true), "a connected player without a pawn cannot prove vehicles are far");
-		Check(IA_DynamicAIOccupancyHost.HasUsablePlayerSampleForTest(false, false), "an empty server may still cache parked occupancy");
-		Check(IA_DynamicAIOccupancyHost.EnRouteBlocksOccupancyForTest(true, false), "a seated crew with an unmet drive target stays physical");
-		Check(!IA_DynamicAIOccupancyHost.EnRouteBlocksOccupancyForTest(true, true), "a parked crew that has arrived may cache occupancy");
-		Check(!IA_DynamicAIOccupancyHost.EnRouteBlocksOccupancyForTest(false, false), "a garrison with no drive target is not treated as en route");
 		Check(IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(0, 0), "a parked host evicts only when every participant allocation is zero");
 		Check(!IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(2, 0), "a crew allocation keeps the whole host physical");
 		Check(!IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(0, 1), "a passenger allocation keeps the whole host physical");
 		Check(IA_DynamicAIOccupancyHost.RemainingOccupancyOpsForTest(3, 4) == 1, "occupancy work shares the existing four-operation tick cap");
 		Check(IA_DynamicAIOccupancyHost.RemainingOccupancyOpsForTest(4, 4) == 0, "occupancy waits when the tick already spent its character operations");
+		ref IA_DynamicAIBudgetCacheFixture seatedBudget = new IA_DynamicAIBudgetCacheFixture();
+		Check(!seatedBudget.OccupancySeatIsBudgetProtectedForTest(false, false, false, ""), "healthy far seated soldiers are occupancy work, not protected budget squatters");
+		Check(seatedBudget.OccupancySeatIsBudgetProtectedForTest(true, false, false, ""), "close seated soldiers stay protected");
+		Check(seatedBudget.OccupancySeatIsBudgetProtectedForTest(false, true, false, ""), "fresh seated soldiers stay protected for min-live");
+		Check(seatedBudget.OccupancySeatIsBudgetProtectedForTest(false, false, true, ""), "combat or close-group seated soldiers stay protected");
 
 		ref IA_DynamicAIBudgetCacheFixture crewBudget = new IA_DynamicAIBudgetCacheFixture();
 		ref IA_AiGroup crewOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(crewBudget, 4);

@@ -247,6 +247,35 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		return CanRecreateHealthyInfantry(pawn, manager);
 	}
 
+	// Seated healthy occupants are occupancy work, not protected budget squatters.
+	// CanRemoveUnit is false for them so the per-soldier evict path will not delete a seated pawn.
+	protected bool IsSeatedOccupancyCandidate(IA_DynamicAIUnit unit, PlayerManager manager)
+	{
+		if (!unit || !unit.m_bRestored || unit.m_bDead || !unit.m_Entity || !manager)
+			return false;
+		SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(unit.m_Entity);
+		if (!pawn)
+			return false;
+		if (manager.GetPlayerIdFromControlledEntity(pawn) > 0)
+			return false;
+		if (!pawn.GetParent() && !pawn.IsInVehicle())
+			return false;
+		return IsPawnSafeToVirtualize(pawn, manager, true);
+	}
+
+	protected bool OccupancySeatIsBudgetProtected(bool close, bool minLive, bool full, string reason)
+	{
+		if (full)
+			return true;
+		if (close)
+			return true;
+		if (minLive)
+			return true;
+		if (reason == "initialization")
+			return true;
+		return false;
+	}
+
 	void Describe(IA_DynamicAIBudgetEntry entry, array<vector> players, int now)
 	{
 		RefreshRoster(now);
@@ -265,6 +294,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		string reason = m_Owner.GetDynamicAIRoleBlockReason();
 		bool full = m_bForceFull || m_bClose || HasRecentCombat() || (reason != "" && reason != "initialization");
 		PlayerManager manager = GetGame().GetPlayerManager();
+		int minLiveMs = tuning.m_iDynamicAIMinLiveSec * 1000;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			unit.m_bBudgetProtected = false;
@@ -272,9 +302,23 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 				continue;
 			if (unit.m_bRestored)
 				entry.m_iPhysical++;
-			unit.m_bBudgetProtected = full || unit.m_bBudgetAdmitted;
-			if (unit.m_bRestored && (reason == "initialization" || NearestDistance(CurrentPosition(unit), players) <= tuning.m_iDynamicAIReleaseDistanceM || !CanRemoveUnit(unit, now, manager)))
-				unit.m_bBudgetProtected = true;
+			bool close = false;
+			bool minLive = false;
+			if (unit.m_bRestored)
+			{
+				close = NearestDistance(CurrentPosition(unit), players) <= tuning.m_iDynamicAIReleaseDistanceM;
+				minLive = now - unit.m_iBudgetLiveSinceMs < minLiveMs;
+			}
+			if (IsSeatedOccupancyCandidate(unit, manager))
+			{
+				unit.m_bBudgetProtected = OccupancySeatIsBudgetProtected(close, minLive, full, reason);
+			}
+			else
+			{
+				unit.m_bBudgetProtected = full || unit.m_bBudgetAdmitted;
+				if (unit.m_bRestored && (reason == "initialization" || close || !CanRemoveUnit(unit, now, manager)))
+					unit.m_bBudgetProtected = true;
+			}
 			if (unit.m_bBudgetProtected)
 				entry.m_iProtected++;
 		}
@@ -467,22 +511,27 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return true;
 		if (!m_Owner || !m_Owner.HasOccupancyMembers())
 			return false;
-		if (m_Owner.BlocksOccupancyWhileEnRoute())
-			return false;
 		if (m_bBudgetActive)
 		{
 			if (m_bClose || m_bForceFull || HasRecentCombat() || m_iDesired > 0)
 				return false;
-			int now = System.GetTickCount();
-			if (m_iPlanAt == 0 || now - m_iPlanAt > 5000)
+			if (!IA_DynamicAIOccupancyHost.LinkedGroupsAllowEvict(m_Owner))
 				return false;
 			IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+			int now = System.GetTickCount();
 			if (m_iEvictSince < 0 || now - m_iEvictSince < tuning.m_iDynamicAIEvictDelaySec * 1000)
 				return false;
-			return IA_DynamicAIOccupancyHost.LinkedGroupsAllowEvict(m_Owner);
+			return true;
 		}
 		return true;
 	}
+
+#ifdef WORKBENCH
+	bool OccupancySeatIsBudgetProtectedForTest(bool close, bool minLive, bool full, string reason)
+	{
+		return OccupancySeatIsBudgetProtected(close, minLive, full, reason);
+	}
+#endif
 
 	protected void UpdateState()
 	{
