@@ -31,6 +31,11 @@ class IA_DynamicAIBudgetServiceCacheFixture : IA_DynamicAIBudgetCache
 		SetAllocation(pending + physical, 1);
 	}
 
+	void SetNearestForTest(float distance)
+	{
+		m_fNearest = distance;
+	}
+
 	override bool IsOwnerLive()
 	{
 		return m_bOwnerLive;
@@ -57,6 +62,11 @@ class IA_DynamicAIBudgetServiceCacheFixture : IA_DynamicAIBudgetCache
 		if (!m_bOwnerLive || m_bFinished)
 			return 0;
 		return m_iPhysical + GetReservedCount();
+	}
+
+	override protected int PhysicalAliveCount()
+	{
+		return m_iPhysical;
 	}
 
 	override protected void RestoreUnit(IA_DynamicAIUnit unit, int now)

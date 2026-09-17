@@ -21,6 +21,7 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		TestRetiredCost();
 		TestCivilianBudgetIsolation();
 		TestVehicleBudgetIsolation();
+		TestCaptureSeedOverBudget();
 		Print(string.Format("[IA][DynamicAIBudgetControllerTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -33,8 +34,8 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		ref IA_DynamicAIBudgetServiceCacheFixture eviction = new IA_DynamicAIBudgetServiceCacheFixture();
 		ref IA_DynamicAIBudgetServiceCacheFixture mandatory = new IA_DynamicAIBudgetServiceCacheFixture();
 		optional.Configure(worker, trace, "optional", 8, 0, false);
-		eviction.Configure(worker, trace, "eviction", 0, 4, false);
-		eviction.m_iEvictRemaining = 4;
+		eviction.Configure(worker, trace, "eviction", 0, 2, false);
+		eviction.m_iEvictRemaining = 2;
 		mandatory.Configure(worker, trace, "mandatory", 2, 0, true);
 		ref array<IA_DynamicAIBudgetCache> active = {optional, eviction, mandatory};
 		worker.RunService(active, 1, 4);
@@ -51,9 +52,9 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		single.Configure(worker, trace, "single", 12, 0, true);
 		ref array<IA_DynamicAIBudgetCache> active = {single};
 		worker.RunService(active, 1, 1);
-		Check(single.m_iCreated == 4, "one mandatory squad can use all four attempts and exceed the soft target");
+		Check(single.m_iCreated == 1 && single.GetUnrestoredCount() == 11, "a positive budget stops mandatory restoration at the shared target");
 		worker.RunService(active, 101, 1);
-		Check(single.m_iCreated == 8 && single.GetUnrestoredCount() == 4, "remaining squad members progress on the following tick");
+		Check(single.m_iCreated == 1 && single.GetUnrestoredCount() == 11, "remaining reserves stay cached until eviction or later capacity");
 	}
 
 	protected void TestEvictionBeforeOptional()
@@ -113,7 +114,7 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		failing.Configure(worker, trace, "failing", 8, 0, true);
 		failing.m_iFailRemaining = 8;
 		ref array<IA_DynamicAIBudgetCache> active = {failing};
-		worker.RunService(active, 1, 1);
+		worker.RunService(active, 1, 8);
 		Check(failing.m_iRestoreAttempts == 4 && failing.m_iCreated == 0 && failing.GetReservedCount() == 4, "failed engine attempts consume the shared operation cap and retain every admitted slot");
 		Check(failing.GetUnrestoredCount() == 8, "an all-failure tick never loses pending soldiers");
 	}
@@ -133,7 +134,7 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 			active.Insert(cache);
 		}
 		for (int tick = 0; tick < 5; tick++)
-			worker.RunService(active, 1 + tick * 100, 1);
+			worker.RunService(active, 1 + tick * 100, 20);
 		bool fair = trace.Count() == 5;
 		foreach (IA_DynamicAIBudgetServiceCacheFixture result : retained)
 			fair = fair && result.m_iCreated == 1;
@@ -151,15 +152,13 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 			ref IA_DynamicAIBudgetServiceCacheFixture cache = new IA_DynamicAIBudgetServiceCacheFixture();
 			cache.Configure(worker, trace, index.ToString(), 3, 0, false);
 			cache.m_iOperationMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+			cache.SetNearestForTest((index + 1) * 100);
 			retained.Insert(cache);
 			active.Insert(cache);
 		}
 		for (int tick = 0; tick < 3; tick++)
 			worker.RunService(active, 1 + tick * 100, 20);
-		bool fair = trace.Count() == 3;
-		foreach (IA_DynamicAIBudgetServiceCacheFixture result : retained)
-			fair = fair && result.m_iCreated == 1;
-		Check(fair, "optional cursor persists across time-budget exhaustion instead of repeatedly favoring the first squad");
+		Check(trace.Count() == 3 && retained[0].m_iCreated == 3 && retained[1].m_iCreated == 0 && retained[2].m_iCreated == 0, "optional restoration prefers the nearest eligible squad");
 	}
 
 	protected void TestEvictionCursorFairness()
@@ -174,15 +173,13 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 			cache.Configure(worker, trace, index.ToString(), 0, 3, false);
 			cache.m_iEvictRemaining = 3;
 			cache.m_iOperationMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+			cache.SetNearestForTest((index + 1) * 100);
 			retained.Insert(cache);
 			active.Insert(cache);
 		}
 		for (int tick = 0; tick < 3; tick++)
 			worker.RunService(active, 1 + tick * 100, 1);
-		bool fair = trace.Count() == 3;
-		foreach (IA_DynamicAIBudgetServiceCacheFixture result : retained)
-			fair = fair && result.m_iEvictions == 1;
-		Check(fair, "eviction cursor reaches every overallocated squad under a one-operation time budget");
+		Check(trace.Count() == 3 && retained[0].m_iEvictions == 0 && retained[1].m_iEvictions == 0 && retained[2].m_iEvictions == 3, "eviction prefers the farthest overallocated squad");
 	}
 
 	protected void TestTimeBudget()
@@ -252,6 +249,24 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		vehicle.Init(crew);
 		vehicle.EnableBudget();
 		Check(!vehicle.IsBudgetActive(), "vehicle crews cannot enter the military soldier budget");
+	}
+
+	protected void TestCaptureSeedOverBudget()
+	{
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref array<string> trace = {};
+		ref IA_DynamicAIBudgetServiceCacheFixture live = new IA_DynamicAIBudgetServiceCacheFixture();
+		ref IA_DynamicAIBudgetServiceCacheFixture contested = new IA_DynamicAIBudgetServiceCacheFixture();
+		live.Configure(worker, trace, "live", 0, 1, false);
+		contested.Configure(worker, trace, "contested", 3, 0, false);
+		ref array<IA_DynamicAIBudgetCache> active = {live, contested};
+		worker.RunService(active, 1, 1);
+		Check(contested.m_iCreated == 0, "a full target withholds a fully cached squad that nobody is capturing");
+		contested.RequestCaptureSeed();
+		worker.RunService(active, 101, 1);
+		Check(contested.m_iCreated == 1 && contested.GetUnrestoredCount() == 2, "a contested objective seeds exactly one defender over the target");
+		worker.RunService(active, 201, 1);
+		Check(contested.m_iCreated == 1, "the seeded squad's remaining reserves wait for nearest-first capacity");
 	}
 
 	protected void Check(bool condition, string description)

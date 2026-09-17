@@ -61,5 +61,15 @@ class IA_DynamicAIBudgetCacheFixture : IA_DynamicAIBudgetCache
 	{
 		m_iDesired = desired;
 	}
+
+	void SetNearestForTest(float distance)
+	{
+		m_fNearest = distance;
+	}
+
+	void CheckProtectionForTest(array<vector> players)
+	{
+		CheckProtection(players);
+	}
 }
 #endif

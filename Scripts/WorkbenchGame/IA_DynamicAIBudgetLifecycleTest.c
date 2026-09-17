@@ -11,6 +11,7 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		TestDisableWaitsForReserves();
 		TestCasualtyLedger();
 		TestRetuningPreservesAdmittedWork();
+		TestApproachDoesNotForceFull();
 		Print(string.Format("[IA][DynamicAIBudgetLifecycleTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -115,7 +116,7 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		cache.OnUnitKilled(null);
 		Check(cache.IsPaused() && cache.GetLogicalAliveCount() == 1 && cache.GetUnrestoredCount() == 1 && cache.ShouldPreserveGroup(), "loss of the last physical member pauses its surviving reserve without consuming it");
 		cache.RequestWake();
-		Check(cache.GetDesired() == 1 && cache.HasMandatoryWork(), "restoration demand includes only current survivors after a casualty");
+		Check(cache.IsWaking() && cache.GetUnrestoredCount() == 1 && !cache.IsFullRequiredForTest() && !cache.HasMandatoryWork(), "a casualty wake does not force surviving reserves over the shared budget");
 		cache.DisableBudget();
 		survivor.m_bRestored = true;
 		owner.SetDynamicAIPhysicalForTest(1);
@@ -145,7 +146,7 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		cache.ResetQuietPeriod();
 		Check(!cache.IsCloseForTest() && cache.IsPlanInvalidForTest(), "settings changes clear prior close hysteresis and queued eviction eligibility");
 		Check(cache.IsBudgetActive() && cache.IsCached() && !cache.IsPaused() && cache.GetLogicalAliveCount() == 2, "retuning preserves a hybrid roster and its live owner");
-		Check(cache.IsWaking() && cache.IsFullRequiredForTest() && cache.HasUrgentWake() && cache.HasMandatoryWork() && cache.GetWakeRequestedMs() == requestedAt, "retuning cannot cancel or re-age an existing mandatory wake");
+		Check(cache.IsWaking() && !cache.IsFullRequiredForTest() && cache.HasUrgentWake() && cache.HasMandatoryWork() && cache.GetWakeRequestedMs() == requestedAt, "retuning cannot cancel or re-age an existing admitted wake");
 		Check(admitted.m_bBudgetAdmitted && !admitted.m_bRestored && admitted.m_iNextAttemptMs == 9000 && admitted.m_iFailures == 2, "retuning preserves admission and restoration retry history");
 		Check(live.m_iBudgetLiveSinceMs == 1234, "retuning retains the soldier's actual live age");
 		Check(cache.GetEvictionRetryAtForTest() == 9000 && cache.GetLastCasualtyForTest() == 77, "retuning keeps failure backoff and casualty event time");
@@ -153,6 +154,21 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		cache.SeedSettingsStateForTest();
 		cache.ResetQuietPeriod();
 		Check(cache.IsExitPendingForTest() && cache.IsFullRequiredForTest() && cache.HasMandatoryWork() && cache.GetUnrestoredCount() == 1, "retuning cannot interrupt an unfinished OFF drain");
+	}
+
+	protected void TestApproachDoesNotForceFull()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 0);
+		cache.Init(owner);
+		ref IA_DynamicAIBudgetUnitFixture reserve = new IA_DynamicAIBudgetUnitFixture();
+		cache.AddForTest(reserve);
+		cache.EnableBudget();
+		cache.ReconcileForTest();
+		ref array<vector> players = {};
+		players.Insert("0 0 0");
+		cache.CheckProtectionForTest(players);
+		Check(cache.IsCloseForTest() && cache.IsCached() && !cache.IsFullRequiredForTest() && !cache.HasMandatoryWork(), "walking into a cached objective does not force-full restore over the budget");
 	}
 
 	protected void Check(bool passed, string description)

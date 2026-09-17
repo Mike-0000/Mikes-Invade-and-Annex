@@ -13,6 +13,7 @@ class IA_DynamicAIUnit
 	bool m_bBudgetProtected;
 	bool m_bBudgetLeader;
 	int m_iBudgetLiveSinceMs;
+	float m_fNearestPlayerM = 10000000;
 
 	RplId m_HostId;
 	int m_iOccupancyMgrId;

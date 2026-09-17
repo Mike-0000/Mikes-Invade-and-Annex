@@ -4250,10 +4250,10 @@ class IA_AiGroup
 
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
         {
-            // Objective transitions must wake these troops. Apply the latest
-            // requested mode once all survivors exist, including a later OFF.
+            // Fully cached groups wake through nearest-first budget restore.
+            // Apply the latest requested mode once any soldiers are physical.
             m_bDynamicAIDefendPending = true;
             m_DynamicAICache.RequestWake();
             return;
@@ -6451,7 +6451,7 @@ class IA_AiGroup
         group.ActivateAI();
         if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
             return;
-        if (m_bDynamicAIDefendPending && !IsDynamicAICached())
+        if (m_bDynamicAIDefendPending && !IsDynamicAIPaused())
         {
             m_bDynamicAIDefendPending = false;
             SetDefendMode(m_isInDefendMode, m_defendTarget);

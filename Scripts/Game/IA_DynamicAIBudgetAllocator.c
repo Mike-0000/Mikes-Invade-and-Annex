@@ -1,5 +1,5 @@
-// Pure demand allocation. Protected soldiers may exceed the soft budget;
-// admission and safe physical removal remain the runtime worker's responsibility.
+// Pure demand allocation. Already-live protected soldiers may keep the cost
+// above the target until they can be evicted; optional restore does not.
 class IA_DynamicAIBudgetAllocator
 {
 	static const float RETENTION_BIAS_M = 50;

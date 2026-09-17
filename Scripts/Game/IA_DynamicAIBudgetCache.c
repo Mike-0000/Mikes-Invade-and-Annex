@@ -20,7 +20,9 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	protected int m_iPlanAt;
 	protected int m_iRetryEvictAt;
 	protected int m_iLastCasualtyMs = -1;
+	protected int m_iCaptureSeedMs = -1;
 	protected float m_fNearest = 10000000;
+	static const int CAPTURE_SEED_WINDOW_MS = 30000;
 
 	override void Init(IA_AiGroup owner)
 	{
@@ -55,7 +57,9 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return;
 		m_bBudgetActive = true;
 		m_bBudgetPaused = m_bCached;
-		m_bForceFull = m_bWaking;
+		// A legacy wake does not become a force-full restore; the allocator
+		// decides how many of these reserves fit under the shared target.
+		m_bForceFull = false;
 		m_bExitBudget = false;
 		m_iPlanAt = 0;
 	}
@@ -89,11 +93,52 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return;
 		if (!m_bWaking)
 			m_iWakeRequestedMs = System.GetTickCount();
-		m_bForceFull = true;
 		m_bWaking = true;
 		m_bUrgentWake = m_bUrgentWake || urgent;
-		m_iDesired = GetLogicalAliveCount();
 		m_iEvictSince = -1;
+	}
+
+	// OFF and budget-0 drains restore every survivor. Approach, combat, capture,
+	// and defend only mark the group waking so the allocator can fill nearest first.
+	void RequestMandatoryRestore(bool urgent = true)
+	{
+		RequestWake(urgent);
+		if (!m_bBudgetActive || !m_bCached || m_bFinished)
+			return;
+		m_bForceFull = true;
+		m_iDesired = GetLogicalAliveCount();
+	}
+
+	// Capture progress needs at least one physical defender per contested group.
+	// This seeds exactly one soldier over the target and ranks the group first;
+	// the rest of its roster still fills through nearest-first optional restore.
+	void RequestCaptureSeed()
+	{
+		if (!m_bBudgetActive || !m_bCached || m_bFinished)
+			return;
+		m_iCaptureSeedMs = System.GetTickCount();
+		RequestWake();
+	}
+
+	bool HasCapturePriority()
+	{
+		if (m_iCaptureSeedMs < 0 || !m_bBudgetActive || !m_bCached || m_bFinished)
+			return false;
+		return System.GetTickCount() - m_iCaptureSeedMs < CAPTURE_SEED_WINDOW_MS;
+	}
+
+	bool HasCaptureSeedWork()
+	{
+		if (!HasCapturePriority() || !IsOwnerLive())
+			return false;
+		return PhysicalAliveCount() == 0;
+	}
+
+	protected int PhysicalAliveCount()
+	{
+		if (!m_Owner)
+			return 0;
+		return m_Owner.GetDynamicAIPhysicalAliveCount();
 	}
 
 	override void CheckWake(array<vector> players, bool enabled)
@@ -104,7 +149,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return;
 		}
 		if (!enabled || m_bExitBudget)
-			RequestWake(false);
+			RequestMandatoryRestore(false);
 		CheckProtection(players);
 	}
 
@@ -137,16 +182,17 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		m_fNearest = 10000000;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
-			if (unit.IsLogicallyAlive())
-				m_fNearest = Math.Min(m_fNearest, NearestDistance(CurrentPosition(unit), players));
+			if (!unit.IsLogicallyAlive())
+				continue;
+			unit.m_fNearestPlayerM = NearestDistance(CurrentPosition(unit), players);
+			m_fNearest = Math.Min(m_fNearest, unit.m_fNearestPlayerM);
 		}
 		if (m_fNearest <= tuning.m_iDynamicAICloseDistanceM)
 			m_bClose = true;
 		else if (m_fNearest > tuning.m_iDynamicAIReleaseDistanceM)
 			m_bClose = false;
-		string reason = m_Owner.GetDynamicAIRoleBlockReason();
-		if (m_bClose || HasRecentCombat() || (reason != "" && reason != "initialization"))
-			RequestWake();
+		// Close and combat keep live soldiers; they must not force-full a cached
+		// town over the shared target. Nearest optional restore fills the budget.
 	}
 
 	protected bool HasRecentCombat()
@@ -291,8 +337,14 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		entry.m_bInRange = m_fNearest <= tuning.m_iDynamicAIWakeDistanceM;
 		if (m_iDesired > 0 && m_fNearest <= tuning.m_iDynamicAICacheDistanceM)
 			entry.m_bInRange = true;
+		if (HasCapturePriority())
+		{
+			// Contested objective defenders outrank every other optional squad.
+			entry.m_fDistance = 0;
+			entry.m_bInRange = true;
+		}
 		string reason = m_Owner.GetDynamicAIRoleBlockReason();
-		bool full = m_bForceFull || m_bClose || HasRecentCombat() || (reason != "" && reason != "initialization");
+		bool full = m_bForceFull || (reason != "" && reason != "initialization");
 		PlayerManager manager = GetGame().GetPlayerManager();
 		int minLiveMs = tuning.m_iDynamicAIMinLiveSec * 1000;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
@@ -366,10 +418,49 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return false;
 		if (m_bForceFull || m_bExitBudget)
 			return true;
+		if (HasCaptureSeedWork())
+			return true;
+		return HasAdmittedRetryWork();
+	}
+
+	bool HasAdmittedRetryWork()
+	{
+		if (!m_bCached || m_bFinished)
+			return false;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			if (unit.m_bBudgetAdmitted && !unit.m_bRestored && !unit.m_bDead)
 				return true;
+		}
+		return false;
+	}
+
+	bool IsExitingBudget()
+	{
+		return m_bExitBudget;
+	}
+
+	int GetBudgetOrder()
+	{
+		return m_iOrder;
+	}
+
+	float GetNearestPlayerDistance()
+	{
+		return m_fNearest;
+	}
+
+	bool WantsOptionalRestore(int now)
+	{
+		if (!m_bBudgetActive || !m_bCached || m_bFinished || !IsOwnerLive())
+			return false;
+		if (m_iPlanAt == 0 || now - m_iPlanAt > 5000 || GetBudgetCost() >= m_iDesired)
+			return false;
+		foreach (IA_DynamicAIUnit unit : m_aUnits)
+		{
+			if (unit.m_bRestored || unit.m_bDead || now < unit.m_iNextAttemptMs)
+				continue;
+			return true;
 		}
 		return false;
 	}
@@ -382,17 +473,31 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return false;
 		if (optional && (m_iPlanAt == 0 || now - m_iPlanAt > 5000 || GetBudgetCost() >= m_iDesired))
 			return false;
+		bool anyUnit = m_bForceFull || m_bExitBudget || HasCaptureSeedWork();
+		// The original leader returns first when nothing is physical; otherwise
+		// the reserve closest to a player fills the fight where it is happening.
+		bool preferLeader = PhysicalAliveCount() == 0;
 		ref IA_DynamicAIUnit chosen;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			if (unit.m_bRestored || unit.m_bDead || now < unit.m_iNextAttemptMs)
 				continue;
-			if (!optional && !m_bForceFull && !m_bExitBudget && !unit.m_bBudgetAdmitted)
+			if (!optional && !anyUnit && !unit.m_bBudgetAdmitted)
 				continue;
-			if (!chosen || unit.m_bBudgetLeader)
+			if (!chosen)
+			{
 				chosen = unit;
-			if (unit.m_bBudgetLeader)
+				if (preferLeader && unit.m_bBudgetLeader)
+					break;
+				continue;
+			}
+			if (preferLeader && unit.m_bBudgetLeader)
+			{
+				chosen = unit;
 				break;
+			}
+			if (!preferLeader && unit.m_fNearestPlayerM < chosen.m_fNearestPlayerM)
+				chosen = unit;
 		}
 		if (!chosen)
 			return false;
@@ -419,8 +524,10 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		if (now < m_iRetryEvictAt || m_iEvictSince < 0 || now - m_iEvictSince < tuning.m_iDynamicAIEvictDelaySec * 1000 || GetBudgetCost() <= m_iDesired)
 			return false;
 		// Revalidate current players, combat, role, membership and health at commit.
+		// Group-level close no longer vetoes eviction: soldiers inside the release
+		// distance are skipped below so farther teammates can free budget slots.
 		CheckProtection(players);
-		if (m_bClose || m_bForceFull || HasRecentCombat() || m_Owner.GetDynamicAIRoleBlockReason() != "")
+		if (m_bForceFull || HasRecentCombat() || m_Owner.GetDynamicAIRoleBlockReason() != "")
 		{
 			m_iEvictSince = -1;
 			return false;
@@ -599,5 +706,6 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		m_bBudgetPaused = false;
 		m_bBudgetDeleting = false;
 		m_bForceFull = false;
+		m_iCaptureSeedMs = -1;
 	}
 }

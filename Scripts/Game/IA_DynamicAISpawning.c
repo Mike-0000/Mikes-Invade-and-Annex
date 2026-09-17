@@ -129,7 +129,13 @@ class IA_DynamicAISpawning
 				continue;
 			cache.ResetQuietPeriod();
 			if (!enabled)
-				cache.RequestWake(false);
+			{
+				ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(cache);
+				if (budgetCache && budgetCache.IsBudgetActive())
+					budgetCache.RequestMandatoryRestore(false);
+				else
+					cache.RequestWake(false);
+			}
 		}
 		if (!s_aGroups.IsEmpty())
 			Start();
@@ -178,8 +184,23 @@ class IA_DynamicAISpawning
 		{
 			if (!cache || !cache.IsOwnerLive() || !cache.Intersects(center, radius))
 				continue;
-			cache.RequestWake();
-			ready = false;
+			ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(cache);
+			if (budgetCache && budgetCache.IsBudgetActive())
+			{
+				// A contested objective needs one physical defender per group so
+				// the fight and capture can progress; the rest fill nearest-first.
+				if (cache.IsPaused())
+				{
+					budgetCache.RequestCaptureSeed();
+					ready = false;
+				}
+				continue;
+			}
+			if (cache.IsCached())
+			{
+				cache.RequestWake();
+				ready = false;
+			}
 		}
 		if (!ready)
 			Start();

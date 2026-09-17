@@ -170,6 +170,66 @@ class IA_DynamicAIBudgetController
 		return total;
 	}
 
+	protected bool CacheTried(array<IA_DynamicAIBudgetCache> tried, IA_DynamicAIBudgetCache cache)
+	{
+		if (!cache)
+			return true;
+		foreach (IA_DynamicAIBudgetCache existing : tried)
+		{
+			if (existing == cache)
+				return true;
+		}
+		return false;
+	}
+
+	protected IA_DynamicAIBudgetCache PickNearestOptional(array<IA_DynamicAIBudgetCache> active, int now)
+	{
+		ref IA_DynamicAIBudgetCache best;
+		float bestDist = 1000000000;
+		int count = active.Count();
+		for (int index = 0; index < count; index++)
+		{
+			IA_DynamicAIBudgetCache cache = active[index];
+			if (!cache || !cache.WantsOptionalRestore(now))
+				continue;
+			float distance = cache.GetNearestPlayerDistance();
+			if (best)
+			{
+				if (distance > bestDist)
+					continue;
+				if (distance == bestDist && cache.GetBudgetOrder() >= best.GetBudgetOrder())
+					continue;
+			}
+			best = cache;
+			bestDist = distance;
+		}
+		return best;
+	}
+
+	protected IA_DynamicAIBudgetCache PickFarthestUntried(array<IA_DynamicAIBudgetCache> active, array<IA_DynamicAIBudgetCache> tried)
+	{
+		ref IA_DynamicAIBudgetCache best;
+		float bestDist = -1;
+		int count = active.Count();
+		for (int index = 0; index < count; index++)
+		{
+			IA_DynamicAIBudgetCache cache = active[index];
+			if (!cache || CacheTried(tried, cache))
+				continue;
+			float distance = cache.GetNearestPlayerDistance();
+			if (best)
+			{
+				if (distance < bestDist)
+					continue;
+				if (distance == bestDist && cache.GetBudgetOrder() <= best.GetBudgetOrder())
+					continue;
+			}
+			best = cache;
+			bestDist = distance;
+		}
+		return best;
+	}
+
 	protected void Service(array<IA_DynamicAIBudgetCache> active, array<vector> players, int now, int budget)
 	{
 		int started = ClockMs();
@@ -178,8 +238,9 @@ class IA_DynamicAIBudgetController
 		if (total == 0)
 			return;
 		int visits;
-		// Mandatory work (nearby combat/capture/OFF/admitted retries) can exceed
-		// the target. Round-robin position persists even if only one op fits.
+		int cost = TotalCost(active);
+		// OFF/budget-0 drains and already-admitted retries remain mandatory.
+		// Approach and combat no longer force-full over the shared target.
 		while (operations < IA_DynamicAISpawning.RESTORE_ATTEMPTS_PER_TICK && visits < total + IA_DynamicAISpawning.RESTORE_ATTEMPTS_PER_TICK)
 		{
 			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS)
@@ -192,54 +253,66 @@ class IA_DynamicAIBudgetController
 				m_iMandatoryCursor = 0;
 			ref IA_DynamicAIBudgetCache mandatory = active[m_iMandatoryCursor++];
 			visits++;
-			if (mandatory && mandatory.RestoreBudgetUnit(now, false))
-			{
-				operations++;
-				if (IA_Log.IsDebugEnabled())
-					m_iRestoreAttempts++;
-			}
-		}
-		// Release capacity before optional creation. At most four character
-		// operations TOTAL per tick, including failed attempts and downed deaths.
-		visits = 0;
-		int releaseStarted = ClockMs();
-		int beforeRelease = operations;
-		while (budget > 0 && operations < 4 && visits < total + 4)
-		{
-			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS)
-				break;
-			if (visits > 0 && operations == beforeRelease && ClockMs() - releaseStarted >= 1)
-				break;
-			if (m_iEvictCursor >= total)
-				m_iEvictCursor = 0;
-			ref IA_DynamicAIBudgetCache evict = active[m_iEvictCursor++];
-			visits++;
-			if (evict && evict.EvictBudgetUnit(players, now))
-			{
-				operations++;
-				if (IA_Log.IsDebugEnabled())
-					m_iEvictions++;
-			}
-		}
-		visits = 0;
-		int cost;
-		if (budget > 0 && operations < 4 && ClockMs() - started < IA_DynamicAISpawning.WORK_BUDGET_MS)
-			cost = TotalCost(active);
-		while (budget > 0 && operations < 4 && visits < total + 4)
-		{
-			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS || cost >= budget)
-				break;
-			if (m_iOptionalCursor >= total)
-				m_iOptionalCursor = 0;
-			ref IA_DynamicAIBudgetCache optional = active[m_iOptionalCursor++];
-			visits++;
-			if (optional && optional.RestoreBudgetUnit(now, true))
+			if (!mandatory)
+				continue;
+			if (budget > 0 && cost >= budget && !mandatory.IsExitingBudget() && !mandatory.HasAdmittedRetryWork() && !mandatory.HasCaptureSeedWork())
+				continue;
+			if (mandatory.RestoreBudgetUnit(now, false))
 			{
 				operations++;
 				cost = TotalCost(active);
 				if (IA_Log.IsDebugEnabled())
 					m_iRestoreAttempts++;
 			}
+		}
+		// Release farthest capacity before optional creation. At most four
+		// character operations TOTAL per tick, including failed attempts and
+		// downed deaths.
+		visits = 0;
+		int releaseStarted = ClockMs();
+		int beforeRelease = operations;
+		ref array<IA_DynamicAIBudgetCache> evictTried = {};
+		while (budget > 0 && operations < 4 && visits < total + 4)
+		{
+			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS)
+				break;
+			if (visits > 0 && operations == beforeRelease && ClockMs() - releaseStarted >= 1)
+				break;
+			ref IA_DynamicAIBudgetCache evict = PickFarthestUntried(active, evictTried);
+			if (!evict)
+				break;
+			visits++;
+			// The farthest overallocated squad keeps shedding until it refuses;
+			// only a refusal moves the pick to the next farthest squad.
+			if (evict.EvictBudgetUnit(players, now))
+			{
+				operations++;
+				if (IA_Log.IsDebugEnabled())
+					m_iEvictions++;
+			}
+			else
+				evictTried.Insert(evict);
+		}
+		visits = 0;
+		if (budget > 0 && operations < 4 && ClockMs() - started < IA_DynamicAISpawning.WORK_BUDGET_MS)
+			cost = TotalCost(active);
+		while (budget > 0 && operations < 4 && visits < total + 4)
+		{
+			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS || cost >= budget)
+				break;
+			ref IA_DynamicAIBudgetCache optional = PickNearestOptional(active, now);
+			visits++;
+			if (!optional)
+				break;
+			if (optional.RestoreBudgetUnit(now, true))
+			{
+				operations++;
+				cost = TotalCost(active);
+				if (IA_Log.IsDebugEnabled())
+					m_iRestoreAttempts++;
+			}
+			else
+				break;
 		}
 		if (IA_Log.IsDebugEnabled())
 			m_iMaxWorkMs = Math.Max(m_iMaxWorkMs, ClockMs() - started);

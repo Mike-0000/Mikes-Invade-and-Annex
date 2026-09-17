@@ -542,7 +542,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
 		m_PageDynamicAI.AddChild(m_DynamicAISpawningToggle);
 		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON fixes effective AI scale at 1.0, even with budget 0. Objectives still spawn fully, then far infantry cache after min-live and eviction delays. Vehicles stay spawned. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
-		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Soft cap on physical infantry after they spawn, using your pawn not the camera. Vehicles and anyone inside 400 m stay live and can exceed it. 0 is distance-only caching. Independent of the Game Master budget.");
+		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Target count of physical infantry after they spawn, using your pawn not the camera. Nearest squads restore first. Farther squads stay cached or are evicted to stay at this number. Live soldiers already inside 400 m are not deleted immediately. Vehicles stay spawned. 0 is distance-only caching.");
 
 		ref MUI_Label modes = runtime.CreateLabel("Budget 0: distance only. Positive budget: nearest squads first. AI scale is 1.0 while ON. Save applies now; Save for restart also remembers changes.", "dynamicAiModes");
 		modes.SetFontSize(runtime.GetTheme().FONT_SMALL);
@@ -553,10 +553,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		distances.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		distances.SetBold(true);
 		m_PageDynamicAI.AddChild(distances);
-		m_DynamicAIWakeField = MakeDynamicAIField(runtime, "Wake / eligibility distance (m)", "dynamicAiWake", 100, 5000, 50, 1000, "Distance only: requests the whole squad. Budget mode: admits squads to nearest-first allocation; close protection can force a full wake. Larger values provide more approach time.");
+		m_DynamicAIWakeField = MakeDynamicAIField(runtime, "Wake / eligibility distance (m)", "dynamicAiWake", 100, 5000, 50, 1000, "Distance only: requests the whole squad. Budget mode: admits squads to nearest-first allocation up to the soldier budget. Larger values provide more approach time.");
 		m_DynamicAICacheField = MakeDynamicAIField(runtime, "Cache / outer retention distance (m)", "dynamicAiCache", 150, 7500, 50, 1500, "Distance only: all soldiers must remain beyond this distance for the quiet period. Budget mode: an existing allocation remains eligible out to this distance.");
-		m_DynamicAICloseField = MakeDynamicAIField(runtime, "Full-squad protection distance (m; budget)", "dynamicAiClose", 50, 2000, 50, 300, "Inside this distance, the squad's surviving reserves restore even if the budget is full. Larger values preserve more nearby enemies but may exceed the target more often.");
-		m_DynamicAIReleaseField = MakeDynamicAIField(runtime, "Protection release distance (m; budget)", "dynamicAiRelease", 100, 3000, 50, 400, "Close protection ends beyond this distance. Individual live soldiers inside it cannot be removed. Keeping it wider than protection prevents repeated transitions at the boundary.");
+		m_DynamicAICloseField = MakeDynamicAIField(runtime, "Close keep distance (m; budget)", "dynamicAiClose", 50, 2000, 50, 300, "Live soldiers inside this band stay in the close-keep hysteresis. They are not deleted while you remain this close. Walking in does not restore every cached squad over the budget; nearest groups fill first.");
+		m_DynamicAIReleaseField = MakeDynamicAIField(runtime, "Keep release distance (m; budget)", "dynamicAiRelease", 100, 3000, 50, 400, "Close-keep hysteresis ends beyond this distance. Individual live soldiers inside it cannot be removed. Farther teammates of the same squad can still be cached to free budget for nearer groups.");
 
 		ref MUI_Label distanceOrder = runtime.CreateLabel("Save keeps release at least 50 m beyond protection, wake at least as far as release, and cache at least 50 m beyond wake.", "dynamicAiDistanceOrder");
 		distanceOrder.SetFontSize(runtime.GetTheme().FONT_SMALL);
