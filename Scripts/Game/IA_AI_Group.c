@@ -2481,6 +2481,29 @@ class IA_AiGroup
             m_StaticGunAssignment.ResumeAfterDynamicAI();
     }
 
+    bool BlocksOccupancyWhileEnRoute()
+    {
+        if (m_drivingTarget == vector.Zero)
+            return false;
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (!vehicle)
+            vehicle = Vehicle.Cast(m_passengerVehicle);
+        if (!vehicle)
+            return true;
+        return !IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget);
+    }
+
+    void RestoreOccupancyDrive()
+    {
+        if (!m_isVehicleCrewGroup || m_drivingTarget == vector.Zero)
+            return;
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (!vehicle)
+            vehicle = Vehicle.Cast(GetOccupancyHostEntity());
+        if (vehicle)
+            DriveAfterGetInClear(vehicle, m_drivingTarget);
+    }
+
     void OnDynamicAIOccupancyRemounted(IA_DynamicAIUnit unit)
     {
         if (!unit || !unit.m_Entity)

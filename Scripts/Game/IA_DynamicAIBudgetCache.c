@@ -467,9 +467,17 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return true;
 		if (!m_Owner || !m_Owner.HasOccupancyMembers())
 			return false;
+		if (m_Owner.BlocksOccupancyWhileEnRoute())
+			return false;
 		if (m_bBudgetActive)
 		{
 			if (m_bClose || m_bForceFull || HasRecentCombat() || m_iDesired > 0)
+				return false;
+			int now = System.GetTickCount();
+			if (m_iPlanAt == 0 || now - m_iPlanAt > 5000)
+				return false;
+			IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+			if (m_iEvictSince < 0 || now - m_iEvictSince < tuning.m_iDynamicAIEvictDelaySec * 1000)
 				return false;
 			return IA_DynamicAIOccupancyHost.LinkedGroupsAllowEvict(m_Owner);
 		}

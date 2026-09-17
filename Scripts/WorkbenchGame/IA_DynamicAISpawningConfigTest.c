@@ -72,6 +72,12 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, true, false, false), "a nearby player vetoes the whole host");
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, true, false), "an ineligible occupant vetoes the whole host");
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, false, true), "a boarding tree vetoes the whole host");
+		Check(IA_DynamicAIOccupancyHost.HasUsablePlayerSampleForTest(true, true), "a possessed player is a usable occupancy sample");
+		Check(!IA_DynamicAIOccupancyHost.HasUsablePlayerSampleForTest(false, true), "a connected player without a pawn cannot prove vehicles are far");
+		Check(IA_DynamicAIOccupancyHost.HasUsablePlayerSampleForTest(false, false), "an empty server may still cache parked occupancy");
+		Check(IA_DynamicAIOccupancyHost.EnRouteBlocksOccupancyForTest(true, false), "a seated crew with an unmet drive target stays physical");
+		Check(!IA_DynamicAIOccupancyHost.EnRouteBlocksOccupancyForTest(true, true), "a parked crew that has arrived may cache occupancy");
+		Check(!IA_DynamicAIOccupancyHost.EnRouteBlocksOccupancyForTest(false, false), "a garrison with no drive target is not treated as en route");
 		Check(IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(0, 0), "a parked host evicts only when every participant allocation is zero");
 		Check(!IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(2, 0), "a crew allocation keeps the whole host physical");
 		Check(!IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(0, 1), "a passenger allocation keeps the whole host physical");
