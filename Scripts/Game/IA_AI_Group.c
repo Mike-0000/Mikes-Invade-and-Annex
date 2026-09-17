@@ -6533,7 +6533,7 @@ class IA_AiGroup
 		group.m_DynamicAICache = cache;
 		cache.SetCachedForTest(true);
 		group.m_lastConfirmedPosition = "150 20 160";
-		DynamicAIRegressionCheck(group.GetOrigin() == "150 20 160", "a fully paused group reports its saved pose instead of an empty native origin");
+		DynamicAIRegressionCheck(group.GetOrigin() == "150 20 160", "a fully paused group reports its saved pose instead of an empty native origin", failures);
 		group.m_isHoldingPost = true;
 		group.m_bHoldEntered = false;
 		group.m_bHoldMarchScheduled = true;
