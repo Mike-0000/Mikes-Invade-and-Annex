@@ -281,6 +281,11 @@ class IA_DynamicAIGroupCache
 		if (!m_ActivityGate.CanCache(blocked, now, m_Owner.GetLastDangerEventTime(), System.GetUnixTime()))
 			return false;
 
+		if (m_Owner.ShouldKeepVehicleOccupantsPhysical())
+		{
+			m_sLiveStatus = "vehicle";
+			return false;
+		}
 		if (IA_DynamicAIOccupancyHost.IsCacheParticipating(this) || m_Owner.HasOccupancyMembers())
 		{
 			m_sLiveStatus = "occupancy";

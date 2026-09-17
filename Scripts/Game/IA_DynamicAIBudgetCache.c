@@ -511,6 +511,8 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return true;
 		if (!m_Owner || !m_Owner.HasOccupancyMembers())
 			return false;
+		if (m_Owner.ShouldKeepVehicleOccupantsPhysical())
+			return false;
 		if (m_bBudgetActive)
 		{
 			if (m_bClose || m_bForceFull || HasRecentCombat() || m_iDesired > 0)

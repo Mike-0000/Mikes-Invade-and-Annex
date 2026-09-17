@@ -65,7 +65,7 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 
 	protected void TestOccupancyPolicy()
 	{
-		Check(IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, false, false), "a quiet stationary host with eligible occupants can qualify");
+		Check(IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, false, false), "a quiet stationary emplacement host with eligible occupants can qualify");
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(true, false, false, false, false, false), "a moving host cannot qualify");
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, true, false, false, false, false), "a player occupant vetoes the whole host");
 		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, true, false, false, false), "an injured occupant vetoes the whole host");
@@ -77,11 +77,6 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(!IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(0, 1), "a passenger allocation keeps the whole host physical");
 		Check(IA_DynamicAIOccupancyHost.RemainingOccupancyOpsForTest(3, 4) == 1, "occupancy work shares the existing four-operation tick cap");
 		Check(IA_DynamicAIOccupancyHost.RemainingOccupancyOpsForTest(4, 4) == 0, "occupancy waits when the tick already spent its character operations");
-		ref IA_DynamicAIBudgetCacheFixture seatedBudget = new IA_DynamicAIBudgetCacheFixture();
-		Check(!seatedBudget.OccupancySeatIsBudgetProtectedForTest(false, false, false, ""), "healthy far seated soldiers are occupancy work, not protected budget squatters");
-		Check(seatedBudget.OccupancySeatIsBudgetProtectedForTest(true, false, false, ""), "close seated soldiers stay protected");
-		Check(seatedBudget.OccupancySeatIsBudgetProtectedForTest(false, true, false, ""), "fresh seated soldiers stay protected for min-live");
-		Check(seatedBudget.OccupancySeatIsBudgetProtectedForTest(false, false, true, ""), "combat or close-group seated soldiers stay protected");
 
 		ref IA_DynamicAIBudgetCacheFixture crewBudget = new IA_DynamicAIBudgetCacheFixture();
 		ref IA_AiGroup crewOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(crewBudget, 4);

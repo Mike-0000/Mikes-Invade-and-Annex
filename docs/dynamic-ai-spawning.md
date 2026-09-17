@@ -81,9 +81,9 @@ Building teams can cache before completing their walk indoors. The arrival-owned
 
 ## Scope and mission safety
 
-The budget covers registered **area-owned I&A groups**: military infantry, elites, HVT/objective units, finished defend waves, inbound-pinned QRF, foot civilians, and (when parked) vehicle crews, passengers, static-gun crews, and mortar crews. Civilians use a separate distance-only pool and never consume the military soldier budget. Arbitrary GM-placed troops and player-controlled pawns are not included. This is not a cap over every AI entity in the world.
+The budget covers registered **area-owned I&A groups**: military infantry, elites, HVT/objective units, finished defend waves, inbound-pinned QRF, foot civilians, static-gun crews, and mortar crews. Vehicles, vehicle crews, and vehicle passengers stay spawned. Civilians use a separate distance-only pool and never consume the military soldier budget. Arbitrary GM-placed troops and player-controlled pawns are not included. This is not a cap over every AI entity in the world.
 
-Vehicle crews, passengers, and emplacement occupants cache only while their host is stationary (under 0.5 m/s). Occupancy is all-or-nothing for one hull: a player, injured, close, or ineligible occupant anywhere on it keeps every occupant physical. Healthy far seats are occupancy work, not protected budget squatters: `CanRemoveUnit` still refuses a seated delete, but those soldiers do not reserve military slots. Seated pawns are ejected, then deleted; they remount by force-teleport GetIn on restore. Moving QRF trucks keep driving until they park.
+Emplacement occupants (static guns and mortars) cache only while their host is stationary. Occupancy is all-or-nothing for one emplacement. Vehicles and anyone seated in a world vehicle are excluded from caching and keep their hulls fully crewed.
 
 In-flight airborne forces (`m_bAirborneDrop`) stay physical until they land. Pending seat teleport and staggered-spawn initialization still block caching. Player-controlled pawns are never intentionally removed or duplicated.
 
@@ -91,7 +91,7 @@ Logical strength includes virtual survivors. Town capture and base seize request
 
 Area shutdown retires saved records before delayed work can recreate soldiers. Spawn, attachment, suspension, and deletion paths check ownership around callback-producing operations. Group-empty handling distinguishes deliberate removal from elimination. Mandatory OFF restoration uses the same bounded worker and can take time; changing the toggle does not synchronously spawn every reserve.
 
-Registered vehicle reservations treat a cached crew as alive (`GetAliveCount` uses logical survivors), so inactive-group vehicle cleanup does not despawn a hull whose crew is virtual.
+Registered vehicle reservations stay on live crews. Vehicles are not virtualized, so inactive-group cleanup still sees a living reserving group.
 
 ### Not covered
 
@@ -100,6 +100,7 @@ These stay out of Dynamic AI caching:
 - GM/editor-placed troops that never received `SetDynamicAIOwner`
 - Player-controlled pawns
 - In-flight airborne groups (`m_bAirborneDrop`) until they land
+- Vehicles, vehicle crews, vehicle passengers, and anyone seated in a world vehicle
 - Loadout, magazine, and injury state (recreation resets from the saved prefab)
 - A line-of-sight or camera gate; distance and combat quiet still decide eligibility
 
@@ -153,7 +154,7 @@ For the new controls, open **Dynamic AI**, change distances and delays, Save, an
 6. **Performance and visibility:** compare the same mission/player count with OFF, distance-only, and budget mode. Record server frame times and transition spikes alongside managed live counts. Observe distant optics, fast arrivals, and indirect fire separately; report remaining pop-in and absent-target limitations rather than treating compiler checks as live validation.
 7. **Live tuning and persistence:** change distances and timings while reserves exist, including conflicting distance values. Save and reopen the tab to confirm normalization and current values. Verify existing reserve/casualty state survives and the new boundaries govern subsequent work. Use Save for restart and restart to confirm all nine values return; test an older profile without the new fields retains the mission defaults.
 8. **On-foot roles:** a far town with an elite patrol, an HVT objective, and a finished defend wave should cache those groups. Approach restores them. Killing the restored HVT still completes the objective. Capture still waits on `EnsureReadyInRadius`.
-9. **Civilians:** a far village empties its wanderers without changing military budget numbers. Returning restores surviving civilians. Killed civilians stay dead. Civilian vehicle keep-alive must not remount a cached crew.
-10. **Occupancy (blocking for seated caching):** a parked truck with crew and passengers caches as one host; the hull stays; approach remounts the same seats and they can drive. A player in any seat blocks the hull. Static gun and mortar crews cache far and remount. A mid-eject approach re-seats everyone with no standing-beside-truck leftover and no boarding-tree NodeError spam. Dedicated clients must not see duplicate pawns or replication kicks.
+9. **Civilians:** a far village empties its wanderers without changing military budget numbers. Returning restores surviving civilians. Killed civilians stay dead. Civilian vehicle crews stay spawned.
+10. **Emplacements:** far static-gun and mortar crews can cache and remount. Parked trucks and their AI stay fully spawned.
 
 These are acceptance checks to run, not reported results. Logging controls are documented in [runtime logging](runtime-logging.md).

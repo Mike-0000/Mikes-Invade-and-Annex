@@ -91,25 +91,11 @@ class IA_DynamicAIOccupancyHost
 		return budget.GetDesired() <= 0;
 	}
 
-	static bool HasUsablePlayerSample(array<vector> players)
-	{
-		if (players && !players.IsEmpty())
-			return true;
-		if (!GetGame())
-			return false;
-		PlayerManager manager = GetGame().GetPlayerManager();
-		if (!manager)
-			return false;
-		array<int> ids = {};
-		manager.GetPlayers(ids);
-		return ids.IsEmpty();
-	}
-
 	static void Request(IA_AiGroup owner, array<vector> players, int now)
 	{
 		if (!owner || !Replication.IsServer())
 			return;
-		if (!HasUsablePlayerSample(players))
+		if (owner.ShouldKeepVehicleOccupantsPhysical())
 			return;
 		IEntity host = owner.GetOccupancyHostEntity();
 		if (!host)
@@ -455,8 +441,6 @@ class IA_DynamicAIOccupancyHost
 		m_aSeats.Clear();
 		if (!RefreshHost())
 			return "missing host";
-		if (!HasUsablePlayerSample(players))
-			return "no player sample";
 		if (!IsHostStationary())
 			return "moving";
 		ref array<BaseCompartmentSlot> occupied = new array<BaseCompartmentSlot>();
@@ -510,8 +494,6 @@ class IA_DynamicAIOccupancyHost
 				return "retired participant";
 			if (cache.GetOwner() && cache.GetOwner().HasPendingCompartmentTree())
 				return "boarding";
-			if (cache.GetOwner() && cache.GetOwner().BlocksOccupancyWhileEnRoute())
-				return "en route";
 			IA_DynamicAIBudgetCache budget = IA_DynamicAIBudgetCache.Cast(cache);
 			if (budget && budget.IsBudgetActive() && budget.GetDesired() > 0)
 				return "allocation";
@@ -523,8 +505,6 @@ class IA_DynamicAIOccupancyHost
 	{
 		if (!RefreshHost() || !IsHostStationary())
 			return "moving";
-		if (!HasUsablePlayerSample(players))
-			return "no player sample";
 		PlayerManager manager = GetGame().GetPlayerManager();
 		if (!manager)
 			return "missing players";
@@ -539,8 +519,6 @@ class IA_DynamicAIOccupancyHost
 				return "player occupant";
 			if (seat.m_Pawn && IA_SpawnPlacement.IsNearAnyPlayer(seat.m_aTransform[3], players, tuning.m_iDynamicAIReleaseDistanceM))
 				return "player nearby";
-			if (seat.m_Cache.GetOwner() && seat.m_Cache.GetOwner().BlocksOccupancyWhileEnRoute())
-				return "en route";
 			IA_DynamicAIBudgetCache budget = IA_DynamicAIBudgetCache.Cast(seat.m_Cache);
 			if (budget && budget.IsBudgetActive() && budget.GetDesired() > 0)
 				return "allocation";
@@ -572,10 +550,8 @@ class IA_DynamicAIOccupancyHost
 	{
 		foreach (IA_DynamicAIGroupCache cache : m_aCaches)
 		{
-			if (!cache || !cache.GetOwner())
-				continue;
-			cache.GetOwner().ResumeOccupancyAssignment();
-			cache.GetOwner().RestoreOccupancyDrive();
+			if (cache && cache.GetOwner())
+				cache.GetOwner().ResumeOccupancyAssignment();
 		}
 	}
 
@@ -646,20 +622,6 @@ class IA_DynamicAIOccupancyHost
 		if (moving || playerOccupant || injured || close || ineligible || boarding)
 			return false;
 		return true;
-	}
-
-	static bool HasUsablePlayerSampleForTest(bool hasPositions, bool hasConnectedPlayers)
-	{
-		if (hasPositions)
-			return true;
-		return !hasConnectedPlayers;
-	}
-
-	static bool EnRouteBlocksOccupancyForTest(bool hasDriveTarget, bool reachedDestination)
-	{
-		if (!hasDriveTarget)
-			return false;
-		return !reachedDestination;
 	}
 
 	static bool LinkedAllocationAllowsEvictForTest(int crewDesired, int passengerDesired)

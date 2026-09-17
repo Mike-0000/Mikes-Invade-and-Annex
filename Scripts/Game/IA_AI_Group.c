@@ -2419,6 +2419,41 @@ class IA_AiGroup
         return IsAnyMemberInVehicle();
     }
 
+    // Vehicles and their crews stay physical. Occupancy caching is emplacements only.
+    bool ShouldKeepVehicleOccupantsPhysical()
+    {
+        if (IsMortarCrew() || HasStaticGunAssignment())
+            return false;
+        if (m_isVehiclePassengerGroup && m_passengerDumped)
+            return IsAnyMemberSeatedInWorldVehicle();
+        if (m_isVehicleCrewGroup || m_isVehiclePassengerGroup || m_isDriving)
+            return true;
+        if (m_passengerVehicle)
+            return true;
+        if (Vehicle.Cast(m_referencedEntity))
+            return true;
+        return IsAnyMemberSeatedInWorldVehicle();
+    }
+
+    protected bool IsAnyMemberSeatedInWorldVehicle()
+    {
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character || !character.IsInVehicle())
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                return true;
+            BaseCompartmentSlot slot = access.GetCompartment();
+            if (!slot)
+                return true;
+            if (Vehicle.Cast(slot.GetVehicle()))
+                return true;
+        }
+        return false;
+    }
+
     IEntity GetOccupancyHostEntity()
     {
         if (m_referencedEntity)
@@ -2479,29 +2514,6 @@ class IA_AiGroup
     {
         if (m_StaticGunAssignment)
             m_StaticGunAssignment.ResumeAfterDynamicAI();
-    }
-
-    bool BlocksOccupancyWhileEnRoute()
-    {
-        if (m_drivingTarget == vector.Zero)
-            return false;
-        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
-        if (!vehicle)
-            vehicle = Vehicle.Cast(m_passengerVehicle);
-        if (!vehicle)
-            return true;
-        return !IA_VehicleManager.HasVehicleReachedDestination(vehicle, m_drivingTarget);
-    }
-
-    void RestoreOccupancyDrive()
-    {
-        if (!m_isVehicleCrewGroup || m_drivingTarget == vector.Zero)
-            return;
-        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
-        if (!vehicle)
-            vehicle = Vehicle.Cast(GetOccupancyHostEntity());
-        if (vehicle)
-            DriveAfterGetInClear(vehicle, m_drivingTarget);
     }
 
     void OnDynamicAIOccupancyRemounted(IA_DynamicAIUnit unit)
@@ -6320,6 +6332,8 @@ class IA_AiGroup
             return "pending seat teleport";
         if (m_typedClearScheduled || HasPendingUnitSpawns())
             return "initialization";
+        if (ShouldKeepVehicleOccupantsPhysical())
+            return "vehicle";
         return "";
     }
 
@@ -6524,8 +6538,14 @@ class IA_AiGroup
 		DynamicAIRegressionCheck(!group.BlocksDynamicAIForcedLodValue(0), "mission-owned PreventMaxLOD no longer vetoes cache", failures);
 		group.UnpinInboundSimulation();
 		group.m_isVehicleCrewGroup = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "parked vehicle crews qualify for occupancy caching", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle", "vehicle crews stay physical", failures);
 		group.m_isVehicleCrewGroup = false;
+		group.m_isVehiclePassengerGroup = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle", "vehicle passengers stay physical", failures);
+		group.m_passengerDumped = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "dumped passengers on foot can cache", failures);
+		group.m_isVehiclePassengerGroup = false;
+		group.m_passengerDumped = false;
 		group.m_pendingSeatTeleport = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "pending seat teleport", "pending seat teleport still excludes a group", failures);
 		group.m_pendingSeatTeleport = false;
