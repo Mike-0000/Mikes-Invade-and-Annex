@@ -70,6 +70,7 @@ class IA_DynamicAISpawning
 		s_aGroups.Clear();
 		s_Work.Clear();
 		s_Budget = new IA_DynamicAIBudgetController();
+		IA_DynamicAIOccupancyHost.Reset();
 		s_bRunning = false;
 		s_iNextScanMs = 0;
 		s_iNextWakeScanMs = 0;
@@ -135,6 +136,29 @@ class IA_DynamicAISpawning
 	}
 
 	// Deliberate removal is not group elimination. Off/ordinary groups use vanilla.
+	static IA_DynamicAIGroupCache FindCacheForPawn(IEntity pawn)
+	{
+		if (!pawn)
+			return null;
+		AIControlComponent control = AIControlComponent.Cast(pawn.FindComponent(AIControlComponent));
+		if (!control)
+			return null;
+		AIAgent agent = control.GetControlAIAgent();
+		if (!agent)
+			return null;
+		AIGroup parent = agent.GetParentGroup();
+		if (!parent)
+			return null;
+		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
+		{
+			if (!cache || !cache.GetOwner())
+				continue;
+			if (cache.GetOwner().GetSCR_AIGroup() == parent)
+				return cache;
+		}
+		return null;
+	}
+
 	static bool IsVirtualizingGroup(SCR_AIGroup group)
 	{
 		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
@@ -195,6 +219,7 @@ class IA_DynamicAISpawning
 		}
 		ScanSlice(players, enabled, now);
 		s_Work.Service(players, now, enabled);
+		IA_DynamicAIOccupancyHost.TickAll(players, now, RESTORE_ATTEMPTS_PER_TICK, now);
 
 		if (IA_Log.IsDebugEnabled())
 		{

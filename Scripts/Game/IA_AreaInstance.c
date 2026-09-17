@@ -3416,6 +3416,7 @@ class IA_AreaInstance
             m_civilians.Insert(vehicleGroup);
 			m_initialCivilianCount++;
         }
+        vehicleGroup.SetDynamicAIOwner(this);
     }
     
     // Spawn initial vehicles when the area is created
@@ -3558,6 +3559,7 @@ class IA_AreaInstance
                 continue;
             IA_AiGroup civ = IA_AiGroup.CreateCivilianGroup(pos);
             civ.SetOwningAreaInstance(this);
+            civ.SetDynamicAIOwner(this);
             
             // Directly assign the area instance's area to the civilian group
             if (m_area) // Ensure m_area is not null before assigning
@@ -3714,6 +3716,8 @@ class IA_AreaInstance
             // Register the vehicle and group with our civilian tracking
             if (civGroup)
             {
+                civGroup.SetOwningAreaInstance(this);
+                civGroup.SetDynamicAIOwner(this);
                 RegisterCivilianVehicle(vehicle, civGroup);
             }
             else
@@ -3874,6 +3878,7 @@ class IA_AreaInstance
                 if (civGroup)
                 {
 					civGroup.SetOwningAreaInstance(this);
+					civGroup.SetDynamicAIOwner(this);
                    //////Print("[DEBUG_CIV_VEHICLES] Created civilian AI group for vehicle, registering vehicle with group", LogLevel.DEBUG);
                     RegisterCivilianVehicle(vehicle, civGroup);
                 }

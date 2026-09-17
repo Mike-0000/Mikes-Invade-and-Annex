@@ -55,10 +55,75 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		TestConfiguredGateTimeline();
 		TestGateReconfiguration();
 		TestWorkQueue();
+		TestOccupancyPolicy();
+		TestHVTCompletion();
 		m_iFailures += IA_AiGroup.RunDynamicAIGroupRegression();
 
 		Print(string.Format("[IA][DynamicAISpawningConfigTest] failures=%1", m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
+	}
+
+	protected void TestOccupancyPolicy()
+	{
+		Check(IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, false, false), "a quiet stationary host with eligible occupants can qualify");
+		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(true, false, false, false, false, false), "a moving host cannot qualify");
+		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, true, false, false, false, false), "a player occupant vetoes the whole host");
+		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, true, false, false, false), "an injured occupant vetoes the whole host");
+		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, true, false, false), "a nearby player vetoes the whole host");
+		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, true, false), "an ineligible occupant vetoes the whole host");
+		Check(!IA_DynamicAIOccupancyHost.QualifyAllowedForTest(false, false, false, false, false, true), "a boarding tree vetoes the whole host");
+		Check(IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(0, 0), "a parked host evicts only when every participant allocation is zero");
+		Check(!IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(2, 0), "a crew allocation keeps the whole host physical");
+		Check(!IA_DynamicAIOccupancyHost.LinkedAllocationAllowsEvictForTest(0, 1), "a passenger allocation keeps the whole host physical");
+		Check(IA_DynamicAIOccupancyHost.RemainingOccupancyOpsForTest(3, 4) == 1, "occupancy work shares the existing four-operation tick cap");
+		Check(IA_DynamicAIOccupancyHost.RemainingOccupancyOpsForTest(4, 4) == 0, "occupancy waits when the tick already spent its character operations");
+
+		ref IA_DynamicAIBudgetCacheFixture crewBudget = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup crewOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(crewBudget, 4);
+		crewBudget.Init(crewOwner);
+		crewBudget.EnableBudget();
+		crewBudget.SetDesiredForTest(0);
+		Check(IA_DynamicAIOccupancyHost.LinkedGroupsAllowEvict(crewOwner), "a budget crew at desired 0 may cache occupancy");
+		crewBudget.SetDesiredForTest(2);
+		Check(!IA_DynamicAIOccupancyHost.LinkedGroupsAllowEvict(crewOwner), "a remaining crew allocation vetoes occupancy eviction");
+		crewBudget.SetDesiredForTest(0);
+		ref IA_DynamicAIBudgetCacheFixture passengerBudget = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup passengerOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(passengerBudget, 4);
+		passengerBudget.Init(passengerOwner);
+		passengerBudget.EnableBudget();
+		passengerBudget.SetDesiredForTest(1);
+		crewOwner.SetLinkedPassengerGroup(passengerOwner);
+		Check(!IA_DynamicAIOccupancyHost.LinkedGroupsAllowEvict(crewOwner), "a linked passenger allocation vetoes the shared host");
+
+		ref IA_DynamicAIGroupCacheFixture crew = new IA_DynamicAIGroupCacheFixture();
+		ref IA_DynamicAIGroupCacheFixture passengers = new IA_DynamicAIGroupCacheFixture();
+		ref IA_DynamicAIOccupancyHost host = new IA_DynamicAIOccupancyHost();
+		host.SeedCachesForTest(crew, passengers);
+		host.SeedSeatForTest(crew, 0, 1, true, false);
+		host.SeedSeatForTest(passengers, 0, 2, true, false);
+		Check(host.GetSeatCountForTest() == 2, "crew and passenger seats share one host record");
+		host.BeginAbortForTest();
+		host.StepAbortBookkeepingForTest();
+		Check(host.GetRemountedCountForTest() == 2 && host.GetStateForTest() == IA_DynamicAIOccupancyState.Idle, "abort remounts ejected survivors instead of leaving them on foot");
+
+		ref IA_DynamicAIOccupancyHost commitHost = new IA_DynamicAIOccupancyHost();
+		commitHost.SeedSeatForTest(crew, 1, 0, true, false);
+		commitHost.MarkDeletedForTest(0);
+		Check(commitHost.GetDeletedCountForTest() == 1, "commit records a deleted occupancy seat");
+
+		ref IA_DynamicAIUnit unit = new IA_DynamicAIUnit();
+		unit.SetOccupancy(RplId.Invalid(), 0, 1, IA_DynamicAIOccupancyKind.Vehicle);
+		Check(!unit.HasOccupancy(), "a missing host identity selects the on-foot fallback");
+		unit.ClearOccupancy();
+		Check(unit.m_eOccupancyKind == IA_DynamicAIOccupancyKind.None, "clearing occupancy drops seat identity");
+	}
+
+	protected void TestHVTCompletion()
+	{
+		Check(!IA_AssassinationObjective.ShouldCompleteMissingHVTForTest(true, false, 1), "a cached HVT with logical survivors does not complete the objective");
+		Check(IA_AssassinationObjective.ShouldCompleteMissingHVTForTest(true, false, 0), "a missing HVT with no logical survivors completes");
+		Check(!IA_AssassinationObjective.ShouldCompleteMissingHVTForTest(true, true, 0), "a living HVT entity does not complete through the missing-entity path");
+		Check(!IA_AssassinationObjective.ShouldCompleteMissingHVTForTest(false, false, 0), "an unspawned HVT does not complete");
 	}
 
 	protected void TestDepartureTimeline()

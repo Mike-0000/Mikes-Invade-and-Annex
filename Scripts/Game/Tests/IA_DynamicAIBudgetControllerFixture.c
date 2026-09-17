@@ -16,6 +16,13 @@ class IA_DynamicAIBudgetControllerFixture : IA_DynamicAIBudgetController
 		Service(active, players, now, budget);
 	}
 
+	void RunTick(array<IA_DynamicAIGroupCache> groups, int now, int budget)
+	{
+		m_iClockMs = now;
+		ref array<vector> players = {};
+		Tick(groups, players, now, budget);
+	}
+
 	override protected int ClockMs()
 	{
 		return m_iClockMs;

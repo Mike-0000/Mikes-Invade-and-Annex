@@ -17,10 +17,44 @@ class IA_DynamicAIGroupCache
 	protected int m_iAuditBudgetBefore;
 	protected string m_sLiveStatus = "awaiting scan";
 	protected string m_sSnapshotBlockReason;
+#ifdef WORKBENCH
+	protected bool m_bCivilianForTest;
+#endif
 
 	void Init(IA_AiGroup owner)
 	{
 		m_Owner = owner;
+	}
+
+	bool IsCivilianCache()
+	{
+#ifdef WORKBENCH
+		if (m_bCivilianForTest)
+			return true;
+#endif
+		return m_Owner && m_Owner.IsCivilian();
+	}
+
+#ifdef WORKBENCH
+	void SetCivilianCacheForTest(bool civilian)
+	{
+		m_bCivilianForTest = civilian;
+	}
+#endif
+
+	vector GetCachedOrigin()
+	{
+		foreach (IA_DynamicAIUnit unit : m_aUnits)
+		{
+			if (!unit.m_bRestored && unit.IsLogicallyAlive())
+				return unit.GetPosition();
+		}
+		foreach (IA_DynamicAIUnit unit : m_aUnits)
+		{
+			if (unit.IsLogicallyAlive())
+				return unit.GetPosition();
+		}
+		return vector.Zero;
 	}
 
 	void ResetQuietPeriod()
@@ -247,6 +281,13 @@ class IA_DynamicAIGroupCache
 		if (!m_ActivityGate.CanCache(blocked, now, m_Owner.GetLastDangerEventTime(), System.GetUnixTime()))
 			return false;
 
+		if (IA_DynamicAIOccupancyHost.IsCacheParticipating(this) || m_Owner.HasOccupancyMembers())
+		{
+			m_sLiveStatus = "occupancy";
+			IA_DynamicAIOccupancyHost.Request(m_Owner, players, now);
+			return false;
+		}
+
 		m_sLiveStatus = "queued to despawn";
 		// The scan queues references only. The worker repeats this entire check
 		// with fresh player positions and the current roster before any mutation.
@@ -266,7 +307,9 @@ class IA_DynamicAIGroupCache
 			if (!agent)
 				return BlockSnapshot("missing character");
 			SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
-			if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0 || m_Owner.BlocksDynamicAIForcedLod(agent))
+			if (!pawn || manager.GetPlayerIdFromControlledEntity(pawn) > 0 || m_Owner.BlocksDynamicAIForcedLod(agent))
+				return BlockSnapshot("ownership, attachment or forced LOD");
+			if (pawn.GetParent() || pawn.IsInVehicle())
 				return BlockSnapshot("ownership, attachment or forced LOD");
 			CharacterControllerComponent controller = pawn.GetCharacterController();
 			SCR_CharacterDamageManagerComponent damage = SCR_CharacterDamageManagerComponent.Cast(pawn.FindComponent(SCR_CharacterDamageManagerComponent));
@@ -401,9 +444,11 @@ class IA_DynamicAIGroupCache
 		return budget.GetCurrentBudget();
 	}
 
-	protected bool CanRecreateHealthyInfantry(SCR_ChimeraCharacter pawn, PlayerManager manager)
+	bool IsPawnSafeToVirtualize(SCR_ChimeraCharacter pawn, PlayerManager manager, bool allowSeated)
 	{
-		if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0)
+		if (!pawn || !manager || manager.GetPlayerIdFromControlledEntity(pawn) > 0)
+			return false;
+		if (!allowSeated && (pawn.GetParent() || pawn.IsInVehicle()))
 			return false;
 		CharacterControllerComponent controller = pawn.GetCharacterController();
 		if (!controller || controller.GetLifeState() != ECharacterLifeState.ALIVE || controller.IsUnconscious())
@@ -411,8 +456,6 @@ class IA_DynamicAIGroupCache
 		SCR_CharacterDamageManagerComponent damage = SCR_CharacterDamageManagerComponent.Cast(pawn.FindComponent(SCR_CharacterDamageManagerComponent));
 		if (!damage)
 			return false;
-		// Injury/status serialization is intentionally deferred; never heal a survivor
-		// merely by recreating its prefab. These teams remain live until recovered.
 		ref array<ref SCR_PersistentDamageEffect> effects = {};
 		damage.GetPersistentEffects(effects);
 		if (!effects.IsEmpty())
@@ -424,6 +467,57 @@ class IA_DynamicAIGroupCache
 			if (zone && zone.GetHealthScaled() < 0.999)
 				return false;
 		}
+		return true;
+	}
+
+	protected bool CanRecreateHealthyInfantry(SCR_ChimeraCharacter pawn, PlayerManager manager)
+	{
+		return IsPawnSafeToVirtualize(pawn, manager, false);
+	}
+
+	bool CacheOccupancyPawn(IA_DynamicAIOccupancySeat seat)
+	{
+		if (!seat || !seat.m_Pawn || !IsOwnerLive())
+			return false;
+		ChimeraCharacter character = ChimeraCharacter.Cast(seat.m_Pawn);
+		if (character)
+		{
+			CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+			if (access && (access.IsInCompartment() || access.IsGettingOut()))
+				return false;
+			if (character.IsInVehicle())
+				return false;
+		}
+		ref IA_DynamicAIUnit record;
+		foreach (IA_DynamicAIUnit existing : m_aUnits)
+		{
+			if (existing && existing.m_Entity == seat.m_Pawn)
+			{
+				record = existing;
+				break;
+			}
+		}
+		if (!record)
+		{
+			record = new IA_DynamicAIUnit();
+			m_aUnits.Insert(record);
+		}
+		if (!record.Capture(seat.m_Pawn))
+			return false;
+		Math3D.MatrixCopy(seat.m_aTransform, record.m_aTransform);
+		record.SetOccupancy(seat.m_HostId, seat.m_iMgrId, seat.m_iSlotId, seat.m_eKind);
+		record.m_bRestored = false;
+		record.m_bBudgetAdmitted = false;
+		record.m_bDead = false;
+		m_bCached = true;
+		IEntity original = seat.m_Pawn;
+		m_Owner.PrepareDynamicAIUnitRemoval(original);
+		if (!IsOwnerLive())
+			return false;
+		record.m_Entity = null;
+		RplComponent.DeleteRplEntity(original, false);
+		if (IsOwnerLive() && m_Owner.GetDynamicAIPhysicalAliveCount() == 0)
+			m_Owner.SuspendForDynamicAI();
 		return true;
 	}
 
@@ -555,6 +649,22 @@ class IA_DynamicAIGroupCache
 		m_Owner.OnDynamicAIUnitAttached(unit.m_Entity);
 		if (!IsTransactionLive())
 			return;
+		if (unit.HasOccupancy())
+		{
+			int remount = IA_DynamicAIOccupancyHost.RemountUnit(unit);
+			if (remount == 1)
+			{
+				unit.m_bRestored = false;
+				unit.RecordFailure(now);
+				return;
+			}
+			if (remount == 0)
+				unit.ClearOccupancy();
+			else
+				m_Owner.OnDynamicAIOccupancyRemounted(unit);
+		}
+		if (!IsTransactionLive())
+			return;
 		// Let successfully restored soldiers respond while the remainder is queued.
 		group.ActivateAI();
 	}
@@ -601,6 +711,7 @@ class IA_DynamicAIGroupCache
 	{
 		if (m_bFinished)
 			return;
+		IA_DynamicAIOccupancyHost.AbortForCache(this);
 		bool wasCached = m_bCached;
 		// Latch retirement and detach before the first native callback. Keep the
 		// detached records alive while recursive notifications see an empty cache.

@@ -51,7 +51,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 
 	void EnableBudget()
 	{
-		if (m_bBudgetActive || m_bFinished)
+		if (IsCivilianCache() || m_bBudgetActive || m_bFinished)
 			return;
 		m_bBudgetActive = true;
 		m_bBudgetPaused = m_bCached;
@@ -234,8 +234,10 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(unit.m_Entity);
 		if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0)
 			return false;
+		if (IA_DynamicAIOccupancyHost.IsCacheParticipating(this))
+			return false;
 		AIAgent agent = GetRestoreAgent(unit);
-		if (!agent || agent.GetParentGroup() != m_Owner.GetSCR_AIGroup() || m_Owner.BlocksDynamicAIForcedLod(agent))
+		if (!agent || agent.GetParentGroup() != m_Owner.GetSCR_AIGroup())
 			return false;
 		CharacterControllerComponent controller = pawn.GetCharacterController();
 		if (!controller || controller.GetLifeState() == ECharacterLifeState.DEAD)
@@ -446,6 +448,31 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		m_bBudgetDeleting = false;
 		if (IsOwnerLive() && !m_bFinished)
 			UpdateState();
+		return true;
+	}
+
+	override bool CacheOccupancyPawn(IA_DynamicAIOccupancySeat seat)
+	{
+		bool cached = super.CacheOccupancyPawn(seat);
+		if (cached && IsOwnerLive() && !m_bFinished)
+			UpdateState();
+		return cached;
+	}
+
+	bool WantsOccupancyEviction()
+	{
+		if (!IsOwnerLive() || m_bFinished)
+			return false;
+		if (IA_DynamicAIOccupancyHost.IsCacheParticipating(this))
+			return true;
+		if (!m_Owner || !m_Owner.HasOccupancyMembers())
+			return false;
+		if (m_bBudgetActive)
+		{
+			if (m_bClose || m_bForceFull || HasRecentCombat() || m_iDesired > 0)
+				return false;
+			return IA_DynamicAIOccupancyHost.LinkedGroupsAllowEvict(m_Owner);
+		}
 		return true;
 	}
 

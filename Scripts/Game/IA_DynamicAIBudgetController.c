@@ -21,6 +21,9 @@ class IA_DynamicAIBudgetController
 	protected int m_iLastPlanMs;
 	protected int m_iBudget;
 	protected bool m_bActive;
+	protected int m_iLastOperations;
+	protected int m_iCivilianCursor;
+	protected int m_iOccupancyCursor;
 
 	protected int ClockMs()
 	{
@@ -49,10 +52,18 @@ class IA_DynamicAIBudgetController
 			m_iBudget = budget;
 		}
 		ref array<IA_DynamicAIBudgetCache> active = {};
+		ref array<IA_DynamicAIGroupCache> civilians = {};
 		foreach (IA_DynamicAIGroupCache item : groups)
 		{
+			if (!item || item.IsFinished() || !item.IsOwnerLive())
+				continue;
+			if (item.IsCivilianCache())
+			{
+				civilians.Insert(item);
+				continue;
+			}
 			ref IA_DynamicAIBudgetCache cache = IA_DynamicAIBudgetCache.Cast(item);
-			if (!cache || cache.IsFinished() || !cache.IsOwnerLive())
+			if (!cache)
 				continue;
 			if (budget > 0)
 				cache.EnableBudget();
@@ -61,18 +72,27 @@ class IA_DynamicAIBudgetController
 			if (cache.IsBudgetActive())
 				active.Insert(cache);
 		}
-		m_bActive = !active.IsEmpty();
+		m_bActive = !active.IsEmpty() || !civilians.IsEmpty();
 		if (!m_bActive)
 			return;
+		m_iLastOperations = 0;
 		if (now >= m_iNextProtectionMs)
 		{
 			m_iNextProtectionMs = now + 1000;
 			foreach (IA_DynamicAIBudgetCache protectedCache : active)
 				protectedCache.CheckWake(players, budget > 0);
+			foreach (IA_DynamicAIGroupCache civilianCache : civilians)
+			{
+				if (civilianCache)
+					civilianCache.CheckWake(players, true);
+			}
 		}
 		if (budget > 0)
 			PlanSlice(active, players, now, budget);
 		Service(active, players, now, budget);
+		int started = ClockMs();
+		ServiceCivilians(civilians, players, now, started);
+		ServiceOccupancy(groups, players, now, started);
 		if (IA_Log.IsDebugEnabled())
 		{
 			if (m_iNextReportMs == 0)
@@ -214,6 +234,58 @@ class IA_DynamicAIBudgetController
 		}
 		if (IA_Log.IsDebugEnabled())
 			m_iMaxWorkMs = Math.Max(m_iMaxWorkMs, ClockMs() - started);
+		m_iLastOperations = operations;
+	}
+
+	protected void ServiceCivilians(array<IA_DynamicAIGroupCache> civilians, array<vector> players, int now, int started)
+	{
+		int total = civilians.Count();
+		if (total == 0)
+			return;
+		int visits;
+		while (m_iLastOperations < IA_DynamicAISpawning.RESTORE_ATTEMPTS_PER_TICK && visits < total + IA_DynamicAISpawning.RESTORE_ATTEMPTS_PER_TICK)
+		{
+			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS)
+				break;
+			if (m_iCivilianCursor >= total)
+				m_iCivilianCursor = 0;
+			ref IA_DynamicAIGroupCache civilian = civilians[m_iCivilianCursor];
+			m_iCivilianCursor = m_iCivilianCursor + 1;
+			visits++;
+			if (!civilian || !civilian.IsOwnerLive() || civilian.IsFinished())
+				continue;
+			if (civilian.IsCached())
+			{
+				if (civilian.IsWaking() && civilian.RestoreNext(now))
+					m_iLastOperations = m_iLastOperations + 1;
+				continue;
+			}
+			if (civilian.TryCache(players, now, true))
+				m_iLastOperations = m_iLastOperations + 1;
+		}
+	}
+
+	protected void ServiceOccupancy(array<IA_DynamicAIGroupCache> groups, array<vector> players, int now, int started)
+	{
+		int remaining = IA_DynamicAISpawning.RESTORE_ATTEMPTS_PER_TICK - m_iLastOperations;
+		if (remaining <= 0 || ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS)
+			return;
+		int total = groups.Count();
+		int visits;
+		while (visits < total && remaining > 0)
+		{
+			if (m_iOccupancyCursor >= total)
+				m_iOccupancyCursor = 0;
+			ref IA_DynamicAIGroupCache cache = groups[m_iOccupancyCursor];
+			m_iOccupancyCursor = m_iOccupancyCursor + 1;
+			visits++;
+			ref IA_DynamicAIBudgetCache budget = IA_DynamicAIBudgetCache.Cast(cache);
+			if (budget && budget.WantsOccupancyEviction() && budget.GetOwner())
+				IA_DynamicAIOccupancyHost.Request(budget.GetOwner(), players, now);
+		}
+		int used = IA_DynamicAIOccupancyHost.TickAll(players, now, remaining, started);
+		if (used > 0)
+			m_iLastOperations = m_iLastOperations + used;
 	}
 
 	protected void Report(array<IA_DynamicAIBudgetCache> active, int now, int budget)

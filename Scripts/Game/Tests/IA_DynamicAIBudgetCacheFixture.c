@@ -56,5 +56,10 @@ class IA_DynamicAIBudgetCacheFixture : IA_DynamicAIBudgetCache
 	{
 		return m_Owner.GetDynamicAIPhysicalAliveCount();
 	}
+
+	void SetDesiredForTest(int desired)
+	{
+		m_iDesired = desired;
+	}
 }
 #endif

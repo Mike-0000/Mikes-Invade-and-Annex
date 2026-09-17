@@ -15,6 +15,7 @@ class IA_DynamicAIBudgetTest : WorkbenchPlugin
 		TestSplitPlayersAndCasualties();
 		TestUnlimitedAndInvalidCounts();
 		TestBudgetSweep();
+		TestCivilianEntriesAreOmitted();
 		Print(string.Format("[IA][DynamicAIBudgetTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -173,6 +174,14 @@ class IA_DynamicAIBudgetTest : WorkbenchPlugin
 			int expected = Math.Min(19, Math.Max(6, budget));
 			Check(valid && total == expected && entries[4].m_iDesired == 0, string.Format("budget %1 conserves protected and eligible demand", budget));
 		}
+	}
+
+	protected void TestCivilianEntriesAreOmitted()
+	{
+		ref array<ref IA_DynamicAIBudgetEntry> entries = {};
+		IA_DynamicAIBudgetEntry military = AddEntry(entries, 8, 400);
+		IA_DynamicAIBudgetAllocator.Allocate(entries, 8);
+		Check(military.m_iDesired == 8, "allocator conservation is unchanged when civilian groups never enter the military census");
 	}
 
 	protected void Check(bool passed, string description)

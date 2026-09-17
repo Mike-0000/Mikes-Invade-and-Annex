@@ -19,6 +19,7 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		TestTimeBudget();
 		TestBudgetOffDrain();
 		TestRetiredCost();
+		TestCivilianBudgetIsolation();
 		Print(string.Format("[IA][DynamicAIBudgetControllerTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -226,6 +227,20 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		ref array<IA_DynamicAIBudgetCache> active = {retired, optional};
 		worker.RunService(active, 1, 1);
 		Check(retired.m_iRestoreAttempts == 0 && optional.m_iCreated == 1, "a retired owner neither receives restoration nor blocks remaining optional capacity");
+	}
+
+	protected void TestCivilianBudgetIsolation()
+	{
+		ref IA_DynamicAIBudgetCacheFixture civilian = new IA_DynamicAIBudgetCacheFixture();
+		civilian.SetCivilianCacheForTest(true);
+		civilian.EnableBudget();
+		Check(!civilian.IsBudgetActive(), "civilian caches cannot enter the military budget allocator");
+
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref IA_DynamicAICivilianServiceCacheFixture civilianService = new IA_DynamicAICivilianServiceCacheFixture();
+		ref array<IA_DynamicAIGroupCache> groups = {civilianService};
+		worker.RunTick(groups, 1, 160);
+		Check(!civilianService.IsBudgetActive() && civilianService.m_iTryCacheCalls > 0, "budget ticks service civilians on a separate pool after military work");
 	}
 
 	protected void Check(bool condition, string description)

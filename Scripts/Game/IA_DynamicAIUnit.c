@@ -14,6 +14,11 @@ class IA_DynamicAIUnit
 	bool m_bBudgetLeader;
 	int m_iBudgetLiveSinceMs;
 
+	RplId m_HostId;
+	int m_iOccupancyMgrId;
+	int m_iOccupancySlotId;
+	IA_DynamicAIOccupancyKind m_eOccupancyKind;
+
 	bool Capture(IEntity entity)
 	{
 		m_sPrefab = SCR_ResourceNameUtils.GetPrefabName(entity);
@@ -25,6 +30,29 @@ class IA_DynamicAIUnit
 		entity.GetWorldTransform(m_aTransform);
 		m_Entity = entity;
 		return true;
+	}
+
+	bool HasOccupancy()
+	{
+		if (m_eOccupancyKind == IA_DynamicAIOccupancyKind.None)
+			return false;
+		return m_HostId.IsValid();
+	}
+
+	void ClearOccupancy()
+	{
+		m_HostId = RplId.Invalid();
+		m_iOccupancyMgrId = -1;
+		m_iOccupancySlotId = -1;
+		m_eOccupancyKind = IA_DynamicAIOccupancyKind.None;
+	}
+
+	void SetOccupancy(RplId hostId, int mgrId, int slotId, IA_DynamicAIOccupancyKind kind)
+	{
+		m_HostId = hostId;
+		m_iOccupancyMgrId = mgrId;
+		m_iOccupancySlotId = slotId;
+		m_eOccupancyKind = kind;
 	}
 
 	vector GetPosition()

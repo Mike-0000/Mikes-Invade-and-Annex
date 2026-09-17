@@ -1403,12 +1403,26 @@ class IA_AiGroup
 
     vector GetOrigin()
     {
+        if (IsDynamicAIPaused() && m_DynamicAICache)
+        {
+            vector cached = m_DynamicAICache.GetCachedOrigin();
+            if (cached != vector.Zero)
+            {
+                m_lastConfirmedPosition = cached;
+                return cached;
+            }
+            if (m_lastConfirmedPosition != vector.Zero)
+                return m_lastConfirmedPosition;
+        }
         if (!m_group)
         {
-            return vector.Zero;
+            return m_lastConfirmedPosition;
         }
         vector origin = m_group.GetOrigin();
-        m_lastConfirmedPosition = origin;
+        if (origin != vector.Zero)
+            m_lastConfirmedPosition = origin;
+        else if (m_lastConfirmedPosition != vector.Zero)
+            return m_lastConfirmedPosition;
         return origin;
     }
 
@@ -2383,6 +2397,107 @@ class IA_AiGroup
     IA_AiGroup GetLinkedPassengerGroup()
     {
         return m_linkedPassengerGroup;
+    }
+
+    IA_AiGroup GetLinkedCrewGroup()
+    {
+        return m_linkedCrewGroup;
+    }
+
+    bool IsCivilian()
+    {
+        return m_isCivilian;
+    }
+
+    IA_DynamicAIGroupCache GetDynamicAICache()
+    {
+        return m_DynamicAICache;
+    }
+
+    bool HasOccupancyMembers()
+    {
+        return IsAnyMemberInVehicle();
+    }
+
+    IEntity GetOccupancyHostEntity()
+    {
+        if (m_referencedEntity)
+            return m_referencedEntity;
+        if (m_passengerVehicle)
+            return m_passengerVehicle;
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character)
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                continue;
+            BaseCompartmentSlot slot = access.GetCompartment();
+            if (!slot)
+                continue;
+            IEntity host = slot.GetVehicle();
+            if (host)
+                return host;
+            return slot.GetOwner();
+        }
+        if (m_assignedMortars && !m_assignedMortars.IsEmpty())
+            return m_assignedMortars[0];
+        return null;
+    }
+
+    bool HasPendingCompartmentTree()
+    {
+        if (m_pendingSeatTeleport)
+            return true;
+        if (IsCurrentWaypointGetInNearest())
+            return true;
+        if (!m_group)
+            return false;
+        AIWaypoint current = m_group.GetCurrentWaypoint();
+        if (SCR_BoardingWaypoint.Cast(current))
+            return true;
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character)
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (access && (access.IsGettingIn() || access.IsGettingOut()))
+                return true;
+        }
+        return false;
+    }
+
+    void SuspendOccupancyAssignment()
+    {
+        if (m_StaticGunAssignment)
+            m_StaticGunAssignment.SuspendForDynamicAI();
+    }
+
+    void ResumeOccupancyAssignment()
+    {
+        if (m_StaticGunAssignment)
+            m_StaticGunAssignment.ResumeAfterDynamicAI();
+    }
+
+    void OnDynamicAIOccupancyRemounted(IA_DynamicAIUnit unit)
+    {
+        if (!unit || !unit.m_Entity)
+            return;
+        if (m_StaticGunAssignment)
+            m_StaticGunAssignment.RebindPawn(unit.m_Entity);
+        if (!unit.HasOccupancy() || unit.m_eOccupancyKind != IA_DynamicAIOccupancyKind.Vehicle)
+            return;
+        if (!m_isVehicleCrewGroup || m_drivingTarget == vector.Zero)
+            return;
+        if (m_DynamicAICache && m_DynamicAICache.GetUnrestoredCount() > 0)
+            return;
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (!vehicle)
+            vehicle = Vehicle.Cast(GetOccupancyHostEntity());
+        if (vehicle)
+            DriveAfterGetInClear(vehicle, m_drivingTarget);
     }
 
     bool HasDumpedPassengers()
@@ -4756,9 +4871,7 @@ class IA_AiGroup
 
     bool BlocksDynamicAIForcedLodValue(int permanentLod)
     {
-        if (permanentLod == -1)
-            return false;
-        return !OwnsBuildingMarchForcedLod();
+        return false;
     }
 
     protected void SuspendBuildingMarchSimulation()
@@ -6178,27 +6291,12 @@ class IA_AiGroup
 
     string GetDynamicAIRoleBlockReason()
     {
-        if (m_isCivilian)
-            return "civilian";
-        if (m_isMortarCrew || HasStaticGunAssignment())
-            return "emplacement crew";
-        if (m_HVTGroup || IsObjectiveUnit())
-            return "objective unit";
-        if (m_isVehicleCrewGroup || m_isVehiclePassengerGroup || m_referencedEntity || m_isDriving || m_pendingSeatTeleport)
-            return "vehicle assignment";
         if (m_bAirborneDrop)
             return "airborne";
-        if (m_isDefendWaveGroup || m_isInDefendMode)
-            return "active defense";
-        if (m_bEliteProfile || m_bSweepPatrol)
-            return "special patrol";
-        // Unfinished building walks resume from the saved physical positions.
-        // Other mission-owned simulation pins must remain live.
-        if (m_bInboundSimPinned && !IsBuildingMarchSimulationPinned())
-            return "simulation pin";
+        if (m_pendingSeatTeleport)
+            return "pending seat teleport";
         if (m_typedClearScheduled || HasPendingUnitSpawns())
             return "initialization";
-        // Ordinary area infantry and their normal patrol orders are supported.
         return "";
     }
 
@@ -6220,7 +6318,7 @@ class IA_AiGroup
         GetGame().GetCallqueue().Remove(this.ApplyDynamicAICombatProfile);
         m_isStateEvaluationScheduled = false;
         m_bHoldMarchScheduled = false;
-        SuspendBuildingMarchSimulation();
+        UnpinInboundSimulation();
         if (!IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
             return;
         array<AIAgent> agents = {};
@@ -6251,6 +6349,8 @@ class IA_AiGroup
     {
         if (!entity || !IsDynamicAIOwnerLive())
             return;
+        if (m_OwningSideObjective)
+            m_OwningSideObjective.OnDynamicAIUnitCached(this, entity);
         ChimeraCharacter pawn = ChimeraCharacter.Cast(entity);
         if (!pawn)
             return;
@@ -6262,6 +6362,8 @@ class IA_AiGroup
     void SetupDynamicAIUnit(IEntity entity)
     {
         SetupDeathListenerForUnit(entity);
+        if (m_OwningSideObjective)
+            m_OwningSideObjective.OnDynamicAIUnitRestored(this, entity);
         // Character init can overwrite the immediate profile. Reapply only this
         // replacement, instead of rescanning the whole group once per soldier.
         GetGame().GetCallqueue().CallLater(ApplyDynamicAICombatProfile, 2000, false, entity);
@@ -6387,30 +6489,51 @@ class IA_AiGroup
 		group.EnableBuildingMarchSimulation();
 		group.SuspendBuildingMarchSimulation();
 		DynamicAIRegressionCheck(group.m_bInboundSimPinned && !group.m_bBuildingMarchSimPinned && group.m_vInboundTarget == "300 20 300", "building march cannot take over or suspend a mission-owned pin", failures);
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "simulation pin", "mission pin still excludes a building garrison", failures);
-		DynamicAIRegressionCheck(!group.OwnsBuildingMarchForcedLod() && group.BlocksDynamicAIForcedLodValue(0), "mission-owned PreventMaxLOD still vetoes cache", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "mission pin no longer excludes a building garrison", failures);
+		DynamicAIRegressionCheck(!group.OwnsBuildingMarchForcedLod() && !group.BlocksDynamicAIForcedLodValue(0), "mission-owned PreventMaxLOD no longer vetoes cache", failures);
 		group.UnpinInboundSimulation();
 		group.m_bHoldEntered = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "settled building garrisons remain supported", failures);
 		group.m_isHoldingPost = false;
 		group.m_bInboundSimPinned = true;
 		group.m_bBuildingMarchSimPinned = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "simulation pin", "an obsolete arrival tag cannot exempt another role's pin", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "an obsolete arrival tag cannot exempt another role's pin", failures);
+		DynamicAIRegressionCheck(!group.BlocksDynamicAIForcedLodValue(0), "mission-owned PreventMaxLOD no longer vetoes cache", failures);
 		group.UnpinInboundSimulation();
 		group.m_isVehicleCrewGroup = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle assignment", "vehicle crews remain live", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "parked vehicle crews qualify for occupancy caching", failures);
 		group.m_isVehicleCrewGroup = false;
+		group.m_pendingSeatTeleport = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "pending seat teleport", "pending seat teleport still excludes a group", failures);
+		group.m_pendingSeatTeleport = false;
 		group.m_isDefendWaveGroup = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "active defense", "defense waves remain live", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "defense waves cache after the event", failures);
 		group.m_isDefendWaveGroup = false;
+		group.m_bEliteProfile = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "elite patrols qualify for caching", failures);
+		group.m_bEliteProfile = false;
+		group.m_HVTGroup = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "HVT groups qualify while remaining logically alive", failures);
+		group.m_HVTGroup = false;
+		group.m_isCivilian = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "civilians qualify for a separate cache pool", failures);
+		group.m_isCivilian = false;
+		group.m_isMortarCrew = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "emplacement crews qualify for occupancy caching", failures);
+		group.m_isMortarCrew = false;
 		group.m_bInboundSimPinned = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "simulation pin", "inbound simulation ownership is respected", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "inbound simulation ownership no longer blocks cache", failures);
 		group.m_bInboundSimPinned = false;
+		group.m_bAirborneDrop = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "airborne", "in-flight airborne groups remain live", failures);
+		group.m_bAirborneDrop = false;
 
 		ref IA_DynamicAIGroupCacheFixture cache = new IA_DynamicAIGroupCacheFixture();
 		cache.Init(group);
 		group.m_DynamicAICache = cache;
 		cache.SetCachedForTest(true);
+		group.m_lastConfirmedPosition = "150 20 160";
+		DynamicAIRegressionCheck(group.GetOrigin() == "150 20 160", "a fully paused group reports its saved pose instead of an empty native origin");
 		group.m_isHoldingPost = true;
 		group.m_bHoldEntered = false;
 		group.m_bHoldMarchScheduled = true;

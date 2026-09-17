@@ -30,6 +30,7 @@ class IA_StaticGunAssignment
 	protected bool m_bExitRequested;
 	protected bool m_bBoardingCancelled;
 	protected bool m_bPosted;
+	protected bool m_bSuspended;
 	protected vector m_vDefend;
 	protected float m_fRadius;
 	protected static ref array<IEntity> s_PostedPawns;
@@ -43,6 +44,35 @@ class IA_StaticGunAssignment
 		m_fRadius = radius;
 		if (gun)
 			m_Seat = gun.GetSeat();
+	}
+
+	void SuspendForDynamicAI()
+	{
+		m_bSuspended = true;
+		UnregisterPosted();
+	}
+
+	void ResumeAfterDynamicAI()
+	{
+		m_bSuspended = false;
+	}
+
+	void RebindPawn(IEntity entity)
+	{
+		m_Pawn = entity;
+		m_Agent = null;
+		if (entity)
+		{
+			AIControlComponent control = AIControlComponent.Cast(entity.FindComponent(AIControlComponent));
+			if (control)
+				m_Agent = control.GetControlAIAgent();
+		}
+		m_bPosted = false;
+		RegisterPosted();
+		m_iState = 2;
+		m_bWasMounted = true;
+		m_bAccepted = false;
+		m_bSuspended = false;
 	}
 
 	bool BlocksOrders() { return m_iState < 4; }
@@ -107,7 +137,7 @@ class IA_StaticGunAssignment
 
 	void Tick(bool permitInitialMount, bool siteLive)
 	{
-		if (!Replication.IsServer() || m_iState == 4)
+		if (!Replication.IsServer() || m_iState == 4 || m_bSuspended)
 			return;
 		int now = System.GetTickCount();
 		if (!m_Group || !m_Group.IsSpawned())
