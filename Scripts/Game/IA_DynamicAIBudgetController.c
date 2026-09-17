@@ -24,6 +24,11 @@ class IA_DynamicAIBudgetController
 	protected int m_iLastOperations;
 	protected int m_iCivilianCursor;
 	protected int m_iOccupancyCursor;
+	protected int m_iOptionalRestores;
+	protected int m_iCaptureSeeds;
+	protected int m_iTargetFullDenials;
+	protected float m_fNearestRestoreM = -1;
+	protected float m_fFarthestEvictM = -1;
 
 	protected int ClockMs()
 	{
@@ -193,6 +198,8 @@ class IA_DynamicAIBudgetController
 			if (!cache || !cache.WantsOptionalRestore(now))
 				continue;
 			float distance = cache.GetNearestPlayerDistance();
+			if (cache.HasRecentCombat())
+				distance = Math.Max(0, distance - IA_DynamicAISpawning.GetTuning().m_iDynamicAIRetentionBiasM);
 			if (best)
 			{
 				if (distance > bestDist)
@@ -204,6 +211,16 @@ class IA_DynamicAIBudgetController
 			bestDist = distance;
 		}
 		return best;
+	}
+
+	protected bool HasNearbyCombatRestore(array<IA_DynamicAIBudgetCache> active, int now)
+	{
+		foreach (IA_DynamicAIBudgetCache cache : active)
+		{
+			if (cache && cache.WantsOptionalRestore(now) && cache.HasRecentCombat())
+				return true;
+		}
+		return false;
 	}
 
 	protected IA_DynamicAIBudgetCache PickFarthestUntried(array<IA_DynamicAIBudgetCache> active, array<IA_DynamicAIBudgetCache> tried)
@@ -256,11 +273,18 @@ class IA_DynamicAIBudgetController
 			if (!mandatory)
 				continue;
 			if (budget > 0 && cost >= budget && !mandatory.IsExitingBudget() && !mandatory.HasAdmittedRetryWork() && !mandatory.HasCaptureSeedWork())
+			{
+				if (mandatory.HasMandatoryWork())
+					m_iTargetFullDenials++;
 				continue;
+			}
+			bool captureSeed = mandatory.HasCaptureSeedWork();
 			if (mandatory.RestoreBudgetUnit(now, false))
 			{
 				operations++;
 				cost = TotalCost(active);
+				if (captureSeed)
+					m_iCaptureSeeds++;
 				if (IA_Log.IsDebugEnabled())
 					m_iRestoreAttempts++;
 			}
@@ -287,6 +311,7 @@ class IA_DynamicAIBudgetController
 			if (evict.EvictBudgetUnit(players, now))
 			{
 				operations++;
+				m_fFarthestEvictM = evict.GetNearestPlayerDistance();
 				if (IA_Log.IsDebugEnabled())
 					m_iEvictions++;
 			}
@@ -294,9 +319,12 @@ class IA_DynamicAIBudgetController
 				evictTried.Insert(evict);
 		}
 		visits = 0;
-		if (budget > 0 && operations < 4 && ClockMs() - started < IA_DynamicAISpawning.WORK_BUDGET_MS)
+		int optionalCap = 4;
+		if (HasNearbyCombatRestore(active, now))
+			optionalCap = 6;
+		if (budget > 0 && operations < optionalCap && ClockMs() - started < IA_DynamicAISpawning.WORK_BUDGET_MS)
 			cost = TotalCost(active);
-		while (budget > 0 && operations < 4 && visits < total + 4)
+		while (budget > 0 && operations < optionalCap && visits < total + optionalCap)
 		{
 			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS || cost >= budget)
 				break;
@@ -308,6 +336,8 @@ class IA_DynamicAIBudgetController
 			{
 				operations++;
 				cost = TotalCost(active);
+				m_iOptionalRestores++;
+				m_fNearestRestoreM = optional.GetNearestPlayerDistance();
 				if (IA_Log.IsDebugEnabled())
 					m_iRestoreAttempts++;
 			}
@@ -390,12 +420,19 @@ class IA_DynamicAIBudgetController
 			float seconds = Math.Max(1, now - m_iWindowStartMs) / 1000.0;
 			Print(string.Format("[IA][DynamicAI] Budget: target=%1 physicalAndReserved=%2 protectedDemand=%3 planned=%4 virtual=%5 partialGroups=%6 overTarget=%7 planAgeMs=%8.", budget, cost, m_iProtectedDemand, demand, pending, partial, Math.Max(0, cost - budget), now - m_iLastPlanMs), LogLevel.NORMAL);
 			Print(string.Format("[IA][DynamicAI] Budget work %1s: evictions=%2 restoreAttempts=%3 maxWorkerMs=%4 maxPlanSliceMs=%5.", seconds, m_iEvictions, m_iRestoreAttempts, m_iMaxWorkMs, m_iMaxScanMs), LogLevel.NORMAL);
+			Print(string.Format("[IA][DynamicAI] Budget flow: nearestRestoreM=%1 farthestEvictM=%2 captureSeeds=%3 deniedOverBudget=%4 optionalRestores=%5 reservesSeeded=%6.", m_fNearestRestoreM, m_fFarthestEvictM, m_iCaptureSeeds, m_iTargetFullDenials, m_iOptionalRestores, IA_DynamicAISpawning.GetReservesSeeded()), LogLevel.NORMAL);
 			m_iWindowStartMs = now;
 			m_iNextReportMs = now + 30000;
 			m_iEvictions = 0;
 			m_iRestoreAttempts = 0;
 			m_iMaxWorkMs = 0;
 			m_iMaxScanMs = 0;
+			m_iOptionalRestores = 0;
+			m_iCaptureSeeds = 0;
+			m_iTargetFullDenials = 0;
+			m_fNearestRestoreM = -1;
+			m_fFarthestEvictM = -1;
+			IA_DynamicAISpawning.ResetReservesSeeded();
 		}
 	}
 }

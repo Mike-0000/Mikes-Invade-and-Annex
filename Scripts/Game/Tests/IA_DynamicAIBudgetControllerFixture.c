@@ -27,5 +27,25 @@ class IA_DynamicAIBudgetControllerFixture : IA_DynamicAIBudgetController
 	{
 		return m_iClockMs;
 	}
+
+	int GetOptionalRestoresForTest()
+	{
+		return m_iOptionalRestores;
+	}
+
+	int GetCaptureSeedsForTest()
+	{
+		return m_iCaptureSeeds;
+	}
+
+	int GetDeniedOverBudgetForTest()
+	{
+		return m_iTargetFullDenials;
+	}
+
+	float GetNearestRestoreMForTest()
+	{
+		return m_fNearestRestoreM;
+	}
 }
 #endif

@@ -33,6 +33,20 @@ class IA_DynamicAIUnit
 		return true;
 	}
 
+	// Reserve-first spawn: a soldier that was never created still owns a roster
+	// slot. Restoration uses the same prefab/transform path as a captured pawn.
+	void SeedReserve(ResourceName prefab, vector position)
+	{
+		m_sPrefab = prefab;
+		m_aTransform[0] = "1 0 0";
+		m_aTransform[1] = "0 1 0";
+		m_aTransform[2] = "0 0 1";
+		m_aTransform[3] = position;
+		m_Entity = null;
+		m_bRestored = false;
+		m_bDead = false;
+	}
+
 	bool HasOccupancy()
 	{
 		if (m_eOccupancyKind == IA_DynamicAIOccupancyKind.None)

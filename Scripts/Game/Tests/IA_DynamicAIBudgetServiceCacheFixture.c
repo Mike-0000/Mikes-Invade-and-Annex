@@ -13,6 +13,7 @@ class IA_DynamicAIBudgetServiceCacheFixture : IA_DynamicAIBudgetCache
 	int m_iEvictRemaining;
 	int m_iFailRemaining;
 	int m_iOperationMs;
+	bool m_bCombatForTest;
 
 	void Configure(IA_DynamicAIBudgetControllerFixture clock, array<string> trace, string label, int pending, int physical, bool mandatory)
 	{
@@ -67,6 +68,18 @@ class IA_DynamicAIBudgetServiceCacheFixture : IA_DynamicAIBudgetCache
 	override protected int PhysicalAliveCount()
 	{
 		return m_iPhysical;
+	}
+
+	override bool HasRecentCombat()
+	{
+		return m_bCombatForTest;
+	}
+
+	IA_DynamicAIUnit GetUnitForTest(int index)
+	{
+		if (index < 0 || index >= m_aUnits.Count())
+			return null;
+		return m_aUnits[index];
 	}
 
 	override protected void RestoreUnit(IA_DynamicAIUnit unit, int now)

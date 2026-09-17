@@ -43,6 +43,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_NumericField m_DynamicAIMinLiveField;
 	protected ref MUI_NumericField m_DynamicAIEvictDelayField;
 	protected ref MUI_NumericField m_DynamicAIRetentionField;
+	protected ref MUI_NumericField m_DynamicAICaptureSeedField;
+	protected ref MUI_Toggle m_DynamicAIHardCapToggle;
 	protected ref MUI_NumericField m_MilVehField;
 	protected ref MUI_Dropdown m_NormalSkillDrop;
 	protected ref MUI_Dropdown m_EliteSkillDrop;
@@ -541,8 +543,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	{
 		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
 		m_PageDynamicAI.AddChild(m_DynamicAISpawningToggle);
-		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON fixes effective AI scale at 1.0, even with budget 0. Objectives still spawn fully, then far infantry cache after min-live and eviction delays. Vehicles stay spawned. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
-		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Target count of physical infantry after they spawn, using your pawn not the camera. Nearest squads restore first. Farther squads stay cached or are evicted to stay at this number. Live soldiers already inside 400 m are not deleted immediately. Vehicles stay spawned. 0 is distance-only caching.");
+		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON fixes effective AI scale at 1.0, even with budget 0. Far squads that would exceed the budget record reserves instead of creating every soldier; the leader still spawns. Vehicles stay spawned. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
+		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Target count of physical infantry. Far new squads seed reserves once this number is already live. Nearest squads restore first. Farther squads stay cached or are evicted. Live soldiers already inside 400 m are not deleted immediately. Vehicles stay spawned. 0 is distance-only caching.");
 
 		ref MUI_Label modes = runtime.CreateLabel("Budget 0: distance only. Positive budget: nearest squads first. AI scale is 1.0 while ON. Save applies now; Save for restart also remembers changes.", "dynamicAiModes");
 		modes.SetFontSize(runtime.GetTheme().FONT_SMALL);
@@ -576,6 +578,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		stability.SetBold(true);
 		m_PageDynamicAI.AddChild(stability);
 		m_DynamicAIRetentionField = MakeDynamicAIField(runtime, "Existing allocation preference (m; budget)", "dynamicAiRetention", 0, 500, 10, 50, "Subtracts this distance from the ranking of already allocated squads. Reduces swapping between similar distances. 0 uses nearest distance without this preference.");
+		m_DynamicAICaptureSeedField = MakeDynamicAIField(runtime, "Capture seed window (s; budget)", "dynamicAiCaptureSeed", 5, 120, 5, 30, "A contested objective may restore one defender over the budget for this long so capture can start. The rest of that squad still fills nearest-first.");
+		m_DynamicAIHardCapToggle = runtime.CreateToggle("Hard cap (combat does not block eviction)", "dynamicAiHardCap");
+		m_PageDynamicAI.AddChild(m_DynamicAIHardCapToggle);
+		m_Hints.AddHint(m_DynamicAIHardCapToggle, "Hard cap", "When on, a squad in recent combat can still be evicted if it is overallocated and outside the keep-release distance. Close soldiers stay. Use this when you want the budget to stay tight during a running fight.");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1108,6 +1114,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_DynamicAIEvictDelayField.SetValue(cfg.m_iDynamicAIEvictDelaySec);
 		if (m_DynamicAIRetentionField)
 			m_DynamicAIRetentionField.SetValue(cfg.m_iDynamicAIRetentionBiasM);
+		if (m_DynamicAICaptureSeedField)
+			m_DynamicAICaptureSeedField.SetValue(cfg.m_iDynamicAICaptureSeedSec);
+		if (m_DynamicAIHardCapToggle)
+			m_DynamicAIHardCapToggle.SetChecked(cfg.m_bDynamicAIHardCap);
 		if (m_MilVehField)
 			m_MilVehField.SetValue(cfg.m_fMilitaryVehicleCountMultiplier);
 		if (m_CivVehField)
@@ -1508,6 +1518,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			dynamicAiPack.m_iDynamicAIEvictDelaySec = Math.Round(m_DynamicAIEvictDelayField.GetValue());
 		if (m_DynamicAIRetentionField)
 			dynamicAiPack.m_iDynamicAIRetentionBiasM = Math.Round(m_DynamicAIRetentionField.GetValue());
+		if (m_DynamicAICaptureSeedField)
+			dynamicAiPack.m_iDynamicAICaptureSeedSec = Math.Round(m_DynamicAICaptureSeedField.GetValue());
+		if (m_DynamicAIHardCapToggle)
+			dynamicAiPack.m_bDynamicAIHardCap = m_DynamicAIHardCapToggle.IsChecked();
 		packed = packed + "|" + IA_Config.PackDynamicAIBudget(dynamicAiPack);
 		packed = packed + "|" + IA_Config.PackDynamicAIExtras(dynamicAiPack);
 

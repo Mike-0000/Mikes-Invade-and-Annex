@@ -100,6 +100,9 @@ class IA_AiGroup
 {
     private SCR_AIGroup m_group;
     private ref IA_DynamicAIGroupCache m_DynamicAICache;
+    // Soldiers recorded at spawn time while the shared target was already full.
+    // They wait here until the cache exists, then become ordinary reserves.
+    private ref array<ref IA_DynamicAIUnit> m_aDynamicAIReserveSeeds;
     private IA_AreaInstance m_DynamicAIOwner;
     private bool m_bDynamicAIDefendPending;
 #ifdef WORKBENCH
@@ -1398,6 +1401,10 @@ class IA_AiGroup
             return 0;
         }
         int aliveCount = m_group.GetPlayerAndAgentCount();
+        // Reserves recorded at spawn time are roster members that simply have no
+        // entity yet, so area strength must not read them as casualties.
+        if (m_aDynamicAIReserveSeeds)
+            aliveCount += m_aDynamicAIReserveSeeds.Count();
         return aliveCount;
     }
 
@@ -3788,12 +3795,14 @@ class IA_AiGroup
             m_DynamicAICache.Retire();
         m_bSpawnAborted = true;
         m_pendingUnitsToSpawn = 0;
+        m_aDynamicAIReserveSeeds = null;
         ScriptCallQueue queue = GetGame().GetCallqueue();
         if (queue)
         {
             queue.Remove(this.SpawnNextUnit);
             queue.Remove(this.SpawnNextHostileCivilianUnit);
             queue.Remove(this.OnHoldMarchTick);
+            queue.Remove(this.ResolveDynamicAIReserveSeeds);
         }
         m_bHoldMarchScheduled = false;
         UnpinInboundSimulation();
@@ -4355,9 +4364,9 @@ class IA_AiGroup
         if (!m_bHoldEntered)
         {
             // Live members keep walking, but absent reserves cannot prove arrival.
-            if (!IsDynamicAICached() && IA_BuildingGarrison.HasReachedInterior(m_group, m_HoldBuilding, m_holdPost, m_holdRadius))
+            if (IA_BuildingGarrison.HasReachedInterior(m_group, m_HoldBuilding, m_holdPost, m_holdRadius))
             {
-                // Arrival changes orders only. Never reposition the group or pawns.
+                // Live members prove arrival. Virtual reserves inherit Hold.
                 EnterHoldPost();
                 return;
             }
@@ -4404,8 +4413,7 @@ class IA_AiGroup
 
     protected void EnterHoldPost()
     {
-        // A partially restored roster cannot prove that the whole team arrived.
-        if (IsDynamicAICached())
+        if (IsDynamicAIPaused())
             return;
         if (m_bHoldEntered)
             return;
@@ -5082,6 +5090,18 @@ class IA_AiGroup
             vector scattered = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
             unitSpawnPos = IA_SpawnPlacement.OutdoorOrOrigin(m_staggeredSpawnPos, scattered);
         }
+        // Reserve-first spawn: record this soldier instead of creating it while
+        // the shared target is full and no player is anywhere near its position.
+        if (TrySeedDynamicAIReserve(charPrefabPath, unitSpawnPos))
+        {
+            TryRegisterDynamicAI();
+            m_pendingUnitsToSpawn--;
+            if (m_pendingUnitsToSpawn > 0)
+                GetGame().GetCallqueue().CallLater(this.SpawnNextUnit, 100, false);
+            else
+                OnStaggeredSpawningComplete();
+            return;
+        }
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
         {
@@ -5124,6 +5144,7 @@ class IA_AiGroup
             m_unitsSpawnedCount++;
             PinInboundAgents();
             RegisterAirborneJumper(charEntity);
+            TryRegisterDynamicAI();
         }
         
         // Decrement pending count and schedule next spawn
@@ -5171,6 +5192,7 @@ class IA_AiGroup
         m_unitsSpawnedCount++;
         PinInboundAgents();
         RegisterAirborneJumper(charEntity);
+        TryRegisterDynamicAI();
     }
 
     void FinalizeStaggeredSpawn()
@@ -5196,6 +5218,11 @@ class IA_AiGroup
 
         // Mark as spawned
         PerformSpawn();
+
+        // PerformSpawn adopts recorded reserves when the cache already exists.
+        // Anything still pending belongs to a group Dynamic AI cannot manage.
+        if (m_aDynamicAIReserveSeeds && !m_aDynamicAIReserveSeeds.IsEmpty())
+            GetGame().GetCallqueue().CallLater(this.ResolveDynamicAIReserveSeeds, 5000, false);
         
         if (IA_Log.IsDebugEnabled())
         {
@@ -6292,7 +6319,13 @@ class IA_AiGroup
         if (m_bDynamicAIOwnerTest)
             return true;
 #endif
-        return m_isSpawned && !m_bSpawnAborted && m_group && m_DynamicAIOwner && !m_DynamicAIOwner.IsShutDown();
+        if (m_bSpawnAborted || !m_group || !m_DynamicAIOwner || m_DynamicAIOwner.IsShutDown())
+            return false;
+        // Mid-stagger groups already have a leader. Counting them lets later
+        // far squads seed reserves instead of creating every remaining soldier.
+        if (m_isSpawned)
+            return true;
+        return m_unitsSpawnedCount > 0;
     }
 
     void SetDynamicAIOwner(IA_AreaInstance owner)
@@ -6309,11 +6342,91 @@ class IA_AiGroup
     protected void TryRegisterDynamicAI()
     {
         // Registration retains no soldier entities and is inert while disabled.
-        if (!Replication.IsServer() || !IsDynamicAIOwnerLive() || m_DynamicAICache)
+        if (!Replication.IsServer() || !IsDynamicAIOwnerLive())
             return;
-        m_DynamicAICache = new IA_DynamicAIBudgetCache();
-        m_DynamicAICache.Init(this);
-        IA_DynamicAISpawning.Register(m_DynamicAICache);
+        if (!m_DynamicAICache)
+        {
+            m_DynamicAICache = new IA_DynamicAIBudgetCache();
+            m_DynamicAICache.Init(this);
+            IA_DynamicAISpawning.Register(m_DynamicAICache);
+        }
+        AdoptDynamicAIReserveSeeds();
+    }
+
+    // Reserve-first spawn. A squad that is already beyond the shared target and
+    // far from every player records its remaining soldiers instead of creating
+    // them; the budget worker restores them nearest-first as players approach.
+    bool CanSeedDynamicAIReserves()
+    {
+        if (!m_group || m_bSpawnAborted || m_unitsSpawnedCount <= 0)
+            return false;
+        // The first soldier always spawns, so the squad keeps a live leader,
+        // death listeners and behavior without a restore round trip.
+        if (m_isCivilian || m_HVTGroup || m_bAirborneDrop || m_isHoldingPost || m_bKeepAltitude)
+            return false;
+        if (m_pendingSeatTeleport || IsMortarCrew() || HasStaticGunAssignment())
+            return false;
+        if (ShouldKeepVehicleOccupantsPhysical() || m_passengerVehicle || Vehicle.Cast(m_referencedEntity))
+            return false;
+        return true;
+    }
+
+    protected bool TrySeedDynamicAIReserve(ResourceName prefab, vector position)
+    {
+        if (!IA_DynamicAISpawning.ShouldSeedReserve(this, position))
+            return false;
+        ref IA_DynamicAIUnit seed = new IA_DynamicAIUnit();
+        seed.SeedReserve(prefab, position);
+        if (!m_aDynamicAIReserveSeeds)
+            m_aDynamicAIReserveSeeds = new array<ref IA_DynamicAIUnit>();
+        m_aDynamicAIReserveSeeds.Insert(seed);
+        return true;
+    }
+
+    protected void AdoptDynamicAIReserveSeeds()
+    {
+        if (!m_DynamicAICache || !m_aDynamicAIReserveSeeds || m_aDynamicAIReserveSeeds.IsEmpty())
+            return;
+        ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(m_DynamicAICache);
+        if (!budgetCache)
+            return;
+        budgetCache.AdoptReserveSeeds(m_aDynamicAIReserveSeeds);
+        m_aDynamicAIReserveSeeds = null;
+    }
+
+    // A squad the cache never adopted must not silently lose its roster. Spawn
+    // those soldiers for real instead, one per call, and keep the group intact.
+    void ResolveDynamicAIReserveSeeds()
+    {
+        if (!m_aDynamicAIReserveSeeds || m_aDynamicAIReserveSeeds.IsEmpty())
+            return;
+        TryRegisterDynamicAI();
+        if (!m_aDynamicAIReserveSeeds || m_aDynamicAIReserveSeeds.IsEmpty())
+            return;
+        if (m_bSpawnAborted || !m_group)
+        {
+            m_aDynamicAIReserveSeeds = null;
+            return;
+        }
+        ref IA_DynamicAIUnit seed = m_aDynamicAIReserveSeeds[0];
+        m_aDynamicAIReserveSeeds.RemoveOrdered(0);
+        Resource charRes = Resource.Load(seed.m_sPrefab);
+        if (charRes)
+        {
+            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(seed.GetPosition()));
+            if (charEntity)
+            {
+                if (m_group.AddAIEntityToGroup(charEntity))
+                {
+                    SetupDeathListenerForUnit(charEntity);
+                    m_unitsSpawnedCount++;
+                }
+                else
+                    IA_Game.AddEntityToGc(charEntity);
+            }
+        }
+        if (!m_aDynamicAIReserveSeeds.IsEmpty())
+            GetGame().GetCallqueue().CallLater(this.ResolveDynamicAIReserveSeeds, 250, false);
     }
 
     bool IsDynamicAICacheReady()
@@ -6462,8 +6575,8 @@ class IA_AiGroup
         SetupDeathListener();
         if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
             return;
-        // Reacquire movement support for the live roster. TickHoldMarch retains
-        // the original post and cannot finish arrival while reserves are absent.
+        // Reacquire movement support for the live roster. Arrival uses living
+        // members; restored reserves inherit the group's current Hold order.
         if (IsBuildingGarrison())
             TickHoldMarch();
         if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
@@ -6504,6 +6617,16 @@ class IA_AiGroup
     void SetVehicleCrewForTest(bool crew)
     {
         m_isVehicleCrewGroup = crew;
+    }
+
+    void EnterHoldPostForTest()
+    {
+        EnterHoldPost();
+    }
+
+    bool CanSeedDynamicAIReservesForTest()
+    {
+        return CanSeedDynamicAIReserves();
     }
 
     // Native wrapper regression; the private constructor stays in its own class.
@@ -6614,8 +6737,10 @@ class IA_AiGroup
 		group.RequestTacticalStateChange(IA_GroupTacticalState.Attacking, "220 20 220");
 		DynamicAIRegressionCheck(group.HasPendingStateRequest(), "hybrid soldiers can request combat reactions", failures);
 		group.m_isHoldingPost = true;
+		group.m_bHoldEntered = false;
+		group.m_bInboundSimPinned = true;
 		group.EnterHoldPost();
-		DynamicAIRegressionCheck(!group.m_bHoldEntered, "a hybrid building roster cannot finish arrival while reserves are virtual", failures);
+		DynamicAIRegressionCheck(group.m_bHoldEntered && !group.m_bInboundSimPinned, "a hybrid building roster arrives with its live members and releases the inbound pin", failures);
 		group.m_isHoldingPost = false;
 		DynamicAIRegressionCheck(group.GetDynamicAIPhysicalAliveCount() == 0, "a wrapper without a native roster contributes no physical AI", failures);
 

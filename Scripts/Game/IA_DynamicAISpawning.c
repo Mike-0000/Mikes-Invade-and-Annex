@@ -14,6 +14,9 @@ class IA_DynamicAISpawning
 	static const int CACHE_SOLDIERS_PER_TICK = 8;
 	static const int CACHE_AGING_MS = 2000;
 	static const int WAKE_AGING_MS = 5000;
+	static const int COST_SAMPLE_MS = 250;
+	// Nearest-first restore must not materialize a soldier in a player's face.
+	static const float POPIN_MIN_M = 60;
 	protected static ref array<IA_DynamicAIGroupCache> s_aGroups = {};
 	protected static ref IA_DynamicAIWorkQueue s_Work = new IA_DynamicAIWorkQueue();
 	protected static ref IA_DynamicAIBudgetController s_Budget = new IA_DynamicAIBudgetController();
@@ -27,6 +30,9 @@ class IA_DynamicAISpawning
 	protected static int s_iScanMaxMs;
 	protected static int s_iWakeScanMaxMs;
 	protected static int s_iNextDiagnosticMs;
+	protected static int s_iCostSampleMs;
+	protected static int s_iCostSample;
+	protected static int s_iReservesSeeded;
 
 	static bool IsEnabled()
 	{
@@ -51,6 +57,74 @@ class IA_DynamicAISpawning
 		if (!IsEnabled())
 			return 0;
 		return IA_Config.ClampDynamicAIBudget(IA_MissionInitializer.GetInstance().GetConfig().m_iDynamicAIBudget);
+	}
+
+	// Shared cost is sampled, not recomputed per soldier: a spawn burst asks this
+	// question once per created soldier and every answer walks the whole registry.
+	static int GetManagedCost()
+	{
+		int now = System.GetTickCount();
+		if (s_iCostSampleMs != 0 && now - s_iCostSampleMs < COST_SAMPLE_MS)
+			return s_iCostSample;
+		int total;
+		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
+		{
+			ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(cache);
+			if (!budgetCache || !budgetCache.IsOwnerLive() || budgetCache.IsFinished())
+				continue;
+			if (budgetCache.IsBudgetActive())
+				total += budgetCache.GetBudgetCost();
+			else
+				total += budgetCache.GetOwner().GetDynamicAIPhysicalAliveCount();
+		}
+		s_iCostSample = total;
+		s_iCostSampleMs = now;
+		return total;
+	}
+
+	// True while managed soldiers already fill the shared target. Protections that
+	// exist to avoid visible pop-out stay; distance-based retention does not.
+	static bool IsOverTarget()
+	{
+		int budget = GetBudgetLimit();
+		if (budget <= 0)
+			return false;
+		return GetManagedCost() >= budget;
+	}
+
+	static int GetReservesSeeded()
+	{
+		return s_iReservesSeeded;
+	}
+
+	static void ResetReservesSeeded()
+	{
+		s_iReservesSeeded = 0;
+	}
+
+	// Reserve-first spawn. While the target is already full, a squad spawning
+	// beyond the wake distance records its remaining soldiers instead of creating
+	// them. The same nearest-first restore fills them in as players approach.
+	static bool ShouldSeedReserve(IA_AiGroup group, vector position)
+	{
+		if (!Replication.IsServer() || !group || !group.CanSeedDynamicAIReserves())
+			return false;
+		if (GetBudgetLimit() <= 0)
+			return false;
+		float wake = GetTuning().m_iDynamicAIWakeDistanceM;
+		ref array<vector> players = {};
+		IA_SpawnPlacement.CollectPlayerPositions(players);
+		foreach (vector player : players)
+		{
+			float dx = position[0] - player[0];
+			float dz = position[2] - player[2];
+			if (dx * dx + dz * dz <= wake * wake)
+				return false;
+		}
+		if (!IsOverTarget())
+			return false;
+		s_iReservesSeeded++;
+		return true;
 	}
 
 	static void Register(IA_DynamicAIGroupCache cache)
@@ -79,6 +153,9 @@ class IA_DynamicAISpawning
 		s_iScanMaxMs = 0;
 		s_iWakeScanMaxMs = 0;
 		s_iNextDiagnosticMs = 0;
+		s_iCostSampleMs = 0;
+		s_iCostSample = 0;
+		s_iReservesSeeded = 0;
 	}
 
 	static void RetireForArea(IA_AreaInstance area)

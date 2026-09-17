@@ -22,6 +22,9 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		TestCivilianBudgetIsolation();
 		TestVehicleBudgetIsolation();
 		TestCaptureSeedOverBudget();
+		TestPopInPrefersFartherReserve();
+		TestCombatOptionalThroughput();
+		TestBudgetFlowTelemetry();
 		Print(string.Format("[IA][DynamicAIBudgetControllerTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -267,6 +270,50 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		Check(contested.m_iCreated == 1 && contested.GetUnrestoredCount() == 2, "a contested objective seeds exactly one defender over the target");
 		worker.RunService(active, 201, 1);
 		Check(contested.m_iCreated == 1, "the seeded squad's remaining reserves wait for nearest-first capacity");
+	}
+
+	protected void TestPopInPrefersFartherReserve()
+	{
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref array<string> trace = {};
+		ref IA_DynamicAIBudgetServiceCacheFixture squad = new IA_DynamicAIBudgetServiceCacheFixture();
+		squad.Configure(worker, trace, "popin", 2, 1, false);
+		IA_DynamicAIUnit close = squad.GetUnitForTest(0);
+		IA_DynamicAIUnit farther = squad.GetUnitForTest(1);
+		close.m_fNearestPlayerM = 10;
+		farther.m_fNearestPlayerM = 80;
+		Check(squad.RestoreBudgetUnit(1, true) && farther.m_bRestored && !close.m_bRestored, "optional restore prefers a reserve outside the pop-in band");
+		Check(squad.RestoreBudgetUnit(2, true) && close.m_bRestored, "the close reserve still restores when it is the only remaining slot");
+	}
+
+	protected void TestCombatOptionalThroughput()
+	{
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref array<string> trace = {};
+		ref IA_DynamicAIBudgetServiceCacheFixture fight = new IA_DynamicAIBudgetServiceCacheFixture();
+		fight.Configure(worker, trace, "fight", 8, 0, false);
+		fight.m_bCombatForTest = true;
+		fight.SetNearestForTest(120);
+		ref array<IA_DynamicAIBudgetCache> active = {fight};
+		worker.RunService(active, 1, 10);
+		Check(fight.m_iCreated == 6, "a nearby combat squad receives two extra optional restorations in the same tick");
+	}
+
+	protected void TestBudgetFlowTelemetry()
+	{
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref array<string> trace = {};
+		ref IA_DynamicAIBudgetServiceCacheFixture live = new IA_DynamicAIBudgetServiceCacheFixture();
+		ref IA_DynamicAIBudgetServiceCacheFixture contested = new IA_DynamicAIBudgetServiceCacheFixture();
+		live.Configure(worker, trace, "live", 0, 1, false);
+		contested.Configure(worker, trace, "contested", 3, 0, true);
+		contested.SetNearestForTest(90);
+		ref array<IA_DynamicAIBudgetCache> active = {live, contested};
+		worker.RunService(active, 1, 1);
+		Check(worker.GetDeniedOverBudgetForTest() > 0, "a full target records denied mandatory restorations");
+		contested.RequestCaptureSeed();
+		worker.RunService(active, 101, 1);
+		Check(worker.GetCaptureSeedsForTest() == 1, "a capture seed is counted when it creates the extra defender");
 	}
 
 	protected void Check(bool condition, string description)

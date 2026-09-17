@@ -78,16 +78,19 @@ class IA_DynamicAIBudgetConfigTest : WorkbenchPlugin
 	{
 		ref IA_Config source = new IA_Config();
 		ref IA_Config restored = new IA_Config();
-		string defaults = "1000,1500,300,400,60,60,30,10,50";
-		string customized = "1500,2500,500,650,80,90,45,15,75";
-		Check(IA_Config.PackDynamicAIExtras(source) == defaults, "tuning defaults preserve the established distances and timers");
-		Check(IA_Config.UnpackDynamicAIExtras(source, customized) && IA_Config.PackDynamicAIExtras(source) == customized, "all nine tuning fields accept a valid custom admin token");
+		string defaults = "1000,1500,300,400,60,60,30,10,50,30,0";
+		string customized = "1500,2500,500,650,80,90,45,15,75,45,1";
+		Check(IA_Config.PackDynamicAIExtras(source) == defaults, "tuning defaults preserve the established distances, timers, capture seed and hard cap");
+		Check(IA_Config.UnpackDynamicAIExtras(source, customized) && IA_Config.PackDynamicAIExtras(source) == customized, "all eleven tuning fields accept a valid custom admin token");
 		Check(IA_Config.UnpackDynamicAIExtras(restored, IA_Config.PackDynamicAIExtras(source)) && IA_Config.PackDynamicAIExtras(restored) == customized, "all tuning fields survive the replicated/admin packed roundtrip");
+		ref IA_Config legacy = new IA_Config();
+		Check(IA_Config.UnpackDynamicAIExtras(legacy, "1000,1500,300,400,60,60,30,10,50") && IA_Config.PackDynamicAIExtras(legacy) == defaults, "a nine-field token keeps capture-seed and hard-cap defaults");
 
 		ref array<string> malformed = {
 			"",
 			"1000,1500,300,400,60,60,30,10",
 			"1000,1500,300,400,60,60,30,10,50,1",
+			"1000,1500,300,400,60,60,30,10,50,30,0,1",
 			"1000,1500,300,400,,60,30,10,50",
 			"1000,1500,300,400,60,60,30,10,50,",
 			",1000,1500,300,400,60,60,30,10,50",
@@ -101,11 +104,11 @@ class IA_DynamicAIBudgetConfigTest : WorkbenchPlugin
 			Check(!IA_Config.UnpackDynamicAIExtras(restored, invalid) && IA_Config.PackDynamicAIExtras(restored) == customized, "malformed tuning leaves every existing field unchanged: " + invalid);
 		}
 
-		Check(IA_Config.UnpackDynamicAIExtras(restored, "-1,-1,-1,-1,-1,-1,-1,-1,-1") && IA_Config.PackDynamicAIExtras(restored) == "100,150,50,100,0,10,5,1,0", "all tuning lower bounds clamp while preserving required distance gaps");
-		Check(IA_Config.UnpackDynamicAIExtras(restored, "999999999,999999999,999999999,999999999,999999999,999999999,999999999,999999999,999999999") && IA_Config.PackDynamicAIExtras(restored) == "5000,7500,2000,3000,600,300,300,120,500", "safe large integers clamp to every upper bound without overflow");
-		Check(IA_Config.UnpackDynamicAIExtras(restored, "100,150,2000,100,60,60,30,10,50") && IA_Config.PackDynamicAIExtras(restored) == "2050,2100,2000,2050,60,60,30,10,50", "close protection pushes release, wake and cache distances outward together");
-		Check(IA_Config.UnpackDynamicAIExtras(restored, "5000,150,300,400,60,60,30,10,50") && restored.m_iDynamicAICacheDistanceM == 5050, "cache distance always remains at least fifty metres beyond wake distance");
-		Check(IA_Config.UnpackDynamicAIExtras(restored, "100,150,300,3000,60,60,30,10,50") && restored.m_iDynamicAIWakeDistanceM == 3000 && restored.m_iDynamicAICacheDistanceM == 3050, "wake distance never falls inside the protected release distance");
+		Check(IA_Config.UnpackDynamicAIExtras(restored, "-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0") && IA_Config.PackDynamicAIExtras(restored) == "100,150,50,100,0,10,5,1,0,5,0", "all tuning lower bounds clamp while preserving required distance gaps");
+		Check(IA_Config.UnpackDynamicAIExtras(restored, "999999999,999999999,999999999,999999999,999999999,999999999,999999999,999999999,999999999,999999999,2") && IA_Config.PackDynamicAIExtras(restored) == "5000,7500,2000,3000,600,300,300,120,500,120,1", "safe large integers clamp to every upper bound without overflow");
+		Check(IA_Config.UnpackDynamicAIExtras(restored, "100,150,2000,100,60,60,30,10,50,30,0") && IA_Config.PackDynamicAIExtras(restored) == "2050,2100,2000,2050,60,60,30,10,50,30,0", "close protection pushes release, wake and cache distances outward together");
+		Check(IA_Config.UnpackDynamicAIExtras(restored, "5000,150,300,400,60,60,30,10,50,30,0") && restored.m_iDynamicAICacheDistanceM == 5050, "cache distance always remains at least fifty metres beyond wake distance");
+		Check(IA_Config.UnpackDynamicAIExtras(restored, "100,150,300,3000,60,60,30,10,50,30,0") && restored.m_iDynamicAIWakeDistanceM == 3000 && restored.m_iDynamicAICacheDistanceM == 3050, "wake distance never falls inside the protected release distance");
 
 		ref IA_DynamicAISpawningOverridesFixture saved = new IA_DynamicAISpawningOverridesFixture();
 		ref IA_DynamicAISpawningOverridesFixture loaded = new IA_DynamicAISpawningOverridesFixture();
@@ -124,9 +127,9 @@ class IA_DynamicAIBudgetConfigTest : WorkbenchPlugin
 		loaded.Decode("{\"dynamicAIExtras\":\"1000,1500,300,400,60,60,30,10,bad\"}");
 		loaded.ApplyTo(restored);
 		Check(IA_Config.PackDynamicAIExtras(restored) == customized, "malformed persisted tuning cannot partially overwrite a mission configuration");
-		loaded.Decode("{\"dynamicAIExtras\":\"100,150,2000,100,0,0,0,0,-1\"}");
+		loaded.Decode("{\"dynamicAIExtras\":\"100,150,2000,100,0,0,0,0,-1,30,0\"}");
 		loaded.ApplyTo(restored);
-		Check(IA_Config.PackDynamicAIExtras(restored) == "2050,2100,2000,2050,0,10,5,1,0", "profile loading normalizes both bounds and distance relationships");
+		Check(IA_Config.PackDynamicAIExtras(restored) == "2050,2100,2000,2050,0,10,5,1,0,30,0", "profile loading normalizes both bounds and distance relationships");
 		loaded.Decode("{\"dynamicAIExtras\":\"\"}");
 		loaded.ApplyTo(source);
 		Check(IA_Config.PackDynamicAIExtras(source) == customized, "a later empty profile clears previous override presence without resetting mission tuning");

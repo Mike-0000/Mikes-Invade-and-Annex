@@ -12,6 +12,8 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		TestCasualtyLedger();
 		TestRetuningPreservesAdmittedWork();
 		TestApproachDoesNotForceFull();
+		TestReserveSeedAdopt();
+		TestHardCapCombatEviction();
 		Print(string.Format("[IA][DynamicAIBudgetLifecycleTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -169,6 +171,36 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		players.Insert("0 0 0");
 		cache.CheckProtectionForTest(players);
 		Check(cache.IsCloseForTest() && cache.IsCached() && !cache.IsFullRequiredForTest() && !cache.HasMandatoryWork(), "walking into a cached objective does not force-full restore over the budget");
+	}
+
+	protected void TestReserveSeedAdopt()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 1);
+		cache.Init(owner);
+		ref array<ref IA_DynamicAIUnit> seeds = {};
+		ref IA_DynamicAIUnit seed = new IA_DynamicAIUnit();
+		seed.SeedReserve("{0000000000000000}Prefabs/Characters/Test.et", "200 20 200");
+		seeds.Insert(seed);
+		cache.AdoptReserveSeeds(seeds);
+		Check(cache.IsBudgetActive() && cache.IsCached() && cache.GetUnrestoredCount() == 1 && cache.GetLogicalAliveCount() == 1, "reserve-first spawn records enter the ledger as unrestored survivors");
+		Check(!seed.m_bRestored && !seed.m_bBudgetAdmitted && seed.GetPosition() == "200 20 200", "a seeded reserve keeps its prefab transform and waits for nearest-first restore");
+	}
+
+	protected void TestHardCapCombatEviction()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 1);
+		cache.Init(owner);
+		cache.EnableBudget();
+		cache.SetLastCasualtyForTest(System.GetTickCount());
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+		bool previousHard = tuning.m_bDynamicAIHardCap;
+		tuning.m_bDynamicAIHardCap = false;
+		Check(cache.CombatBlocksEvictionForTest(), "recent combat holds a squad together while the shared target has room");
+		tuning.m_bDynamicAIHardCap = true;
+		Check(!cache.CombatBlocksEvictionForTest(), "the admin hard cap lets overallocated combat squads be evicted by distance");
+		tuning.m_bDynamicAIHardCap = previousHard;
 	}
 
 	protected void Check(bool passed, string description)

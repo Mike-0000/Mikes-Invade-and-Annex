@@ -71,5 +71,15 @@ class IA_DynamicAIBudgetCacheFixture : IA_DynamicAIBudgetCache
 	{
 		CheckProtection(players);
 	}
+
+	bool CombatBlocksEvictionForTest()
+	{
+		return CombatBlocksEviction();
+	}
+
+	void SetLastCasualtyForTest(int timestampMs)
+	{
+		m_iLastCasualtyMs = timestampMs;
+	}
 }
 #endif

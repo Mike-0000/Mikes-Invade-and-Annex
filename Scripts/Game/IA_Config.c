@@ -88,6 +88,12 @@ class IA_Config{
 	[Attribute(defvalue: "50", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Distance ranking preference in metres for already allocated squads. Reduces repeated swaps between similarly distant groups.", params: "0 500 1")]
 	int m_iDynamicAIRetentionBiasM = 50;
 
+	[Attribute(defvalue: "30", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "How long a contested objective may seed one defender over the soldier budget, in seconds.", params: "5 120 1")]
+	int m_iDynamicAICaptureSeedSec = 30;
+
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Dynamic AI Spawning", desc: "Hard cap: recent combat does not protect a squad from eviction. Live soldiers inside the keep-release distance still stay.")]
+	bool m_bDynamicAIHardCap = false;
+
 	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "Multiplier for military vehicle count calculation (0.5 = half, 2.0 = double)")]
 	float m_fMilitaryVehicleCountMultiplier;
  
@@ -414,6 +420,7 @@ class IA_Config{
 		m_iDynamicAIMinLiveSec = Math.Clamp(m_iDynamicAIMinLiveSec, 5, 300);
 		m_iDynamicAIEvictDelaySec = Math.Clamp(m_iDynamicAIEvictDelaySec, 1, 120);
 		m_iDynamicAIRetentionBiasM = Math.Clamp(m_iDynamicAIRetentionBiasM, 0, 500);
+		m_iDynamicAICaptureSeedSec = Math.Clamp(m_iDynamicAICaptureSeedSec, 5, 120);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -429,6 +436,11 @@ class IA_Config{
 		packed = packed + "," + cfg.m_iDynamicAIMinLiveSec.ToString();
 		packed = packed + "," + cfg.m_iDynamicAIEvictDelaySec.ToString();
 		packed = packed + "," + cfg.m_iDynamicAIRetentionBiasM.ToString();
+		packed = packed + "," + cfg.m_iDynamicAICaptureSeedSec.ToString();
+		if (cfg.m_bDynamicAIHardCap)
+			packed = packed + ",1";
+		else
+			packed = packed + ",0";
 		return packed;
 	}
 
@@ -437,7 +449,7 @@ class IA_Config{
 	{
 		ref array<string> parts = {};
 		packed.Split(",", parts, false);
-		if (parts.Count() != 9)
+		if (parts.Count() != 9 && parts.Count() != 11)
 			return false;
 		ref array<int> values = {};
 		foreach (string token : parts)
@@ -459,6 +471,11 @@ class IA_Config{
 		cfg.m_iDynamicAIMinLiveSec = values[6];
 		cfg.m_iDynamicAIEvictDelaySec = values[7];
 		cfg.m_iDynamicAIRetentionBiasM = values[8];
+		if (values.Count() == 11)
+		{
+			cfg.m_iDynamicAICaptureSeedSec = values[9];
+			cfg.m_bDynamicAIHardCap = values[10] != 0;
+		}
 		cfg.ClampDynamicAISettings();
 		return true;
 	}
