@@ -3,6 +3,53 @@
 class IA_DynamicAIBudgetAllocator
 {
 	static const float RETENTION_BIAS_M = 50;
+	static const float WAITING_NONE_M = 10000000;
+
+	static bool IsClearlyFarther(float candidateM, float waitingM, int biasM)
+	{
+		if (waitingM >= WAITING_NONE_M)
+			return false;
+		return candidateM > waitingM + Math.Max(0, biasM);
+	}
+
+	// A wake-range squad that still has reserves, or that has not filled its last
+	// allocation, is waiting. Physical occupancy of a farther incumbent must not
+	// keep consuming leftover budget while that squad is empty.
+	static float NearestWaitingDistance(array<ref IA_DynamicAIBudgetEntry> entries, int wakeM)
+	{
+		float best = WAITING_NONE_M;
+		if (!entries)
+			return best;
+		foreach (IA_DynamicAIBudgetEntry entry : entries)
+		{
+			if (!entry)
+				continue;
+			if (entry.m_fDistance > wakeM)
+				continue;
+			int physical = Math.Max(0, entry.m_iPhysical);
+			int alive = Math.Max(0, entry.m_iAlive);
+			if (physical >= alive && physical >= Math.Max(0, entry.m_iPreviousDesired))
+				continue;
+			if (entry.m_fDistance < best)
+				best = entry.m_fDistance;
+		}
+		return best;
+	}
+
+	static void DropOuterIncumbentEligibility(array<ref IA_DynamicAIBudgetEntry> entries, float waitingM, int wakeM, int biasM)
+	{
+		if (!entries)
+			return;
+		foreach (IA_DynamicAIBudgetEntry entry : entries)
+		{
+			if (!entry)
+				continue;
+			if (!IsClearlyFarther(entry.m_fDistance, waitingM, biasM))
+				continue;
+			if (entry.m_fDistance > wakeM)
+				entry.m_bInRange = false;
+		}
+	}
 
 	static void Allocate(array<ref IA_DynamicAIBudgetEntry> entries, int budget)
 	{

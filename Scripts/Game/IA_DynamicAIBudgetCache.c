@@ -15,6 +15,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	protected bool m_bExitBudget;
 	protected bool m_bForceFull;
 	protected bool m_bClose;
+	protected bool m_bNearbyPreempt;
 	protected int m_iDesired;
 	protected int m_iEvictSince = -1;
 	protected int m_iPlanAt;
@@ -106,6 +107,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	{
 		super.ResetQuietPeriod();
 		m_bClose = false;
+		m_bNearbyPreempt = false;
 		m_iEvictSince = -1;
 		m_iPlanAt = 0;
 	}
@@ -308,14 +310,89 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 
 	// Close-range keep and min-live still hold a soldier. Combat only holds a
 	// squad together while the shared target has room, unless the admin hard cap
-	// is on — then distance alone decides who stays.
+	// is on — then distance alone decides who stays. A clearly-farther squad
+	// also releases when a closer group is waiting for those slots.
 	bool CombatBlocksEviction()
 	{
 		if (IA_DynamicAISpawning.GetTuning().m_bDynamicAIHardCap)
 			return false;
+		if (m_bNearbyPreempt)
+			return false;
 		if (HasRecentCombat() && !IA_DynamicAISpawning.IsOverTarget())
 			return true;
 		return false;
+	}
+
+	bool HasWaitingNearbyDemand()
+	{
+		if (!m_bBudgetActive || m_bFinished || !IsOwnerLive())
+			return false;
+		if (m_fNearest > IA_DynamicAISpawning.GetTuning().m_iDynamicAIWakeDistanceM)
+			return false;
+		int cost = GetBudgetCost();
+		if (cost < GetLogicalAliveCount())
+			return true;
+		if (cost < m_iDesired)
+			return true;
+		return false;
+	}
+
+	void SetNearbyPreemption(float nearestWaitingM)
+	{
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+		m_bNearbyPreempt = IA_DynamicAIBudgetAllocator.IsClearlyFarther(m_fNearest, nearestWaitingM, tuning.m_iDynamicAIRetentionBiasM);
+	}
+
+	bool HasNearbyPreemption()
+	{
+		return m_bNearbyPreempt;
+	}
+
+	void ApplyCensusPreemption(IA_DynamicAIBudgetEntry entry, array<vector> players, int now, float nearestWaitingM)
+	{
+		SetNearbyPreemption(nearestWaitingM);
+		FillProtectedDemand(entry, players, now);
+	}
+
+	protected int EvictionDelayMs()
+	{
+		if (m_bNearbyPreempt)
+			return 0;
+		return IA_DynamicAISpawning.GetTuning().m_iDynamicAIEvictDelaySec * 1000;
+	}
+
+	protected int MinLiveMsForDistance(float distanceM)
+	{
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+		int minLiveMs = tuning.m_iDynamicAIMinLiveSec * 1000;
+		if (!m_bNearbyPreempt)
+			return minLiveMs;
+		if (distanceM <= tuning.m_iDynamicAIReleaseDistanceM)
+			return minLiveMs;
+		int preemptMs = IA_DynamicAISpawning.PREEMPT_MIN_LIVE_SEC * 1000;
+		if (preemptMs < minLiveMs)
+			return preemptMs;
+		return minLiveMs;
+	}
+
+	protected int MinLiveMsForUnit(IA_DynamicAIUnit unit)
+	{
+		if (!unit)
+			return MinLiveMsForDistance(0);
+		return MinLiveMsForDistance(unit.m_fNearestPlayerM);
+	}
+
+	protected bool CanStartBudgetEviction(int now)
+	{
+		if (!m_bBudgetActive || m_bExitBudget || !IsOwnerLive() || m_bFinished || m_bForceFull)
+			return false;
+		if (m_iPlanAt == 0 || now - m_iPlanAt > 5000)
+			return false;
+		if (now < m_iRetryEvictAt || m_iEvictSince < 0 || now - m_iEvictSince < EvictionDelayMs())
+			return false;
+		if (GetBudgetCost() <= m_iDesired)
+			return false;
+		return true;
 	}
 
 	// New native members enter the ledger; transferred, deleted or dead live
@@ -383,7 +460,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 
 	protected bool CanRemoveUnit(IA_DynamicAIUnit unit, int now, PlayerManager manager)
 	{
-		if (!unit.m_bRestored || unit.m_bDead || !unit.m_Entity || !manager || now - unit.m_iBudgetLiveSinceMs < IA_DynamicAISpawning.GetTuning().m_iDynamicAIMinLiveSec * 1000)
+		if (!unit.m_bRestored || unit.m_bDead || !unit.m_Entity || !manager || now - unit.m_iBudgetLiveSinceMs < MinLiveMsForUnit(unit))
 			return false;
 		SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(unit.m_Entity);
 		if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0)
@@ -452,27 +529,44 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			entry.m_fDistance = 0;
 			entry.m_bInRange = true;
 		}
+		entry.m_iPhysical = 0;
+		foreach (IA_DynamicAIUnit counted : m_aUnits)
+		{
+			if (!counted.IsLogicallyAlive())
+				continue;
+			if (counted.m_bRestored)
+				entry.m_iPhysical++;
+		}
+		FillProtectedDemand(entry, players, now);
+	}
+
+	void FillProtectedDemand(IA_DynamicAIBudgetEntry entry, array<vector> players, int now)
+	{
+		if (!entry || !m_Owner)
+			return;
 		string reason = m_Owner.GetDynamicAIRoleBlockReason();
 		bool full = m_bForceFull || (reason != "" && reason != "initialization");
-		PlayerManager manager = GetGame().GetPlayerManager();
-		int minLiveMs = tuning.m_iDynamicAIMinLiveSec * 1000;
+		PlayerManager manager;
+		if (GetGame())
+			manager = GetGame().GetPlayerManager();
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+		int occupancyMinLiveMs = tuning.m_iDynamicAIMinLiveSec * 1000;
+		entry.m_iProtected = 0;
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
 			unit.m_bBudgetProtected = false;
 			if (!unit.IsLogicallyAlive())
 				continue;
-			if (unit.m_bRestored)
-				entry.m_iPhysical++;
 			bool close = false;
-			bool minLive = false;
+			bool occupancyMinLive = false;
 			if (unit.m_bRestored)
 			{
 				close = NearestDistance(CurrentPosition(unit), players) <= tuning.m_iDynamicAIReleaseDistanceM;
-				minLive = now - unit.m_iBudgetLiveSinceMs < minLiveMs;
+				occupancyMinLive = now - unit.m_iBudgetLiveSinceMs < occupancyMinLiveMs;
 			}
 			if (IsSeatedOccupancyCandidate(unit, manager))
 			{
-				unit.m_bBudgetProtected = OccupancySeatIsBudgetProtected(close, minLive, full, reason);
+				unit.m_bBudgetProtected = OccupancySeatIsBudgetProtected(close, occupancyMinLive, full, reason);
 			}
 			else
 			{
@@ -639,7 +733,7 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 
 	bool EvictBudgetUnit(array<vector> players, int now)
 	{
-		if (!m_bBudgetActive || m_bExitBudget || !IsOwnerLive() || m_bFinished || m_bForceFull || m_iPlanAt == 0 || now - m_iPlanAt > 5000)
+		if (!CanStartBudgetEviction(now))
 			return false;
 		// This is a worker mutex, not protected demand. Putting it in
 		// CanRemoveUnit makes Describe reallocate ejected occupants during the
@@ -647,8 +741,6 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		if (IA_DynamicAIOccupancyHost.IsCacheParticipating(this))
 			return false;
 		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
-		if (now < m_iRetryEvictAt || m_iEvictSince < 0 || now - m_iEvictSince < tuning.m_iDynamicAIEvictDelaySec * 1000 || GetBudgetCost() <= m_iDesired)
-			return false;
 		// Revalidate current players, combat, role, membership and health at commit.
 		// Group-level close no longer vetoes eviction: soldiers inside the release
 		// distance are skipped below so farther teammates can free budget slots.
@@ -659,9 +751,10 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			return false;
 		}
 		// Nearby recent combat holds a squad together only while the shared
-		// target has room. Once it is full, or no player is inside wake,
-		// distance decides who stays: soldiers inside the release distance are
-		// still skipped below, so only far fighters release.
+		// target has room and a closer squad is not waiting for those slots.
+		// Once the target is full, no player is inside wake, or nearby
+		// preemption is active, distance decides who stays. Soldiers inside
+		// the release distance are still skipped below.
 		if (CombatBlocksEviction())
 		{
 			m_iEvictSince = -1;
@@ -774,6 +867,36 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	bool OccupancySeatIsBudgetProtectedForTest(bool close, bool minLive, bool full, string reason)
 	{
 		return OccupancySeatIsBudgetProtected(close, minLive, full, reason);
+	}
+
+	void SetNearbyPreemptForTest(bool preempt)
+	{
+		m_bNearbyPreempt = preempt;
+	}
+
+	int EvictionDelayMsForTest()
+	{
+		return EvictionDelayMs();
+	}
+
+	int MinLiveMsForTest(float distanceM)
+	{
+		return MinLiveMsForDistance(distanceM);
+	}
+
+	bool CanStartBudgetEvictionForTest(int now)
+	{
+		return CanStartBudgetEviction(now);
+	}
+
+	void SetEvictSinceForTest(int timestampMs)
+	{
+		m_iEvictSince = timestampMs;
+	}
+
+	void SetPlanAtForTest(int timestampMs)
+	{
+		m_iPlanAt = timestampMs;
 	}
 #endif
 

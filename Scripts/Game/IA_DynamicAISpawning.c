@@ -17,6 +17,8 @@ class IA_DynamicAISpawning
 	static const int COST_SAMPLE_MS = 250;
 	// Nearest-first restore must not materialize a soldier in a player's face.
 	static const float POPIN_MIN_M = 60;
+	// Far soldiers beyond keep-release may shed this soon when a closer squad is waiting.
+	static const int PREEMPT_MIN_LIVE_SEC = 5;
 	protected static ref array<IA_DynamicAIGroupCache> s_aGroups = {};
 	protected static ref IA_DynamicAIWorkQueue s_Work = new IA_DynamicAIWorkQueue();
 	protected static ref IA_DynamicAIBudgetController s_Budget = new IA_DynamicAIBudgetController();

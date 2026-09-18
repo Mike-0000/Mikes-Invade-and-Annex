@@ -32,6 +32,7 @@ class IA_DynamicAIBudgetController
 	protected int m_iTargetFullDenials;
 	protected float m_fNearestRestoreM = -1;
 	protected float m_fFarthestEvictM = -1;
+	protected float m_fNearestWaitingM = IA_DynamicAIBudgetAllocator.WAITING_NONE_M;
 
 	protected int ClockMs()
 	{
@@ -156,6 +157,16 @@ class IA_DynamicAIBudgetController
 		}
 		if (m_iScanCursor >= total)
 		{
+			IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+			float waitingM = IA_DynamicAIBudgetAllocator.NearestWaitingDistance(m_aEntries, tuning.m_iDynamicAIWakeDistanceM);
+			IA_DynamicAIBudgetAllocator.DropOuterIncumbentEligibility(m_aEntries, waitingM, tuning.m_iDynamicAIWakeDistanceM, tuning.m_iDynamicAIRetentionBiasM);
+			m_fNearestWaitingM = waitingM;
+			foreach (IA_DynamicAIBudgetEntry censusEntry : m_aEntries)
+			{
+				if (!censusEntry || !censusEntry.m_Cache || !censusEntry.m_Cache.IsOwnerLive() || censusEntry.m_Cache.IsFinished())
+					continue;
+				censusEntry.m_Cache.ApplyCensusPreemption(censusEntry, players, now, waitingM);
+			}
 			IA_DynamicAIBudgetAllocator.Allocate(m_aEntries, budget);
 			m_iProtectedDemand = 0;
 			foreach (IA_DynamicAIBudgetEntry planned : m_aEntries)
@@ -193,6 +204,24 @@ class IA_DynamicAIBudgetController
 				return true;
 		}
 		return false;
+	}
+
+	protected float NearestWaitingRestoreM(array<IA_DynamicAIBudgetCache> active)
+	{
+		float best = IA_DynamicAIBudgetAllocator.WAITING_NONE_M;
+		if (!active)
+			return best;
+		int count = active.Count();
+		for (int index = 0; index < count; index++)
+		{
+			IA_DynamicAIBudgetCache cache = active[index];
+			if (!cache || !cache.HasWaitingNearbyDemand())
+				continue;
+			float distance = cache.GetNearestPlayerDistance();
+			if (distance < best)
+				best = distance;
+		}
+		return best;
 	}
 
 	protected IA_DynamicAIBudgetCache PickNearestOptional(array<IA_DynamicAIBudgetCache> active, int now)
@@ -303,6 +332,8 @@ class IA_DynamicAIBudgetController
 		visits = 0;
 		int releaseStarted = ClockMs();
 		int beforeRelease = operations;
+		float waitingM = NearestWaitingRestoreM(active);
+		m_fNearestWaitingM = waitingM;
 		while (budget > 0 && operations < 4 && visits < total + 4)
 		{
 			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS)
@@ -318,6 +349,7 @@ class IA_DynamicAIBudgetController
 				break;
 			}
 			visits++;
+			evict.SetNearbyPreemption(waitingM);
 			// The farthest overallocated squad keeps shedding until it refuses;
 			// only a refusal moves the pick to the next farthest squad.
 			if (evict.EvictBudgetUnit(players, now))

@@ -14,6 +14,7 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		TestApproachDoesNotForceFull();
 		TestReserveSeedAdopt();
 		TestHardCapCombatEviction();
+		TestNearbyPreemptionEvictionGates();
 		Print(string.Format("[IA][DynamicAIBudgetLifecycleTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -204,6 +205,36 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		cache.SetNearestForTest(120);
 		tuning.m_bDynamicAIHardCap = true;
 		Check(!cache.CombatBlocksEvictionForTest(), "the admin hard cap lets overallocated combat squads be evicted by distance");
+		tuning.m_bDynamicAIHardCap = previousHard;
+	}
+
+	protected void TestNearbyPreemptionEvictionGates()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 4);
+		cache.Init(owner);
+		cache.EnableBudget();
+		cache.SetNearestForTest(2000);
+		Check(cache.EvictionDelayMsForTest() == IA_DynamicAISpawning.GetTuning().m_iDynamicAIEvictDelaySec * 1000, "eviction still waits the configured delay when nobody closer is waiting");
+		Check(cache.MinLiveMsForTest(2000) == IA_DynamicAISpawning.GetTuning().m_iDynamicAIMinLiveSec * 1000, "far min-live stays at the configured dwell without preemption");
+		cache.SetAllocation(0, 1000);
+		Check(!cache.CanStartBudgetEvictionForTest(1000), "a freshly overallocated far group cannot evict during the ordinary delay");
+		Check(!cache.CanStartBudgetEvictionForTest(4000), "the ordinary delay still applies a few seconds later when nobody closer is waiting");
+		cache.SetNearbyPreemptForTest(true);
+		Check(cache.EvictionDelayMsForTest() == 0, "nearby waiting demand skips the allocation-reduction delay on a clearly farther group");
+		Check(cache.MinLiveMsForTest(2000) == IA_DynamicAISpawning.PREEMPT_MIN_LIVE_SEC * 1000, "a 2000 m soldier is removable after the short preempt min-live");
+		Check(cache.MinLiveMsForTest(100) == IA_DynamicAISpawning.GetTuning().m_iDynamicAIMinLiveSec * 1000, "a 100 m soldier keeps the full min-live under preemption");
+		Check(cache.CanStartBudgetEvictionForTest(1000), "preemption lets the far group start eviction on the first tick");
+
+		cache.SetLastCasualtyForTest(System.GetTickCount());
+		cache.SetNearestForTest(800);
+		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
+		bool previousHard = tuning.m_bDynamicAIHardCap;
+		tuning.m_bDynamicAIHardCap = false;
+		Check(!cache.CombatBlocksEvictionForTest(), "combat does not hold a clearly farther squad when nearby demand is waiting");
+		cache.SetNearbyPreemptForTest(false);
+		cache.SetNearestForTest(800);
+		Check(cache.CombatBlocksEvictionForTest(), "combat still holds a squad that is not being preempted");
 		tuning.m_bDynamicAIHardCap = previousHard;
 	}
 

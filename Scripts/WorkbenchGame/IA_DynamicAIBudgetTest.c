@@ -16,6 +16,7 @@ class IA_DynamicAIBudgetTest : WorkbenchPlugin
 		TestUnlimitedAndInvalidCounts();
 		TestBudgetSweep();
 		TestCivilianEntriesAreOmitted();
+		TestNearbyPreemptionEligibility();
 		Print(string.Format("[IA][DynamicAIBudgetTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -182,6 +183,37 @@ class IA_DynamicAIBudgetTest : WorkbenchPlugin
 		IA_DynamicAIBudgetEntry military = AddEntry(entries, 8, 400);
 		IA_DynamicAIBudgetAllocator.Allocate(entries, 8);
 		Check(military.m_iDesired == 8, "allocator conservation is unchanged when civilian groups never enter the military census");
+	}
+
+	protected void TestNearbyPreemptionEligibility()
+	{
+		ref array<ref IA_DynamicAIBudgetEntry> entries = {};
+		ref IA_DynamicAIBudgetEntry close = AddEntry(entries, 2, 200);
+		close.m_iPhysical = 0;
+		ref IA_DynamicAIBudgetEntry incumbent = AddEntry(entries, 8, 1400, 0, true, 8);
+		float waitingM = IA_DynamicAIBudgetAllocator.NearestWaitingDistance(entries, 1000);
+		Check(waitingM == 200, "a wake-range cached squad is waiting even when its previous allocation was zero");
+		IA_DynamicAIBudgetAllocator.DropOuterIncumbentEligibility(entries, waitingM, 1000, 50);
+		Check(close.m_bInRange && !incumbent.m_bInRange, "a closer waiting squad drops outer incumbent eligibility beyond wake");
+		IA_DynamicAIBudgetAllocator.Allocate(entries, 8);
+		Check(close.m_iDesired == 2 && incumbent.m_iDesired == 0, "leftover budget is not kept on a farther incumbent while a closer squad is waiting");
+
+		ref array<ref IA_DynamicAIBudgetEntry> protectedEntries = {};
+		ref IA_DynamicAIBudgetEntry nearby = AddEntry(protectedEntries, 2, 200);
+		nearby.m_iPhysical = 0;
+		ref IA_DynamicAIBudgetEntry distantCrew = AddEntry(protectedEntries, 5, 2000, 5, false);
+		float protectedWaitingM = IA_DynamicAIBudgetAllocator.NearestWaitingDistance(protectedEntries, 1000);
+		IA_DynamicAIBudgetAllocator.DropOuterIncumbentEligibility(protectedEntries, protectedWaitingM, 1000, 50);
+		IA_DynamicAIBudgetAllocator.Allocate(protectedEntries, 8);
+		Check(distantCrew.m_iDesired == 5 && nearby.m_iDesired == 2, "protected far demand remains reserved after outer eligibility is dropped");
+
+		ref array<ref IA_DynamicAIBudgetEntry> quiet = {};
+		ref IA_DynamicAIBudgetEntry filled = AddEntry(quiet, 8, 200);
+		ref IA_DynamicAIBudgetEntry outer = AddEntry(quiet, 8, 1400, 0, true, 8);
+		float noneWaitingM = IA_DynamicAIBudgetAllocator.NearestWaitingDistance(quiet, 1000);
+		Check(noneWaitingM >= IA_DynamicAIBudgetAllocator.WAITING_NONE_M, "a fully physical nearby squad does not create preemption demand");
+		IA_DynamicAIBudgetAllocator.DropOuterIncumbentEligibility(quiet, noneWaitingM, 1000, 50);
+		Check(outer.m_bInRange, "outer incumbent eligibility is unchanged when nobody closer is waiting");
 	}
 
 	protected void Check(bool passed, string description)

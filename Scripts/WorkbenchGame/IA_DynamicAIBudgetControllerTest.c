@@ -27,6 +27,8 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		TestPopInPrefersFartherReserve();
 		TestCombatOptionalThroughput();
 		TestBudgetFlowTelemetry();
+		TestNearbyPreemptionMarksFartherGroup();
+		TestNearbyPreemptionRequiresCloserWaiter();
 		Print(string.Format("[IA][DynamicAIBudgetControllerTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -358,6 +360,46 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		contested.RequestCaptureSeed();
 		worker.RunService(active, 101, 1);
 		Check(worker.GetCaptureSeedsForTest() == 1, "a capture seed is counted when it creates the extra defender");
+	}
+
+	protected void TestNearbyPreemptionMarksFartherGroup()
+	{
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref array<string> trace = {};
+		ref IA_DynamicAIBudgetServiceCacheFixture close = new IA_DynamicAIBudgetServiceCacheFixture();
+		ref IA_DynamicAIBudgetServiceCacheFixture far = new IA_DynamicAIBudgetServiceCacheFixture();
+		close.Configure(worker, trace, "close", 4, 0, false);
+		close.SetNearestForTest(200);
+		far.Configure(worker, trace, "far", 0, 4, false);
+		far.SetNearestForTest(2000);
+		far.SetAllocation(0, 1);
+		far.m_iEvictRemaining = 4;
+		ref array<IA_DynamicAIBudgetCache> active = {close, far};
+		worker.RunService(active, 1, 4);
+		Check(close.HasWaitingNearbyDemand() && !far.HasWaitingNearbyDemand(), "only the closer cached squad counts as nearby waiting demand");
+		Check(far.HasNearbyPreemption() && !close.HasNearbyPreemption(), "a full-cap far group is marked for preemption when a closer squad wants slots");
+		Check(far.m_iEvictions == 4 && close.m_iCreated == 0, "the first tick releases far capacity before optional restore");
+		worker.RunService(active, 101, 4);
+		Check(close.m_iCreated == 4, "the closer squad restores into the freed slots on the next tick");
+		Check(worker.GetNearestWaitingMForTest() == 200, "the worker records the nearer waiting restore distance");
+	}
+
+	protected void TestNearbyPreemptionRequiresCloserWaiter()
+	{
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref array<string> trace = {};
+		ref IA_DynamicAIBudgetServiceCacheFixture filled = new IA_DynamicAIBudgetServiceCacheFixture();
+		ref IA_DynamicAIBudgetServiceCacheFixture far = new IA_DynamicAIBudgetServiceCacheFixture();
+		filled.Configure(worker, trace, "filled", 0, 4, false);
+		filled.SetNearestForTest(200);
+		far.Configure(worker, trace, "far", 0, 4, false);
+		far.SetNearestForTest(2000);
+		far.SetAllocation(0, 1);
+		far.m_iEvictRemaining = 4;
+		ref array<IA_DynamicAIBudgetCache> active = {filled, far};
+		worker.RunService(active, 1, 4);
+		Check(!filled.HasWaitingNearbyDemand() && !far.HasWaitingNearbyDemand(), "a fully physical nearby squad does not create waiting demand");
+		Check(!far.HasNearbyPreemption() && !filled.HasNearbyPreemption(), "outer eviction keeps its ordinary delay when nobody closer is waiting");
 	}
 
 	protected void Check(bool condition, string description)

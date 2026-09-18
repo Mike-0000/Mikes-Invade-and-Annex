@@ -47,5 +47,10 @@ class IA_DynamicAIBudgetControllerFixture : IA_DynamicAIBudgetController
 	{
 		return m_fNearestRestoreM;
 	}
+
+	float GetNearestWaitingMForTest()
+	{
+		return m_fNearestWaitingM;
+	}
 }
 #endif
