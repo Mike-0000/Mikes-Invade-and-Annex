@@ -2,6 +2,8 @@
 
 Dynamic AI Spawning is an optional server-authoritative system that removes supported I&A infantry characters and recreates surviving soldiers when needed. Budget mode concentrates full squads near players instead of waking every objective inside the same city. Individual members of less important squads can remain cached. Native groups, their orders, and the mission's logical survivor counts remain present.
 
+The [2026-09-17 despawn audit](dynamic-ai-despawn-audit.md) records the eviction-sweep, budget-zero handoff, and emplacement allocation fixes, plus the remaining conditions that can keep distant AI physical.
+
 ## Admin settings and compatibility
 
 Open **Admin configuration → Dynamic AI**. The dedicated tab holds the master toggle, soldier budget, distances, and timing. The existing Scaling tab retains the saved AI multiplier, static override, and combat settings.

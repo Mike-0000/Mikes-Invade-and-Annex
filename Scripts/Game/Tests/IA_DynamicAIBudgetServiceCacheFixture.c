@@ -13,6 +13,8 @@ class IA_DynamicAIBudgetServiceCacheFixture : IA_DynamicAIBudgetCache
 	int m_iEvictRemaining;
 	int m_iFailRemaining;
 	int m_iOperationMs;
+	int m_iRefusalMs;
+	int m_iEvictionChecks;
 	bool m_bCombatForTest;
 
 	void Configure(IA_DynamicAIBudgetControllerFixture clock, array<string> trace, string label, int pending, int physical, bool mandatory)
@@ -100,8 +102,12 @@ class IA_DynamicAIBudgetServiceCacheFixture : IA_DynamicAIBudgetCache
 
 	override bool EvictBudgetUnit(array<vector> players, int now)
 	{
+		m_iEvictionChecks++;
 		if (!m_bOwnerLive || m_bFinished || m_iEvictRemaining <= 0 || m_iPhysical <= 0)
+		{
+			m_Clock.AdvanceClockMs(m_iRefusalMs);
 			return false;
+		}
 		m_Clock.AdvanceClockMs(m_iOperationMs);
 		m_iEvictRemaining--;
 		m_iPhysical--;

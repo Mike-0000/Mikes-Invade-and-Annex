@@ -4,6 +4,9 @@ class IA_DynamicAIBudgetController
 {
 	protected ref array<ref IA_DynamicAIBudgetEntry> m_aEntries = {};
 	protected ref array<IA_DynamicAIBudgetCache> m_aCensus = {};
+	// Refusals survive a time-sliced sweep. Restarting at the farthest group
+	// every tick can permanently hide all groups behind one expensive refusal.
+	protected ref array<IA_DynamicAIBudgetCache> m_aEvictTried = {};
 	protected int m_iScanCursor;
 	protected int m_iNextPlanMs;
 	protected int m_iQuota;
@@ -44,6 +47,7 @@ class IA_DynamicAIBudgetController
 	{
 		m_aCensus.Clear();
 		m_aEntries.Clear();
+		m_aEvictTried.Clear();
 		m_iScanCursor = 0;
 		m_iNextPlanMs = 0;
 		m_iNextProtectionMs = 0;
@@ -86,8 +90,11 @@ class IA_DynamicAIBudgetController
 			if (cache.IsBudgetActive())
 				active.Insert(cache);
 		}
-		m_bActive = !active.IsEmpty() || !civilians.IsEmpty();
-		if (!m_bActive)
+		// Only an unfinished military ledger keeps the budget-0/OFF drain alive.
+		// Civilians otherwise strand the dispatcher here and stop distance-only
+		// military caching after the ledger has finished draining.
+		m_bActive = !active.IsEmpty();
+		if (!m_bActive && budget <= 0)
 			return;
 		m_iLastOperations = 0;
 		if (now >= m_iNextProtectionMs)
@@ -97,7 +104,7 @@ class IA_DynamicAIBudgetController
 				protectedCache.CheckWake(players, budget > 0);
 			foreach (IA_DynamicAIGroupCache civilianCache : civilians)
 			{
-				if (civilianCache)
+				if (civilianCache && budget > 0)
 					civilianCache.CheckWake(players, true);
 			}
 		}
@@ -105,7 +112,8 @@ class IA_DynamicAIBudgetController
 			PlanSlice(active, players, now, budget);
 		Service(active, players, now, budget);
 		int started = ClockMs();
-		ServiceCivilians(civilians, players, now, started);
+		if (budget > 0)
+			ServiceCivilians(civilians, players, now, started);
 		ServiceOccupancy(groups, players, now, started);
 		if (IA_Log.IsDebugEnabled())
 		{
@@ -295,16 +303,20 @@ class IA_DynamicAIBudgetController
 		visits = 0;
 		int releaseStarted = ClockMs();
 		int beforeRelease = operations;
-		ref array<IA_DynamicAIBudgetCache> evictTried = {};
 		while (budget > 0 && operations < 4 && visits < total + 4)
 		{
 			if (ClockMs() - started >= IA_DynamicAISpawning.WORK_BUDGET_MS)
 				break;
 			if (visits > 0 && operations == beforeRelease && ClockMs() - releaseStarted >= 1)
 				break;
-			ref IA_DynamicAIBudgetCache evict = PickFarthestUntried(active, evictTried);
+			ref IA_DynamicAIBudgetCache evict = PickFarthestUntried(active, m_aEvictTried);
 			if (!evict)
+			{
+				// Start another sweep on the next tick, after every current group
+				// has had a turn. Allocation replans must not reset this progress.
+				m_aEvictTried.Clear();
 				break;
+			}
 			visits++;
 			// The farthest overallocated squad keeps shedding until it refuses;
 			// only a refusal moves the pick to the next farthest squad.
@@ -316,7 +328,7 @@ class IA_DynamicAIBudgetController
 					m_iEvictions++;
 			}
 			else
-				evictTried.Insert(evict);
+				m_aEvictTried.Insert(evict);
 		}
 		visits = 0;
 		int optionalCap = 4;

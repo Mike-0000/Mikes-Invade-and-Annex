@@ -388,8 +388,6 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(unit.m_Entity);
 		if (!pawn || pawn.GetParent() || pawn.IsInVehicle() || manager.GetPlayerIdFromControlledEntity(pawn) > 0)
 			return false;
-		if (IA_DynamicAIOccupancyHost.IsCacheParticipating(this))
-			return false;
 		AIAgent agent = GetRestoreAgent(unit);
 		if (!agent || agent.GetParentGroup() != m_Owner.GetSCR_AIGroup())
 			return false;
@@ -642,6 +640,11 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 	bool EvictBudgetUnit(array<vector> players, int now)
 	{
 		if (!m_bBudgetActive || m_bExitBudget || !IsOwnerLive() || m_bFinished || m_bForceFull || m_iPlanAt == 0 || now - m_iPlanAt > 5000)
+			return false;
+		// This is a worker mutex, not protected demand. Putting it in
+		// CanRemoveUnit makes Describe reallocate ejected occupants during the
+		// quiesce window, so their own transaction aborts on the next scan.
+		if (IA_DynamicAIOccupancyHost.IsCacheParticipating(this))
 			return false;
 		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
 		if (now < m_iRetryEvictAt || m_iEvictSince < 0 || now - m_iEvictSince < tuning.m_iDynamicAIEvictDelaySec * 1000 || GetBudgetCost() <= m_iDesired)

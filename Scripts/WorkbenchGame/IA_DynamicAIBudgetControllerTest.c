@@ -16,6 +16,8 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		TestMandatoryCursorFairness();
 		TestOptionalCursorFairness();
 		TestEvictionCursorFairness();
+		TestBlockedEvictionProgress();
+		TestCivilianDoesNotTrapBudgetDrain();
 		TestTimeBudget();
 		TestBudgetOffDrain();
 		TestRetiredCost();
@@ -183,6 +185,41 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		for (int tick = 0; tick < 3; tick++)
 			worker.RunService(active, 1 + tick * 100, 1);
 		Check(trace.Count() == 3 && retained[0].m_iEvictions == 0 && retained[1].m_iEvictions == 0 && retained[2].m_iEvictions == 3, "eviction prefers the farthest overallocated squad");
+	}
+
+	protected void TestBlockedEvictionProgress()
+	{
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref array<string> trace = {};
+		ref IA_DynamicAIBudgetServiceCacheFixture blocked = new IA_DynamicAIBudgetServiceCacheFixture();
+		ref IA_DynamicAIBudgetServiceCacheFixture removable = new IA_DynamicAIBudgetServiceCacheFixture();
+		blocked.Configure(worker, trace, "blocked", 0, 4, false);
+		blocked.SetNearestForTest(5000);
+		blocked.m_iRefusalMs = IA_DynamicAISpawning.WORK_BUDGET_MS;
+		removable.Configure(worker, trace, "removable", 0, 4, false);
+		removable.SetNearestForTest(3000);
+		removable.m_iEvictRemaining = 4;
+		ref array<IA_DynamicAIBudgetCache> active = {blocked, removable};
+		worker.RunService(active, 1, 1);
+		Check(removable.m_iEvictions == 0, "a slow refusal respects the current tick's time limit");
+		worker.RunService(active, 101, 1);
+		Check(removable.m_iEvictions == 4, "the next tick reaches removable troops behind a slow blocked farthest group");
+		worker.RunService(active, 201, 1);
+		blocked.m_iEvictRemaining = 1;
+		worker.RunService(active, 301, 1);
+		Check(blocked.m_iEvictions == 1, "a completed sweep revisits previously blocked groups");
+	}
+
+	protected void TestCivilianDoesNotTrapBudgetDrain()
+	{
+		ref IA_DynamicAIBudgetControllerFixture worker = new IA_DynamicAIBudgetControllerFixture();
+		ref IA_DynamicAICivilianServiceCacheFixture civilian = new IA_DynamicAICivilianServiceCacheFixture();
+		ref array<IA_DynamicAIGroupCache> groups = {civilian};
+		worker.RunTick(groups, 1, 70);
+		int callsBefore = civilian.m_iTryCacheCalls;
+		worker.RunTick(groups, 101, 0);
+		Check(!worker.IsActive(), "civilians alone do not retain the budget worker after a zero-budget drain");
+		Check(civilian.m_iTryCacheCalls == callsBefore, "the drain cannot cache civilians when Dynamic AI may be off");
 	}
 
 	protected void TestTimeBudget()
