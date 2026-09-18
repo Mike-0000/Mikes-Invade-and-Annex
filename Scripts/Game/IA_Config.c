@@ -46,10 +46,10 @@ class IA_Config{
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "HQ Vehicles", desc: "Disable all Ground Vehicle spawning at HQ (Everything else)")]
 	bool m_bDisableHQGroundVehicles;
 
-	[Attribute(defvalue: "0", UIWidgets.EditBox, category: "AI Scaling", desc: "Static AI Player Scale Factor Override (0 = use player-based scaling, >0 = fixed scale factor). Ignored while Dynamic AI Spawning is enabled; effective scale is 1.0.")]
+	[Attribute(defvalue: "0", UIWidgets.EditBox, category: "AI Scaling", desc: "Static AI Player Scale Factor Override (0 = use player-based scaling, >0 = fixed scale factor). Ignored while Dynamic AI Spawning is enabled; that tab's Dynamic AI scale is used instead.")]
 	float m_fStaticAIScaleOverride;
 
-	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "AI Player Scale Multiplier (multiplies player-based scale, ignored if static override is set). Ignored while Dynamic AI Spawning is enabled; effective scale is 1.0.")]
+	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "AI Player Scale Multiplier (multiplies player-based scale, ignored if static override is set). Ignored while Dynamic AI Spawning is enabled; that tab's Dynamic AI scale is used instead.")]
 	float m_fAIScaleMultiplier;
 
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "AI Scaling", desc: "Dynamic AI Spawning: repeatedly cache supported area infantry, ordinary patrols and garrisons while distant and out of combat, then restore their latest saved positions as players approach. Equipment/ammo reset. Caching kills downed AI. Disabling restores cached survivors.")]
@@ -57,9 +57,15 @@ class IA_Config{
 
 	static const int DYNAMIC_AI_BUDGET_DEFAULT = 70;
 	static const int DYNAMIC_AI_BUDGET_MAX = 2000;
+	static const float DYNAMIC_AI_SCALE_DEFAULT = 0.8;
+	static const float DYNAMIC_AI_SCALE_MIN = 0.1;
+	static const float DYNAMIC_AI_SCALE_MAX = 10;
 
 	[Attribute(defvalue: "160", UIWidgets.EditBox, category: "AI Scaling", desc: "Dynamic AI Budget: target number of supported area soldiers present while Dynamic AI Spawning is enabled. Closest groups get priority. Protected nearby or fighting soldiers may exceed this target. 0 uses distance-only spawning. Independent of the Game Master budget.", params: "0 2000 1")]
 	int m_iDynamicAIBudget = DYNAMIC_AI_BUDGET_DEFAULT;
+
+	[Attribute(defvalue: "0.8", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "AI scale used while Dynamic AI Spawning is enabled. Replaces player-count scaling, the Scaling-tab multiplier, and the static override. 0.8 is 80 percent of baseline roster size. Changing this does not rebuild an already assigned roster.", params: "0.1 10 0.1")]
+	float m_fDynamicAIScale = DYNAMIC_AI_SCALE_DEFAULT;
 
 	[Attribute(defvalue: "1000", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Wake/admission distance in metres. Budget mode admits nearby optional squads; distance-only mode restores a whole team. Cannot be below the protected release distance.", params: "100 5000 1")]
 	int m_iDynamicAIWakeDistanceM = 1000;
@@ -405,9 +411,20 @@ class IA_Config{
 	}
 
 	//------------------------------------------------------------------------------------------------
+	static float ClampDynamicAIScale(float scale)
+	{
+		if (scale < DYNAMIC_AI_SCALE_MIN)
+			return DYNAMIC_AI_SCALE_MIN;
+		if (scale > DYNAMIC_AI_SCALE_MAX)
+			return DYNAMIC_AI_SCALE_MAX;
+		return scale;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void ClampDynamicAISettings()
 	{
 		m_iDynamicAIBudget = ClampDynamicAIBudget(m_iDynamicAIBudget);
+		m_fDynamicAIScale = ClampDynamicAIScale(m_fDynamicAIScale);
 		m_iDynamicAICloseDistanceM = Math.Clamp(m_iDynamicAICloseDistanceM, 50, 2000);
 		m_iDynamicAIReleaseDistanceM = Math.Clamp(m_iDynamicAIReleaseDistanceM, 100, 3000);
 		m_iDynamicAIReleaseDistanceM = Math.Max(m_iDynamicAIReleaseDistanceM, m_iDynamicAICloseDistanceM + 50);
@@ -505,6 +522,33 @@ class IA_Config{
 		if (!TryParseDynamicAIBudget(token, budget))
 			return false;
 		cfg.m_iDynamicAIBudget = budget;
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool TryParseDynamicAIScale(string token, out float scale)
+	{
+		scale = DYNAMIC_AI_SCALE_DEFAULT;
+		if (!IA_DynamicParse.TryParseFloatToken(token, scale))
+			return false;
+		scale = ClampDynamicAIScale(scale);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string PackDynamicAIScale(notnull IA_Config cfg)
+	{
+		cfg.ClampDynamicAISettings();
+		return cfg.m_fDynamicAIScale.ToString();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool UnpackDynamicAIScale(notnull IA_Config cfg, string token)
+	{
+		float scale;
+		if (!TryParseDynamicAIScale(token, scale))
+			return false;
+		cfg.m_fDynamicAIScale = scale;
 		return true;
 	}
 

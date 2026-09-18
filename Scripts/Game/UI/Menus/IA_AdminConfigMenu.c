@@ -33,6 +33,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_NumericField m_AIField;
 	protected ref MUI_NumericField m_StaticAIField;
 	protected ref MUI_Toggle m_DynamicAISpawningToggle;
+	protected ref MUI_NumericField m_DynamicAIScaleField;
 	protected ref MUI_NumericField m_DynamicAIBudgetField;
 	protected ref MUI_NumericField m_DynamicAIWakeField;
 	protected ref MUI_NumericField m_DynamicAICacheField;
@@ -198,8 +199,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageScaling.AddChild(m_StaticAIField);
 		m_PageScaling.AddChild(m_MilVehField);
 		m_Hints.AddHint(m_Tabs, "Settings pages", "Choose a tab to view a different group of settings. Help updates to explain the open tab.");
-		m_Hints.AddHint(m_AIField, "Enemy strength", "Multiplies player-based AI scaling while Dynamic AI Spawning is OFF and no static override is set. Dynamic AI Spawning ON fixes the effective scale at 1.0; this saved value is kept for when it is switched OFF.");
-		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "When Dynamic AI Spawning is OFF, a value above 0 replaces player-based AI scaling; 0 uses normal scaling. Dynamic AI Spawning ON fixes the effective scale at 1.0 and keeps this saved override for when it is switched OFF.");
+		m_Hints.AddHint(m_AIField, "Enemy strength", "Multiplies player-based AI scaling while Dynamic AI Spawning is OFF and no static override is set. Dynamic AI Spawning ON uses the Dynamic AI scale on that tab; this saved value is kept for when it is switched OFF.");
+		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "When Dynamic AI Spawning is OFF, a value above 0 replaces player-based AI scaling; 0 uses normal scaling. Dynamic AI Spawning ON uses the Dynamic AI scale on that tab and keeps this saved override for when it is switched OFF.");
 		m_Hints.AddHint(m_MilVehField, "Enemy vehicle count", "Changes how many enemy military vehicles appear. 1 is normal, 0.5 is about half, and 2 is about double.");
 
 		ref MUI_Label combatLbl = runtime.CreateLabel("AI combat  •  Skill is aim accuracy only. Fire rate and spotting are separate.", "combatLbl");
@@ -543,10 +544,17 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	{
 		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
 		m_PageDynamicAI.AddChild(m_DynamicAISpawningToggle);
-		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON fixes effective AI scale at 1.0, even with budget 0. Far squads that would exceed the budget record reserves instead of creating every soldier; the leader still spawns. Vehicles and assigned mortar gunners stay spawned. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
+		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON uses the Dynamic AI scale below instead of player-count scaling, even with budget 0. Far squads that would exceed the budget record reserves instead of creating every soldier; the leader still spawns. Vehicles and assigned mortar gunners stay spawned. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
+		m_DynamicAIScaleField = runtime.CreateNumericField("Dynamic AI scale", "dynamicAiScale");
+		m_DynamicAIScaleField.SetRange(IA_Config.DYNAMIC_AI_SCALE_MIN, IA_Config.DYNAMIC_AI_SCALE_MAX);
+		m_DynamicAIScaleField.SetStep(0.1);
+		m_DynamicAIScaleField.SetDecimals(2);
+		m_DynamicAIScaleField.SetValue(IA_Config.DYNAMIC_AI_SCALE_DEFAULT);
+		m_PageDynamicAI.AddChild(m_DynamicAIScaleField);
+		m_Hints.AddHint(m_DynamicAIScaleField, "Dynamic AI scale", "Roster strength while Dynamic AI Spawning is ON. Replaces player-count scaling and the Scaling-tab multiplier or static override. 0.8 is 80 percent of the baseline roster. 1.0 is full strength. Changing this does not rebuild an already assigned roster.");
 		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Target count of physical infantry. Far new squads seed reserves once this number is already live. Nearest squads restore first. Farther squads stay cached or are evicted. Live soldiers already inside 400 m are not deleted immediately. Vehicles and assigned mortar gunners stay spawned. 0 is distance-only caching.");
 
-		ref MUI_Label modes = runtime.CreateLabel("Budget 0: distance only. Positive budget: nearest squads first. AI scale is 1.0 while ON. Save applies now; Save for restart also remembers changes.", "dynamicAiModes");
+		ref MUI_Label modes = runtime.CreateLabel("Budget 0: distance only. Positive budget: nearest squads first. Dynamic AI scale applies while ON. Save applies now; Save for restart also remembers changes.", "dynamicAiModes");
 		modes.SetFontSize(runtime.GetTheme().FONT_SMALL);
 		modes.SetMuted(true);
 		m_PageDynamicAI.AddChild(modes);
@@ -1094,6 +1102,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_StaticAIField.SetValue(cfg.m_fStaticAIScaleOverride);
 		if (m_DynamicAISpawningToggle)
 			m_DynamicAISpawningToggle.SetChecked(cfg.m_bDynamicAISpawningEnabled);
+		if (m_DynamicAIScaleField)
+			m_DynamicAIScaleField.SetValue(IA_Config.ClampDynamicAIScale(cfg.m_fDynamicAIScale));
 		if (m_DynamicAIBudgetField)
 			m_DynamicAIBudgetField.SetValue(IA_Config.ClampDynamicAIBudget(cfg.m_iDynamicAIBudget));
 		if (m_DynamicAIWakeField)
@@ -1496,8 +1506,11 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		if (live)
 		{
 			dynamicAiPack.m_iDynamicAIBudget = live.m_iDynamicAIBudget;
+			dynamicAiPack.m_fDynamicAIScale = live.m_fDynamicAIScale;
 			IA_Config.UnpackDynamicAIExtras(dynamicAiPack, IA_Config.PackDynamicAIExtras(live));
 		}
+		if (m_DynamicAIScaleField)
+			dynamicAiPack.m_fDynamicAIScale = m_DynamicAIScaleField.GetValue();
 		if (m_DynamicAIBudgetField)
 			dynamicAiPack.m_iDynamicAIBudget = Math.Round(m_DynamicAIBudgetField.GetValue());
 		if (m_DynamicAIWakeField)
@@ -1524,6 +1537,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			dynamicAiPack.m_bDynamicAIHardCap = m_DynamicAIHardCapToggle.IsChecked();
 		packed = packed + "|" + IA_Config.PackDynamicAIBudget(dynamicAiPack);
 		packed = packed + "|" + IA_Config.PackDynamicAIExtras(dynamicAiPack);
+		packed = packed + "|" + IA_Config.PackDynamicAIScale(dynamicAiPack);
 
 		IA_MissionInitializer.SubmitPackedAdminConfig(packed, persist);
 	}

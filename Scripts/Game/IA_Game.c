@@ -193,10 +193,10 @@ class IA_Game
     static float GetAIScaleFactor()
     {
         IA_Config config = IA_MissionInitializer.GetGlobalConfig();
-        // Dynamic spawning owns live population; seed its roster at baseline
-        // strength without changing the settings used by the legacy path.
+        // Dynamic spawning owns live population; seed its roster from the
+        // Dynamic AI scale without changing the Scaling-tab legacy settings.
         if (config && config.m_bDynamicAISpawningEnabled)
-            return 1.0;
+            return IA_Config.ClampDynamicAIScale(config.m_fDynamicAIScale);
 
         // The configured scale applies again when dynamic spawning is off.
         if (config && config.m_fStaticAIScaleOverride > 0)

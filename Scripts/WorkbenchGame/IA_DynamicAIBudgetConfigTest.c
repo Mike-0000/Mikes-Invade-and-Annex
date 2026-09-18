@@ -70,6 +70,7 @@ class IA_DynamicAIBudgetConfigTest : WorkbenchPlugin
 		Check(IA_Config.PackDynamicAIBudget(source) == "0" && source.m_iDynamicAIBudget == 0, "admin packing also clamps direct mission configuration");
 
 		TestDynamicAITuning();
+		TestDynamicAIScale();
 		Print(string.Format("[IA][DynamicAIBudgetConfigTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -139,6 +140,58 @@ class IA_DynamicAIBudgetConfigTest : WorkbenchPlugin
 		loaded.Decode(saved.Encode());
 		loaded.ApplyTo(restored);
 		Check(source.m_iDynamicAICacheDistanceM == 1550 && source.m_iDynamicAICacheQuietSec == 0 && IA_Config.PackDynamicAIExtras(restored) == IA_Config.PackDynamicAIExtras(source), "saving normalizes direct mission fields before writing the server profile");
+	}
+
+	protected void TestDynamicAIScale()
+	{
+		ref IA_Config source = new IA_Config();
+		ref IA_Config restored = new IA_Config();
+		Check(source.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_DEFAULT, "new configurations default Dynamic AI scale to 0.8");
+		Check(IA_Config.UnpackDynamicAIScale(restored, IA_Config.PackDynamicAIScale(source)) && restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_DEFAULT, "the admin token retains the default scale");
+
+		source.m_fDynamicAIScale = 1.5;
+		Check(IA_Config.UnpackDynamicAIScale(restored, IA_Config.PackDynamicAIScale(source)) && restored.m_fDynamicAIScale == 1.5, "the admin token retains a custom Dynamic AI scale");
+		Check(IA_Config.UnpackDynamicAIScale(restored, "0") && restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MIN, "zero admin values clamp to the supported minimum");
+		Check(IA_Config.UnpackDynamicAIScale(restored, "-1") && restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MIN, "negative admin values clamp to the supported minimum");
+		Check(IA_Config.UnpackDynamicAIScale(restored, "99") && restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MAX, "oversized admin values clamp to the supported maximum");
+		Check(!IA_Config.UnpackDynamicAIScale(restored, "") && restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MAX, "an empty admin token preserves the existing scale");
+		Check(!IA_Config.UnpackDynamicAIScale(restored, "0.8oops") && restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MAX, "trailing junk cannot partially change the scale");
+		Check(!IA_Config.UnpackDynamicAIScale(restored, "9999999") && restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MAX, "overflow-sized values cannot silently replace the scale");
+
+		ref IA_DynamicAISpawningOverridesFixture saved = new IA_DynamicAISpawningOverridesFixture();
+		ref IA_DynamicAISpawningOverridesFixture loaded = new IA_DynamicAISpawningOverridesFixture();
+		source.m_bDynamicAISpawningEnabled = true;
+		source.m_fDynamicAIScale = 1.25;
+		saved.FillFrom(source);
+		loaded.Decode(saved.Encode());
+		loaded.ApplyTo(restored);
+		Check(restored.m_bDynamicAISpawningEnabled && restored.m_fDynamicAIScale == 1.25, "a custom Dynamic AI scale survives the server profile roundtrip");
+
+		restored.m_fDynamicAIScale = 2.0;
+		loaded.Decode("{\"v\":2,\"dynamicAISpawning\":1}");
+		loaded.ApplyTo(restored);
+		Check(restored.m_fDynamicAIScale == 2.0, "an older profile preserves an explicit mission Dynamic AI scale");
+		restored.m_fDynamicAIScale = IA_Config.DYNAMIC_AI_SCALE_DEFAULT;
+		loaded.ApplyTo(restored);
+		Check(restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_DEFAULT, "an older profile also preserves the default Dynamic AI scale");
+
+		loaded.Decode("{\"dynamicAIScale\":\"invalid\"}");
+		loaded.ApplyTo(restored);
+		Check(restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_DEFAULT, "malformed persisted scales preserve the mission setting");
+		loaded.Decode("{\"dynamicAIScale\":0.05}");
+		loaded.ApplyTo(restored);
+		Check(restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MIN, "persisted scales obey the lower bound");
+		loaded.Decode("{\"dynamicAIScale\":12}");
+		loaded.ApplyTo(restored);
+		Check(restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MAX, "persisted scales obey the upper bound");
+
+		source.m_fDynamicAIScale = 50;
+		saved.FillFrom(source);
+		loaded.Decode(saved.Encode());
+		loaded.ApplyTo(restored);
+		Check(source.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MAX && restored.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MAX, "saving clamps direct mission scale before persistence");
+		source.m_fDynamicAIScale = 0;
+		Check(IA_Config.PackDynamicAIScale(source) == IA_Config.DYNAMIC_AI_SCALE_MIN.ToString() && source.m_fDynamicAIScale == IA_Config.DYNAMIC_AI_SCALE_MIN, "admin packing also clamps direct mission scale");
 	}
 
 	protected void Check(bool condition, string description)

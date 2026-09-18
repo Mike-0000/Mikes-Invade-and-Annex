@@ -14,6 +14,8 @@ class IA_AdminOverrides
 	bool m_bDynamicAISpawningEnabled = false;
 	bool m_bHasDynamicAIBudgetOverride;
 	int m_iDynamicAIBudget = IA_Config.DYNAMIC_AI_BUDGET_DEFAULT;
+	bool m_bHasDynamicAIScaleOverride;
+	float m_fDynamicAIScale = IA_Config.DYNAMIC_AI_SCALE_DEFAULT;
 	bool m_bHasDynamicAIExtrasOverride;
 	string m_sDynamicAIExtrasPacked;
 	bool m_bDisableHQHelipads;
@@ -160,6 +162,8 @@ class IA_AdminOverrides
 		config.ClampDynamicAISettings();
 		m_bHasDynamicAIBudgetOverride = true;
 		m_iDynamicAIBudget = config.m_iDynamicAIBudget;
+		m_bHasDynamicAIScaleOverride = true;
+		m_fDynamicAIScale = config.m_fDynamicAIScale;
 		m_bHasDynamicAIExtrasOverride = true;
 		m_sDynamicAIExtrasPacked = IA_Config.PackDynamicAIExtras(config);
 		m_bDisableHQHelipads = config.m_bDisableHQHelipads;
@@ -238,6 +242,8 @@ class IA_AdminOverrides
 			config.m_bDynamicAISpawningEnabled = m_bDynamicAISpawningEnabled;
 		if (m_bHasDynamicAIBudgetOverride)
 			config.m_iDynamicAIBudget = m_iDynamicAIBudget;
+		if (m_bHasDynamicAIScaleOverride)
+			config.m_fDynamicAIScale = m_fDynamicAIScale;
 		if (m_bHasDynamicAIExtrasOverride)
 			IA_Config.UnpackDynamicAIExtras(config, m_sDynamicAIExtrasPacked);
 		config.ClampDynamicAISettings();
@@ -375,6 +381,7 @@ class IA_AdminOverrides
 			dynamicAISpawningI = 1;
 		json = json + ",\"dynamicAISpawning\":" + dynamicAISpawningI.ToString();
 		json = json + ",\"dynamicAIBudget\":" + IA_Config.ClampDynamicAIBudget(m_iDynamicAIBudget).ToString();
+		json = json + ",\"dynamicAIScale\":" + IA_Config.ClampDynamicAIScale(m_fDynamicAIScale).ToString();
 		if (m_bHasDynamicAIExtrasOverride)
 			json = json + ",\"dynamicAIExtras\":\"" + m_sDynamicAIExtrasPacked + "\"";
 		json = json + ",\"disableHeli\":" + heliI.ToString();
@@ -486,6 +493,16 @@ class IA_AdminOverrides
 			{
 				m_bHasDynamicAIBudgetOverride = true;
 				m_iDynamicAIBudget = dynamicAIBudget;
+			}
+		}
+		m_bHasDynamicAIScaleOverride = false;
+		if (HasKey(json, "dynamicAIScale"))
+		{
+			float dynamicAIScale;
+			if (IA_Config.TryParseDynamicAIScale(ExtractValue(json, "dynamicAIScale"), dynamicAIScale))
+			{
+				m_bHasDynamicAIScaleOverride = true;
+				m_fDynamicAIScale = dynamicAIScale;
 			}
 		}
 		m_bHasDynamicAIExtrasOverride = false;
