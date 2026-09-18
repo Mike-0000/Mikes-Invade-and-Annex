@@ -194,10 +194,14 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		cache.Init(owner);
 		cache.EnableBudget();
 		cache.SetLastCasualtyForTest(System.GetTickCount());
+		cache.SetNearestForTest(120);
 		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
 		bool previousHard = tuning.m_bDynamicAIHardCap;
 		tuning.m_bDynamicAIHardCap = false;
-		Check(cache.CombatBlocksEvictionForTest(), "recent combat holds a squad together while the shared target has room");
+		Check(cache.CombatBlocksEvictionForTest(), "recent combat holds a nearby squad together while the shared target has room");
+		cache.SetNearestForTest(4000);
+		Check(!cache.CombatBlocksEvictionForTest(), "combat does not hold a squad when no player is inside wake distance");
+		cache.SetNearestForTest(120);
 		tuning.m_bDynamicAIHardCap = true;
 		Check(!cache.CombatBlocksEvictionForTest(), "the admin hard cap lets overallocated combat squads be evicted by distance");
 		tuning.m_bDynamicAIHardCap = previousHard;

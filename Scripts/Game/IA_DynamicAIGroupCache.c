@@ -271,19 +271,11 @@ class IA_DynamicAIGroupCache
 				m_sLiveStatus = "player nearby";
 				break;
 			}
-			SCR_AICombatComponent combat = SCR_AICombatComponent.Cast(member.GetControlledEntity().FindComponent(SCR_AICombatComponent));
-			if (combat && combat.GetCurrentTarget() && combat.GetCurrentTarget().GetTimeSinceSeen() < tuning.m_iDynamicAICombatQuietSec)
-			{
-				blocked = true;
-				m_sLiveStatus = "recent combat";
-				break;
-			}
 		}
-		// The addon's engaged-faction flag is historical; recent danger can expire.
-		int lastDanger = m_Owner.GetLastDangerEventTime();
-		if (!blocked && lastDanger > 0 && System.GetUnixTime() - lastDanger < tuning.m_iDynamicAICombatQuietSec)
-			m_sLiveStatus = "recent combat";
-		if (!m_ActivityGate.CanCache(blocked, now, m_Owner.GetLastDangerEventTime(), System.GetUnixTime()))
+		// Combat and danger only protect a squad while a player is nearby.
+		// Native selected targets and AI-vs-AI fire must not keep a distant
+		// garrison live after every player is beyond cache distance.
+		if (!m_ActivityGate.CanCache(blocked, now, 0, System.GetUnixTime()))
 			return false;
 
 		if (m_Owner.ShouldKeepVehicleOccupantsPhysical())

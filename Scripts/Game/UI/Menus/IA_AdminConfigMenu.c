@@ -570,7 +570,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		timing.SetBold(true);
 		m_PageDynamicAI.AddChild(timing);
 		m_DynamicAICacheQuietField = MakeDynamicAIField(runtime, "Departure quiet time (s; distance only)", "dynamicAiCacheQuiet", 0, 600, 5, 60, "How long a squad must remain outside cache distance before distance-only removal. Returning players restart the timer. 0 removes the departure delay; other safety checks still apply.");
-		m_DynamicAICombatQuietField = MakeDynamicAIField(runtime, "Combat quiet time (s; both modes)", "dynamicAiCombatQuiet", 10, 300, 5, 60, "Protects recent combat targets and danger for this long. Applies in both modes. Lower values release quiet troops sooner after fighting.");
+		m_DynamicAICombatQuietField = MakeDynamicAIField(runtime, "Combat quiet time (s; both modes)", "dynamicAiCombatQuiet", 10, 300, 5, 60, "Protects recent combat only while a player is inside wake distance. Native AI-vs-AI targets do not keep far squads spawned. Lower values release nearby troops sooner after fighting.");
 		m_DynamicAIMinLiveField = MakeDynamicAIField(runtime, "Minimum live time (s; budget)", "dynamicAiMinLive", 5, 300, 5, 30, "Newly observed or restored soldiers stay live for at least this long. Prevents rapid removal immediately after a spawn.");
 		m_DynamicAIEvictDelayField = MakeDynamicAIField(runtime, "Allocation reduction delay (s; budget)", "dynamicAiEvictDelay", 1, 120, 1, 10, "A lower squad allocation must remain pending for this long before removals begin. Higher values smooth brief priority changes; lower values free capacity sooner.");
 		ref MUI_Label stability = runtime.CreateLabel("Allocation stability (meters)", "dynamicAiStability");

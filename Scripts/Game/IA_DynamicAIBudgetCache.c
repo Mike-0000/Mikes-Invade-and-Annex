@@ -284,6 +284,11 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 
 	bool HasRecentCombat()
 	{
+		// Native combat, danger, and casualties are ignored unless a player is
+		// inside wake. AI-vs-AI or leftover selected targets must not hold a
+		// far squad against eviction or optional-restore priority.
+		if (m_fNearest > IA_DynamicAISpawning.GetTuning().m_iDynamicAIWakeDistanceM)
+			return false;
 		int combatQuietSec = IA_DynamicAISpawning.GetTuning().m_iDynamicAICombatQuietSec;
 		if (m_iLastCasualtyMs >= 0 && System.GetTickCount() - m_iLastCasualtyMs < combatQuietSec * 1000)
 			return true;
@@ -440,9 +445,8 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		entry.m_bInRange = m_fNearest <= tuning.m_iDynamicAIWakeDistanceM;
 		if (m_iDesired > 0 && m_fNearest <= tuning.m_iDynamicAICacheDistanceM)
 			entry.m_bInRange = true;
-		// A squad already trading fire outranks an equidistant quiet one, so the
-		// shared target funds the engagement the players are actually in.
-		if (m_fNearest <= tuning.m_iDynamicAIWakeDistanceM && HasRecentCombat())
+		// A nearby squad already trading fire outranks an equidistant quiet one.
+		if (HasRecentCombat())
 			entry.m_iRetentionBiasM = entry.m_iRetentionBiasM + tuning.m_iDynamicAIRetentionBiasM;
 		if (HasCapturePriority())
 		{
@@ -651,9 +655,10 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 			m_iEvictSince = -1;
 			return false;
 		}
-		// Recent combat holds a squad together only while the shared target has
-		// room. Once it is full, distance decides who stays: soldiers inside the
-		// release distance are still skipped below, so only far fighters release.
+		// Nearby recent combat holds a squad together only while the shared
+		// target has room. Once it is full, or no player is inside wake,
+		// distance decides who stays: soldiers inside the release distance are
+		// still skipped below, so only far fighters release.
 		if (CombatBlocksEviction())
 		{
 			m_iEvictSince = -1;
