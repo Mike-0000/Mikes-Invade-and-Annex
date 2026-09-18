@@ -9,7 +9,7 @@ Open **Admin configuration → Dynamic AI**. The dedicated tab holds the master 
 | Setting | Behavior |
 | --- | --- |
 | **Dynamic AI Spawning OFF** | Default. Uses the original spawning path and stored AI scaling settings. If soldiers are already cached, restores all surviving records through the worker before becoming inactive. |
-| **Dynamic AI Spawning ON, Dynamic AI Budget 1–2000** | Uses the shared soldier budget described below and fixes effective AI scale at **1.0**. The budget defaults to **160**. |
+| **Dynamic AI Spawning ON, Dynamic AI Budget 1–2000** | Uses the shared soldier budget described below and fixes effective AI scale at **1.0**. The budget defaults to **70**. |
 | **Dynamic AI Spawning ON, Dynamic AI Budget 0** | Removes the budget policy while keeping effective AI scale at **1.0**. Existing budget reserves first restore, then the previous distance-only Dynamic AI path takes over. |
 
 The budget is an **absolute target number of managed soldiers**, independent of the Game Master percentage and vanilla editor limits. The target itself controls how many assigned soldiers remain physical; it does not multiply an objective's initial roster. Settings are saved with the admin configuration; existing profiles without a budget retain the configured/default value.
@@ -48,7 +48,7 @@ Saving normalizes the distances by raising outer values: **release ≥ protectio
 4. Previous allocations receive the configured ranking preference, **50 m by default**. Equal ranks use stable registration order. Small player movements therefore do not constantly swap equally distant squads. Ranking does not rearrange the group registry.
 5. Ordinary optional demand begins inside the wake distance, **1000 m by default**. An existing allocation may remain eligible out to the cache distance, **1500 m by default**, reducing boundary churn. These are eligibility distances, not unconditional full-squad wake distances in budget mode.
 
-For example, after reserving 20 protected soldiers, a target of 160 provides 140 optional slots. Closest eligible squads fill those slots; the last squad can be partial. If protected demand grows above 160, optional admission waits while protected soldiers remain available.
+For example, after reserving 20 protected soldiers, a target of 70 provides 50 optional slots. Closest eligible squads fill those slots; the last squad can be partial. If protected demand grows above 70, optional admission waits while protected soldiers remain available.
 
 ### Protection and eviction timing
 

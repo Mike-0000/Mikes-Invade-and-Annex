@@ -9,7 +9,7 @@ class IA_DynamicAIBudgetConfigTest : WorkbenchPlugin
 	{
 		ref IA_Config source = new IA_Config();
 		ref IA_Config restored = new IA_Config();
-		Check(!source.m_bDynamicAISpawningEnabled && source.m_iDynamicAIBudget == 160, "new configurations retain the legacy toggle and a budget of 160");
+		Check(!source.m_bDynamicAISpawningEnabled && source.m_iDynamicAIBudget == IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "new configurations retain the legacy toggle and a budget of 70");
 
 		source.m_iDynamicAIBudget = 235;
 		Check(IA_Config.UnpackDynamicAIBudget(restored, IA_Config.PackDynamicAIBudget(source)) && restored.m_iDynamicAIBudget == 235, "the admin token retains the chosen integer budget");
@@ -43,17 +43,17 @@ class IA_DynamicAIBudgetConfigTest : WorkbenchPlugin
 		Check(restored.m_bDynamicAISpawningEnabled && restored.m_iDynamicAIBudget == 320, "an older profile preserves an explicit mission budget");
 		restored.m_iDynamicAIBudget = IA_Config.DYNAMIC_AI_BUDGET_DEFAULT;
 		loaded.ApplyTo(restored);
-		Check(restored.m_iDynamicAIBudget == 160, "an older profile also preserves the default budget");
+		Check(restored.m_iDynamicAIBudget == IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "an older profile also preserves the default budget");
 
 		loaded.Decode("{\"dynamicAIBudget\":\"invalid\"}");
 		loaded.ApplyTo(restored);
-		Check(restored.m_iDynamicAIBudget == 160, "malformed persisted budgets preserve the mission setting");
+		Check(restored.m_iDynamicAIBudget == IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "malformed persisted budgets preserve the mission setting");
 		loaded.Decode("{\"dynamicAIBudget\":80.5}");
 		loaded.ApplyTo(restored);
-		Check(restored.m_iDynamicAIBudget == 160, "fractional persisted values cannot truncate silently");
+		Check(restored.m_iDynamicAIBudget == IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "fractional persisted values cannot truncate silently");
 		loaded.Decode("{\"dynamicAIBudget\":9999999999999999999}");
 		loaded.ApplyTo(restored);
-		Check(restored.m_iDynamicAIBudget == 160, "overflow-sized persisted values preserve the mission setting");
+		Check(restored.m_iDynamicAIBudget == IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "overflow-sized persisted values preserve the mission setting");
 		loaded.Decode("{\"dynamicAIBudget\":-1}");
 		loaded.ApplyTo(restored);
 		Check(restored.m_iDynamicAIBudget == 0, "negative persisted budgets clamp to zero");

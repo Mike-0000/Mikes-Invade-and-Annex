@@ -55,7 +55,7 @@ class IA_Config{
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "AI Scaling", desc: "Dynamic AI Spawning: repeatedly cache supported area infantry, ordinary patrols and garrisons while distant and out of combat, then restore their latest saved positions as players approach. Equipment/ammo reset. Caching kills downed AI. Disabling restores cached survivors.")]
 	bool m_bDynamicAISpawningEnabled = false;
 
-	static const int DYNAMIC_AI_BUDGET_DEFAULT = 160;
+	static const int DYNAMIC_AI_BUDGET_DEFAULT = 70;
 	static const int DYNAMIC_AI_BUDGET_MAX = 2000;
 
 	[Attribute(defvalue: "160", UIWidgets.EditBox, category: "AI Scaling", desc: "Dynamic AI Budget: target number of supported area soldiers present while Dynamic AI Spawning is enabled. Closest groups get priority. Protected nearby or fighting soldiers may exceed this target. 0 uses distance-only spawning. Independent of the Game Master budget.", params: "0 2000 1")]
