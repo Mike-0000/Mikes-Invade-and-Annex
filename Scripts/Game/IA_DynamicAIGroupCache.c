@@ -49,17 +49,56 @@ class IA_DynamicAIGroupCache
 
 	vector GetCachedOrigin()
 	{
+		ref array<vector> live = {};
+		if (m_Owner)
+			m_Owner.CollectLiveMemberWorldPositions(live);
+		if (!live.IsEmpty())
+			return IA_AiGroup.AveragePosition(live);
+		ref array<vector> saved = {};
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
-			if (!unit.m_bRestored && unit.IsLogicallyAlive())
-				return unit.GetPosition();
+			if (!unit || !unit.IsLogicallyAlive())
+				continue;
+			saved.Insert(CurrentPosition(unit));
+		}
+		return IA_AiGroup.AveragePosition(saved);
+	}
+
+	// Live pawns use their current world pose; cached reserves keep the last
+	// saved transform. The native group entity origin is not a member position.
+	protected vector CurrentPosition(IA_DynamicAIUnit unit)
+	{
+		if (!unit)
+			return vector.Zero;
+		if (!unit.m_Entity)
+			return unit.GetPosition();
+		vector transform[4];
+		unit.m_Entity.GetWorldTransform(transform);
+		Math3D.MatrixCopy(transform, unit.m_aTransform);
+		return transform[3];
+	}
+
+	protected void CollectLatestGroupPositions(notnull array<vector> positions)
+	{
+		int liveCount;
+		if (m_Owner)
+		{
+			m_Owner.CollectLiveMemberWorldPositions(positions);
+			liveCount = positions.Count();
 		}
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
-			if (unit.IsLogicallyAlive())
-				return unit.GetPosition();
+			if (!unit || !unit.IsLogicallyAlive())
+				continue;
+			if (unit.m_bRestored && unit.m_Entity)
+			{
+				if (liveCount > 0)
+					continue;
+				positions.Insert(CurrentPosition(unit));
+				continue;
+			}
+			positions.Insert(CurrentPosition(unit));
 		}
-		return vector.Zero;
 	}
 
 	void ResetQuietPeriod()
@@ -222,9 +261,11 @@ class IA_DynamicAIGroupCache
 		if (m_bUrgentWake)
 			return;
 		int wakeDistance = IA_DynamicAISpawning.GetTuning().m_iDynamicAIWakeDistanceM;
-		foreach (IA_DynamicAIUnit unit : m_aUnits)
+		ref array<vector> positions = {};
+		CollectLatestGroupPositions(positions);
+		foreach (vector position : positions)
 		{
-			if (IA_SpawnPlacement.IsNearAnyPlayer(unit.GetPosition(), players, wakeDistance))
+			if (IA_SpawnPlacement.IsNearAnyPlayer(position, players, wakeDistance))
 			{
 				RequestWake();
 				return;

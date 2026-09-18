@@ -111,6 +111,7 @@ class IA_AiGroup
     private int m_iDynamicAISuspendTest;
     private int m_iDynamicAIResumeTest;
     private bool m_bTestSeatedAssignedMortar;
+    private ref array<vector> m_aLivePositionsForTest;
 #endif
     private bool        m_isSpawned = false;
     private bool        m_isCivilian = false;
@@ -1422,6 +1423,14 @@ class IA_AiGroup
             if (m_lastConfirmedPosition != vector.Zero)
                 return m_lastConfirmedPosition;
         }
+        // The native group entity stays at spawn. Rank and orders need the
+        // soldiers' current world positions, not that leftover origin.
+        vector live = GetLatestLiveMemberOrigin();
+        if (live != vector.Zero)
+        {
+            m_lastConfirmedPosition = live;
+            return live;
+        }
         if (!m_group)
         {
             return m_lastConfirmedPosition;
@@ -1432,6 +1441,65 @@ class IA_AiGroup
         else if (m_lastConfirmedPosition != vector.Zero)
             return m_lastConfirmedPosition;
         return origin;
+    }
+
+    // Current world positions of living AI members. The group entity origin is
+    // not a member position and is never added here.
+    void CollectLiveMemberWorldPositions(notnull array<vector> positions)
+    {
+#ifdef WORKBENCH
+        if (m_aLivePositionsForTest)
+        {
+            foreach (vector testPos : m_aLivePositionsForTest)
+                positions.Insert(testPos);
+            return;
+        }
+#endif
+        if (!m_group)
+            return;
+        PlayerManager manager;
+        if (GetGame())
+            manager = GetGame().GetPlayerManager();
+        ref array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            if (!agent || !agent.GetControlledEntity())
+                continue;
+            IEntity entity = agent.GetControlledEntity();
+            if (manager && manager.GetPlayerIdFromControlledEntity(entity) > 0)
+                continue;
+            ChimeraCharacter pawn = ChimeraCharacter.Cast(entity);
+            if (pawn && pawn.GetCharacterController() && pawn.GetCharacterController().GetLifeState() == ECharacterLifeState.DEAD)
+                continue;
+            vector transform[4];
+            entity.GetWorldTransform(transform);
+            positions.Insert(transform[3]);
+        }
+    }
+
+    vector GetLatestLiveMemberOrigin()
+    {
+        ref array<vector> positions = {};
+        CollectLiveMemberWorldPositions(positions);
+        return AveragePosition(positions);
+    }
+
+    static vector AveragePosition(array<vector> positions)
+    {
+        if (!positions || positions.IsEmpty())
+            return vector.Zero;
+        float x;
+        float y;
+        float z;
+        int count = positions.Count();
+        foreach (vector position : positions)
+        {
+            x = x + position[0];
+            y = y + position[1];
+            z = z + position[2];
+        }
+        return Vector(x / count, y / count, z / count);
     }
 
     bool IsSpawned()
@@ -6640,6 +6708,7 @@ class IA_AiGroup
         ref IA_AiGroup owner = new IA_AiGroup("100 20 100", IA_SquadType.Riflemen, IA_Faction.USSR, 4);
         owner.m_bDynamicAIOwnerTest = true;
         owner.m_iDynamicAIPhysicalTest = physical;
+        owner.m_lastConfirmedPosition = "100 20 100";
         owner.m_DynamicAICache = cache;
         return owner;
     }
@@ -6647,6 +6716,18 @@ class IA_AiGroup
     void SetDynamicAIPhysicalForTest(int physical)
     {
         m_iDynamicAIPhysicalTest = physical;
+    }
+
+    void SetLiveMemberPositionsForTest(array<vector> positions)
+    {
+        if (!positions)
+        {
+            m_aLivePositionsForTest = null;
+            return;
+        }
+        m_aLivePositionsForTest = new array<vector>();
+        foreach (vector position : positions)
+            m_aLivePositionsForTest.Insert(position);
     }
 
     int GetDynamicAISuspendCountForTest()

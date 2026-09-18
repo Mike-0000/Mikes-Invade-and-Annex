@@ -15,6 +15,7 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		TestReserveSeedAdopt();
 		TestHardCapCombatEviction();
 		TestNearbyPreemptionEvictionGates();
+		TestGroupLocationUsesLatestMembers();
 		Print(string.Format("[IA][DynamicAIBudgetLifecycleTest] checks=%1 failures=%2", m_iChecks, m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
@@ -236,6 +237,43 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		cache.SetNearestForTest(800);
 		Check(cache.CombatBlocksEvictionForTest(), "combat still holds a squad that is not being preempted");
 		tuning.m_bDynamicAIHardCap = previousHard;
+	}
+
+	protected void TestGroupLocationUsesLatestMembers()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 1);
+		cache.Init(owner);
+		cache.EnableBudget();
+		ref array<vector> players = {};
+		players.Insert("0 0 0");
+
+		ref IA_DynamicAIBudgetUnitFixture stale = new IA_DynamicAIBudgetUnitFixture();
+		stale.m_aTransform[3] = "2000 20 0";
+		cache.AddForTest(stale);
+		ref array<vector> liveNear = {};
+		liveNear.Insert("40 0 0");
+		owner.SetLiveMemberPositionsForTest(liveNear);
+		cache.CheckProtectionForTest(players);
+		Check(cache.GetNearestPlayerDistance() < 50, "a live member next to the player outranks a leftover saved pose kilometres away");
+		Check(vector.Distance(cache.GetCachedOrigin(), "40 0 0") < vector.Distance(cache.GetCachedOrigin(), "2000 20 0"), "the group origin follows the current soldiers, not the first stale ledger record");
+
+		owner.SetLiveMemberPositionsForTest(null);
+		ref IA_DynamicAIBudgetCacheFixture empty = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup undescribed = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(empty, 4);
+		empty.Init(undescribed);
+		empty.EnableBudget();
+		ref array<vector> liveOnly = {};
+		liveOnly.Insert("60 0 0");
+		undescribed.SetLiveMemberPositionsForTest(liveOnly);
+		empty.CheckProtectionForTest(players);
+		Check(empty.GetNearestPlayerDistance() < 70, "an undescribed live squad still ranks from current member world positions");
+
+		ref array<vector> farLive = {};
+		farLive.Insert("1800 0 0");
+		undescribed.SetLiveMemberPositionsForTest(farLive);
+		empty.CheckProtectionForTest(players);
+		Check(empty.GetNearestPlayerDistance() > 1000, "the same live squad becomes far once its members have actually moved away");
 	}
 
 	protected void Check(bool passed, string description)

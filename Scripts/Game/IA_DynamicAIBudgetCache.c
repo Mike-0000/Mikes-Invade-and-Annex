@@ -214,15 +214,6 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		return Math.Sqrt(nearestSq);
 	}
 
-	protected vector CurrentPosition(IA_DynamicAIUnit unit)
-	{
-		if (!unit.m_Entity)
-			return unit.GetPosition();
-		vector transform[4];
-		unit.m_Entity.GetWorldTransform(transform);
-		return transform[3];
-	}
-
 	// Nearest-first, except a hidden reserve that is almost as close is preferred
 	// so the soldier does not appear in a player's face. Never vetoes restore.
 	protected bool PreferHiddenReserve(IA_DynamicAIUnit candidate, IA_DynamicAIUnit current)
@@ -263,18 +254,26 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		IA_Config tuning = IA_DynamicAISpawning.GetTuning();
 		m_fNearest = 10000000;
 		m_vNearestPlayer = vector.Zero;
+		ref array<vector> positions = {};
+		CollectLatestGroupPositions(positions);
+		if (positions.IsEmpty() && m_Owner)
+			positions.Insert(m_Owner.GetOrigin());
 		foreach (IA_DynamicAIUnit unit : m_aUnits)
 		{
-			if (!unit.IsLogicallyAlive())
+			if (!unit || !unit.IsLogicallyAlive())
 				continue;
 			vector position = CurrentPosition(unit);
 			vector nearestPlayer;
 			unit.m_fNearestPlayerM = NearestPlayer(position, players, nearestPlayer);
-			if (unit.m_fNearestPlayerM < m_fNearest)
-			{
-				m_fNearest = unit.m_fNearestPlayerM;
-				m_vNearestPlayer = nearestPlayer;
-			}
+		}
+		foreach (vector position : positions)
+		{
+			vector nearestPlayer;
+			float distance = NearestPlayer(position, players, nearestPlayer);
+			if (distance >= m_fNearest)
+				continue;
+			m_fNearest = distance;
+			m_vNearestPlayer = nearestPlayer;
 		}
 		if (m_fNearest <= tuning.m_iDynamicAICloseDistanceM)
 			m_bClose = true;
