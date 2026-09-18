@@ -289,6 +289,13 @@ class IA_DynamicAIBudgetControllerTest : WorkbenchPlugin
 		vehicle.Init(crew);
 		vehicle.EnableBudget();
 		Check(!vehicle.IsBudgetActive(), "vehicle crews cannot enter the military soldier budget");
+
+		ref IA_DynamicAIBudgetCacheFixture mortar = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup mortarCrew = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(mortar, 1);
+		mortarCrew.SetSeatedAssignedMortarForTest(true);
+		mortar.Init(mortarCrew);
+		mortar.EnableBudget();
+		Check(!mortar.IsBudgetActive(), "assigned mortar-vehicle gunners cannot enter the military soldier budget");
 	}
 
 	protected void TestCaptureSeedOverBudget()

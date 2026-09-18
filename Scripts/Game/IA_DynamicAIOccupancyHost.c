@@ -1,6 +1,7 @@
-// One compartment host (vehicle hull, static gun, or mortar) whose occupants
-// cache together. Driven as one logical transaction; each engine call is one
-// worker operation. Abort remounts ejected survivors. Never delete a seated pawn.
+// One compartment host (static gun, or a mortar that is not an assigned
+// vehicle-gunner seat) whose occupants cache together. Assigned mortar-vehicle
+// gunners stay seated. Driven as one logical transaction; each engine call is
+// one worker operation. Abort remounts ejected survivors. Never delete a seated pawn.
 class IA_DynamicAIOccupancyHost
 {
 	static const float STATIONARY_SPEED_M_S = 0.5;
@@ -95,6 +96,7 @@ class IA_DynamicAIOccupancyHost
 	{
 		if (!owner || !Replication.IsServer())
 			return;
+		// Parked trucks and assigned mortar-vehicle gunners stay seated.
 		if (owner.ShouldKeepVehicleOccupantsPhysical())
 			return;
 		IEntity host = owner.GetOccupancyHostEntity();

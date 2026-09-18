@@ -85,9 +85,9 @@ Building teams can cache before completing their walk indoors. The arrival-owned
 
 ## Scope and mission safety
 
-The budget covers registered **area-owned I&A groups**: military infantry, elites, HVT/objective units, finished defend waves, inbound-pinned QRF, foot civilians, static-gun crews, and mortar crews. Vehicles, vehicle crews, and vehicle passengers stay spawned and **do not consume the military soldier budget**. Civilians use a separate distance-only pool. Arbitrary GM-placed troops and player-controlled pawns are not included. This is not a cap over every AI entity in the world. Far ordinary infantry that would exceed the target are recorded as reserves at spawn. **Capture reinforcement waves and automatic capture QRF wait until managed cost is under the target**, so they fill combat gaps instead of stacking on a full roster. Defend-mission waves, Enhanced Defense beats, and admin Force QRF still spawn immediately. Distance is measured to player pawns, not the Game Master camera.
+The budget covers registered **area-owned I&A groups**: military infantry, elites, HVT/objective units, finished defend waves, inbound-pinned QRF, foot civilians, and static-gun crews. Vehicles, vehicle crews, vehicle passengers, and assigned mortar-vehicle gunners stay spawned and **do not consume the military soldier budget**. Civilians use a separate distance-only pool. Arbitrary GM-placed troops and player-controlled pawns are not included. This is not a cap over every AI entity in the world. Far ordinary infantry that would exceed the target are recorded as reserves at spawn. **Capture reinforcement waves and automatic capture QRF wait until managed cost is under the target**, so they fill combat gaps instead of stacking on a full roster. Defend-mission waves, Enhanced Defense beats, and admin Force QRF still spawn immediately. Distance is measured to player pawns, not the Game Master camera.
 
-Emplacement occupants (static guns and mortars) cache only while their host is stationary. Occupancy is all-or-nothing for one emplacement. Vehicles and anyone seated in a world vehicle are excluded from caching and keep their hulls fully crewed.
+Emplacement occupants (static guns) cache only while their host is stationary. Occupancy is all-or-nothing for one emplacement. Vehicles, anyone seated in a world vehicle, and gunners who are both assigned to a mortar vehicle and seated in that vehicle stay spawned. Mortar-pit guards on foot still cache as ordinary infantry.
 
 In-flight airborne forces (`m_bAirborneDrop`) stay physical until they land. Pending seat teleport and staggered-spawn initialization still block caching. Player-controlled pawns are never intentionally removed or duplicated.
 
@@ -104,7 +104,7 @@ These stay out of Dynamic AI caching:
 - GM/editor-placed troops that never received `SetDynamicAIOwner`
 - Player-controlled pawns
 - In-flight airborne groups (`m_bAirborneDrop`) until they land
-- Vehicles, vehicle crews, vehicle passengers, and anyone seated in a world vehicle
+- Vehicles, vehicle crews, vehicle passengers, anyone seated in a world vehicle, and assigned mortar-vehicle gunners
 - Loadout, magazine, and injury state (recreation resets from the saved prefab)
 - A line-of-sight or camera gate; distance and combat quiet still decide eligibility
 
@@ -161,6 +161,6 @@ For the new controls, open **Dynamic AI**, change distances and delays, Save, an
 7. **Live tuning and persistence:** change distances and timings while reserves exist, including conflicting distance values. Save and reopen the tab to confirm normalization and current values. Verify existing reserve/casualty state survives and the new boundaries govern subsequent work. Use Save for restart and restart to confirm the current packed extras return; test an older nine-field profile retains capture-seed and hard-cap defaults.
 8. **On-foot roles:** a far town with an elite patrol, an HVT objective, and a finished defend wave should cache those groups. Approach restores them. Killing the restored HVT still completes the objective. Capture still waits on `EnsureReadyInRadius`.
 9. **Civilians:** a far village empties its wanderers without changing military budget numbers. Returning restores surviving civilians. Killed civilians stay dead. Civilian vehicle crews stay spawned.
-10. **Emplacements:** far static-gun and mortar crews can cache and remount. Parked trucks and their AI stay fully spawned.
+10. **Emplacements:** far static-gun crews can cache and remount. Assigned mortar-vehicle gunners stay on their tubes. Parked trucks and their AI stay fully spawned. Mortar-pit guards on foot still cache.
 
 These are acceptance checks to run, not reported results. Logging controls are documented in [runtime logging](runtime-logging.md).

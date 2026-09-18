@@ -110,6 +110,7 @@ class IA_AiGroup
     private int m_iDynamicAIPhysicalTest;
     private int m_iDynamicAISuspendTest;
     private int m_iDynamicAIResumeTest;
+    private bool m_bTestSeatedAssignedMortar;
 #endif
     private bool        m_isSpawned = false;
     private bool        m_isCivilian = false;
@@ -2426,10 +2427,15 @@ class IA_AiGroup
         return IsAnyMemberInVehicle();
     }
 
-    // Vehicles and their crews stay physical. Occupancy caching is emplacements only.
+    // Vehicles and their crews stay physical. Occupancy caching is static guns only.
+    // Mortar gunners assigned to a mortar vehicle stay on that tube.
     bool ShouldKeepVehicleOccupantsPhysical()
     {
-        if (IsMortarCrew() || HasStaticGunAssignment())
+        if (HasStaticGunAssignment())
+            return false;
+        if (HasAssignedMortarVehicleGunner())
+            return true;
+        if (IsMortarCrew())
             return false;
         if (m_isVehiclePassengerGroup && m_passengerDumped)
             return IsAnyMemberSeatedInWorldVehicle();
@@ -2440,6 +2446,45 @@ class IA_AiGroup
         if (Vehicle.Cast(m_referencedEntity))
             return true;
         return IsAnyMemberSeatedInWorldVehicle();
+    }
+
+    // Occupied mortar tubes are vehicles. Keep the seated, assigned gunner physical
+    // so Dynamic AI cannot eject and cache them off the weapon.
+    bool HasAssignedMortarVehicleGunner()
+    {
+#ifdef WORKBENCH
+        if (m_bTestSeatedAssignedMortar)
+            return true;
+#endif
+        if (!IsMortarCrew())
+            return false;
+        if (GetAssignedMortarCount() <= 0)
+            return false;
+        return HasMemberSeatedInAssignedMortar();
+    }
+
+    protected bool HasMemberSeatedInAssignedMortar()
+    {
+        if (!m_assignedMortars || m_assignedMortars.IsEmpty())
+            return false;
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character || !character.IsInVehicle())
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                continue;
+            BaseCompartmentSlot slot = access.GetCompartment();
+            if (!slot)
+                continue;
+            IEntity host = slot.GetVehicle();
+            if (!host)
+                host = slot.GetOwner();
+            if (OwnsMortar(host))
+                return true;
+        }
+        return false;
     }
 
     protected bool IsAnyMemberSeatedInWorldVehicle()
@@ -6619,6 +6664,12 @@ class IA_AiGroup
         m_isVehicleCrewGroup = crew;
     }
 
+    void SetSeatedAssignedMortarForTest(bool seatedAssigned)
+    {
+        m_isMortarCrew = seatedAssigned;
+        m_bTestSeatedAssignedMortar = seatedAssigned;
+    }
+
     void EnterHoldPostForTest()
     {
         EnterHoldPost();
@@ -6690,7 +6741,10 @@ class IA_AiGroup
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "civilians qualify for a separate cache pool", failures);
 		group.m_isCivilian = false;
 		group.m_isMortarCrew = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "emplacement crews qualify for occupancy caching", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "unseated mortar-crew flags still qualify for occupancy caching", failures);
+		group.SetSeatedAssignedMortarForTest(true);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle", "assigned mortar-vehicle gunners stay physical", failures);
+		group.SetSeatedAssignedMortarForTest(false);
 		group.m_isMortarCrew = false;
 		group.m_bInboundSimPinned = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "inbound simulation ownership no longer blocks cache", failures);

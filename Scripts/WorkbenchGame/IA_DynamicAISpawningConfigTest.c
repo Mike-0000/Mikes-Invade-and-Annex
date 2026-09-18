@@ -88,6 +88,15 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(IA_DynamicAIOccupancyHost.RemainingOccupancyOpsForTest(3, 4) == 1, "occupancy work shares the existing four-operation tick cap");
 		Check(IA_DynamicAIOccupancyHost.RemainingOccupancyOpsForTest(4, 4) == 0, "occupancy waits when the tick already spent its character operations");
 
+		ref IA_DynamicAIBudgetCacheFixture mortarBudget = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup mortarOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(mortarBudget, 1);
+		mortarBudget.Init(mortarOwner);
+		mortarOwner.SetMortarCrew(true);
+		Check(!mortarOwner.ShouldKeepVehicleOccupantsPhysical(), "an unseated mortar-crew flag remains occupancy-cache eligible");
+		mortarOwner.SetSeatedAssignedMortarForTest(true);
+		Check(mortarOwner.ShouldKeepVehicleOccupantsPhysical(), "an assigned mortar-vehicle gunner stays physical");
+		Check(mortarOwner.GetDynamicAIRoleBlockReason() == "vehicle", "assigned mortar-vehicle gunners use the vehicle cache exemption");
+
 		ref IA_DynamicAIBudgetCacheFixture crewBudget = new IA_DynamicAIBudgetCacheFixture();
 		ref IA_AiGroup crewOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(crewBudget, 4);
 		crewBudget.Init(crewOwner);
