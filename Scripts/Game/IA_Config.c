@@ -46,11 +46,59 @@ class IA_Config{
 	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "HQ Vehicles", desc: "Disable all Ground Vehicle spawning at HQ (Everything else)")]
 	bool m_bDisableHQGroundVehicles;
 
-	[Attribute(defvalue: "0", UIWidgets.EditBox, category: "AI Scaling", desc: "Static AI Player Scale Factor Override (0 = use dynamic scaling, >0 = fixed scale factor)")]
+	[Attribute(defvalue: "0", UIWidgets.EditBox, category: "AI Scaling", desc: "Static AI Player Scale Factor Override (0 = use player-based scaling, >0 = fixed scale factor). Ignored while Dynamic AI Spawning is enabled; that tab's Dynamic AI scale is used instead.")]
 	float m_fStaticAIScaleOverride;
 
-	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "AI Player Scale Multiplier (multiplies dynamic scale factor, ignored if static override is set)")]
+	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "AI Player Scale Multiplier (multiplies player-based scale, ignored if static override is set). Ignored while Dynamic AI Spawning is enabled; that tab's Dynamic AI scale is used instead.")]
 	float m_fAIScaleMultiplier;
+
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "AI Scaling", desc: "Dynamic AI Spawning: repeatedly cache supported area infantry, ordinary patrols and garrisons while distant and out of combat, then restore their latest saved positions as players approach. Equipment/ammo reset. Caching kills downed AI. Disabling restores cached survivors.")]
+	bool m_bDynamicAISpawningEnabled = false;
+
+	static const int DYNAMIC_AI_BUDGET_DEFAULT = 70;
+	static const int DYNAMIC_AI_BUDGET_MAX = 2000;
+	static const float DYNAMIC_AI_SCALE_DEFAULT = 0.8;
+	static const float DYNAMIC_AI_SCALE_MIN = 0.1;
+	static const float DYNAMIC_AI_SCALE_MAX = 10;
+
+	[Attribute(defvalue: "160", UIWidgets.EditBox, category: "AI Scaling", desc: "Dynamic AI Budget: target number of supported area soldiers present while Dynamic AI Spawning is enabled. Closest groups get priority. Protected nearby or fighting soldiers may exceed this target. 0 uses distance-only spawning. Independent of the Game Master budget.", params: "0 2000 1")]
+	int m_iDynamicAIBudget = DYNAMIC_AI_BUDGET_DEFAULT;
+
+	[Attribute(defvalue: "0.8", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "AI scale used while Dynamic AI Spawning is enabled. Replaces player-count scaling, the Scaling-tab multiplier, and the static override. 0.8 is 80 percent of baseline roster size. Changing this does not rebuild an already assigned roster.", params: "0.1 10 0.1")]
+	float m_fDynamicAIScale = DYNAMIC_AI_SCALE_DEFAULT;
+
+	[Attribute(defvalue: "1000", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Wake/admission distance in metres. Budget mode admits nearby optional squads; distance-only mode restores a whole team. Cannot be below the protected release distance.", params: "100 5000 1")]
+	int m_iDynamicAIWakeDistanceM = 1000;
+
+	[Attribute(defvalue: "1500", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Cache/retention distance in metres. Distance-only teams must be beyond this distance; budget allocations may persist out to it. At least 50 m beyond wake distance.", params: "150 7500 1")]
+	int m_iDynamicAICacheDistanceM = 1500;
+
+	[Attribute(defvalue: "300", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Close protection distance in metres. A budgeted group this close to any player restores its complete surviving roster.", params: "50 2000 1")]
+	int m_iDynamicAICloseDistanceM = 300;
+
+	[Attribute(defvalue: "400", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Protected release distance in metres. Close protection releases beyond this distance; individual soldiers inside it cannot be budget-evicted. At least 50 m beyond close distance.", params: "100 3000 1")]
+	int m_iDynamicAIReleaseDistanceM = 400;
+
+	[Attribute(defvalue: "60", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Continuous distant quiet time before whole-team caching in distance-only mode, in seconds.", params: "0 600 1")]
+	int m_iDynamicAICacheQuietSec = 60;
+
+	[Attribute(defvalue: "60", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Recent-combat protection time in seconds. Applies to budget mode and distance-only mode.", params: "10 300 1")]
+	int m_iDynamicAICombatQuietSec = 60;
+
+	[Attribute(defvalue: "30", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Minimum time a new or restored budgeted soldier stays live before eviction eligibility, in seconds.", params: "5 300 1")]
+	int m_iDynamicAIMinLiveSec = 30;
+
+	[Attribute(defvalue: "10", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Delay after a budget allocation becomes lower than the group's physical/reserved count before eviction, in seconds.", params: "1 120 1")]
+	int m_iDynamicAIEvictDelaySec = 10;
+
+	[Attribute(defvalue: "50", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "Distance ranking preference in metres for already allocated squads. Reduces repeated swaps between similarly distant groups.", params: "0 500 1")]
+	int m_iDynamicAIRetentionBiasM = 50;
+
+	[Attribute(defvalue: "30", UIWidgets.EditBox, category: "Dynamic AI Spawning", desc: "How long a contested objective may seed one defender over the soldier budget, in seconds.", params: "5 120 1")]
+	int m_iDynamicAICaptureSeedSec = 30;
+
+	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "Dynamic AI Spawning", desc: "Hard cap: recent combat does not protect a squad from eviction. Live soldiers inside the keep-release distance still stay.")]
+	bool m_bDynamicAIHardCap = false;
 
 	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "Multiplier for military vehicle count calculation (0.5 = half, 2.0 = double)")]
 	float m_fMilitaryVehicleCountMultiplier;
@@ -350,6 +398,158 @@ class IA_Config{
 			m_fDefendHotDropChance = 0;
 		if (m_fDefendHotDropChance > 1)
 			m_fDefendHotDropChance = 1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static int ClampDynamicAIBudget(int budget)
+	{
+		if (budget < 0)
+			return 0;
+		if (budget > DYNAMIC_AI_BUDGET_MAX)
+			return DYNAMIC_AI_BUDGET_MAX;
+		return budget;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static float ClampDynamicAIScale(float scale)
+	{
+		if (scale < DYNAMIC_AI_SCALE_MIN)
+			return DYNAMIC_AI_SCALE_MIN;
+		if (scale > DYNAMIC_AI_SCALE_MAX)
+			return DYNAMIC_AI_SCALE_MAX;
+		return scale;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void ClampDynamicAISettings()
+	{
+		m_iDynamicAIBudget = ClampDynamicAIBudget(m_iDynamicAIBudget);
+		m_fDynamicAIScale = ClampDynamicAIScale(m_fDynamicAIScale);
+		m_iDynamicAICloseDistanceM = Math.Clamp(m_iDynamicAICloseDistanceM, 50, 2000);
+		m_iDynamicAIReleaseDistanceM = Math.Clamp(m_iDynamicAIReleaseDistanceM, 100, 3000);
+		m_iDynamicAIReleaseDistanceM = Math.Max(m_iDynamicAIReleaseDistanceM, m_iDynamicAICloseDistanceM + 50);
+		m_iDynamicAIWakeDistanceM = Math.Clamp(m_iDynamicAIWakeDistanceM, 100, 5000);
+		m_iDynamicAIWakeDistanceM = Math.Max(m_iDynamicAIWakeDistanceM, m_iDynamicAIReleaseDistanceM);
+		m_iDynamicAICacheDistanceM = Math.Clamp(m_iDynamicAICacheDistanceM, 150, 7500);
+		m_iDynamicAICacheDistanceM = Math.Max(m_iDynamicAICacheDistanceM, m_iDynamicAIWakeDistanceM + 50);
+		m_iDynamicAICacheQuietSec = Math.Clamp(m_iDynamicAICacheQuietSec, 0, 600);
+		m_iDynamicAICombatQuietSec = Math.Clamp(m_iDynamicAICombatQuietSec, 10, 300);
+		m_iDynamicAIMinLiveSec = Math.Clamp(m_iDynamicAIMinLiveSec, 5, 300);
+		m_iDynamicAIEvictDelaySec = Math.Clamp(m_iDynamicAIEvictDelaySec, 1, 120);
+		m_iDynamicAIRetentionBiasM = Math.Clamp(m_iDynamicAIRetentionBiasM, 0, 500);
+		m_iDynamicAICaptureSeedSec = Math.Clamp(m_iDynamicAICaptureSeedSec, 5, 120);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string PackDynamicAIExtras(notnull IA_Config cfg)
+	{
+		cfg.ClampDynamicAISettings();
+		string packed = cfg.m_iDynamicAIWakeDistanceM.ToString();
+		packed = packed + "," + cfg.m_iDynamicAICacheDistanceM.ToString();
+		packed = packed + "," + cfg.m_iDynamicAICloseDistanceM.ToString();
+		packed = packed + "," + cfg.m_iDynamicAIReleaseDistanceM.ToString();
+		packed = packed + "," + cfg.m_iDynamicAICacheQuietSec.ToString();
+		packed = packed + "," + cfg.m_iDynamicAICombatQuietSec.ToString();
+		packed = packed + "," + cfg.m_iDynamicAIMinLiveSec.ToString();
+		packed = packed + "," + cfg.m_iDynamicAIEvictDelaySec.ToString();
+		packed = packed + "," + cfg.m_iDynamicAIRetentionBiasM.ToString();
+		packed = packed + "," + cfg.m_iDynamicAICaptureSeedSec.ToString();
+		if (cfg.m_bDynamicAIHardCap)
+			packed = packed + ",1";
+		else
+			packed = packed + ",0";
+		return packed;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool UnpackDynamicAIExtras(notnull IA_Config cfg, string packed)
+	{
+		ref array<string> parts = {};
+		packed.Split(",", parts, false);
+		if (parts.Count() != 9 && parts.Count() != 11)
+			return false;
+		ref array<int> values = {};
+		foreach (string token : parts)
+		{
+			int value;
+			// Nine digits plus optional sign are not needed for these settings;
+			// reject oversized tokens before native integer parsing can overflow.
+			if (token.Length() > 9 || !IA_DynamicParse.TryParseIntToken(token, value))
+				return false;
+			values.Insert(value);
+		}
+		// Do not apply any field until every token has passed validation.
+		cfg.m_iDynamicAIWakeDistanceM = values[0];
+		cfg.m_iDynamicAICacheDistanceM = values[1];
+		cfg.m_iDynamicAICloseDistanceM = values[2];
+		cfg.m_iDynamicAIReleaseDistanceM = values[3];
+		cfg.m_iDynamicAICacheQuietSec = values[4];
+		cfg.m_iDynamicAICombatQuietSec = values[5];
+		cfg.m_iDynamicAIMinLiveSec = values[6];
+		cfg.m_iDynamicAIEvictDelaySec = values[7];
+		cfg.m_iDynamicAIRetentionBiasM = values[8];
+		if (values.Count() == 11)
+		{
+			cfg.m_iDynamicAICaptureSeedSec = values[9];
+			cfg.m_bDynamicAIHardCap = values[10] != 0;
+		}
+		cfg.ClampDynamicAISettings();
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool TryParseDynamicAIBudget(string token, out int budget)
+	{
+		budget = 0;
+		// Reject overflow-sized input instead of letting it wrap to the disabling value.
+		if (token.Length() > 9 || !IA_DynamicParse.TryParseIntToken(token, budget))
+			return false;
+		budget = ClampDynamicAIBudget(budget);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string PackDynamicAIBudget(notnull IA_Config cfg)
+	{
+		cfg.ClampDynamicAISettings();
+		return cfg.m_iDynamicAIBudget.ToString();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool UnpackDynamicAIBudget(notnull IA_Config cfg, string token)
+	{
+		int budget;
+		if (!TryParseDynamicAIBudget(token, budget))
+			return false;
+		cfg.m_iDynamicAIBudget = budget;
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool TryParseDynamicAIScale(string token, out float scale)
+	{
+		scale = DYNAMIC_AI_SCALE_DEFAULT;
+		if (!IA_DynamicParse.TryParseFloatToken(token, scale))
+			return false;
+		scale = ClampDynamicAIScale(scale);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static string PackDynamicAIScale(notnull IA_Config cfg)
+	{
+		cfg.ClampDynamicAISettings();
+		return cfg.m_fDynamicAIScale.ToString();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool UnpackDynamicAIScale(notnull IA_Config cfg, string token)
+	{
+		float scale;
+		if (!TryParseDynamicAIScale(token, scale))
+			return false;
+		cfg.m_fDynamicAIScale = scale;
+		return true;
 	}
 
 	//------------------------------------------------------------------------------------------------

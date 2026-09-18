@@ -389,15 +389,12 @@ class IA_MortarPitPlacer
 	//----------------------------------------------------------------------------------------------
 	protected static void SpawnRuntimeMarker(int groupNumber, vector pos)
 	{
-		// Spawn base Area_Marker; ConfigureRuntime sets MortarPit type/group/name.
-		// Prefer typed prefab path when Workbench has registered it.
-		Resource res = Resource.Load("Prefabs/IA_AreaMarkers/IA_MortarPit.et");
-		if (!res)
-			res = Resource.Load("{61B9AD559D2CE12D}Components/Area_Marker.et");
+		// ConfigureRuntime supplies the type, group and name on this registered prefab.
+		Resource res = Resource.Load("{61B9AD559D2CE12D}Components/Area_Marker.et");
 
 		if (!res)
 		{
-			Print("[IA_MortarPitPlacer] Failed to load IA_MortarPit / Area_Marker prefab.", LogLevel.ERROR);
+			Print("[IA_MortarPitPlacer] Failed to load Area_Marker prefab.", LogLevel.ERROR);
 			return;
 		}
 

@@ -7,10 +7,15 @@ modded class SCR_AIGetDefendWaypointParameters
 {
 	override ENodeResult EOnTaskSimulate(AIAgent owner, float dt)
 	{
-		if (ENodeResult.FAIL == super.EOnTaskSimulate(owner, dt))
-			return ENodeResult.FAIL;
-
-		SCR_DefendWaypoint wp = SCR_DefendWaypoint.Cast(m_Waypoint);
+		IEntity waypointEntity;
+		if (!GetVariableIn(PORT_WAYPOINT_IN, waypointEntity))
+		{
+			AIGroup group = AIGroup.Cast(owner);
+			if (!group)
+				return ENodeResult.FAIL;
+			waypointEntity = group.GetCurrentWaypoint();
+		}
+		SCR_DefendWaypoint wp = SCR_DefendWaypoint.Cast(waypointEntity);
 		if (!wp)
 			return ENodeResult.FAIL;
 
@@ -18,12 +23,6 @@ modded class SCR_AIGetDefendWaypointParameters
 		if (!defendPreset)
 			return ENodeResult.FAIL;
 
-		defendPreset.GetTagsForSearch(m_tagsArray);
-
-		SetVariableOut(PORT_USE_TURRETS, defendPreset.GetUseTurrets());
-		SetVariableOut(PORT_SEARCH_TAGS, m_tagsArray);
-		SetVariableOut(PORT_FAST_INIT, wp.GetFastInit());
-		SetVariableOut(PORT_WAYPOINT_HOLDING_TIME, wp.GetHoldingTime());
-		return ENodeResult.SUCCESS;
+		return super.EOnTaskSimulate(owner, dt);
 	}
 };

@@ -21,7 +21,7 @@ enum IA_GroupTacticalState
     InVehicle,       // Group is currently assigned to a vehicle
 	Escaping,      // Unconditionally moving to an escape point, ignoring combat
     Approaching,   // Counter-attack staging approach: following arc routing to jump-off point before assaulting
-    Holding,       // Vanilla Wait waypoint: stay at a post (building CoverPost / ObservationPost)
+    Holding,       // Pinned garrison: walk in on Defend, optionally Wait after arrival.
 }
 
 enum IA_TypedWpTree
@@ -99,6 +99,20 @@ class IA_RoadSearchState
 class IA_AiGroup
 {
     private SCR_AIGroup m_group;
+    private ref IA_DynamicAIGroupCache m_DynamicAICache;
+    // Soldiers recorded at spawn time while the shared target was already full.
+    // They wait here until the cache exists, then become ordinary reserves.
+    private ref array<ref IA_DynamicAIUnit> m_aDynamicAIReserveSeeds;
+    private IA_AreaInstance m_DynamicAIOwner;
+    private bool m_bDynamicAIDefendPending;
+#ifdef WORKBENCH
+    private bool m_bDynamicAIOwnerTest;
+    private int m_iDynamicAIPhysicalTest;
+    private int m_iDynamicAISuspendTest;
+    private int m_iDynamicAIResumeTest;
+    private bool m_bTestSeatedAssignedMortar;
+    private ref array<vector> m_aLivePositionsForTest;
+#endif
     private bool        m_isSpawned = false;
     private bool        m_isCivilian = false;
     private IA_SquadType m_squadType;
@@ -110,7 +124,7 @@ class IA_AiGroup
     private float m_defendWaypointRadiusOverride = 0;
     private ref array<IEntity> m_assignedMortars = new array<IEntity>();
     private ref array<AIAgent> m_claimedMortarGunners = new array<AIAgent>();
-    private IEntity m_artilleryFireWaypoint;
+    private SCR_AIWaypointArtillerySupport m_artilleryFireWaypoint;
     
     private vector      m_initialPosition;
     private vector      m_lastOrderPosition;
@@ -232,6 +246,8 @@ class IA_AiGroup
     private bool m_isDefendWaveGroup = false;
     private bool m_bDefendHunter = false;
     private bool m_bInboundSimPinned = false;
+    // Only the building walk owns a pin that dynamic AI may suspend.
+    private bool m_bBuildingMarchSimPinned = false;
     private vector m_vInboundTarget = vector.Zero;
     private bool m_bAirborneDrop = false;
     private bool m_bKeepAltitude = false;
@@ -239,8 +255,9 @@ class IA_AiGroup
     private bool m_bDefendPost = false;
     private bool m_bHoldEntered = false;
     private bool m_bHoldMarchScheduled = false;
+    private bool m_bHoldAfterEntry = false;
     private vector m_holdPost = vector.Zero;
-    private vector m_vHoldApproach = vector.Zero;
+    private IEntity m_HoldBuilding;
     private float m_holdRadius = 0;
     private int m_iAirborneInFlight = 0;
     private vector m_vAirDropTarget = vector.Zero;
@@ -839,6 +856,8 @@ class IA_AiGroup
     // Add a pre-existing waypoint to the group
     void AddWaypoint(SCR_AIWaypoint waypoint)
     {
+        if (IsDynamicAIPaused())
+            return;
         if (!m_group || !waypoint)
         {
             ////Print("[IA_AiGroup.AddWaypoint] Group or waypoint is null.", LogLevel.WARNING);
@@ -861,6 +880,8 @@ class IA_AiGroup
 
     void AddOrder(vector origin, IA_AiOrder order, bool topPriority = false)
     {
+        if (IsDynamicAIPaused())
+            return;
         if (HasStaticGunAssignment())
             return;
         if (m_isHoldingPost)
@@ -874,14 +895,12 @@ class IA_AiGroup
                 origin = m_holdPost;
                 order = IA_AiOrder.DefendSmall;
             }
-            else if (m_bHoldEntered)
+            else
             {
-                if (order != IA_AiOrder.Hold)
+                if (order != IA_AiOrder.Hold && order != IA_AiOrder.Defend && order != IA_AiOrder.DefendSmall)
                     return;
-            }
-            else if (order != IA_AiOrder.Hold && order != IA_AiOrder.Move && order != IA_AiOrder.PriorityMove)
-            {
-                return;
+                origin = m_holdPost;
+                order = IA_BuildingGarrison.OrderFor(m_bHoldAfterEntry, m_bHoldEntered);
             }
         }
 
@@ -1209,7 +1228,7 @@ class IA_AiGroup
             // --- END MODIFIED ---
         }
 
-        if (order == IA_AiOrder.Hold || m_bDefendPost)
+        if (order == IA_AiOrder.Hold || m_isHoldingPost)
         {
             SCR_TimedWaypoint waitWp = SCR_TimedWaypoint.Cast(w);
             if (waitWp)
@@ -1220,11 +1239,15 @@ class IA_AiGroup
                     holdR = 5;
                 waitWp.SetCompletionRadius(holdR);
             }
-            if (m_bDefendPost)
+            if (m_isHoldingPost)
             {
                 SCR_DefendWaypoint postWaypoint = SCR_DefendWaypoint.Cast(w);
                 if (postWaypoint)
+                {
                     postWaypoint.SetCurrentDefendPreset(1); // CoverPost, not loitering.
+                    if (!m_bDefendPost)
+                        IA_BuildingGarrison.ConfigureDefend(postWaypoint);
+                }
                 w.SetPriorityLevel(WP_PRIORITY_DEFEND_POST);
             }
         }
@@ -1292,6 +1315,13 @@ class IA_AiGroup
                 continue;
             if (m_bDefendPost && !SCR_DefendWaypoint.Cast(wp))
                 continue;
+            if (IsBuildingGarrison())
+            {
+                bool wantsDefend = IA_BuildingGarrison.OrderFor(m_bHoldAfterEntry, m_bHoldEntered) == IA_AiOrder.DefendSmall;
+                bool isDefend = SCR_DefendWaypoint.Cast(wp) != null;
+                if (wantsDefend != isDefend)
+                    continue;
+            }
             if (SCR_TimedWaypoint.Cast(wp))
                 return true;
         }
@@ -1305,6 +1335,8 @@ class IA_AiGroup
 
     void RemoveAllOrders(bool resetLastOrderTime = false)
     {
+        if (IsDynamicAIPaused())
+            return;
         if (m_isHoldingPost && m_bDefendPost && HasHoldWaypoint())
             return;
         if (m_isHoldingPost && m_bHoldEntered && HasHoldWaypoint())
@@ -1352,6 +1384,8 @@ class IA_AiGroup
 
     int GetAliveCount()
     {
+        if (IsDynamicAICached())
+            return m_DynamicAICache.GetLogicalAliveCount();
         if (!m_isSpawned)
         {
             if (m_isCivilian)
@@ -1369,18 +1403,103 @@ class IA_AiGroup
             return 0;
         }
         int aliveCount = m_group.GetPlayerAndAgentCount();
+        // Reserves recorded at spawn time are roster members that simply have no
+        // entity yet, so area strength must not read them as casualties.
+        if (m_aDynamicAIReserveSeeds)
+            aliveCount += m_aDynamicAIReserveSeeds.Count();
         return aliveCount;
     }
 
     vector GetOrigin()
     {
+        if (IsDynamicAIPaused() && m_DynamicAICache)
+        {
+            vector cached = m_DynamicAICache.GetCachedOrigin();
+            if (cached != vector.Zero)
+            {
+                m_lastConfirmedPosition = cached;
+                return cached;
+            }
+            if (m_lastConfirmedPosition != vector.Zero)
+                return m_lastConfirmedPosition;
+        }
+        // The native group entity stays at spawn. Rank and orders need the
+        // soldiers' current world positions, not that leftover origin.
+        vector live = GetLatestLiveMemberOrigin();
+        if (live != vector.Zero)
+        {
+            m_lastConfirmedPosition = live;
+            return live;
+        }
         if (!m_group)
         {
-            return vector.Zero;
+            return m_lastConfirmedPosition;
         }
         vector origin = m_group.GetOrigin();
-        m_lastConfirmedPosition = origin;
+        if (origin != vector.Zero)
+            m_lastConfirmedPosition = origin;
+        else if (m_lastConfirmedPosition != vector.Zero)
+            return m_lastConfirmedPosition;
         return origin;
+    }
+
+    // Current world positions of living AI members. The group entity origin is
+    // not a member position and is never added here.
+    void CollectLiveMemberWorldPositions(notnull array<vector> positions)
+    {
+#ifdef WORKBENCH
+        if (m_aLivePositionsForTest)
+        {
+            foreach (vector testPos : m_aLivePositionsForTest)
+                positions.Insert(testPos);
+            return;
+        }
+#endif
+        if (!m_group)
+            return;
+        PlayerManager manager;
+        if (GetGame())
+            manager = GetGame().GetPlayerManager();
+        ref array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            if (!agent || !agent.GetControlledEntity())
+                continue;
+            IEntity entity = agent.GetControlledEntity();
+            if (manager && manager.GetPlayerIdFromControlledEntity(entity) > 0)
+                continue;
+            ChimeraCharacter pawn = ChimeraCharacter.Cast(entity);
+            if (pawn && pawn.GetCharacterController() && pawn.GetCharacterController().GetLifeState() == ECharacterLifeState.DEAD)
+                continue;
+            vector transform[4];
+            entity.GetWorldTransform(transform);
+            positions.Insert(transform[3]);
+        }
+    }
+
+    vector GetLatestLiveMemberOrigin()
+    {
+        ref array<vector> positions = {};
+        CollectLiveMemberWorldPositions(positions);
+        return AveragePosition(positions);
+    }
+
+    static vector AveragePosition(array<vector> positions)
+    {
+        if (!positions || positions.IsEmpty())
+            return vector.Zero;
+        float x;
+        float y;
+        float z;
+        int count = positions.Count();
+        foreach (vector position : positions)
+        {
+            x = x + position[0];
+            y = y + position[1];
+            z = z + position[2];
+        }
+        return Vector(x / count, y / count, z / count);
     }
 
     bool IsSpawned()
@@ -1566,6 +1685,8 @@ class IA_AiGroup
         }
 
         m_isSpawned = true; // Set spawned to true only after successful creation/validation of entities and group
+
+        TryRegisterDynamicAI();
 
         vector groundPos;
         if (m_initialPosition != vector.Zero) { 
@@ -1846,6 +1967,8 @@ class IA_AiGroup
 
     private void SetupDeathListener()
     {
+        if (IsDynamicAIPaused())
+            return;
 
               
         if (!m_group)
@@ -2315,6 +2438,9 @@ class IA_AiGroup
 
     bool ShouldSkipInfantryOrders()
     {
+        // A reduced squad's live members continue to accept ordinary assignments.
+        if (IsDynamicAIPaused())
+            return true;
         if (m_isDriving || m_isVehicleCrewGroup)
             return true;
 
@@ -2329,6 +2455,8 @@ class IA_AiGroup
 
     bool ShouldKeepOwnOrders()
     {
+        if (IsDynamicAIPaused())
+            return true;
         if (IsPinnedGarrison())
             return true;
         if (IsDefendHunter())
@@ -2345,6 +2473,186 @@ class IA_AiGroup
     IA_AiGroup GetLinkedPassengerGroup()
     {
         return m_linkedPassengerGroup;
+    }
+
+    IA_AiGroup GetLinkedCrewGroup()
+    {
+        return m_linkedCrewGroup;
+    }
+
+    bool IsCivilian()
+    {
+        return m_isCivilian;
+    }
+
+    IA_DynamicAIGroupCache GetDynamicAICache()
+    {
+        return m_DynamicAICache;
+    }
+
+    bool HasOccupancyMembers()
+    {
+        return IsAnyMemberInVehicle();
+    }
+
+    // Vehicles and their crews stay physical. Occupancy caching is static guns only.
+    // Mortar gunners assigned to a mortar vehicle stay on that tube.
+    bool ShouldKeepVehicleOccupantsPhysical()
+    {
+        if (HasStaticGunAssignment())
+            return false;
+        if (HasAssignedMortarVehicleGunner())
+            return true;
+        if (IsMortarCrew())
+            return false;
+        if (m_isVehiclePassengerGroup && m_passengerDumped)
+            return IsAnyMemberSeatedInWorldVehicle();
+        if (m_isVehicleCrewGroup || m_isVehiclePassengerGroup || m_isDriving)
+            return true;
+        if (m_passengerVehicle)
+            return true;
+        if (Vehicle.Cast(m_referencedEntity))
+            return true;
+        return IsAnyMemberSeatedInWorldVehicle();
+    }
+
+    // Occupied mortar tubes are vehicles. Keep the seated, assigned gunner physical
+    // so Dynamic AI cannot eject and cache them off the weapon.
+    bool HasAssignedMortarVehicleGunner()
+    {
+#ifdef WORKBENCH
+        if (m_bTestSeatedAssignedMortar)
+            return true;
+#endif
+        if (!IsMortarCrew())
+            return false;
+        if (GetAssignedMortarCount() <= 0)
+            return false;
+        return HasMemberSeatedInAssignedMortar();
+    }
+
+    protected bool HasMemberSeatedInAssignedMortar()
+    {
+        if (!m_assignedMortars || m_assignedMortars.IsEmpty())
+            return false;
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character || !character.IsInVehicle())
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                continue;
+            BaseCompartmentSlot slot = access.GetCompartment();
+            if (!slot)
+                continue;
+            IEntity host = slot.GetVehicle();
+            if (!host)
+                host = slot.GetOwner();
+            if (OwnsMortar(host))
+                return true;
+        }
+        return false;
+    }
+
+    protected bool IsAnyMemberSeatedInWorldVehicle()
+    {
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character || !character.IsInVehicle())
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                return true;
+            BaseCompartmentSlot slot = access.GetCompartment();
+            if (!slot)
+                return true;
+            if (Vehicle.Cast(slot.GetVehicle()))
+                return true;
+        }
+        return false;
+    }
+
+    IEntity GetOccupancyHostEntity()
+    {
+        if (m_referencedEntity)
+            return m_referencedEntity;
+        if (m_passengerVehicle)
+            return m_passengerVehicle;
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character)
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                continue;
+            BaseCompartmentSlot slot = access.GetCompartment();
+            if (!slot)
+                continue;
+            IEntity host = slot.GetVehicle();
+            if (host)
+                return host;
+            return slot.GetOwner();
+        }
+        if (m_assignedMortars && !m_assignedMortars.IsEmpty())
+            return m_assignedMortars[0];
+        return null;
+    }
+
+    bool HasPendingCompartmentTree()
+    {
+        if (m_pendingSeatTeleport)
+            return true;
+        if (IsCurrentWaypointGetInNearest())
+            return true;
+        if (!m_group)
+            return false;
+        AIWaypoint current = m_group.GetCurrentWaypoint();
+        if (SCR_BoardingWaypoint.Cast(current))
+            return true;
+        array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
+        foreach (SCR_ChimeraCharacter character : characters)
+        {
+            if (!character)
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (access && (access.IsGettingIn() || access.IsGettingOut()))
+                return true;
+        }
+        return false;
+    }
+
+    void SuspendOccupancyAssignment()
+    {
+        if (m_StaticGunAssignment)
+            m_StaticGunAssignment.SuspendForDynamicAI();
+    }
+
+    void ResumeOccupancyAssignment()
+    {
+        if (m_StaticGunAssignment)
+            m_StaticGunAssignment.ResumeAfterDynamicAI();
+    }
+
+    void OnDynamicAIOccupancyRemounted(IA_DynamicAIUnit unit)
+    {
+        if (!unit || !unit.m_Entity)
+            return;
+        if (m_StaticGunAssignment)
+            m_StaticGunAssignment.RebindPawn(unit.m_Entity);
+        if (!unit.HasOccupancy() || unit.m_eOccupancyKind != IA_DynamicAIOccupancyKind.Vehicle)
+            return;
+        if (!m_isVehicleCrewGroup || m_drivingTarget == vector.Zero)
+            return;
+        if (m_DynamicAICache && m_DynamicAICache.GetUnrestoredCount() > 0)
+            return;
+        Vehicle vehicle = Vehicle.Cast(m_referencedEntity);
+        if (!vehicle)
+            vehicle = Vehicle.Cast(GetOccupancyHostEntity());
+        if (vehicle)
+            DriveAfterGetInClear(vehicle, m_drivingTarget);
     }
 
     bool HasDumpedPassengers()
@@ -2943,6 +3251,10 @@ class IA_AiGroup
 
     private void OnMemberDeath(notnull SCR_CharacterControllerComponent memberCtrl, IEntity killerEntity, Instigator killer)
     {
+        // Budget mode tracks live squads too, so a first casualty must protect
+        // their survivors even before any member has been virtualized.
+        if (m_DynamicAICache)
+            m_DynamicAICache.OnUnitKilled(memberCtrl.GetOwner());
 
         IEntity victimEntity = memberCtrl.GetOwner();
         vector deathPosition = victimEntity.GetOrigin();
@@ -3077,6 +3389,8 @@ class IA_AiGroup
     // Evaluate and potentially change tactical state based on situation
     void EvaluateTacticalState()
     {
+        if (IsDynamicAIPaused())
+            return;
         if (HasStaticGunAssignment())
             return;
         if (m_isMortarCrew)
@@ -3590,14 +3904,21 @@ class IA_AiGroup
     // Stop deferred creation without deleting soldiers who are still near players.
     void CancelPendingUnitSpawns()
     {
+        if (m_DynamicAICache)
+            m_DynamicAICache.Retire();
         m_bSpawnAborted = true;
         m_pendingUnitsToSpawn = 0;
+        m_aDynamicAIReserveSeeds = null;
         ScriptCallQueue queue = GetGame().GetCallqueue();
         if (queue)
         {
             queue.Remove(this.SpawnNextUnit);
             queue.Remove(this.SpawnNextHostileCivilianUnit);
+            queue.Remove(this.OnHoldMarchTick);
+            queue.Remove(this.ResolveDynamicAIReserveSeeds);
         }
+        m_bHoldMarchScheduled = false;
+        UnpinInboundSimulation();
     }
 
     void Despawn()
@@ -3646,6 +3967,8 @@ class IA_AiGroup
     // Add a public SetTacticalState method to replace the one we accidentally removed
     void SetTacticalState(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null, bool fromAuthority = false)
     {
+        if (IsDynamicAIPaused())
+            return;
         if (HasStaticGunAssignment())
             return;
         if (m_isHoldingPost)
@@ -3699,11 +4022,11 @@ class IA_AiGroup
         
         // Apply orders based on the state.
         // Approaching is the exception: arc routing waypoints were already queued externally,
-        // so we must NOT wipe them here. Hold posts keep their Wait even if a
+        // so we must NOT wipe them here. Garrison posts keep their assignment even if a
         // caller asked for Attacking/Defending.
         if (m_tacticalState != IA_GroupTacticalState.Approaching)
         {
-            if (!(m_isHoldingPost && HasHoldWaypoint()))
+            if (!(m_isHoldingPost && (HasHoldWaypoint() || m_typedClearScheduled)))
             {
                 CancelPendingTypedClear();
                 RemoveAllOrders();
@@ -3872,6 +4195,8 @@ class IA_AiGroup
     // Make sure CheckDangerEvents is defined as a public method
     void CheckDangerEvents()
     {
+        if (IsDynamicAIPaused() && !m_DynamicAICache.IsWaking())
+            return;
         // Throttle the main check logic per group
         int currentTime_check = GetGame().GetWorld().GetWorldTime();
         if (currentTime_check - m_lastAgentEventCheckTime < AGENT_EVENT_CHECK_INTERVAL_MS)
@@ -4005,6 +4330,9 @@ class IA_AiGroup
     void EvaluateGroupState()
     {
         m_isStateEvaluationScheduled = false;
+
+        if (IsDynamicAIPaused())
+            return;
         
         if (!IsSpawned() || !m_group)
             return;
@@ -4044,6 +4372,14 @@ class IA_AiGroup
 
         m_isInDefendMode = enable;
         m_defendTarget = defendPoint;
+        if (IsDynamicAIPaused())
+        {
+            // Fully cached groups wake through nearest-first budget restore.
+            // Apply the latest requested mode once any soldiers are physical.
+            m_bDynamicAIDefendPending = true;
+            m_DynamicAICache.RequestWake();
+            return;
+        }
         
         if (enable && defendPoint != vector.Zero)
         {
@@ -4095,13 +4431,26 @@ class IA_AiGroup
         m_holdPost = pos;
         m_bKeepAltitude = true;
         m_holdRadius = radius;
-        m_vHoldApproach = vector.Zero;
-        if (pos != vector.Zero)
-            m_vHoldApproach = IA_SpawnPlacement.FindHoldApproach(pos);
+        m_bHoldAfterEntry = false;
+        m_HoldBuilding = null;
+        TryRegisterDynamicAI();
     }
 
-    //! Wait at an interior post is not a Move. Groups spawn on the road, walk to
-    //! an outdoor approach, then enter the validated hold pose.
+    bool IsBuildingGarrison()
+    {
+        return m_isHoldingPost && !m_bDefendPost;
+    }
+
+    void SetHoldAfterBuildingEntry(bool enabled)
+    {
+        if (!IsBuildingGarrison())
+            return;
+        m_bHoldAfterEntry = enabled;
+        m_HoldBuilding = IA_BuildingGarrison.FindBuilding(m_holdPost);
+    }
+
+    //! Defend drives the entire walk into the building. Wait is only a final
+    //! assignment for the alternating teams whose living members are inside.
     protected void StartHoldMarch()
     {
         if (m_bDefendPost)
@@ -4111,67 +4460,48 @@ class IA_AiGroup
 
     protected void TickHoldMarch()
     {
-        if (m_bDefendPost)
+        if (IsDynamicAIPaused())
+            return;
+        if (!IsBuildingGarrison() || m_bSpawnAborted || !m_group)
             return;
         if (m_holdPost == vector.Zero)
             return;
-
-        if (m_bHoldEntered)
+        if (!m_isSpawned || HasPendingUnitSpawns())
+            return;
+        if (GetAliveCount() == 0)
         {
-            if (!HasHoldWaypoint())
-                AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+            UnpinInboundSimulation();
             return;
         }
 
-        if (!m_isSpawned)
-            return;
-
-        vector here = GetOrigin();
-        if (here == vector.Zero)
-            here = m_staggeredSpawnPos;
-
-        if (here != vector.Zero)
+        if (!m_bHoldEntered)
         {
-            if (vector.Distance(here, m_holdPost) <= IA_SpawnPlacement.HOLD_ENTER_M)
+            // Live members keep walking, but absent reserves cannot prove arrival.
+            if (IA_BuildingGarrison.HasReachedInterior(m_group, m_HoldBuilding, m_holdPost, m_holdRadius))
             {
+                // Live members prove arrival. Virtual reserves inherit Hold.
                 EnterHoldPost();
                 return;
             }
+            if (!m_bInboundSimPinned)
+                EnableBuildingMarchSimulation();
+            ScheduleHoldMarchTick();
         }
 
-        if (m_vHoldApproach == vector.Zero)
-            m_vHoldApproach = IA_SpawnPlacement.FindHoldApproach(m_holdPost);
-
-        if (m_vHoldApproach == vector.Zero)
-        {
-            EnterHoldPost();
-            return;
-        }
-
-        if (here != vector.Zero)
-        {
-            if (vector.Distance(here, m_vHoldApproach) <= IA_SpawnPlacement.HOLD_APPROACH_ARRIVE_M)
-            {
-                EnterHoldPost();
-                return;
-            }
-        }
-
-        if (HasActiveWaypoint())
+        // Let ActivityDefend finish before the queued Wait is installed.
+        if (m_typedClearScheduled || HasHoldWaypoint())
             return;
 
-        AddOrder(m_vHoldApproach, IA_AiOrder.PriorityMove, true);
-        EnableInboundSimulation(m_vHoldApproach);
-        ScheduleHoldMarchTick();
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print(string.Format("[IA][Hold] March %1 then enter %2", m_vHoldApproach.ToString(), m_holdPost.ToString()), LogLevel.NORMAL);
-        }
+        AddOrder(m_holdPost, IA_BuildingGarrison.OrderFor(m_bHoldAfterEntry, m_bHoldEntered), true);
     }
 
     protected void ScheduleHoldMarchTick()
     {
+        if (IsDynamicAIPaused())
+            return;
         if (m_bHoldMarchScheduled)
+            return;
+        if (m_bSpawnAborted || !m_group || GetAliveCount() == 0)
             return;
         if (m_bHoldEntered)
             return;
@@ -4181,12 +4511,14 @@ class IA_AiGroup
             return;
 
         m_bHoldMarchScheduled = true;
-        GetGame().GetCallqueue().CallLater(this.OnHoldMarchTick, 1000, false);
+        GetGame().GetCallqueue().CallLater(this.OnHoldMarchTick, 2000, false);
     }
 
     protected void OnHoldMarchTick()
     {
         m_bHoldMarchScheduled = false;
+        if (IsDynamicAIPaused())
+            return;
         TickHoldMarch();
         if (!m_bHoldEntered && m_isHoldingPost && !m_bDefendPost)
             ScheduleHoldMarchTick();
@@ -4194,63 +4526,24 @@ class IA_AiGroup
 
     protected void EnterHoldPost()
     {
+        if (IsDynamicAIPaused())
+            return;
         if (m_bHoldEntered)
             return;
         if (m_holdPost == vector.Zero)
             return;
 
         m_bHoldEntered = true;
-        RelocateHoldUnits(m_holdPost);
-        RemoveAllOrders();
-        AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+        if (m_bHoldAfterEntry)
+        {
+            // HasHoldWaypoint now expects Wait, so it permits clearing Defend.
+            // AddOrder uses the existing typed-tree handoff before adding Wait.
+            AddOrder(m_holdPost, IA_AiOrder.Hold, true);
+        }
         UnpinInboundSimulation();
         if (IA_Log.IsDebugEnabled())
         {
-            Print(string.Format("[IA][Hold] Entered post at %1", m_holdPost.ToString()), LogLevel.NORMAL);
-        }
-    }
-
-    protected void RelocateHoldUnits(vector holdPos)
-    {
-        if (!m_group)
-            return;
-        if (holdPos == vector.Zero)
-            return;
-
-        m_group.SetOrigin(holdPos);
-
-        array<AIAgent> agents = {};
-        m_group.GetAgents(agents);
-        int count = agents.Count();
-        int i;
-        for (i = 0; i < count; i++)
-        {
-            AIAgent agent = agents[i];
-            if (!agent)
-                continue;
-
-            IEntity pawn = agent.GetControlledEntity();
-            if (!pawn)
-                continue;
-
-            vector pos = holdPos;
-            if (i > 0)
-            {
-                float iF = i;
-                float countF = count;
-                float ang = Math.PI2 * (iF / countF);
-                vector probe;
-                probe[0] = holdPos[0] + Math.Cos(ang) * 0.9;
-                probe[1] = holdPos[1];
-                probe[2] = holdPos[2] + Math.Sin(ang) * 0.9;
-                if (IA_SpawnPlacement.HasStandRoom(probe))
-                    pos = probe;
-            }
-
-            pawn.SetOrigin(pos);
-            Physics phys = pawn.GetPhysics();
-            if (phys)
-                phys.SetVelocity(vector.Zero);
+            Print(string.Format("[IA][Garrison] Walked into post at %1 wait=%2", m_holdPost.ToString(), m_bHoldAfterEntry), LogLevel.NORMAL);
         }
     }
 
@@ -4692,6 +4985,8 @@ class IA_AiGroup
 
     void EnableInboundSimulation(vector target)
     {
+        // Explicit mission callers take ownership, even over an existing march pin.
+        m_bBuildingMarchSimPinned = false;
         m_bInboundSimPinned = true;
         m_vInboundTarget = target;
         RequestInboundNavmeshLoad();
@@ -4701,6 +4996,44 @@ class IA_AiGroup
         {
             Print(string.Format("[IA][InboundSim] pin target=%1", target.ToString()), LogLevel.NORMAL);
         }
+    }
+
+    protected void EnableBuildingMarchSimulation()
+    {
+        if (m_bInboundSimPinned || IsDynamicAIPaused())
+            return;
+        EnableInboundSimulation(m_holdPost);
+        m_bBuildingMarchSimPinned = true;
+    }
+
+    protected bool IsBuildingMarchSimulationPinned()
+    {
+        return m_bInboundSimPinned && m_bBuildingMarchSimPinned && IsBuildingGarrison() && !m_bHoldEntered;
+    }
+
+    // PinInboundAgent uses PreventMaxLOD. That is visible as GetPermanentLOD() != -1
+    // and must not veto the cache path that already permits this arrival-owned pin.
+    bool OwnsBuildingMarchForcedLod()
+    {
+        return IsBuildingMarchSimulationPinned();
+    }
+
+    bool BlocksDynamicAIForcedLod(AIAgent agent)
+    {
+        if (!agent)
+            return false;
+        return BlocksDynamicAIForcedLodValue(agent.GetPermanentLOD());
+    }
+
+    bool BlocksDynamicAIForcedLodValue(int permanentLod)
+    {
+        return false;
+    }
+
+    protected void SuspendBuildingMarchSimulation()
+    {
+        if (IsBuildingMarchSimulationPinned())
+            UnpinInboundSimulation();
     }
 
     protected void RequestInboundNavmeshLoad()
@@ -4725,25 +5058,28 @@ class IA_AiGroup
 
         array<AIAgent> agents = {};
         m_group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            PinInboundAgent(agent);
+        }
+    }
+
+    protected void PinInboundAgent(AIAgent agent)
+    {
+        if (!agent)
+            return;
         int maxLod = AIAgent.GetMaxLOD();
         int nextToLast = maxLod - 1;
         if (nextToLast < 0)
             nextToLast = 0;
-
-        foreach (AIAgent agent : agents)
-        {
-            if (!agent)
-                continue;
-
-            if (agent.GetLOD() == maxLod)
-                agent.SetLOD(nextToLast);
-
-            agent.PreventMaxLOD();
-        }
+        if (agent.GetLOD() == maxLod)
+            agent.SetLOD(nextToLast);
+        agent.PreventMaxLOD();
     }
 
     protected void UnpinInboundSimulation()
     {
+        m_bBuildingMarchSimPinned = false;
         if (!m_bInboundSimPinned)
             return;
 
@@ -4850,6 +5186,11 @@ class IA_AiGroup
             // Do not scatter its operator outside that certified spawn envelope.
             unitSpawnPos = m_staggeredSpawnPos;
         }
+        else if (IsBuildingGarrison())
+        {
+            vector buildingScatter = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(0.3, 0.9, vector.Zero);
+            unitSpawnPos = IA_SpawnPlacement.OutdoorOrOrigin(m_staggeredSpawnPos, buildingScatter);
+        }
         else if (m_isHoldingPost || m_bKeepAltitude)
         {
             vector offset = IA_Game.rng.GenerateRandomPointInRadius(0.3, 0.9, vector.Zero);
@@ -4861,6 +5202,18 @@ class IA_AiGroup
         {
             vector scattered = m_staggeredSpawnPos + IA_Game.rng.GenerateRandomPointInRadius(1, 3, vector.Zero);
             unitSpawnPos = IA_SpawnPlacement.OutdoorOrOrigin(m_staggeredSpawnPos, scattered);
+        }
+        // Reserve-first spawn: record this soldier instead of creating it while
+        // the shared target is full and no player is anywhere near its position.
+        if (TrySeedDynamicAIReserve(charPrefabPath, unitSpawnPos))
+        {
+            TryRegisterDynamicAI();
+            m_pendingUnitsToSpawn--;
+            if (m_pendingUnitsToSpawn > 0)
+                GetGame().GetCallqueue().CallLater(this.SpawnNextUnit, 100, false);
+            else
+                OnStaggeredSpawningComplete();
+            return;
         }
         Resource charRes = Resource.Load(charPrefabPath);
         if (!charRes)
@@ -4904,6 +5257,7 @@ class IA_AiGroup
             m_unitsSpawnedCount++;
             PinInboundAgents();
             RegisterAirborneJumper(charEntity);
+            TryRegisterDynamicAI();
         }
         
         // Decrement pending count and schedule next spawn
@@ -4951,6 +5305,7 @@ class IA_AiGroup
         m_unitsSpawnedCount++;
         PinInboundAgents();
         RegisterAirborneJumper(charEntity);
+        TryRegisterDynamicAI();
     }
 
     void FinalizeStaggeredSpawn()
@@ -4976,6 +5331,11 @@ class IA_AiGroup
 
         // Mark as spawned
         PerformSpawn();
+
+        // PerformSpawn adopts recorded reserves when the cache already exists.
+        // Anything still pending belongs to a group Dynamic AI cannot manage.
+        if (m_aDynamicAIReserveSeeds && !m_aDynamicAIReserveSeeds.IsEmpty())
+            GetGame().GetCallqueue().CallLater(this.ResolveDynamicAIReserveSeeds, 5000, false);
         
         if (IA_Log.IsDebugEnabled())
         {
@@ -5215,6 +5575,8 @@ class IA_AiGroup
     // Add this new method before SetTacticalState method
     void RequestTacticalStateChange(IA_GroupTacticalState newState, vector targetPos = vector.Zero, IEntity targetEntity = null)
     {
+        if (IsDynamicAIPaused())
+            return;
         if (m_isHoldingPost)
             return;
 
@@ -5295,76 +5657,19 @@ class IA_AiGroup
     }
     // --- END ADDED ---
 
-    // NEW PRIVATE HELPER METHOD
     private void TryFindAndSetAssignedArea()
     {
-        if (m_lastAssignedArea) // Already have an area, no need to search
-        {
-            // Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 already has m_lastAssignedArea: %2. Skipping search.", this, m_lastAssignedArea.ToString()), LogLevel.NORMAL);
+        if (m_lastAssignedArea)
             return;
-        }
 
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 attempting to find its area (m_lastAssignedArea is currently NULL).", 
-                this, m_initialPosition.ToString()), LogLevel.NORMAL);
-        }
+        // Objective and mortar markers can overlap an AO without owning an area.
+        IA_AreaInstance areaInstance = m_owningAreaInstance;
+        if (!areaInstance)
+            areaInstance = IA_Game.GetAreaForPosition(m_initialPosition);
 
-        IA_AreaMarker foundMarker = null;
-        array<IA_AreaMarker> allMarkers = IA_AreaMarker.GetAllMarkers();
-        int markersSearchedCount = 0;
-        
-        if (allMarkers)
-            markersSearchedCount = allMarkers.Count();
-        else 
-            markersSearchedCount = -1; // Indicate null array if that happens
-
-        if (allMarkers && !allMarkers.IsEmpty())
-        {
-            if (IA_Log.IsDebugEnabled())
-            {
-                Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1: Found %2 total area markers to check.", this, markersSearchedCount), LogLevel.NORMAL);
-            }
-            foreach (IA_AreaMarker marker : allMarkers)
-            {
-                if (marker && marker.IsPositionInside(m_initialPosition))
-                {
-                    foundMarker = marker;
-                    if (IA_Log.IsDebugEnabled())
-                    {
-                        Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 at %2 found to be INSIDE marker %3 (Center: %4, Radius: %5)",
-                            this, m_initialPosition.ToString(), marker.ToString(), marker.GetOrigin().ToString(), marker.GetRadius()), LogLevel.NORMAL);
-                    }
-                    break;
-                }
-            }
-        }
-        else
-        {
-             Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1: IA_AreaMarker.GetAllMarkers() returned null or empty array. Count: %2", this, markersSearchedCount), LogLevel.WARNING);
-        }
-
-        if (foundMarker)
-        {
-            IA_Area areaToAssign = IA_Area.Cast(foundMarker.FindComponent(IA_Area));
-            if (areaToAssign)
-            {
-                SetAssignedArea(areaToAssign); // This will use the updated SetAssignedArea with logging
-                // Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 SUCCESS: Found marker %2 and IA_Area component %3. Area set.", this, foundMarker.ToString(), areaToAssign.ToString()), LogLevel.NORMAL);
-            }
-            else
-            {
-                Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Found marker %2, but FAILED TO FIND/CAST IA_Area component on it.",
-                    this, foundMarker.ToString()), LogLevel.WARNING);
-            }
-        }
-        else
-        {
-            Print(string.Format("[IA_AiGroup.TryFindAndSetAssignedArea] Group %1 FAILURE: Could NOT find an area marker that its initial position %2 is inside. (Searched %3 markers)",
-                this, m_initialPosition.ToString(), markersSearchedCount), LogLevel.WARNING);
-        }
+        if (areaInstance)
+            SetAssignedArea(areaInstance.GetArea());
     }
-    // END NEW PRIVATE HELPER METHOD
     //------------------------------------------------------------------------------------------------
 
     // Removed OnUnitAdded, OnAllVehicleGroupMembersSpawned, and OnAllHostileCiviliansSpawned callbacks
@@ -6080,4 +6385,514 @@ class IA_AiGroup
 		m_owningAreaInstance = owner;
 	}
 
+    bool IsDynamicAICached()
+    {
+        return m_DynamicAICache && m_DynamicAICache.IsCached();
+    }
+
+    bool IsDynamicAIPaused()
+    {
+        return m_DynamicAICache && m_DynamicAICache.IsPaused();
+    }
+
+    // Budget accounting measures living physical AI, including downed soldiers.
+    // Native membership can still include a dying pawn during its death callback.
+    int GetDynamicAIPhysicalAliveCount()
+    {
+#ifdef WORKBENCH
+        if (m_bDynamicAIOwnerTest)
+            return m_iDynamicAIPhysicalTest;
+#endif
+        if (!m_group)
+            return 0;
+        PlayerManager manager;
+        if (GetGame())
+            manager = GetGame().GetPlayerManager();
+        ref array<AIAgent> agents = {};
+        m_group.GetAgents(agents);
+        int count;
+        foreach (AIAgent agent : agents)
+        {
+            if (!agent)
+                continue;
+            ChimeraCharacter pawn = ChimeraCharacter.Cast(agent.GetControlledEntity());
+            if (!pawn || (manager && manager.GetPlayerIdFromControlledEntity(pawn) > 0))
+                continue;
+            CharacterControllerComponent controller = pawn.GetCharacterController();
+            if (controller && controller.GetLifeState() == ECharacterLifeState.DEAD)
+                continue;
+            count++;
+        }
+        return count;
+    }
+
+    bool IsDynamicAIOwnerLive()
+    {
+#ifdef WORKBENCH
+        if (m_bDynamicAIOwnerTest)
+            return true;
+#endif
+        if (m_bSpawnAborted || !m_group || !m_DynamicAIOwner || m_DynamicAIOwner.IsShutDown())
+            return false;
+        // Mid-stagger groups already have a leader. Counting them lets later
+        // far squads seed reserves instead of creating every remaining soldier.
+        if (m_isSpawned)
+            return true;
+        return m_unitsSpawnedCount > 0;
+    }
+
+    void SetDynamicAIOwner(IA_AreaInstance owner)
+    {
+        m_DynamicAIOwner = owner;
+        TryRegisterDynamicAI();
+    }
+
+    IA_AreaInstance GetDynamicAIOwner()
+    {
+        return m_DynamicAIOwner;
+    }
+
+    protected void TryRegisterDynamicAI()
+    {
+        // Registration retains no soldier entities and is inert while disabled.
+        if (!Replication.IsServer() || !IsDynamicAIOwnerLive())
+            return;
+        if (!m_DynamicAICache)
+        {
+            m_DynamicAICache = new IA_DynamicAIBudgetCache();
+            m_DynamicAICache.Init(this);
+            IA_DynamicAISpawning.Register(m_DynamicAICache);
+        }
+        AdoptDynamicAIReserveSeeds();
+    }
+
+    // Reserve-first spawn. A squad that is already beyond the shared target and
+    // far from every player records its remaining soldiers instead of creating
+    // them; the budget worker restores them nearest-first as players approach.
+    bool CanSeedDynamicAIReserves()
+    {
+        if (!m_group || m_bSpawnAborted || m_unitsSpawnedCount <= 0)
+            return false;
+        // The first soldier always spawns, so the squad keeps a live leader,
+        // death listeners and behavior without a restore round trip.
+        if (m_isCivilian || m_HVTGroup || m_bAirborneDrop || m_isHoldingPost || m_bKeepAltitude)
+            return false;
+        if (m_pendingSeatTeleport || IsMortarCrew() || HasStaticGunAssignment())
+            return false;
+        if (ShouldKeepVehicleOccupantsPhysical() || m_passengerVehicle || Vehicle.Cast(m_referencedEntity))
+            return false;
+        return true;
+    }
+
+    protected bool TrySeedDynamicAIReserve(ResourceName prefab, vector position)
+    {
+        if (!IA_DynamicAISpawning.ShouldSeedReserve(this, position))
+            return false;
+        ref IA_DynamicAIUnit seed = new IA_DynamicAIUnit();
+        seed.SeedReserve(prefab, position);
+        if (!m_aDynamicAIReserveSeeds)
+            m_aDynamicAIReserveSeeds = new array<ref IA_DynamicAIUnit>();
+        m_aDynamicAIReserveSeeds.Insert(seed);
+        return true;
+    }
+
+    protected void AdoptDynamicAIReserveSeeds()
+    {
+        if (!m_DynamicAICache || !m_aDynamicAIReserveSeeds || m_aDynamicAIReserveSeeds.IsEmpty())
+            return;
+        ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(m_DynamicAICache);
+        if (!budgetCache)
+            return;
+        budgetCache.AdoptReserveSeeds(m_aDynamicAIReserveSeeds);
+        m_aDynamicAIReserveSeeds = null;
+    }
+
+    // A squad the cache never adopted must not silently lose its roster. Spawn
+    // those soldiers for real instead, one per call, and keep the group intact.
+    void ResolveDynamicAIReserveSeeds()
+    {
+        if (!m_aDynamicAIReserveSeeds || m_aDynamicAIReserveSeeds.IsEmpty())
+            return;
+        TryRegisterDynamicAI();
+        if (!m_aDynamicAIReserveSeeds || m_aDynamicAIReserveSeeds.IsEmpty())
+            return;
+        if (m_bSpawnAborted || !m_group)
+        {
+            m_aDynamicAIReserveSeeds = null;
+            return;
+        }
+        ref IA_DynamicAIUnit seed = m_aDynamicAIReserveSeeds[0];
+        m_aDynamicAIReserveSeeds.RemoveOrdered(0);
+        Resource charRes = Resource.Load(seed.m_sPrefab);
+        if (charRes)
+        {
+            IEntity charEntity = GetGame().SpawnEntityPrefab(charRes, null, IA_CreateSimpleSpawnParams(seed.GetPosition()));
+            if (charEntity)
+            {
+                if (m_group.AddAIEntityToGroup(charEntity))
+                {
+                    SetupDeathListenerForUnit(charEntity);
+                    m_unitsSpawnedCount++;
+                }
+                else
+                    IA_Game.AddEntityToGc(charEntity);
+            }
+        }
+        if (!m_aDynamicAIReserveSeeds.IsEmpty())
+            GetGame().GetCallqueue().CallLater(this.ResolveDynamicAIReserveSeeds, 250, false);
+    }
+
+    bool IsDynamicAICacheReady()
+    {
+        if (!IsDynamicAIOwnerLive() || GetDynamicAIRoleBlockReason() != "")
+            return false;
+        // Re-cache the current survivors; casualties must never refill initial slots.
+        return m_group.GetAgentsCount() > 0;
+    }
+
+    string GetDynamicAIRoleBlockReason()
+    {
+        if (m_bAirborneDrop)
+            return "airborne";
+        if (m_pendingSeatTeleport)
+            return "pending seat teleport";
+        if (m_typedClearScheduled || HasPendingUnitSpawns())
+            return "initialization";
+        if (ShouldKeepVehicleOccupantsPhysical())
+            return "vehicle";
+        return "";
+    }
+
+    void SuspendForDynamicAI()
+    {
+#ifdef WORKBENCH
+        if (m_bDynamicAIOwnerTest)
+        {
+            m_iDynamicAISuspendTest++;
+            return;
+        }
+#endif
+        if (!IsDynamicAIPaused() || !IsDynamicAIOwnerLive())
+            return;
+        SCR_AIGroup group = m_group;
+        GetGame().GetCallqueue().Remove(this.EvaluateGroupState);
+        GetGame().GetCallqueue().Remove(this.SetupDeathListener);
+        GetGame().GetCallqueue().Remove(this.OnHoldMarchTick);
+        GetGame().GetCallqueue().Remove(this.ApplyDynamicAICombatProfile);
+        m_isStateEvaluationScheduled = false;
+        m_bHoldMarchScheduled = false;
+        UnpinInboundSimulation();
+        if (!IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
+            return;
+        array<AIAgent> agents = {};
+        group.GetAgents(agents);
+        foreach (AIAgent agent : agents)
+        {
+            if (agent)
+            {
+                SCR_ChimeraCharacter pawn = SCR_ChimeraCharacter.Cast(agent.GetControlledEntity());
+                if (pawn)
+                {
+                    SCR_CharacterControllerComponent controller = SCR_CharacterControllerComponent.Cast(pawn.GetCharacterController());
+                    if (controller)
+                        controller.GetOnPlayerDeathWithParam().Remove(OnMemberDeath);
+                }
+                agent.DeactivateAI();
+                // Behavior aborts can synchronously retire the owning area.
+                if (!IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
+                    return;
+            }
+        }
+        group.DeactivateAI();
+    }
+
+    // Selective removal must leave the surviving squad's listeners and behavior
+    // running. The cache publishes its record before calling this helper.
+    void PrepareDynamicAIUnitRemoval(IEntity entity)
+    {
+        if (!entity || !IsDynamicAIOwnerLive())
+            return;
+        if (m_OwningSideObjective)
+            m_OwningSideObjective.OnDynamicAIUnitCached(this, entity);
+        ChimeraCharacter pawn = ChimeraCharacter.Cast(entity);
+        if (!pawn)
+            return;
+        SCR_CharacterControllerComponent controller = SCR_CharacterControllerComponent.Cast(pawn.GetCharacterController());
+        if (controller)
+            controller.GetOnPlayerDeathWithParam().Remove(OnMemberDeath);
+    }
+
+    void SetupDynamicAIUnit(IEntity entity)
+    {
+        SetupDeathListenerForUnit(entity);
+        if (m_OwningSideObjective)
+            m_OwningSideObjective.OnDynamicAIUnitRestored(this, entity);
+        // Character init can overwrite the immediate profile. Reapply only this
+        // replacement, instead of rescanning the whole group once per soldier.
+        GetGame().GetCallqueue().CallLater(ApplyDynamicAICombatProfile, 2000, false, entity);
+    }
+
+    // The first restored member resumes the wrapper. Later members still need
+    // the current arrival pin without traversing or resetting their teammates.
+    void OnDynamicAIUnitAttached(IEntity entity)
+    {
+        if (!entity || IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || !m_bInboundSimPinned)
+            return;
+        AIControlComponent control = AIControlComponent.Cast(entity.FindComponent(AIControlComponent));
+        if (!control)
+            return;
+        AIAgent agent = control.GetControlAIAgent();
+        if (agent && agent.GetParentGroup() == m_group)
+            PinInboundAgent(agent);
+    }
+
+    protected void ApplyDynamicAICombatProfile(IEntity entity)
+    {
+        if (!entity || !IsDynamicAIOwnerLive())
+            return;
+        PlayerManager manager = GetGame().GetPlayerManager();
+        if (manager && manager.GetPlayerIdFromControlledEntity(entity) > 0)
+            return;
+        ApplyCombatToEntity(entity);
+    }
+
+    void ResumeAfterDynamicAI()
+    {
+#ifdef WORKBENCH
+        if (m_bDynamicAIOwnerTest)
+        {
+            m_iDynamicAIResumeTest++;
+            return;
+        }
+#endif
+        if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive())
+            return;
+        SCR_AIGroup group = m_group;
+        // The last soldier can be killed while other restoration work is pending.
+        if (group.GetPlayerAndAgentCount() == 0)
+        {
+            group.OnEmpty();
+            return;
+        }
+        group.ActivateAI();
+        if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
+            return;
+        if (m_bDynamicAIDefendPending && !IsDynamicAIPaused())
+        {
+            m_bDynamicAIDefendPending = false;
+            SetDefendMode(m_isInDefendMode, m_defendTarget);
+            if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
+                return;
+        }
+        ScheduleNextStateEvaluation();
+        SetupDeathListener();
+        if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
+            return;
+        // Reacquire movement support for the live roster. Arrival uses living
+        // members; restored reserves inherit the group's current Hold order.
+        if (IsBuildingGarrison())
+            TickHoldMarch();
+        if (IsDynamicAIPaused() || !IsDynamicAIOwnerLive() || m_group != group)
+            return;
+        if (IA_Log.IsDebugEnabled())
+        {
+            Print(string.Format("[IA][DynamicAI] Restored infantry at %1.", GetOrigin()), LogLevel.NORMAL);
+        }
+    }
+
+#ifdef WORKBENCH
+    // Substitute only the physical owner boundary for cache state regressions.
+    // No native group, soldier entity, call queue or preview world is created.
+    static IA_AiGroup CreateDynamicAIBudgetOwnerForTest(IA_DynamicAIGroupCache cache, int physical)
+    {
+        ref IA_AiGroup owner = new IA_AiGroup("100 20 100", IA_SquadType.Riflemen, IA_Faction.USSR, 4);
+        owner.m_bDynamicAIOwnerTest = true;
+        owner.m_iDynamicAIPhysicalTest = physical;
+        owner.m_lastConfirmedPosition = "100 20 100";
+        owner.m_DynamicAICache = cache;
+        return owner;
+    }
+
+    void SetDynamicAIPhysicalForTest(int physical)
+    {
+        m_iDynamicAIPhysicalTest = physical;
+    }
+
+    void SetLiveMemberPositionsForTest(array<vector> positions)
+    {
+        if (!positions)
+        {
+            m_aLivePositionsForTest = null;
+            return;
+        }
+        m_aLivePositionsForTest = new array<vector>();
+        foreach (vector position : positions)
+            m_aLivePositionsForTest.Insert(position);
+    }
+
+    int GetDynamicAISuspendCountForTest()
+    {
+        return m_iDynamicAISuspendTest;
+    }
+
+    int GetDynamicAIResumeCountForTest()
+    {
+        return m_iDynamicAIResumeTest;
+    }
+
+    void SetVehicleCrewForTest(bool crew)
+    {
+        m_isVehicleCrewGroup = crew;
+    }
+
+    void SetSeatedAssignedMortarForTest(bool seatedAssigned)
+    {
+        m_isMortarCrew = seatedAssigned;
+        m_bTestSeatedAssignedMortar = seatedAssigned;
+    }
+
+    void EnterHoldPostForTest()
+    {
+        EnterHoldPost();
+    }
+
+    bool CanSeedDynamicAIReservesForTest()
+    {
+        return CanSeedDynamicAIReserves();
+    }
+
+    // Native wrapper regression; the private constructor stays in its own class.
+	static int RunDynamicAIGroupRegression()
+	{
+		int failures;
+		ref IA_AiGroup group = new IA_AiGroup("100 20 100", IA_SquadType.Riflemen, IA_Faction.USSR, 4);
+		group.m_tacticalState = IA_GroupTacticalState.DefendPatrol;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "ordinary patrols qualify without a hold-post assignment", failures);
+		group.m_isHoldingPost = true;
+		group.m_holdPost = "110 25 110";
+		group.m_bHoldAfterEntry = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "unfinished building walks can cache their current positions", failures);
+		group.m_bInboundSimPinned = true;
+		group.m_bBuildingMarchSimPinned = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "an arrival-owned simulation pin permits caching", failures);
+		DynamicAIRegressionCheck(group.OwnsBuildingMarchForcedLod(), "unfinished building walks own their PreventMaxLOD pin", failures);
+		DynamicAIRegressionCheck(!group.BlocksDynamicAIForcedLodValue(0), "arrival-owned PreventMaxLOD does not veto snapshot or eviction", failures);
+		DynamicAIRegressionCheck(!group.BlocksDynamicAIForcedLodValue(-1), "an unforced LOD never vetoes cache", failures);
+		group.SuspendBuildingMarchSimulation();
+		DynamicAIRegressionCheck(!group.m_bInboundSimPinned && !group.m_bBuildingMarchSimPinned, "suspension releases the old soldiers' arrival pin", failures);
+		DynamicAIRegressionCheck(!group.m_bHoldEntered && group.m_bHoldAfterEntry && group.m_holdPost == "110 25 110", "suspension preserves the destination and pending interior arrival", failures);
+		group.m_bInboundSimPinned = true;
+		group.m_vInboundTarget = "300 20 300";
+		group.EnableBuildingMarchSimulation();
+		group.SuspendBuildingMarchSimulation();
+		DynamicAIRegressionCheck(group.m_bInboundSimPinned && !group.m_bBuildingMarchSimPinned && group.m_vInboundTarget == "300 20 300", "building march cannot take over or suspend a mission-owned pin", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "mission pin no longer excludes a building garrison", failures);
+		DynamicAIRegressionCheck(!group.OwnsBuildingMarchForcedLod() && !group.BlocksDynamicAIForcedLodValue(0), "mission-owned PreventMaxLOD no longer vetoes cache", failures);
+		group.UnpinInboundSimulation();
+		group.m_bHoldEntered = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "settled building garrisons remain supported", failures);
+		group.m_isHoldingPost = false;
+		group.m_bInboundSimPinned = true;
+		group.m_bBuildingMarchSimPinned = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "an obsolete arrival tag cannot exempt another role's pin", failures);
+		DynamicAIRegressionCheck(!group.BlocksDynamicAIForcedLodValue(0), "mission-owned PreventMaxLOD no longer vetoes cache", failures);
+		group.UnpinInboundSimulation();
+		group.m_isVehicleCrewGroup = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle", "vehicle crews stay physical", failures);
+		group.m_isVehicleCrewGroup = false;
+		group.m_isVehiclePassengerGroup = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle", "vehicle passengers stay physical", failures);
+		group.m_passengerDumped = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "dumped passengers on foot can cache", failures);
+		group.m_isVehiclePassengerGroup = false;
+		group.m_passengerDumped = false;
+		group.m_pendingSeatTeleport = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "pending seat teleport", "pending seat teleport still excludes a group", failures);
+		group.m_pendingSeatTeleport = false;
+		group.m_isDefendWaveGroup = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "defense waves cache after the event", failures);
+		group.m_isDefendWaveGroup = false;
+		group.m_bEliteProfile = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "elite patrols qualify for caching", failures);
+		group.m_bEliteProfile = false;
+		group.m_HVTGroup = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "HVT groups qualify while remaining logically alive", failures);
+		group.m_HVTGroup = false;
+		group.m_isCivilian = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "civilians qualify for a separate cache pool", failures);
+		group.m_isCivilian = false;
+		group.m_isMortarCrew = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "unseated mortar-crew flags still qualify for occupancy caching", failures);
+		group.SetSeatedAssignedMortarForTest(true);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "vehicle", "assigned mortar-vehicle gunners stay physical", failures);
+		group.SetSeatedAssignedMortarForTest(false);
+		group.m_isMortarCrew = false;
+		group.m_bInboundSimPinned = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "inbound simulation ownership no longer blocks cache", failures);
+		group.m_bInboundSimPinned = false;
+		group.m_bAirborneDrop = true;
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "airborne", "in-flight airborne groups remain live", failures);
+		group.m_bAirborneDrop = false;
+
+		ref IA_DynamicAIGroupCacheFixture cache = new IA_DynamicAIGroupCacheFixture();
+		cache.Init(group);
+		group.m_DynamicAICache = cache;
+		cache.SetCachedForTest(true);
+		group.m_lastConfirmedPosition = "150 20 160";
+		DynamicAIRegressionCheck(group.GetOrigin() == "150 20 160", "a fully paused group reports its saved pose instead of an empty native origin", failures);
+		group.m_isHoldingPost = true;
+		group.m_bHoldEntered = false;
+		group.m_bHoldMarchScheduled = true;
+		group.OnHoldMarchTick();
+		group.EnterHoldPost();
+		group.EnableBuildingMarchSimulation();
+		DynamicAIRegressionCheck(!group.m_bHoldMarchScheduled && !group.m_bHoldEntered && !group.m_bInboundSimPinned, "fully paused buildings cannot reschedule, arrive, or repin", failures);
+		group.m_isHoldingPost = false;
+		DynamicAIRegressionCheck(group.ShouldSkipInfantryOrders() && group.ShouldKeepOwnOrders(), "cached infantry cannot enter live tactical reassignment", failures);
+		group.m_lastOrderPosition = "100 20 100";
+		group.m_lastOrderTime = 123;
+		group.AddOrder("200 20 200", IA_AiOrder.Move, true);
+		DynamicAIRegressionCheck(group.m_lastOrderPosition == "100 20 100" && group.m_lastOrderTime == 123, "cached patrol orders retain their destination and time", failures);
+		group.SetTacticalState(IA_GroupTacticalState.Approaching, "200 20 200", null, true);
+		DynamicAIRegressionCheck(group.GetTacticalState() == IA_GroupTacticalState.DefendPatrol, "an external tactical update cannot replace a cached patrol state", failures);
+		group.RequestTacticalStateChange(IA_GroupTacticalState.Attacking, "200 20 200");
+		DynamicAIRegressionCheck(!group.HasPendingStateRequest(), "absent soldiers cannot submit fresh combat requests", failures);
+
+		group.SetDefendMode(true, "300 20 300");
+		DynamicAIRegressionCheck(cache.IsWaking() && group.m_bDynamicAIDefendPending && group.IsInDefendMode(), "defense assignment requests restoration and defers its orders", failures);
+		DynamicAIRegressionCheck(!group.m_bInboundSimPinned && group.GetTacticalState() == IA_GroupTacticalState.DefendPatrol, "defense does not start movement on an empty group", failures);
+		group.SetDefendMode(false);
+		DynamicAIRegressionCheck(!group.IsInDefendMode() && group.m_bDynamicAIDefendPending && cache.IsWaking(), "a later defense cancellation wins without cancelling restoration", failures);
+
+		cache.SetHybridForTest(true);
+		DynamicAIRegressionCheck(group.IsDynamicAICached() && !group.IsDynamicAIPaused(), "a hybrid roster retains virtual accounting without pausing live members", failures);
+		DynamicAIRegressionCheck(!group.ShouldSkipInfantryOrders() && !group.ShouldKeepOwnOrders(), "reduced ordinary infantry can accept tactical assignments", failures);
+		group.SetTacticalState(IA_GroupTacticalState.Approaching, "200 20 200", null, true);
+		DynamicAIRegressionCheck(group.GetTacticalState() == IA_GroupTacticalState.Approaching, "hybrid infantry remain on the live tactical path", failures);
+		group.RequestTacticalStateChange(IA_GroupTacticalState.Attacking, "220 20 220");
+		DynamicAIRegressionCheck(group.HasPendingStateRequest(), "hybrid soldiers can request combat reactions", failures);
+		group.m_isHoldingPost = true;
+		group.m_bHoldEntered = false;
+		group.m_bInboundSimPinned = true;
+		group.EnterHoldPost();
+		DynamicAIRegressionCheck(group.m_bHoldEntered && !group.m_bInboundSimPinned, "a hybrid building roster arrives with its live members and releases the inbound pin", failures);
+		group.m_isHoldingPost = false;
+		DynamicAIRegressionCheck(group.GetDynamicAIPhysicalAliveCount() == 0, "a wrapper without a native roster contributes no physical AI", failures);
+
+		cache.SetCachedForTest(false);
+		DynamicAIRegressionCheck(!group.ShouldSkipInfantryOrders() && !group.ShouldKeepOwnOrders(), "restored ordinary infantry rejoin tactical assignment", failures);
+		group.SetTacticalState(IA_GroupTacticalState.Approaching, "200 20 200", null, true);
+		DynamicAIRegressionCheck(group.GetTacticalState() == IA_GroupTacticalState.Approaching, "the live legacy tactical path still accepts state changes", failures);
+		return failures;
+	}
+
+	protected static void DynamicAIRegressionCheck(bool passed, string description, inout int failures)
+	{
+		if (passed)
+			return;
+		failures++;
+		Print("[IA][DynamicAISpawningConfigTest] " + description, LogLevel.ERROR);
+	}
+
+#endif
 };  

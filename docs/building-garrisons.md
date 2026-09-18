@@ -1,0 +1,15 @@
+# Objective building garrisons
+
+Building teams spawn outside, normally on a road 15–80 m from their assigned post, with an outdoor navigation-mesh fallback in the same ring. They receive an indefinite DefendSmall waypoint at the interior post. Defend uses CoverPost and ObservationPost actions, normal combat priority, no turrets, and explicitly disabled fast init. Entry uses native walking and pathfinding throughout; there is no scripted relocation or teleport fallback.
+
+Assignments alternate per objective: the first team keeps Defend, the second switches to Wait after arrival, and so on. Even totals split equally; odd totals have one extra Defend team. This includes automatic building teams, GM building-hold teams and ordinary occupying squads assigned a cover/observation post. Dynamic-base area defenders and mortar crews retain their existing behavior.
+
+A team qualifies for arrival only when every living member is on foot, within the post radius, within 1.5 m of its floor height, inside the selected building's bounds, and beneath that building's roof or ceiling. The check excludes the team's pawns from roof traces. A missing building, unavailable route, outside member or wrong floor leaves the team on Defend. Defend-to-Wait changes use the existing 400 ms behavior-tree handoff; no pawn positions are changed. Hold is a group assignment, so individual soldiers are not split between incompatible group waypoints.
+
+If outdoor spawning fails, the existing navigation-load retry still applies; the team is skipped after the retry fails. Teams cannot be rescued by teleportation when a building has no usable entrance or navigation links. Defend can select cover within its radius, so choose a small radius for a single room/building.
+
+Validation: run `python -m unittest discover -s tools -p test_building_garrisons.py` and Workbench ResourceManager with `-plugin=IA_BuildingGarrisonTest -run`. These cover source wiring, policy and native waypoint settings, not live movement.
+
+2026-09-08 validation: Game and WorkbenchGame compiled; the native policy/prefab check completed with zero failures (`logs_2026-09-08_20-53-22/script.log`). All six building source checks, the logging-policy scan and eight logging tests passed. The broader emplacement source suite still has two pre-existing failures: it references the absent `IA_StaticGunCombat.c` and expects a retired `m_bAccepted || now < m_iNextAttemptMs` expression. Its test file and `IA_StaticGunAssignment.c` match HEAD, and the missing file is also absent from HEAD.
+
+Live acceptance: start a fresh town objective with at least two building teams. Observe them spawn outdoors and use doors/stairs; check one team keeps Defend while the other changes to Wait only after its living members arrive. Block one entrance and verify the team keeps Defend without teleporting. Repeat for an upper-floor hold and with a straggler outside; check enemy contact still permits normal reactions and firing. Existing mission instances should be restarted to exercise the new assignments.

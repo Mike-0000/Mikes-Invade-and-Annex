@@ -25,6 +25,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	protected const float QUERY_INTERVAL = 1.0; // How often to run the expensive sphere query
 	protected int m_iUSCountInZone = 0;
 	protected int m_iUSSRCountInZone = 0;
+	protected bool m_bCaptureRosterReady = true;
 	protected ref array<IEntity> m_entitiesInZone = new array<IEntity>();
 	
     // -- Sphere radius
@@ -260,6 +261,12 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 		// Update the cached counts
 		m_iUSCountInZone = factionCounts.Get("US");
 		m_iUSSRCountInZone = factionCounts.Get("USSR");
+
+		// Only demand restoration when a live friendly could capture. Scanning an
+		// empty distant zone must not wake its entire cached garrison every second.
+		m_bCaptureRosterReady = true;
+		if (m_iUSCountInZone > 0)
+			m_bCaptureRosterReady = IA_DynamicAISpawning.EnsureReadyInRadius(m_origin, m_radius);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -433,6 +440,25 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	    int usCount = m_iUSCountInZone;
 	    int ussrCount = m_iUSSRCountInZone;
 	    bool wasCapturing = m_isCapturing;
+
+		// Counts stay physical. Pending defenders freeze progress and scoring until
+		// the next census confirms restoration, including when caching is disabled.
+		if (!m_bCaptureRosterReady)
+		{
+			m_IsActive = true;
+			m_isCapturing = false;
+			m_captureStatus = "Paused";
+			IA_CaptureHudState pendingState = IA_CaptureHudState.Blocked;
+			if (m_captureProgress > 0)
+				pendingState = IA_CaptureHudState.Paused;
+			m_fHudPublishAcc = m_fHudPublishAcc + timeSlice;
+			if (occupancyChanged || wasCapturing || pendingState != m_eLastPublishedHud || m_fHudPublishAcc >= HUD_PUBLISH_INTERVAL)
+			{
+				m_fHudPublishAcc = 0;
+				PublishCaptureHudState(pendingState);
+			}
+			return;
+		}
 	    
 	    if (m_captureProgress > 0 && m_captureProgress < CAPTURE_TIME_SECONDS)
 	    {
@@ -1934,6 +1960,7 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         m_captureStatus = "Neutral";
         m_fHudPublishAcc = 0;
         m_iPlayerCountInZone = 0;
+		m_bCaptureRosterReady = true;
         m_eLastPublishedHud = IA_CaptureHudState.Hidden;
         IA_MissionInitializer.PublishCaptureHud(m_areaName, IA_CaptureHudState.Hidden, 0);
     }

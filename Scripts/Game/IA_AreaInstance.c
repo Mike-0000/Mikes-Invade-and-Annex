@@ -154,6 +154,7 @@ class IA_AreaInstance
     private bool m_garrisonPostsLoaded = false;
     private ref array<vector> m_availableGarrisonPosts;
     private bool m_bBuildingGarrisonSpawned = false;
+    private int m_iBuildingGarrisonAssignments = 0;
     
     // --- BEGIN ADDED: Radio Tower Defense Mode ---
     private bool m_isRadioTowerDefenseActive = false;
@@ -970,6 +971,7 @@ class IA_AreaInstance
         // Latch before OnHostAreaForceFinish. Ending a defend mission re-enters
         // ForceFinish on this same host while the first call is still open.
         m_bShutDown = true;
+        IA_DynamicAISpawning.RetireForArea(this);
         m_canSpawn = false;
         m_mortarCrewSetupDone = true;
         m_reinforcements = IA_ReinforcementState.Done;
@@ -1008,6 +1010,7 @@ class IA_AreaInstance
 
         if (group && m_military.Find(group) == -1) // Avoid duplicates
         {
+            group.SetDynamicAIOwner(this);
             m_military.Insert(group);
             // Optionally update strength immediately?
             // OnStrengthChange(m_strength + group.GetAliveCount());
@@ -1233,6 +1236,14 @@ class IA_AreaInstance
 			////Print("Timer: " + m_reinforcementTimer + " Requirement: " + INITIAL_REINFORCEMENT_DELAY_TICKS,LogLevel.ERROR);
             if (m_reinforcementTimer > INITIAL_REINFORCEMENT_DELAY_TICKS)
             {
+                if (!IA_DynamicAISpawning.HasRoomForInboundInfantry())
+                {
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 holding first wave until infantry budget has a gap.", m_area.GetName()), LogLevel.NORMAL);
+                    }
+                    return;
+                }
                 SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction);
 
                 m_reinforcements = IA_ReinforcementState.SpawningWaves;
@@ -1253,6 +1264,16 @@ class IA_AreaInstance
                 }
                 else
                 {
+                    if (!IA_DynamicAISpawning.HasRoomForInboundInfantry())
+                    {
+                        if (IA_Log.IsDebugEnabled())
+                        {
+                            Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 holding a wave until infantry budget has a gap. Groups spawned: %2/%3.",
+                                m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+                        }
+                        m_reinforcementWaveDelayTimer = 1;
+                        return;
+                    }
                     bool waveSpawnedSuccessfully = SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction);
 
                     if (waveSpawnedSuccessfully)
@@ -3413,6 +3434,7 @@ class IA_AreaInstance
             m_civilians.Insert(vehicleGroup);
 			m_initialCivilianCount++;
         }
+        vehicleGroup.SetDynamicAIOwner(this);
     }
     
     // Spawn initial vehicles when the area is created
@@ -3555,6 +3577,7 @@ class IA_AreaInstance
                 continue;
             IA_AiGroup civ = IA_AiGroup.CreateCivilianGroup(pos);
             civ.SetOwningAreaInstance(this);
+            civ.SetDynamicAIOwner(this);
             
             // Directly assign the area instance's area to the civilian group
             if (m_area) // Ensure m_area is not null before assigning
@@ -3711,6 +3734,8 @@ class IA_AreaInstance
             // Register the vehicle and group with our civilian tracking
             if (civGroup)
             {
+                civGroup.SetOwningAreaInstance(this);
+                civGroup.SetDynamicAIOwner(this);
                 RegisterCivilianVehicle(vehicle, civGroup);
             }
             else
@@ -3871,6 +3896,7 @@ class IA_AreaInstance
                 if (civGroup)
                 {
 					civGroup.SetOwningAreaInstance(this);
+					civGroup.SetDynamicAIOwner(this);
                    //////Print("[DEBUG_CIV_VEHICLES] Created civilian AI group for vehicle, registering vehicle with group", LogLevel.DEBUG);
                     RegisterCivilianVehicle(vehicle, civGroup);
                 }
@@ -5013,6 +5039,8 @@ class IA_AreaInstance
             }
             return false; // Quota already met
         }
+        if (!forDefendMission && !IA_DynamicAISpawning.HasRoomForInboundInfantry())
+            return false;
 		
         int actualSpawnCount;
         ref array<int> defendFireteamSizes = null;
@@ -5114,6 +5142,8 @@ class IA_AreaInstance
 		        return false;
 		    if (!m_area)
 		        return false;
+			if (!forDefendMission && !IA_DynamicAISpawning.HasRoomForInboundInfantry())
+				return false;
 
 			bool spawnedAny = false;
 
@@ -6025,41 +6055,7 @@ class IA_AreaInstance
             fired = m_mortarCrewGroup.IssueArtilleryFireMission(ScatterMortarFireAim(targetPos), shotCount);
         }
 
-        if (!fired)
-            fired = SpawnScriptedMortarBarrage(targetPos, shotCount);
-
         return fired;
-    }
-
-    //! Player capture of the pit is what silences the battery. Dead gunners
-    //! still deliver a warned AO strike through the existing barrage module.
-    protected bool SpawnScriptedMortarBarrage(vector center, int shotCount)
-    {
-        if (shotCount < 1)
-            shotCount = 1;
-
-        ResourceName barrageRes = "{11B2A636F321AD68}PrefabsEditable/EffectsModules/Mortar/IA_EffectModule_Zoned_MortarBarrage_Large.et";
-        Resource res = Resource.Load(barrageRes);
-        if (!res)
-        {
-            Print("[IA][MortarPit] Failed to load scripted mortar barrage prefab", LogLevel.ERROR);
-            return false;
-        }
-
-        vector pos = center;
-        World world = GetGame().GetWorld();
-        if (world)
-            pos[1] = world.GetSurfaceY(pos[0], pos[2]);
-
-        IEntity barrage = GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(pos));
-        if (!barrage)
-            return false;
-
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print(string.Format("[IA][MortarPit] Scripted barrage at %1 (%2 rounds requested)", pos, shotCount), LogLevel.NORMAL);
-        }
-        return true;
     }
 
     //! Vanilla artillery waypoints land on their origin with no CEP. Offset each tube
@@ -6203,7 +6199,8 @@ class IA_AreaInstance
         return true;
     }
 
-    //! Extra fireteams that spawn on the road, walk to a building, then Hold inside.
+    //! Extra fireteams spawn outside and walk in on Defend; alternating teams
+    //! switch to Wait only after their living members reach the interior.
     //! Occupying patrols are untouched.
     protected void SpawnBuildingGarrisonGroups(Faction areaFactionForGroupTask)
     {
@@ -6385,6 +6382,12 @@ class IA_AreaInstance
 
         if (m_area && m_area.GetAreaType() == IA_AreaType.MortarPit && grp.GetInitialUnitCount() != 1)
             AssignMortarPitGuardPost(grp);
+
+        if (grp.IsBuildingGarrison())
+        {
+            grp.SetHoldAfterBuildingEntry(IA_BuildingGarrison.UsesHold(m_iBuildingGarrisonAssignments));
+            m_iBuildingGarrisonAssignments++;
+        }
 
         // AddMilitaryGroup will also assign initial state (e.g., DefendPatrol or Attacking if area is under attack)
         AddMilitaryGroup(grp);

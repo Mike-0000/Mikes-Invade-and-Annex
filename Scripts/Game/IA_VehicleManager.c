@@ -1021,6 +1021,70 @@ class IA_VehicleManager: GenericEntity
         }
     }
 
+    static void CollectOccupiedCompartmentSlots(IEntity ent, notnull array<BaseCompartmentSlot> occupied)
+    {
+        if (!ent)
+            return;
+
+        BaseCompartmentManagerComponent mgr = BaseCompartmentManagerComponent.Cast(ent.FindComponent(BaseCompartmentManagerComponent));
+        if (mgr)
+        {
+            array<BaseCompartmentSlot> slots = {};
+            mgr.GetCompartments(slots);
+            int n = slots.Count();
+            int i;
+            for (i = 0; i < n; i++)
+            {
+                BaseCompartmentSlot slot = slots[i];
+                if (!slot || !slot.GetOccupant())
+                    continue;
+                if (occupied.Contains(slot))
+                    continue;
+                occupied.Insert(slot);
+            }
+        }
+
+        IEntity child = ent.GetChildren();
+        while (child)
+        {
+            CollectOccupiedCompartmentSlots(child, occupied);
+            child = child.GetSibling();
+        }
+    }
+
+    static BaseCompartmentSlot FindCompartmentSlot(IEntity ent, int mgrId, int slotId)
+    {
+        if (!ent)
+            return null;
+
+        BaseCompartmentManagerComponent mgr = BaseCompartmentManagerComponent.Cast(ent.FindComponent(BaseCompartmentManagerComponent));
+        if (mgr)
+        {
+            array<BaseCompartmentSlot> slots = {};
+            mgr.GetCompartments(slots);
+            int n = slots.Count();
+            int i;
+            for (i = 0; i < n; i++)
+            {
+                BaseCompartmentSlot slot = slots[i];
+                if (!slot)
+                    continue;
+                if (slot.GetCompartmentMgrID() == mgrId && slot.GetCompartmentSlotID() == slotId)
+                    return slot;
+            }
+        }
+
+        IEntity child = ent.GetChildren();
+        while (child)
+        {
+            BaseCompartmentSlot nested = FindCompartmentSlot(child, mgrId, slotId);
+            if (nested)
+                return nested;
+            child = child.GetSibling();
+        }
+        return null;
+    }
+
     // Add units to a vehicle and assign orders
     static IA_AiGroup PlaceUnitsInVehicle(Vehicle vehicle, IA_Faction faction, vector destination, IA_AreaInstance areaInstance, Faction AreaFaction)
     {
@@ -1570,6 +1634,9 @@ class IA_VehicleManager: GenericEntity
             return;
 
         if (aiGroup.IsPendingSeatTeleport())
+            return;
+
+        if (aiGroup.IsDynamicAICached() || aiGroup.IsDynamicAIPaused())
             return;
         
         // Get all characters in the group

@@ -112,6 +112,14 @@ class IA_SideObjective
     {
         // Default no-op implementations so that subclasses only override what they need.
     }
+
+    void OnDynamicAIUnitCached(IA_AiGroup group, IEntity entity)
+    {
+    }
+
+    void OnDynamicAIUnitRestored(IA_AiGroup group, IEntity entity)
+    {
+    }
     
     // Helper function to ensure task has required child entity
     protected void EnsureTaskHasChildEntity(IEntity taskEntity)
@@ -694,6 +702,8 @@ class IA_AssassinationObjective : IA_SideObjective
 
 		if(m_bHVTSpawned && !m_HVT)
 		{
+			if (m_HVTGroup && m_HVTGroup.GetAliveCount() > 0)
+				return;
 			if (IA_Log.IsDebugEnabled())
 			{
 				Print("[IA_AssassinationObjective] HVT entity is null after being spawned, assuming objective complete.", LogLevel.NORMAL);
@@ -1076,6 +1086,52 @@ class IA_AssassinationObjective : IA_SideObjective
     bool IsHVTGroup(IA_AiGroup group)
     {
         return m_HVTGroup == group;
+    }
+
+#ifdef WORKBENCH
+    static bool ShouldCompleteMissingHVTForTest(bool spawned, bool hasEntity, int logicalAlive)
+    {
+        if (!spawned)
+            return false;
+        if (hasEntity)
+            return false;
+        return logicalAlive <= 0;
+    }
+#endif
+
+    override void OnDynamicAIUnitCached(IA_AiGroup group, IEntity entity)
+    {
+        if (group != m_HVTGroup)
+            return;
+        if (m_HVT == entity)
+            m_HVT = null;
+    }
+
+    override void OnDynamicAIUnitRestored(IA_AiGroup group, IEntity entity)
+    {
+        if (group != m_HVTGroup || !entity)
+            return;
+        BindHVTEntity(entity);
+    }
+
+    protected void BindHVTEntity(IEntity entity)
+    {
+        if (!entity)
+            return;
+        if (m_HVT && m_HVT != entity)
+        {
+            SCR_CharacterControllerComponent previous = SCR_CharacterControllerComponent.Cast(m_HVT.FindComponent(SCR_CharacterControllerComponent));
+            if (previous)
+                previous.GetOnPlayerDeathWithParam().Remove(OnHVTKilled);
+        }
+        m_HVT = entity;
+        m_bHVTSpawned = true;
+        SCR_CharacterControllerComponent controller = SCR_CharacterControllerComponent.Cast(entity.FindComponent(SCR_CharacterControllerComponent));
+        if (controller)
+        {
+            controller.GetOnPlayerDeathWithParam().Remove(OnHVTKilled);
+            controller.GetOnPlayerDeathWithParam().Insert(OnHVTKilled);
+        }
     }
     // --- END ADDED ---
 
