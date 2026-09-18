@@ -57,10 +57,20 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		TestWorkQueue();
 		TestOccupancyPolicy();
 		TestHVTCompletion();
+		TestInboundWaveBudgetGate();
 		m_iFailures += IA_AiGroup.RunDynamicAIGroupRegression();
 
 		Print(string.Format("[IA][DynamicAISpawningConfigTest] failures=%1", m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
+	}
+
+	protected void TestInboundWaveBudgetGate()
+	{
+		Check(IA_DynamicAISpawning.CanAdmitInboundInfantry(0, 70), "an empty cost admits capture inbound infantry");
+		Check(IA_DynamicAISpawning.CanAdmitInboundInfantry(69, 70), "one free slot admits capture inbound infantry");
+		Check(!IA_DynamicAISpawning.CanAdmitInboundInfantry(70, 70), "a full target pauses capture inbound infantry");
+		Check(!IA_DynamicAISpawning.CanAdmitInboundInfantry(80, 70), "an over-target count pauses capture inbound infantry");
+		Check(IA_DynamicAISpawning.CanAdmitInboundInfantry(100, 0), "distance-only mode does not pause capture inbound infantry");
 	}
 
 	protected void TestOccupancyPolicy()

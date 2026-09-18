@@ -1236,6 +1236,14 @@ class IA_AreaInstance
 			////Print("Timer: " + m_reinforcementTimer + " Requirement: " + INITIAL_REINFORCEMENT_DELAY_TICKS,LogLevel.ERROR);
             if (m_reinforcementTimer > INITIAL_REINFORCEMENT_DELAY_TICKS)
             {
+                if (!IA_DynamicAISpawning.HasRoomForInboundInfantry())
+                {
+                    if (IA_Log.IsDebugEnabled())
+                    {
+                        Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 holding first wave until infantry budget has a gap.", m_area.GetName()), LogLevel.NORMAL);
+                    }
+                    return;
+                }
                 SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction);
 
                 m_reinforcements = IA_ReinforcementState.SpawningWaves;
@@ -1256,6 +1264,16 @@ class IA_AreaInstance
                 }
                 else
                 {
+                    if (!IA_DynamicAISpawning.HasRoomForInboundInfantry())
+                    {
+                        if (IA_Log.IsDebugEnabled())
+                        {
+                            Print(string.Format("[AreaInstance.ReinforcementsTask] Area %1 holding a wave until infantry budget has a gap. Groups spawned: %2/%3.",
+                                m_area.GetName(), m_reinforcementGroupsSpawned, m_totalReinforcementQuota), LogLevel.NORMAL);
+                        }
+                        m_reinforcementWaveDelayTimer = 1;
+                        return;
+                    }
                     bool waveSpawnedSuccessfully = SpawnReinforcementWave(scaledGroupsToAttempt, m_AreaFaction);
 
                     if (waveSpawnedSuccessfully)
@@ -5021,6 +5039,8 @@ class IA_AreaInstance
             }
             return false; // Quota already met
         }
+        if (!forDefendMission && !IA_DynamicAISpawning.HasRoomForInboundInfantry())
+            return false;
 		
         int actualSpawnCount;
         ref array<int> defendFireteamSizes = null;
@@ -5122,6 +5142,8 @@ class IA_AreaInstance
 		        return false;
 		    if (!m_area)
 		        return false;
+			if (!forDefendMission && !IA_DynamicAISpawning.HasRoomForInboundInfantry())
+				return false;
 
 			bool spawnedAny = false;
 

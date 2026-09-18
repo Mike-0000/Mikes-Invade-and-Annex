@@ -92,6 +92,22 @@ class IA_DynamicAISpawning
 		return GetManagedCost() >= budget;
 	}
 
+	// Capture QRF and AO reinforcement waves wait for a real casualty gap.
+	// Distance-only (budget 0) and Dynamic AI off keep the original spawn path.
+	static bool HasRoomForInboundInfantry()
+	{
+		if (!IsEnabled())
+			return true;
+		return CanAdmitInboundInfantry(GetManagedCost(), GetBudgetLimit());
+	}
+
+	static bool CanAdmitInboundInfantry(int cost, int budget)
+	{
+		if (budget <= 0)
+			return true;
+		return cost < budget;
+	}
+
 	static int GetReservesSeeded()
 	{
 		return s_iReservesSeeded;
