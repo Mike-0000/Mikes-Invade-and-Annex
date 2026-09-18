@@ -24,6 +24,7 @@ class IA_AreaGroupManager
     private const int ARTILLERY_COOLDOWN = 300; // 5+ minutes
     private const float ARTILLERY_STRIKE_CHANCE = 0.18; // chance per check
     private const ResourceName RED_SMOKE_EFFECT_PREFAB = "{002FEEDB0213777D}Prefabs/EffectsModuleEntities/EffectModule_Particle_Smoke_Red.et";
+    private const ResourceName ARTILLERY_STRIKE_PREFAB = "{11B2A636F321AD68}PrefabsEditable/EffectsModules/Mortar/IA_EffectModule_Zoned_MortarBarrage_Large.et";
     private const int ARTILLERY_MIN_SHOTS = 6;
     private const int ARTILLERY_MAX_SHOTS = 12;
     private const int ARTILLERY_PIT_DEFENSE_COOLDOWN = 15;
@@ -1265,18 +1266,10 @@ class IA_AreaGroupManager
                 return;
             }
 
-            int shotCount = Math.RandomInt(ARTILLERY_MIN_SHOTS, ARTILLERY_MAX_SHOTS + 1);
-            bool fired = IssueMortarFireOnBatteries(batteries, m_artilleryStrikeCenter, shotCount);
-            if (!fired)
+            SpawnArtilleryBarrage(m_artilleryStrikeCenter);
+            if (IA_Log.IsDebugEnabled())
             {
-                if (IA_Log.IsDebugEnabled())
-                {
-                    Print("[ArtilleryStrike] Fire mission skipped: mortar pit captured.", LogLevel.NORMAL);
-                }
-            }
-            else if (IA_Log.IsDebugEnabled())
-            {
-                Print(string.Format("[ArtilleryStrike] Fire mission issued: %1 rounds at %2. Cooldown started for %3 seconds.", shotCount, m_artilleryStrikeCenter, cooldown), LogLevel.NORMAL);
+                Print(string.Format("[ArtilleryStrike] Firing artillery at %1 for area group. Cooldown started for %2 seconds.", m_artilleryStrikeCenter, cooldown), LogLevel.NORMAL);
             }
 
             ClearPendingArtilleryStrike();
@@ -1421,6 +1414,18 @@ class IA_AreaGroupManager
         if (maxDelay < minDelay)
             maxDelay = minDelay;
         return Math.RandomInt(minDelay, maxDelay + 1);
+    }
+
+    protected void SpawnArtilleryBarrage(vector center)
+    {
+        ref Resource res = Resource.Load(ARTILLERY_STRIKE_PREFAB);
+        if (res)
+        {
+            GetGame().SpawnEntityPrefab(res, null, IA_CreateSimpleSpawnParams(center));
+            return;
+        }
+
+        Print(string.Format("[ArtilleryStrike] FAILED to load artillery prefab: %1", ARTILLERY_STRIKE_PREFAB), LogLevel.ERROR);
     }
 
     protected void SpawnArtilleryWarningSmoke(vector center)
