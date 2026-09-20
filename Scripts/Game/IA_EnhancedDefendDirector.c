@@ -318,6 +318,9 @@ class IA_EnhancedDefendDirector
 			budget = 6;
 		if (m_ePhase == IA_DefendPhase.Crisis)
 			budget = budget + 4;
+		budget = IA_DynamicAISpawning.ClampInboundInfantryRequest(budget);
+		if (budget < 2)
+			return;
 
 		m_iLastFillerMs = now;
 		m_Mission.SpawnDirectorWave(budget, false);

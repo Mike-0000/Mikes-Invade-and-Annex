@@ -5039,7 +5039,7 @@ class IA_AreaInstance
             }
             return false; // Quota already met
         }
-        if (!forDefendMission && !IA_DynamicAISpawning.HasRoomForInboundInfantry())
+        if (!IA_DynamicAISpawning.HasRoomForInboundInfantry())
             return false;
 		
         int actualSpawnCount;
@@ -5050,6 +5050,9 @@ class IA_AreaInstance
             int unitBudget = groupsToSpawn;
             if (unitBudget < 2)
                 unitBudget = IA_GetDefendWaveUnitBudget(IA_Game.GetAIScaleFactor());
+            unitBudget = IA_DynamicAISpawning.ClampInboundInfantryRequest(unitBudget);
+            if (unitBudget < 2)
+                return false;
 
             defendFireteamSizes = new array<int>();
             IA_BuildDefendFireteamSizes(unitBudget, defendFireteamSizes);
@@ -5142,7 +5145,7 @@ class IA_AreaInstance
 		        return false;
 		    if (!m_area)
 		        return false;
-			if (!forDefendMission && !IA_DynamicAISpawning.HasRoomForInboundInfantry())
+			if (!IA_DynamicAISpawning.HasRoomForInboundInfantry())
 				return false;
 
 			bool spawnedAny = false;
@@ -5171,6 +5174,9 @@ class IA_AreaInstance
                     scaledUnitCount = unitCountOverride;
                 else
                     scaledUnitCount = IA_GetDefendFireteamUnitCount();
+                scaledUnitCount = IA_DynamicAISpawning.ClampInboundInfantryRequest(scaledUnitCount);
+                if (scaledUnitCount < 1)
+                    return false;
             }
             else
             {
