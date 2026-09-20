@@ -11,7 +11,9 @@ class IA_ComposedSiteLayout : IA_DynamicSiteLayout
 		m_fHalfWidthM = halfWidth;
 		m_fHalfDepthM = halfDepth;
 		m_iMaxGarrison = garrison;
-		m_fCaptureRadiusM = Math.Min(30, halfWidth * 0.4);
+		// Inscribe the footprint. The old min(30, halfWidth * 0.4) left a 30 m
+		// postage stamp on a Full 90 x 70 m outpost.
+		m_fCaptureRadiusM = Math.Min(halfWidth, halfDepth);
 		m_vAssemblyLocal = vector.Zero;
 		m_aModules = {};
 		m_aEntries = {Vector(0, 0, -halfDepth), Vector(-halfWidth, 0, -8), Vector(halfWidth, 0, -8)};
