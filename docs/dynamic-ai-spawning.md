@@ -1,6 +1,6 @@
 # Dynamic AI Spawning
 
-Dynamic AI Spawning is an optional server-authoritative system that removes supported I&A infantry characters and recreates surviving soldiers when needed. Budget mode concentrates full squads near players instead of waking every objective inside the same city. Individual members of less important squads can remain cached. Native groups, their orders, and the mission's logical survivor counts remain present.
+Dynamic AI Spawning is a server-authoritative system that removes supported I&A infantry characters and recreates surviving soldiers when needed. It is on by default; the admin toggle still turns it off. Budget mode concentrates full squads near players instead of waking every objective inside the same city. Individual members of less important squads can remain cached. Native groups, their orders, and the mission's logical survivor counts remain present.
 
 The [2026-09-17 despawn audit](dynamic-ai-despawn-audit.md) records the eviction-sweep, budget-zero handoff, and emplacement allocation fixes, plus the remaining conditions that can keep distant AI physical.
 
@@ -10,9 +10,9 @@ Open **Admin configuration → Dynamic AI**. The dedicated tab holds the master 
 
 | Setting | Behavior |
 | --- | --- |
-| **Dynamic AI Spawning OFF** | Default. Uses the original spawning path and stored AI scaling settings. If soldiers are already cached, restores all surviving records through the worker before becoming inactive. |
-| **Dynamic AI Spawning ON, Dynamic AI Budget 1–2000** | Uses the shared soldier budget described below and the Dynamic AI scale. The scale defaults to **0.8**. The budget defaults to **70**. |
+| **Dynamic AI Spawning ON, Dynamic AI Budget 1–2000** | Default. Uses the shared soldier budget described below and the Dynamic AI scale. The scale defaults to **0.8**. The budget defaults to **70**. |
 | **Dynamic AI Spawning ON, Dynamic AI Budget 0** | Removes the budget policy while keeping the Dynamic AI scale. Existing budget reserves first restore, then the previous distance-only Dynamic AI path takes over. |
+| **Dynamic AI Spawning OFF** | Uses the original spawning path and stored AI scaling settings. If soldiers are already cached, restores all surviving records through the worker before becoming inactive. |
 
 The budget is an **absolute target number of managed soldiers**, independent of the Game Master percentage and vanilla editor limits. The target itself controls how many assigned soldiers remain physical; it does not multiply an objective's initial roster. Settings are saved with the admin configuration; existing profiles without a budget retain the configured/default value.
 

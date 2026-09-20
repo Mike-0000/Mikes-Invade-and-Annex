@@ -1493,7 +1493,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			basePack.m_iDynamicBaseSizeMode = m_DynamicBaseSizeDrop.GetIndex();
 		packed = packed + "|" + IA_Config.PackDynamicBaseExtras(basePack);
 
-		bool dynamicAISpawning = false;
+		bool dynamicAISpawning = true;
 		if (live)
 			dynamicAISpawning = live.m_bDynamicAISpawningEnabled;
 		if (m_DynamicAISpawningToggle)

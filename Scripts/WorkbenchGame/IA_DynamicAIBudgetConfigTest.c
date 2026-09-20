@@ -9,7 +9,7 @@ class IA_DynamicAIBudgetConfigTest : WorkbenchPlugin
 	{
 		ref IA_Config source = new IA_Config();
 		ref IA_Config restored = new IA_Config();
-		Check(!source.m_bDynamicAISpawningEnabled && source.m_iDynamicAIBudget == IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "new configurations retain the legacy toggle and a budget of 70");
+		Check(source.m_bDynamicAISpawningEnabled && source.m_iDynamicAIBudget == IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "new configurations enable Dynamic AI Spawning with a budget of 70");
 
 		source.m_iDynamicAIBudget = 235;
 		Check(IA_Config.UnpackDynamicAIBudget(restored, IA_Config.PackDynamicAIBudget(source)) && restored.m_iDynamicAIBudget == 235, "the admin token retains the chosen integer budget");
