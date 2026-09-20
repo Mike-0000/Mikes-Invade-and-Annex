@@ -132,7 +132,7 @@ class IA_AreaGroupManager
         if (currentTime - m_lastQRFCheckTime < checkInterval)
             return;
         m_lastQRFCheckTime = currentTime;
-        if (!forDefend && !IA_DynamicAISpawning.HasRoomForInboundInfantry())
+        if (!IA_DynamicAISpawning.HasRoomForInboundInfantry())
         {
             if (IA_Log.IsDebugEnabled())
                 Print("[QRF] Paused: infantry budget is full.", LogLevel.NORMAL);
@@ -704,7 +704,7 @@ class IA_AreaGroupManager
             return;
         if (!m_qrfRetryArea || m_qrfRetryArea.IsShutDown())
             return;
-        if (!m_qrfRetryDefend && !IA_DynamicAISpawning.HasRoomForInboundInfantry())
+        if (!IA_DynamicAISpawning.HasRoomForInboundInfantry())
         {
             m_qrfRetryPending = true;
             GetGame().GetCallqueue().CallLater(this.OnQRFRetry, 15000, false);
@@ -717,6 +717,9 @@ class IA_AreaGroupManager
     {
         float scale = IA_Game.GetAIScaleFactor();
         int unitCount = Math.Clamp(Math.Round(6 * scale), 4, 10);
+        unitCount = IA_DynamicAISpawning.ClampInboundInfantryRequest(unitCount);
+        if (unitCount < 2)
+            return false;
 
         vector spawnPos = preferredSpawn;
         bool preferredUsable = true;
@@ -853,7 +856,9 @@ class IA_AreaGroupManager
         if (!areaInst || !enemyGameFaction)
             return false;
 
-        int jumperCount = IA_Game.GetAirborneQRFJumperCount();
+        int jumperCount = IA_DynamicAISpawning.ClampInboundInfantryRequest(IA_Game.GetAirborneQRFJumperCount());
+        if (jumperCount < 2)
+            return false;
 
         vector attackTarget = targetPos;
         if (attackTarget == vector.Zero)

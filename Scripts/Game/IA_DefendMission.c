@@ -428,7 +428,18 @@ class IA_DefendMission
         int alive = GetCurrentAICount();
         if (cap < alive)
             cap = alive;
-        return cap;
+        return CapTargetByInboundBudget(cap);
+    }
+
+    private int CapTargetByInboundBudget(int desired)
+    {
+        int room = IA_DynamicAISpawning.GetInboundInfantryRoom();
+        if (room < 0)
+            return desired;
+        int allowed = GetCurrentAICount() + room;
+        if (desired > allowed)
+            return allowed;
+        return desired;
     }
 
     private void RollNextWaveInterval()
@@ -729,6 +740,7 @@ class IA_DefendMission
         int room = GetEffectiveTargetAICount() - GetCurrentAICount();
         if (room < unitBudget)
             unitBudget = room;
+        unitBudget = IA_DynamicAISpawning.ClampInboundInfantryRequest(unitBudget);
         if (unitBudget < 2)
         {
             if (IA_Log.IsDebugEnabled())
@@ -1038,6 +1050,9 @@ class IA_DefendMission
             return;
         if (unitBudget < 2)
             unitBudget = 8;
+        unitBudget = IA_DynamicAISpawning.ClampInboundInfantryRequest(unitBudget);
+        if (unitBudget < 2)
+            return;
         targetArea.SpawnReinforcementWave(unitBudget, m_defendFaction, true, tightStagger);
     }
 
@@ -1124,7 +1139,7 @@ class IA_DefendMission
         int cap = Math.Round(m_baseTargetAICount * mult);
         if (cap < 4)
             cap = 4;
-        return cap;
+        return CapTargetByInboundBudget(cap);
     }
 
     void PublishEnhancedHud(IA_DefendHudState state, int phase, float timeLeft, int remainingSec, float pressure)

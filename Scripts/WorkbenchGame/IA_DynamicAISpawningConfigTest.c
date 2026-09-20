@@ -71,6 +71,14 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(!IA_DynamicAISpawning.CanAdmitInboundInfantry(70, 70), "a full target pauses capture inbound infantry");
 		Check(!IA_DynamicAISpawning.CanAdmitInboundInfantry(80, 70), "an over-target count pauses capture inbound infantry");
 		Check(IA_DynamicAISpawning.CanAdmitInboundInfantry(100, 0), "distance-only mode does not pause capture inbound infantry");
+		Check(IA_DynamicAISpawning.CountInboundInfantryRoom(0, 70) == 70, "an empty cost reports the full inbound room");
+		Check(IA_DynamicAISpawning.CountInboundInfantryRoom(69, 70) == 1, "one free slot reports one inbound room");
+		Check(IA_DynamicAISpawning.CountInboundInfantryRoom(70, 70) == 0, "a full target reports no inbound room");
+		Check(IA_DynamicAISpawning.CountInboundInfantryRoom(80, 70) == 0, "an over-target count reports no inbound room");
+		Check(IA_DynamicAISpawning.CountInboundInfantryRoom(100, 0) == -1, "distance-only mode reports unlimited inbound room");
+		Check(IA_DynamicAISpawning.ClampInboundInfantryRequestForCost(14, 35, 40) == 5, "a defense pulse shrinks to the remaining inbound room");
+		Check(IA_DynamicAISpawning.ClampInboundInfantryRequestForCost(14, 40, 40) == 0, "a full target refuses a defense pulse");
+		Check(IA_DynamicAISpawning.ClampInboundInfantryRequestForCost(14, 10, 0) == 14, "distance-only mode keeps the authored defense pulse");
 	}
 
 	protected void TestOccupancyPolicy()

@@ -94,8 +94,10 @@ class IA_DynamicAISpawning
 		return GetManagedCost() >= budget;
 	}
 
-	// Capture QRF and AO reinforcement waves wait for a real casualty gap.
-	// Distance-only (budget 0) and Dynamic AI off keep the original spawn path.
+	// Capture QRF, AO reinforcement waves, and defense inbound waves wait for a
+	// real casualty gap. Distance-only (budget 0) and Dynamic AI off keep the
+	// original spawn path. Defense pulses also shrink to the remaining room so
+	// a large wave cannot overshoot the shared target.
 	static bool HasRoomForInboundInfantry()
 	{
 		if (!IsEnabled())
@@ -108,6 +110,44 @@ class IA_DynamicAISpawning
 		if (budget <= 0)
 			return true;
 		return cost < budget;
+	}
+
+	// Remaining physical infantry slots under the shared target.
+	// -1 means Dynamic AI is off or distance-only: no inbound cap.
+	static int CountInboundInfantryRoom(int cost, int budget)
+	{
+		if (budget <= 0)
+			return -1;
+		int room = budget - cost;
+		if (room < 0)
+			return 0;
+		return room;
+	}
+
+	static int GetInboundInfantryRoom()
+	{
+		if (!IsEnabled())
+			return -1;
+		return CountInboundInfantryRoom(GetManagedCost(), GetBudgetLimit());
+	}
+
+	static int ClampInboundInfantryRequestForCost(int requested, int cost, int budget)
+	{
+		int room = CountInboundInfantryRoom(cost, budget);
+		if (room < 0)
+			return requested;
+		if (requested < 1)
+			return 0;
+		if (requested <= room)
+			return requested;
+		return room;
+	}
+
+	static int ClampInboundInfantryRequest(int requested)
+	{
+		if (!IsEnabled())
+			return requested;
+		return ClampInboundInfantryRequestForCost(requested, GetManagedCost(), GetBudgetLimit());
 	}
 
 	static int GetReservesSeeded()
