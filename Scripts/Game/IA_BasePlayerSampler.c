@@ -7,7 +7,6 @@ class IA_BasePlayerSampler
 	protected static const int DEPLOY_RECORD_INTERVAL_SEC = 5;
 	protected static const int DEPLOY_WINDOW_SEC = 600;
 	protected static const int CASUALTY_GRACE_SEC = 120;
-	protected static const float GROUND_SLACK_M = 3.0;
 
 	protected int m_iGroupId = -1;
 	protected int m_iLastRecordUnix;
@@ -303,11 +302,9 @@ class IA_BasePlayerSampler
 			return false;
 		if (!HorizontalInside(pos, center, radius))
 			return false;
-
-		float supportY = SampleSupportY(pos);
-		if (Math.AbsFloat(pos[1] - supportY) > GROUND_SLACK_M)
-			return false;
-		return true;
+		// GetSurfaceY is terrain mesh only. Outpost floors, pads and tents sit
+		// above that, so a 3 m terrain slack shrank a 30 m circle to a dirt patch.
+		return IsStandingForZone(pawn);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -327,10 +324,21 @@ class IA_BasePlayerSampler
 		if (!world)
 			return pos[1];
 
-		// Dynamic bases are validated on terrain. Tracing from above would hit the
-		// pawn itself, a parachute or a tent roof, accepting airborne occupants and
-		// moving capture/guard anchors onto scenery after it spawns.
+		// Placement anchors stay on the terrain mesh. Occupancy uses
+		// IsStandingForZone so decks and tents still count for seize.
 		return world.GetSurfaceY(pos[0], pos[2]);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool IsStandingForZone(IEntity pawn)
+	{
+		if (!pawn)
+			return false;
+
+		CharacterControllerComponent ctrl = CharacterControllerComponent.Cast(pawn.FindComponent(CharacterControllerComponent));
+		if (ctrl && ctrl.IsFalling())
+			return false;
+		return true;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -438,7 +446,7 @@ class IA_BasePlayerSampler
 		vector pos;
 		if (!IA_AreaMarker.TryGetPawnWorldPos(character, pos))
 			return false;
-		if (Math.AbsFloat(pos[1] - SampleSupportY(pos)) > GROUND_SLACK_M)
+		if (!IsStandingForZone(character))
 			return false;
 		return HorizontalInside(pos, center, radius);
 	}
