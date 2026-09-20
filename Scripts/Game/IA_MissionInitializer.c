@@ -52,7 +52,7 @@ class IA_MissionInitializer : GenericEntity
 	float m_fAIScaleMultiplier_Rpl = 1.0;
 
 	[RplProp()]
-	bool m_bDynamicAISpawningEnabled_Rpl = false;
+	bool m_bDynamicAISpawningEnabled_Rpl = true;
 
 	[RplProp()]
 	int m_iDynamicAIBudget_Rpl = IA_Config.DYNAMIC_AI_BUDGET_DEFAULT;

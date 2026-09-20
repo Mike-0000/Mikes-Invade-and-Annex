@@ -8,7 +8,7 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 	{
 		ref IA_Config source = new IA_Config();
 		ref IA_Config restored = new IA_Config();
-		Check(!source.m_bDynamicAISpawningEnabled, "new configurations keep legacy spawning by default");
+		Check(source.m_bDynamicAISpawningEnabled, "new configurations enable Dynamic AI Spawning by default");
 
 		ref IA_DynamicAISpawningOverridesFixture saved = new IA_DynamicAISpawningOverridesFixture();
 		ref IA_DynamicAISpawningOverridesFixture loaded = new IA_DynamicAISpawningOverridesFixture();
@@ -30,7 +30,7 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(restored.m_bDynamicAISpawningEnabled, "old profiles preserve an explicit mission setting");
 		restored.m_bDynamicAISpawningEnabled = false;
 		loaded.ApplyTo(restored);
-		Check(!restored.m_bDynamicAISpawningEnabled, "old profiles preserve the default legacy setting");
+		Check(!restored.m_bDynamicAISpawningEnabled, "old profiles preserve the current mission setting");
 
 		restored.m_bDynamicAISpawningEnabled = true;
 		loaded.Decode("{\"dynamicAISpawning\":2}");

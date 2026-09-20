@@ -52,8 +52,8 @@ class IA_Config{
 	[Attribute(defvalue: "1.0", UIWidgets.EditBox, category: "AI Scaling", desc: "AI Player Scale Multiplier (multiplies player-based scale, ignored if static override is set). Ignored while Dynamic AI Spawning is enabled; that tab's Dynamic AI scale is used instead.")]
 	float m_fAIScaleMultiplier;
 
-	[Attribute(defvalue: "false", UIWidgets.CheckBox, category: "AI Scaling", desc: "Dynamic AI Spawning: repeatedly cache supported area infantry, ordinary patrols and garrisons while distant and out of combat, then restore their latest saved positions as players approach. Equipment/ammo reset. Caching kills downed AI. Disabling restores cached survivors.")]
-	bool m_bDynamicAISpawningEnabled = false;
+	[Attribute(defvalue: "true", UIWidgets.CheckBox, category: "AI Scaling", desc: "Dynamic AI Spawning: repeatedly cache supported area infantry, ordinary patrols and garrisons while distant and out of combat, then restore their latest saved positions as players approach. Equipment/ammo reset. Caching kills downed AI. Disabling restores cached survivors.")]
+	bool m_bDynamicAISpawningEnabled = true;
 
 	static const int DYNAMIC_AI_BUDGET_DEFAULT = 70;
 	static const int DYNAMIC_AI_BUDGET_MAX = 2000;

@@ -11,7 +11,7 @@ class IA_AdminOverrides
 	float m_fCivilianCountMultiplier = 1.0;
 	float m_fAIScaleMultiplier = 1.0;
 	bool m_bHasDynamicAISpawningOverride;
-	bool m_bDynamicAISpawningEnabled = false;
+	bool m_bDynamicAISpawningEnabled = true;
 	bool m_bHasDynamicAIBudgetOverride;
 	int m_iDynamicAIBudget = IA_Config.DYNAMIC_AI_BUDGET_DEFAULT;
 	bool m_bHasDynamicAIScaleOverride;
