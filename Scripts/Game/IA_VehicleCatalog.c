@@ -191,6 +191,11 @@ class IA_VehicleCatalog
 				Print("[IA_VehicleCatalog] Using default enemy vehicle faction detection", LogLevel.NORMAL);
 			}
 			SCR_Faction USFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
+			if (!USFaction)
+			{
+				Print("[IA_VehicleCatalog] Faction 'US' not found; cannot resolve enemy vehicle factions", LogLevel.WARNING);
+				return result;
+			}
 			array<Faction> AllFactions = {};
 			factionManager.GetFactionsList(AllFactions);
 			
@@ -210,7 +215,12 @@ class IA_VehicleCatalog
 	            continue;
 	        }
 		
-			finalEntityCatalogArray.Insert(scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true));
+			SCR_EntityCatalog enemyVehicleCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+			if (!enemyVehicleCatalog)
+			{
+				continue;
+			}
+			finalEntityCatalogArray.Insert(enemyVehicleCatalog);
 	        
 		
 		
@@ -236,8 +246,18 @@ class IA_VehicleCatalog
             excludedLabels.Insert(EEditableEntityLabel.FACTION_USSR);
             excludedLabels.Insert(EEditableEntityLabel.FACTION_FIA);
 			SCR_Faction scr_CIVFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("CIV"));
+			if (!scr_CIVFaction)
+			{
+				Print("[IA_VehicleCatalog] Faction 'CIV' not found; no civilian vehicles", LogLevel.WARNING);
+				return finalEntityCatalogEntries;
+			}
 
 			SCR_EntityCatalog CIVEntityCatalog = scr_CIVFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+			if (!CIVEntityCatalog)
+			{
+				Print("[IA_VehicleCatalog] Faction 'CIV' has no vehicle catalog; no civilian vehicles", LogLevel.WARNING);
+				return finalEntityCatalogEntries;
+			}
 			
 			CIVEntityCatalog.GetFullFilteredEntityList(finalEntityCatalogEntries, includedLabels, excludedLabels);
 			return finalEntityCatalogEntries;
@@ -392,12 +412,17 @@ class IA_VehicleCatalog
 		array<Faction> friendlyFactions = {};
         //Print(string.Format("[DEBUG] IA_VehicleCatalog.GetRandomVehiclePrefabBySpecificLabels: Looking for faction with key %1", factionKey), LogLevel.NORMAL);
         SCR_Faction scrFaction = SCR_Faction.Cast(factionManager.GetFactionByKey(factionKey));
-		scrFaction.GetFriendlyFactions(friendlyFactions, true);
+		if (scrFaction)
+		{
+			scrFaction.GetFriendlyFactions(friendlyFactions, true);
+		}
 		Faction civFaction = factionManager.GetFactionByKey("CIV");
 		foreach(Faction currentFaction : friendlyFactions){
 			if(factionKey != "CIV" && currentFaction == civFaction)
 				continue;
 			SCR_Faction scrCurrentFaction = SCR_Faction.Cast(currentFaction);
+			if (!scrCurrentFaction)
+				continue;
 			SCR_EntityCatalog entityCatalog = scrCurrentFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
 	        if (!entityCatalog)
 	        {
@@ -411,9 +436,14 @@ class IA_VehicleCatalog
         
 		if(result.IsEmpty()){
 			SCR_Faction newScrCurrentFaction = SCR_Faction.Cast(factionManager.GetFactionByKey("US"));
-
-			SCR_EntityCatalog newEntityCatalog = newScrCurrentFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
-			newEntityCatalog.GetFullFilteredEntityList(result, includedLabels, finalExcludedLabels);
+			if (newScrCurrentFaction)
+			{
+				SCR_EntityCatalog newEntityCatalog = newScrCurrentFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
+				if (newEntityCatalog)
+				{
+					newEntityCatalog.GetFullFilteredEntityList(result, includedLabels, finalExcludedLabels);
+				}
+			}
 			
 		}
         
