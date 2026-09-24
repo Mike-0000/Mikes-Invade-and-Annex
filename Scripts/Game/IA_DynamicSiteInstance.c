@@ -117,7 +117,9 @@ class IA_DynamicSiteInstance
 	//------------------------------------------------------------------------------------------------
 	float GetCaptureRadius()
 	{
-		return m_Layout.m_fCaptureRadiusM;
+		if (!m_Layout)
+			return 0;
+		return m_Layout.GetCaptureRadius();
 	}
 
 	//------------------------------------------------------------------------------------------------

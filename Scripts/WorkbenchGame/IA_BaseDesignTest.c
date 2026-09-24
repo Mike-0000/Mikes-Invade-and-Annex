@@ -4,6 +4,14 @@ class IA_BaseDesignTest : IA_BaseFoundationProbe
 {
 	override void RunCommandline()
 	{
+		ref IA_ComposedSiteLayout fullProbe = new IA_ComposedSiteLayout();
+		fullProbe.Initialize(0, 0, "Full HQ probe", 90, 70, 36);
+		fullProbe.m_vCaptureLocal = "0 0 48.5798";
+		float fullR = fullProbe.GetCaptureRadius();
+		Check(fullR <= 21.5, "Full HQ circle does not use the origin-inscribed 70 m radius");
+		Check(fullR >= 20, "Full HQ circle still covers the command pad");
+		Check(48.5798 + fullR <= 70, "Full HQ circle stays inside the rear half-depth");
+
 		for (int size = 0; size < 6; size++)
 		{
 			for (int variant = 0; variant < 20; variant++)
@@ -12,6 +20,10 @@ class IA_BaseDesignTest : IA_BaseFoundationProbe
 				Check(layout && layout.m_bComposed, "recipe exists");
 				if (!layout)
 					continue;
+				float captureR = layout.GetCaptureRadius();
+				Check(captureR >= 8, "command circle remains usable");
+				Check(Math.AbsFloat(layout.m_vCaptureLocal[0]) + captureR <= layout.m_fHalfWidthM + 0.01, "capture circle stays inside width");
+				Check(Math.AbsFloat(layout.m_vCaptureLocal[2]) + captureR <= layout.m_fHalfDepthM + 0.01, "capture circle stays inside depth");
 				int expanded = 0;
 				array<int> sides = {0, 0, 0, 0};
 				foreach (IA_DynamicSiteModule module : layout.m_aModules)

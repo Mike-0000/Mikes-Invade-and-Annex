@@ -1146,6 +1146,19 @@ class IA_DynamicSiteLayout
 		mod.SetSupportFootprint(Vector(-halfW, 0, -halfD), Vector(halfW, 0, halfD));
 	}
 
+	// Seize scoring uses this radius around m_vCaptureLocal. Composed recipes
+	// assign the HQ offset after Initialize, so the live value must inscribe
+	// around that point rather than the layout origin.
+	float GetCaptureRadius()
+	{
+		if (!m_bComposed)
+			return m_fCaptureRadiusM;
+		float preferred = m_fHalfWidthM;
+		if (m_fHalfDepthM < preferred)
+			preferred = m_fHalfDepthM;
+		return GetDefendPostRadius(m_vCaptureLocal, preferred);
+	}
+
 	// Defend circles stay inside the authored wall faces, with a one-metre
 	// movement margin. Side IDs: rear=0, east=1, front=2, west=3.
 	float GetDefendPostRadius(vector localPost, float preferredRadius = 15)
