@@ -11,9 +11,11 @@ class IA_ComposedSiteLayout : IA_DynamicSiteLayout
 		m_fHalfWidthM = halfWidth;
 		m_fHalfDepthM = halfDepth;
 		m_iMaxGarrison = garrison;
-		// Inscribe the footprint. The old min(30, halfWidth * 0.4) left a 30 m
-		// postage stamp on a Full 90 x 70 m outpost.
+		// Fallback only. Recipes assign m_vCaptureLocal to the HQ after this,
+		// and GetCaptureRadius inscribes around that offset so the command
+		// circle cannot cross the rear wall.
 		m_fCaptureRadiusM = Math.Min(halfWidth, halfDepth);
+		m_vCaptureLocal = vector.Zero;
 		m_vAssemblyLocal = vector.Zero;
 		m_aModules = {};
 		m_aEntries = {Vector(0, 0, -halfDepth), Vector(-halfWidth, 0, -8), Vector(halfWidth, 0, -8)};
