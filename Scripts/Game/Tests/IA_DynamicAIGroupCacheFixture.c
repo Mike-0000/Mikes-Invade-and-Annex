@@ -26,5 +26,11 @@ class IA_DynamicAIGroupCacheFixture : IA_DynamicAIGroupCache
 		m_bWaking = true;
 		m_bUrgentWake = true;
 	}
+
+	void SetWakingForTest(bool waking)
+	{
+		m_bWaking = waking;
+		m_bUrgentWake = waking;
+	}
 }
 #endif
