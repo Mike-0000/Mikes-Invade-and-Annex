@@ -58,6 +58,7 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		TestOccupancyPolicy();
 		TestHVTCompletion();
 		TestInboundWaveBudgetGate();
+		TestCaptureReadinessIgnoresCivilians();
 		m_iFailures += IA_AiGroup.RunDynamicAIGroupRegression();
 
 		Print(string.Format("[IA][DynamicAISpawningConfigTest] failures=%1", m_iFailures), LogLevel.NORMAL);
@@ -79,6 +80,43 @@ class IA_DynamicAISpawningConfigTest : WorkbenchPlugin
 		Check(IA_DynamicAISpawning.ClampInboundInfantryRequestForCost(14, 35, 40) == 5, "a defense pulse shrinks to the remaining inbound room");
 		Check(IA_DynamicAISpawning.ClampInboundInfantryRequestForCost(14, 40, 40) == 0, "a full target refuses a defense pulse");
 		Check(IA_DynamicAISpawning.ClampInboundInfantryRequestForCost(14, 10, 0) == 14, "distance-only mode keeps the authored defense pulse");
+	}
+
+	protected void TestCaptureReadinessIgnoresCivilians()
+	{
+		vector center = "100 20 100";
+		ref IA_DynamicAIGroupCacheFixture civilian = new IA_DynamicAIGroupCacheFixture();
+		civilian.SetCivilianCacheForTest(true);
+		ref IA_AiGroup civilianOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(civilian, 0);
+		civilian.Init(civilianOwner);
+		ref IA_DynamicAIUnit civilianUnit = new IA_DynamicAIUnit();
+		civilianUnit.m_aTransform[3] = center;
+		civilian.AddPendingForTest(civilianUnit);
+		civilian.SetWakingForTest(false);
+		Check(!IA_DynamicAISpawning.BlocksCaptureReadiness(civilian, center, 50), "cached civilians inside the capture circle do not freeze scoring");
+		Check(!civilian.IsWaking(), "cached civilians are not woken as capture blockers");
+
+		ref IA_DynamicAIGroupCacheFixture patrol = new IA_DynamicAIGroupCacheFixture();
+		ref IA_AiGroup patrolOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(patrol, 0);
+		patrol.Init(patrolOwner);
+		ref IA_DynamicAIUnit patrolUnit = new IA_DynamicAIUnit();
+		patrolUnit.m_aTransform[3] = center;
+		patrol.AddPendingForTest(patrolUnit);
+		patrol.SetWakingForTest(false);
+		Check(IA_DynamicAISpawning.BlocksCaptureReadiness(patrol, center, 50), "distance-only cached infantry still freeze capture until they restore");
+		Check(patrol.IsWaking(), "distance-only defenders still request a wake from capture");
+
+		ref IA_DynamicAIBudgetCacheFixture contested = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup contestedOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(contested, 0);
+		contested.Init(contestedOwner);
+		ref IA_DynamicAIUnit defender = new IA_DynamicAIUnit();
+		defender.m_aTransform[3] = center;
+		contested.AddForTest(defender);
+		contested.EnableBudget();
+		contested.ReconcileForTest();
+		Check(contested.IsBudgetActive() && contested.IsPaused(), "a fully cached budget squad is paused until a capture seed returns");
+		Check(IA_DynamicAISpawning.BlocksCaptureReadiness(contested, center, 50), "paused military defenders still freeze capture");
+		Check(contested.HasCapturePriority(), "paused military defenders still receive a capture seed");
 	}
 
 	protected void TestOccupancyPolicy()
