@@ -108,7 +108,36 @@ class IA_SelectionTestPlacer : IA_DynamicSitePlacer
 		CheckSampling();
 		CheckOptimizations();
 		CheckDefendPerimeters();
+		CheckShortlistSort();
 		return m_iFailures;
+	}
+
+	void CheckShortlistSort()
+	{
+		Setup(false);
+		m_aShortlist.Clear();
+
+		ref IA_DynamicSiteCandidate high = new IA_DynamicSiteCandidate();
+		high.m_fScore = 30;
+		ref IA_DynamicSiteCandidate low = new IA_DynamicSiteCandidate();
+		low.m_fScore = 10;
+		ref IA_DynamicSiteCandidate mid = new IA_DynamicSiteCandidate();
+		mid.m_fScore = 20;
+		m_aShortlist.Insert(high);
+		m_aShortlist.Insert(low);
+		m_aShortlist.Insert(mid);
+
+		SortShortlist();
+
+		Check(m_aShortlist.Count() == 3, "shortlist sort keeps three candidates");
+		if (!m_aShortlist[0] || !m_aShortlist[1] || !m_aShortlist[2])
+		{
+			Check(false, "shortlist sort keeps refs through swaps");
+			return;
+		}
+		Check(m_aShortlist[0].m_fScore == 10, "shortlist sort places lowest score first");
+		Check(m_aShortlist[1].m_fScore == 20, "shortlist sort places middle score second");
+		Check(m_aShortlist[2].m_fScore == 30, "shortlist sort places highest score last");
 	}
 
 	void CheckDefendPerimeters()

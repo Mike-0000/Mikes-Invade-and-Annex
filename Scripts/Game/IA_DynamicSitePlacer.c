@@ -291,6 +291,12 @@ class IA_DynamicSitePlacer
 		}
 
 		IA_DynamicSiteCandidate cand = m_aShortlist[m_iCandidateIndex];
+		if (!cand)
+		{
+			m_iCandidateIndex++;
+			m_iHeadingIndex = 0;
+			return;
+		}
 		if (!ValidateCandidate(cand))
 		{
 			if (!m_bCandidateSearchPending)
@@ -1170,9 +1176,13 @@ class IA_DynamicSitePlacer
 		{
 			for (j = i + 1; j < n; j++)
 			{
+				if (!m_aShortlist[i] || !m_aShortlist[j])
+					continue;
 				if (m_aShortlist[j].m_fScore < m_aShortlist[i].m_fScore)
 				{
-					IA_DynamicSiteCandidate tmp = m_aShortlist[i];
+					// Keep a local ref: assigning the array slot drops that
+					// element's ref. A non-ref tmp is collected before write-back.
+					ref IA_DynamicSiteCandidate tmp = m_aShortlist[i];
 					m_aShortlist[i] = m_aShortlist[j];
 					m_aShortlist[j] = tmp;
 				}
