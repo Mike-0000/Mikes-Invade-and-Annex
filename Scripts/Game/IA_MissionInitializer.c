@@ -2258,6 +2258,40 @@ class IA_MissionInitializer : GenericEntity
 	protected void RPC_ForceCompleteZoneAndDefend()
 	{
 		Print("[IA_MissionInitializer] RPC_ForceCompleteZoneAndDefend received. Starting the full seize-regroup-defend chain.", LogLevel.WARNING);
+
+		if (m_DynamicObjectives && m_DynamicObjectives.GetObjective())
+		{
+			int phase = m_DynamicObjectives.GetObjective().GetPhase();
+			int action = IA_AdminCompleteAndDefend.Resolve(phase);
+			if (action == IA_AdminCompleteAndDefend.ALREADY_DEFENDING)
+			{
+				Print("[IA_MissionInitializer] Complete + Defend: dynamic-base defense already active.", LogLevel.WARNING);
+				return;
+			}
+			if (action == IA_AdminCompleteAndDefend.WAIT_PLACING)
+			{
+				Print("[IA_MissionInitializer] Complete + Defend: field-base placement already in progress.", LogLevel.WARNING);
+				return;
+			}
+			if (action == IA_AdminCompleteAndDefend.BYPASS_TO_DEFEND)
+			{
+				if (m_DynamicObjectives.AdminBypassToDefend())
+				{
+					GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
+					Print("[IA_MissionInitializer] Complete + Defend: admin bypass into the live base defense.", LogLevel.WARNING);
+					return;
+				}
+
+				Print("[IA_MissionInitializer] Complete + Defend: live seize has no site to defend.", LogLevel.WARNING);
+				return;
+			}
+			if (action == IA_AdminCompleteAndDefend.RECOVER_FAILED)
+			{
+				Print("[IA_MissionInitializer] Complete + Defend: recovering from a failed dynamic base.", LogLevel.WARNING);
+				CancelActiveDynamicObjective(IA_BaseCancelReason.AdminDirectDefense);
+			}
+		}
+
 		RPC_ForceCompleteObjectivesAndSeizeBase();
 	}
 
