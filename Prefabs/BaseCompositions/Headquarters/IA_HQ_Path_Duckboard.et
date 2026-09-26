@@ -1,0 +1,22 @@
+GenericEntity {
+ ID "59AE2D0B25E252F2"
+ components {
+  RplComponent "{249B9FA4E14F59B2}" {
+  }
+  Hierarchy "{3368614FE499565F}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{498E9C542B8C5E92}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_Duckboard_01.et" {
+   ID "5B44826D0D8E5639"
+   coords 0 0 0
+   components {
+    Hierarchy "{1BB713722D9F5137}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

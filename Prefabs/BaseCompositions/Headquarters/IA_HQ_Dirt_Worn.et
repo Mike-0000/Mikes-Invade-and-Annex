@@ -1,0 +1,46 @@
+GenericEntity {
+ ID "9E2F15674C3956B0"
+ components {
+  RplComponent "{033F1106E34454F5}" {
+  }
+  Hierarchy "{1F56DE69F68A51D9}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  DecalEntity : "{AF4AA779A4546D51}Prefabs/Decals/Dirt/Decal_Dirt_Patch_02.et" {
+   ID "FEB403EB98695E56"
+   components {
+    Hierarchy "{E968E055D7795E2A}" {
+    }
+   }
+   coords 0 0.6 -2.6
+   angles -90 0 0
+   scale 4
+   FarPlane 2
+  }
+  DecalEntity : "{2566A36AF43E9F9E}Prefabs/Decals/Dirt/Decal_Dirt_Patch_06.et" {
+   ID "9F0B86B96DFB5D30"
+   components {
+    Hierarchy "{95A73486728F502B}" {
+    }
+   }
+   coords 0.7 0.6 1
+   angles -90 0 0
+   scale 4.5
+   FarPlane 2
+  }
+  DecalEntity : "{FC56FA6166DEE7B7}Prefabs/Decals/Dirt/Decal_Dirt_Footprints_01.et" {
+   ID "C38D65F32A8C5138"
+   components {
+    Hierarchy "{2E2893BCFA6450CF}" {
+    }
+   }
+   coords -0.5 0.6 3.4
+   angles -90 0 0
+   scale 2.5
+   FarPlane 2
+  }
+ }
+}

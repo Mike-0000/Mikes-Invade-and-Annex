@@ -24,6 +24,44 @@ class IA_HeadquartersProbe : IA_BaseCompositionProbe
 		Measure(world, "HQTeeth", "{84852BA8BD7157AA}Prefabs/BaseCompositions/Headquarters/IA_HQ_Belt_Teeth.et");
 		Measure(world, "HQHedgehogs", "{021016CFA51A5DEF}Prefabs/BaseCompositions/Headquarters/IA_HQ_Belt_Hedgehogs.et");
 		Measure(world, "HQWire", "{465135458FFE52FA}Prefabs/BaseCompositions/Headquarters/IA_HQ_Belt_Wire.et");
+		Measure(world, "HQCamoWallA", "{E47BBD43DC925CB6}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_A.et");
+		Measure(world, "HQCamoWallB", "{0DD97793B78E5ADC}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_B.et");
+		Measure(world, "HQCamoWallC", "{C7006CDDB3B7538F}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_C.et");
+		Measure(world, "HQCamoWallPanel", "{E2D884FB74355BF1}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_Panel.et");
+		Measure(world, "HQCamoWallLongA", "{DA3973E232785056}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_LongA.et");
+		Measure(world, "HQCamoWallLongB", "{C2AF401CE96E5585}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_LongB.et");
+		Measure(world, "HQGateNarrow", "{9BE84B07F4705DAC}Prefabs/BaseCompositions/Headquarters/IA_HQ_Gate_Narrow.et");
+		Measure(world, "HQGateWide", "{A6FC6376A38458B5}Prefabs/BaseCompositions/Headquarters/IA_HQ_Gate_Wide.et");
+		Measure(world, "HQSideGateNarrow", "{0DA966BB462B5D7D}Prefabs/BaseCompositions/Headquarters/IA_HQ_SideGate_Narrow.et");
+		Measure(world, "HQSideGateWide", "{2046084A8B5A5910}Prefabs/BaseCompositions/Headquarters/IA_HQ_SideGate_Wide.et");
+		Measure(world, "HQChicane", "{9B720F62DC465ED7}Prefabs/BaseCompositions/Headquarters/IA_HQ_Chicane.et");
+		Measure(world, "HQCheckpointPost", "{5FB4AADCA91A5430}Prefabs/BaseCompositions/Headquarters/IA_HQ_CheckpointPost.et");
+		Measure(world, "HQCheckpointNest", "{28CB2678FEF458A0}Prefabs/BaseCompositions/Headquarters/IA_HQ_CheckpointNest.et");
+		Measure(world, "HQSquare", "{745B7473BDF25649}Prefabs/BaseCompositions/Headquarters/IA_HQ_Square.et");
+		Measure(world, "HQRoadPlates", "{4B1941EDBFF55222}Prefabs/BaseCompositions/Headquarters/IA_HQ_Road_Plates.et");
+		Measure(world, "HQRoadPlatesShort", "{E26D9D5C05855B07}Prefabs/BaseCompositions/Headquarters/IA_HQ_Road_PlatesShort.et");
+		Measure(world, "HQDuckboards", "{EA01F348BC4557D6}Prefabs/BaseCompositions/Headquarters/IA_HQ_Path_Duckboards.et");
+		Measure(world, "HQDuckboard", "{59AE2D0B25E252F2}Prefabs/BaseCompositions/Headquarters/IA_HQ_Path_Duckboard.et");
+		Measure(world, "HQPlateStack", "{D9554A76E19D5AC3}Prefabs/BaseCompositions/Headquarters/IA_HQ_PlateStack.et");
+		Load(world, "HQDirtPatch", "{26F1DD4512DC595F}Prefabs/BaseCompositions/Headquarters/IA_HQ_Dirt_Patch.et");
+		Load(world, "HQDirtWorn", "{9E2F15674C3956B0}Prefabs/BaseCompositions/Headquarters/IA_HQ_Dirt_Worn.et");
+		Load(world, "HQDirtTrack", "{B96691E6DFC05192}Prefabs/BaseCompositions/Headquarters/IA_HQ_Dirt_Track.et");
+		Load(world, "HQDirtCross", "{5688CAA6D35B5507}Prefabs/BaseCompositions/Headquarters/IA_HQ_Dirt_Cross.et");
+		Load(world, "VigBriefing", "{986F4B80B0BE52E0}Prefabs/DynamicBase/IA_Dressing_BriefingLit.et");
+		Load(world, "VigComms", "{D7D10DFBACA05AD0}Prefabs/DynamicBase/IA_Dressing_CommsLit.et");
+		Load(world, "VigPower", "{3F22F8B9E0EB5442}Prefabs/DynamicBase/IA_Dressing_Power.et");
+		Load(world, "VigKitchen", "{7381F407AD8A54B8}Prefabs/DynamicBase/IA_Dressing_KitchenLit.et");
+		Load(world, "VigMess", "{06111FFC070A5834}Prefabs/DynamicBase/IA_Dressing_MessLit.et");
+		Load(world, "VigRest", "{754823CC537E5D85}Prefabs/DynamicBase/IA_Dressing_Rest.et");
+		Load(world, "VigWash", "{AB8A3CB589625084}Prefabs/DynamicBase/IA_Dressing_WaterWash.et");
+		Load(world, "VigWater", "{CE0933F9935A5FD4}Prefabs/DynamicBase/IA_Dressing_BulkWater.et");
+		Load(world, "VigSanitation", "{6F3672FEE4B857A1}Prefabs/DynamicBase/IA_Dressing_Sanitation.et");
+		Load(world, "VigWaste", "{A70917953C1D58AB}Prefabs/DynamicBase/IA_Dressing_Waste.et");
+		Load(world, "VigStores", "{EBACA024C71C5CAF}Prefabs/DynamicBase/IA_Dressing_Stores.et");
+		Load(world, "VigStoresCovered", "{674112EA1BA85649}Prefabs/DynamicBase/IA_Dressing_StoresCovered.et");
+		Load(world, "VigWorkshop", "{965FEDAFCD3F54D5}Prefabs/DynamicBase/IA_Dressing_WorkshopLit.et");
+		Load(world, "VigMedical", "{A9D76F51AE7B5D37}Prefabs/DynamicBase/IA_Dressing_MedicalLit.et");
+		Load(world, "VigLight", "{8726E742FEE65661}Prefabs/DynamicBase/IA_Dressing_EntranceLight.et");
 		CheckPosts(world, "HQCommand", "{6C2174ECD0E05F93}Prefabs/BaseCompositions/Headquarters/IA_HQ_Command_GuardHouse.et", 3, 6, 0);
 		CheckPosts(world, "HQBarracks", "{5D729180F6AA55B4}Prefabs/BaseCompositions/Headquarters/IA_HQ_Barracks.et", 0, 12, 0);
 		CheckPosts(world, "HQShelter", "{6D804238B8E85DF1}Prefabs/BaseCompositions/Headquarters/IA_HQ_Shelter.et", 0, 1, 0);
@@ -32,6 +70,28 @@ class IA_HeadquartersProbe : IA_BaseCompositionProbe
 		CheckPosts(world, "HQGuardBox", "{A36090ED85CF5A3A}Prefabs/BaseCompositions/Headquarters/IA_HQ_GuardBox.et", 1, 0, 0);
 		Print(string.Format("[IA][HeadquartersProbe] failures=%1", m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
+	}
+
+	// Decal scenes and reused vignettes have authored footprints, not mesh bounds.
+	protected void Load(BaseWorld world, string key, ResourceName name)
+	{
+		ref EntitySpawnParams params = new EntitySpawnParams();
+		params.TransformMode = ETransformMode.WORLD;
+		Math3D.MatrixIdentity4(params.Transform);
+		IEntity entity = GetGame().SpawnEntityPrefab(Resource.Load(name), world, params);
+		Check(entity != null, "load resource " + key);
+		if (!entity)
+			return;
+		int children = 0;
+		IEntity child = entity.GetChildren();
+		while (child)
+		{
+			children++;
+			child = child.GetSibling();
+		}
+		Check(children > 0, "loaded scene has children " + key);
+		Print(string.Format("[IA][HeadquartersProbe] load key=%1 class=%2 children=%3", key, entity.ClassName(), children), LogLevel.NORMAL);
+		SCR_EntityHelper.DeleteEntityAndChildren(entity);
 	}
 
 	protected void CheckPosts(BaseWorld world, string key, ResourceName name, int expected, int addons, int ladders)

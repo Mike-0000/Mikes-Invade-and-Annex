@@ -1,0 +1,32 @@
+GenericEntity {
+ ID "EA01F348BC4557D6"
+ components {
+  RplComponent "{90281501324156D2}" {
+  }
+  Hierarchy "{7766936CB0765A3A}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{498E9C542B8C5E92}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_Duckboard_01.et" {
+   ID "0331CC24324C53E5"
+   coords 0 0 -1.9
+   components {
+    Hierarchy "{1BB713722D9F5137}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{498E9C542B8C5E92}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_Duckboard_01.et" {
+   ID "2C96960056A45200"
+   coords 0 0 1.9
+   angles 0 180 0
+   components {
+    Hierarchy "{1BB713722D9F5137}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

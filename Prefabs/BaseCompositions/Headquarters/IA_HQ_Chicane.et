@@ -1,0 +1,42 @@
+GenericEntity {
+ ID "9B720F62DC465ED7"
+ components {
+  RplComponent "{3E92ACF2C01A5CDA}" {
+  }
+  Hierarchy "{3918F3491F7A529C}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{DDF59362051B28BC}Prefabs/Props/Military/Fortification/BarbedTape_KnifeRest.et" {
+   ID "D588D8CF67765EA9"
+   coords -2.1 0 -2.5
+   angles 0 90 0
+   components {
+    Hierarchy "{12BFD527A0725D79}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{DDF59362051B28BC}Prefabs/Props/Military/Fortification/BarbedTape_KnifeRest.et" {
+   ID "4A8E5F920C065020"
+   coords 2.1 0 2.5
+   angles 0 90 0
+   components {
+    Hierarchy "{12BFD527A0725D79}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C1977A326F2AA011}Prefabs/Structures/Signs/Military/SignCheckpoint_01_stop.et" {
+   ID "405635A388945EA0"
+   coords -3.3 0 -4.3
+   components {
+    Hierarchy "{64F10C3B247C5CAC}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,35 @@
+StaticModelEntity {
+ ID "4AB4255D4FFB54A1"
+ components {
+  MeshObject "{54969A6AAAADA251}" {
+   LODFactors {
+    10 5 1 1 1
+   }
+   Object "{CD7A4E79304AA054}Assets/Structures/Signs/Military/SignRectangle_01_75x45.xob"
+   Materials {
+    MaterialAssignClass "{567878E2458CC49C}" {
+     SourceMaterial "SignRectangle_01_75x45"
+     AssignedMaterial "{DC578BF9679A7B43}Assets/Structures/Signs/Military/Data/Sign_Warning_USSR_01.emat"
+    }
+    MaterialAssignClass "{567878E2458CC4DB}" {
+     SourceMaterial "SignRectangle_01_75x45_MLOD"
+     AssignedMaterial "{40AEB4CE7293CA75}Assets/Structures/Signs/Military/Data/Sign_Warning_USSR_01_MLOD.emat"
+    }
+    MaterialAssignClass "{563646BF11ADF009}" {
+     SourceMaterial "SignRectangle_01_75x45"
+     AssignedMaterial "{DC578BF9679A7B43}Assets/Structures/Signs/Military/Data/Sign_Warning_USSR_01.emat"
+    }
+    MaterialAssignClass "{567878E36A162D10}" {
+     SourceMaterial "SignRectangle_01_75x45_MLOD"
+     AssignedMaterial "{40AEB4CE7293CA75}Assets/Structures/Signs/Military/Data/Sign_Warning_USSR_01_MLOD.emat"
+    }
+   }
+  }
+  RigidBody "{54969A6AA8773997}" {
+   ModelGeometry 1
+   Static 1
+   ResponseIndex "TinyDestructible"
+  }
+ }
+ coords 0 0 0
+}

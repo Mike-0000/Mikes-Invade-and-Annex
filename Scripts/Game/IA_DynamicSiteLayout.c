@@ -26,6 +26,10 @@ class IA_DynamicSiteModule
 	int m_iEstimatedExpandedEntities = 8;
 	int m_iRole;
 	int m_iPerimeterSide = -1;
+	// Generated HQ dressing: the recipe already keeps its mesh box off gun
+	// reservations and this site's own props, so spawn skips the coarse
+	// bounding-circle gun test and ignores own-site entities in its trace.
+	bool m_bPlannedClearance;
 
 	// Physical bearing area is distinct from the larger reserved clearance pad.
 	void SetSupportFootprint(vector mins, vector maxs)

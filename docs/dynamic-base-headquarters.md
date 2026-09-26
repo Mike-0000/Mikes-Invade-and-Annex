@@ -38,7 +38,7 @@ subsystem.
 | `IA_BaseDesignLibrary` | `Select` is unchanged. New `SelectDesign(seed, hqChancePct)` rolls the style, and HQ variants are encoded as `HQ_BASE (100) + v`. New `CreateLayout(size, variant)` dispatches to either recipe class. `Committed` routes HQ variants into a separate history, so the scrappy rotation is untouched. |
 | `IA_HeadquartersRecipes` (generated) | 6 sizes × 12 variants = 72 recipes. |
 | `IA_HeadquartersCatalog` (generated) | Measured HQ scenery assets, with the same asset/socket type as the scrappy catalog. |
-| `IA_HeadquartersSiteLayout : IA_ComposedSiteLayout` | Resolves keys from the HQ catalog before the scrappy one. Adds `AddWallRun` (upright stepped concrete, collective coverage) and `AddObstacle` (outer belt dressing). |
+| `IA_HeadquartersSiteLayout : IA_ComposedSiteLayout` | Resolves keys from the HQ catalog before the scrappy one. Adds `AddWallRun` (upright stepped concrete or slope-following camo sandbags, collective coverage), `AddDressingItem` (planned gates, roads and vignettes) and `AddObstacle` (outer belt dressing). |
 | `IA_ComposedSiteLayout` | A single virtual `ResolveAsset(key)` hook is extracted from `AddComposition`. Scrappy behaviour is byte-for-byte the same code path. |
 | `IA_DynamicSitePlacer` | Uses `SelectDesign` / `CreateLayout`. Falls back once from HQ to scrappy when HQ resources are missing or no legal HQ site exists. |
 | `IA_Config` | Adds `m_iDynamicBaseHeadquartersChancePct` (default 50, clamped 0–100). |
@@ -427,7 +427,49 @@ unproven. Wrappers are `GenericEntity`, not `Building`, so
 sentinel posts and the outdoor posts still garrison them. Doorways have no
 door leaves.
 
+## 16. Iteration 5: built-up, lived-in HQ
+
+- **Walls are mostly Game Master camo sandbags.** `IA_HQ_CamoWall_*` runs use
+  the stock camo-netted sandbag walls. Concrete runs stay at every face's two
+  end slots, beside each casemate (bastions) and within two slots of the front
+  gate. Pairs never mix materials. On Full and Compact, three-slot camo runs
+  (`CamoWall_LongA/B`) keep the recipe under the 240-root cap.
+- **Sandbag runs hug the slope.** `IA_HeadquartersSiteLayout.IsSandbagRun`
+  (buried depth < 0.5 m) switches the run to `TerrainSegment`,
+  `FollowTerrainPlane`, lift 0, residual 0.5 m. Concrete runs keep the upright
+  stepped pad.
+- **Formal entries.** The front gate is a `BarGate_01` (bar raised, yaw −70),
+  flanked by sandbag posts, stop sign and roadblocks, and set in the wall gap
+  (`HQGateNarrow/Wide`). Each side opening gets a side gate with knife rests
+  and warning signs.
+- **Checkpoint.** A knife-rest chicane on the lane, a sandbag bunker post and a
+  round MG nest either side, 11 m or more inside the gate.
+- **Roads and paths.** Steel road plates run from the gate to the command
+  square, with dirt-track decals at the chicane and a crossroads decal at the
+  end. Duckboards and worn-dirt decals lead from building doors.
+- **Lived-in vignettes.** Each building type gets matching IA dressing kits:
+  kitchen, mess, wash, water, sanitation, rest, waste, stores, briefing, comms,
+  power, workshop, medical and light. They sit beside their building, clear of
+  doors, lanes and gun reservations.
+- **Planned clearance.** Dressing is emitted as `AddDressingItem` with
+  `m_bPlannedClearance`. The generator has already checked each item's
+  footprint against gun reserve boxes, so the placer skips its coarse gun
+  circle and ignores this site's own entities in the volume trace. Gates are
+  clipped to the wall line in the planner.
+- **Budgets.** The largest recipe is 237 roots (limit 240) and 1798 expanded
+  (limit 2000). Every recipe has 1 front gate, 2 side gates, a checkpoint, a
+  square, at least 3 road segments and at least 5 vignettes.
+
 ## Verification record
+
+Iteration 5 (2026-09-26): `IA_HeadquartersDesignTest` `logs_2026-09-26_03-48-08`,
+`IA_HeadquartersAssetProbe` `03-48-21`, `IA_HeadquartersProbe` `03-48-29`,
+`IA_BaseGarrisonTest` `03-48-37`, `IA_BaseFoundationProbe` `03-50-13` and
+`IA_BaseSelectionTest` `03-50-21` all report failures=0. `test_headquarters.py`
+passes (17 tests), as do the designs and assets `--check`. Unrelated
+`test_building_garrisons` and `test_dynamic_base_emplacements` failures come
+from files this change does not touch.
+
 
 Results from the iteration 4 tree, 2026-09-26, supersede the earlier rows.
 

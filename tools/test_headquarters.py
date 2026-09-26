@@ -45,7 +45,12 @@ class HeadquartersTests(unittest.TestCase):
 
     def test_every_catalog_prefab_measured_and_loaded(self):
         # Measurements come from a Workbench Preview run that spawned each prefab.
-        self.assertEqual(set(self.catalog),set(self.measure))
+        # Dressing kits and decals carry authored bounds instead (decals have no mesh).
+        probed={k for k,e in self.catalog.items() if 'measure' not in e}
+        self.assertEqual(probed,set(self.measure))
+        for key,e in self.catalog.items():
+            if 'measure' in e:
+                self.assertGreater(e['measure']['maxs'][0],e['measure']['mins'][0],key)
         for key,m in self.measure.items():
             self.assertGreater(m['count'],0,key)
             self.assertTrue((ROOT/self.catalog[key]['prefab'].split('}',1)[1]).exists(),key)
@@ -203,6 +208,51 @@ class HeadquartersTests(unittest.TestCase):
             hq_door=hq.Plan.aprons(None,r['modules'][0])[0]
             self.assertEqual(hq_door[1],(0,-1),r['name'])  # command door looks down the lane at the gate
         self.assertGreater(checked,500)
+
+    def test_camo_sandbag_walls_with_concrete_bastions(self):
+        """Game Master camo sandbag runs make up most of the wall; concrete anchors corners, bastions and the gate."""
+        for r in self.recipes:
+            camo=[w for w in r['walls'] if w['key'].startswith('HQCamoWall')]
+            concrete=[w for w in r['walls'] if w['key'].startswith('HQWall')]
+            self.assertEqual(len(camo)+len(concrete),len(r['walls']),r['name'])
+            self.assertGreater(len(camo),len(concrete),r['name'])
+            self.assertGreater(len(concrete),0,r['name'])
+            for side in range(4):
+                horizontal=side in (0,2)
+                half=r['wall_half_width'] if horizontal else r['wall_half_depth']
+                ends=[w for w in concrete if w['side']==side and abs(w['position'][0 if horizontal else 2])+w['half_width']>half-0.01]
+                self.assertEqual(len(ends),2,(r['name'],side))  # both corners of every face are concrete
+        text=read(self.catalog['HQCamoWallA']['prefab'].split('}',1)[1])
+        self.assertIn('Sandbag',text)
+        self.assertIn('CamoNet',text)
+
+    def test_lived_in_dressing(self):
+        """Formal gates, a checkpoint, roads, paths and service vignettes; all clear of guns and lanes."""
+        for r in self.recipes:
+            name=r['name']
+            keys=Counter(d['key'] for d in r['dressing'])
+            self.assertEqual(sum(v for k,v in keys.items() if k.startswith('HQGate')),1,name)
+            self.assertEqual(sum(v for k,v in keys.items() if k.startswith('HQSideGate')),2,name)
+            self.assertEqual(keys['HQChicane'],1,name)
+            self.assertEqual(keys['HQCheckpointPost'],1,name)
+            self.assertEqual(keys['HQCheckpointNest'],1,name)
+            self.assertGreaterEqual(keys['HQRoadPlates']+keys['HQRoadPlatesShort'],3,name)
+            self.assertGreaterEqual(keys['HQDuckboards']+keys['HQDuckboard'],1,name)
+            self.assertGreaterEqual(sum(v for k,v in keys.items() if k.startswith('Vig')),5,name)
+            gate=next(d for d in r['dressing'] if d['key'].startswith('HQGate'))
+            self.assertEqual(gate['position'][0],0,name)
+            self.assertAlmostEqual(gate['position'][2],-r['wall_half_depth'],2,name)
+            for d in r['dressing']:
+                self.assertIn(d['key'],self.catalog,name)
+                if d['key'].startswith(('HQGate','HQSideGate')):
+                    continue
+                p=d['position']
+                self.assertLess(abs(p[0]),r['wall_half_width'],(name,d['key']))
+                self.assertLess(abs(p[2]),r['wall_half_depth'],(name,d['key']))
+        recipes=read('Scripts/Game/IA_HeadquartersRecipes.c')
+        self.assertIn('AddDressingItem("HQChicane"',recipes)
+        layout=read('Scripts/Game/IA_HeadquartersSiteLayout.c')
+        self.assertIn('m_bPlannedClearance = true',layout)
 
     def test_posts_inside_walls_and_clear(self):
         for r in self.recipes:

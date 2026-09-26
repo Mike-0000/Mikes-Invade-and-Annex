@@ -1,0 +1,42 @@
+GenericEntity {
+ ID "28CB2678FEF458A0"
+ components {
+  RplComponent "{99D3F0F4E6645C94}" {
+  }
+  Hierarchy "{BB25409EA7D45176}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{7AF4B627D5C90235}Prefabs/Props/Military/Sandbags/Sandbag_01_round_high_burlap.et" {
+   ID "43D21FFDE1BF546D"
+   coords 0 -0.1 0
+   angles 0 90 0
+   components {
+    Hierarchy "{0D7D44C9DF5159F3}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "BED67153962E55CA"
+   coords 1 0 -1.6
+   angles 0 160 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "E005DDCC72CB5085"
+   coords 0.2 -0.1 2.4
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

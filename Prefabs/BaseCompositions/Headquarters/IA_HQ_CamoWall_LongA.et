@@ -1,0 +1,58 @@
+GenericEntity {
+ ID "DA3973E232785056"
+ components {
+  RplComponent "{B773DB5182BA5550}" {
+  }
+  Hierarchy "{2D27636116845920}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et" {
+   ID "26F495CEF0B85982"
+   coords -2.698 -0.1 0
+   components {
+    Hierarchy "{62C605633F07553B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{0667675C48220BD6}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Wall_high_Soviet.et" {
+   ID "C9B6E6F17BA7531C"
+   coords -2.718 -0.1 -0.022
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{CD67070EFAFC28C7}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_burlap.et" {
+   ID "9A60A21D8B8051C1"
+   coords 0 -0.1 0
+   components {
+    Hierarchy "{CD7FB03930C35D11}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et" {
+   ID "966B775AA32052D3"
+   coords 2.698 -0.1 0
+   components {
+    Hierarchy "{62C605633F07553B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{0667675C48220BD6}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Wall_high_Soviet.et" {
+   ID "976A8F3D4D825DE3"
+   coords 2.678 -0.1 -0.022
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}
