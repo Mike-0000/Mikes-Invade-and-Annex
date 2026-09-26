@@ -54,6 +54,72 @@ STOCK={
     'wire':'{93E06E731212BD96}Prefabs/Structures/Walls/BarbedWire/BarbedTape_01/BarbedTape_01_Triple.et',
     'pkm':'{723870DBB19D30B0}Prefabs/Weapons/Tripods/Tripod_6T5_PKM.et',
     'nsv':'{29F0CC704A582154}Prefabs/Weapons/Tripods/6T7/Tripod_6T7_NSV.et',
+    # Game Master "Sandbag_Camo_*_USSR" sub-compositions are a stock sandbag
+    # with a Soviet camo net child; the runs rebuild exactly that pairing.
+    'bagHigh':'{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et',
+    'bagWindow':'{CD67070EFAFC28C7}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_burlap.et',
+    'bagLong':'{BE16EE8FAA315FE2}Prefabs/Props/Military/Sandbags/Sandbag_01_long_high_burlap.et',
+    'bagEnd':'{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et',
+    'bagRound':'{7AF4B627D5C90235}Prefabs/Props/Military/Sandbags/Sandbag_01_round_high_burlap.et',
+    'bagBunker':'{5821AF9613353C80}Prefabs/Props/Military/Sandbags/Sandbag_01_bunker_burlap_camonet.et',
+    'netHigh':'{0667675C48220BD6}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Wall_high_Soviet.et',
+    'netMedium':'{08313D18309DAC02}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Wall_medium_Soviet.et',
+    'netTop':'{8088790C2D455045}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Small_Top_Soviet.et',
+    'gateHolder':'Prefabs/Structures/Infrastructure/Barriers/BarGate_01/BarGate_01_base.et',
+    'gateBar':'Prefabs/Structures/Infrastructure/Barriers/BarGate_01/BarGate_01_bar_base.et',
+    'plateA':'{C1B7AB00FF7C1424}Prefabs/Props/Industrial/ConcretePanel_01_A.et',
+    'plateB':'{ADE39FE043B89B0A}Prefabs/Props/Industrial/ConcretePanel_01_B.et',
+    'plateC':'{487FD3194F5D0C61}Prefabs/Props/Industrial/ConcretePanel_01_C.et',
+    'plateD':'{754BF6213A318556}Prefabs/Props/Industrial/ConcretePanel_01_D.et',
+    'plateStack':'{795552B887CD50E7}Prefabs/Props/Industrial/ConcretePanel_01_stack.et',
+    'duckboard':'{CC66836BF4E211F9}Prefabs/Props/Military/Camps/Duckboard_01.et',
+    'roadblock':'{64C9C1D1C2C1B38D}Prefabs/Props/Infrastructure/Roadblocks/RoadBlock_01.et',
+    'signCommand':'{7DA20C66CE0299D6}Prefabs/Structures/Signs/Military/Sign_CommandPost_USSR_01.et',
+    'signWarning':'{547A7CACBC8B0865}Prefabs/Structures/Signs/Military/Sign_Warning_USSR_01.et',
+    'stop':'{C1977A326F2AA011}Prefabs/Structures/Signs/Military/SignCheckpoint_01_stop.et',
+    'knife':'{DDF59362051B28BC}Prefabs/Props/Military/Fortification/BarbedTape_KnifeRest.et',
+    'chair':'{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et',
+    'flag':'{651E545B53BBD034}Prefabs/Structures/Military/Flags/FlagPole_02/FlagPole_02_V1_USSR.et',
+    'decalPatch1':'{BAA55688399B3545}Prefabs/Decals/Dirt/Decal_Dirt_Patch_01.et',
+    'decalPatch2':'{AF4AA779A4546D51}Prefabs/Decals/Dirt/Decal_Dirt_Patch_02.et',
+    'decalPatch3':'{4AD6EB80A8B1FA3A}Prefabs/Decals/Dirt/Decal_Dirt_Patch_03.et',
+    'decalPatch4':'{ACAEDB73441F87DB}Prefabs/Decals/Dirt/Decal_Dirt_Patch_04.et',
+    'decalPatch6':'{2566A36AF43E9F9E}Prefabs/Decals/Dirt/Decal_Dirt_Patch_06.et',
+    'decalCross':'{D0ADBF5A3B6783C0}Prefabs/Decals/Dirt/Decal_Dirt_Crossroad_01.et',
+    'decalSteps':'{FC56FA6166DEE7B7}Prefabs/Decals/Dirt/Decal_Dirt_Footprints_01.et',
+}
+# Net offset from the vanilla Sandbag_Camo_wall_high_USSR sub-composition.
+CAMO_NET=(-0.02,-0.022)
+# Sandbags have no buried foundation (measured y -0.07); sink runs so a
+# terrain-following run never shows daylight under a bag.
+BAG_SINK=0.1
+# Workbench Preview (logs_2026-09-26_03-08-37): BarGate_01 socket_bar sits at
+# (-4.284, 1.34, 0.09) and maps bar local -Z (arm, 8.53 m) to holder +X; the
+# DoorComponent swings about bar local Y (holder -Z) by its -70 degree range.
+BAR_OPEN=-70
+BAR_SOCKET_X=-4.284
+# ConcretePanel_01 road plate: 3.86 x 1.93 m, 0.22 m thick, already flat.
+PLATE_W=3.86
+PLATE_D=1.93
+PLATE_SINK=0.09
+# Existing lived-in vignettes (Prefabs/DynamicBase) with the scrappy
+# layout's authored footprints: (prefab, half width, half depth, expanded).
+VIGNETTES={
+    'VigBriefing':('{986F4B80B0BE52E0}Prefabs/DynamicBase/IA_Dressing_BriefingLit.et',2.3,2.6,9),
+    'VigComms':('{D7D10DFBACA05AD0}Prefabs/DynamicBase/IA_Dressing_CommsLit.et',2,1.3,5),
+    'VigPower':('{3F22F8B9E0EB5442}Prefabs/DynamicBase/IA_Dressing_Power.et',2,2.5,7),
+    'VigKitchen':('{7381F407AD8A54B8}Prefabs/DynamicBase/IA_Dressing_KitchenLit.et',3.5,3.2,6),
+    'VigMess':('{06111FFC070A5834}Prefabs/DynamicBase/IA_Dressing_MessLit.et',1.7,1.5,7),
+    'VigRest':('{754823CC537E5D85}Prefabs/DynamicBase/IA_Dressing_Rest.et',2,1.8,4),
+    'VigWash':('{AB8A3CB589625084}Prefabs/DynamicBase/IA_Dressing_WaterWash.et',1.4,1.2,5),
+    'VigWater':('{CE0933F9935A5FD4}Prefabs/DynamicBase/IA_Dressing_BulkWater.et',2.2,3.4,4),
+    'VigSanitation':('{6F3672FEE4B857A1}Prefabs/DynamicBase/IA_Dressing_Sanitation.et',2.4,2.8,5),
+    'VigWaste':('{A70917953C1D58AB}Prefabs/DynamicBase/IA_Dressing_Waste.et',1,0.7,3),
+    'VigStores':('{EBACA024C71C5CAF}Prefabs/DynamicBase/IA_Dressing_Stores.et',1.8,2.9,6),
+    'VigStoresCovered':('{674112EA1BA85649}Prefabs/DynamicBase/IA_Dressing_StoresCovered.et',1.9,1.6,6),
+    'VigWorkshop':('{965FEDAFCD3F54D5}Prefabs/DynamicBase/IA_Dressing_WorkshopLit.et',2,1.3,7),
+    'VigMedical':('{A9D76F51AE7B5D37}Prefabs/DynamicBase/IA_Dressing_MedicalLit.et',2,2,6),
+    'VigLight':('{8726E742FEE65661}Prefabs/DynamicBase/IA_Dressing_EntranceLight.et',2,1.5,2),
 }
 # Vanilla sub-composition tripod poses sit on a 0.656 m sandbag stack. The
 # concrete parapet top is placed at exactly that height.
@@ -70,11 +136,54 @@ DOORS={
     'HQTower':[((0,1),0.0,3.0)],
 }
 APRON_HALF=1.5
+# Walls within this many slots of a face corner or the front gate stay
+# concrete; the rest of the ring is Game Master camo sandbag runs.
+CONCRETE_SLOTS=2
+# Dressing kinds: solid props reserve ground, decals only paint it.
+SOLID=('mesh','road','gate')
+# Residual (after following the terrain plane) each dressing kind tolerates.
+RESIDUAL={'gate':0.6,'road':0.3,'mesh':0.35,'decal':0.8}
+# Lived-in vignettes beside each building type, most characteristic first.
+VIGNETTES_BY={'HQCommand':['VigBriefing','VigComms','VigPower'],
+              'HQBarracks':['VigKitchen','VigMess','VigWash','VigWater','VigSanitation','VigRest','VigWaste'],
+              'HQShelter':['VigRest','VigStoresCovered','VigWaste'],
+              'LivingSmall':['VigKitchen','VigMess','VigWash','VigSanitation','VigWaste'],
+              'Supply':['VigStores','VigStoresCovered'],'Ammo':['VigStoresCovered'],
+              'MaintenanceSmall':['VigWorkshop','HQPlateStack'],'MaintenanceLarge':['VigWorkshop','HQPlateStack'],
+              'Medical':['VigMedical','VigWater'],'Hospital':['VigMedical','VigWater'],
+              'Fuel':['VigPower'],'HQGuardBox':['VigLight']}
+# Destructible stock scenery with its own RplComponent gets a mesh-only
+# wrapper; sandbags, nets, signs and knife rests stay stock children like the
+# vanilla checkpoints and Game Master sub-compositions.
+MESH_ONLY={'panelV1','panelV2','panelV3','panelDamaged','gateHolder','gateBar','plateA','plateB','plateC','plateD',
+           'plateStack','duckboard','roadblock','signCommand','signWarning'}
 
 
 # Emitted into IA_HeadquartersProbe: vanilla CoverPost/ObservationPost smart
 # actions must survive the mesh-only wrapper (IA area garrisons query them).
 PROBE_POSTS='''
+	// Decal scenes and reused vignettes have authored footprints, not mesh bounds.
+	protected void Load(BaseWorld world, string key, ResourceName name)
+	{
+		ref EntitySpawnParams params = new EntitySpawnParams();
+		params.TransformMode = ETransformMode.WORLD;
+		Math3D.MatrixIdentity4(params.Transform);
+		IEntity entity = GetGame().SpawnEntityPrefab(Resource.Load(name), world, params);
+		Check(entity != null, "load resource " + key);
+		if (!entity)
+			return;
+		int children = 0;
+		IEntity child = entity.GetChildren();
+		while (child)
+		{
+			children++;
+			child = child.GetSibling();
+		}
+		Check(children > 0, "loaded scene has children " + key);
+		Print(string.Format("[IA][HeadquartersProbe] load key=%1 class=%2 children=%3", key, entity.ClassName(), children), LogLevel.NORMAL);
+		SCR_EntityHelper.DeleteEntityAndChildren(entity);
+	}
+
 	protected void CheckPosts(BaseWorld world, string key, ResourceName name, int expected, int addons, int ladders)
 	{
 		ref EntitySpawnParams params = new EntitySpawnParams();
@@ -318,6 +427,101 @@ class HeadquartersAuthor(Author):
             return [self.child(out,i,self.stock_resource(s),c,a) for i,(s,c,a) in enumerate(items)]
         self.composition(key,name,children)
 
+    def piece(self,out,index,name,coords,angles=(0,0,0)):
+        """Stock child, or the mesh-only wrapper for destructible scenery."""
+        if name in MESH_ONLY:
+            return self.child(out,index,self.static_mesh(name),coords,angles)
+        return self.child(out,index,self.stock_resource(name),coords,angles)
+
+    def scene(self,key,name,items,footprint=None):
+        """Hand-placed scene: (stock name, coords, angles) per child."""
+        def children(out):
+            return [self.piece(out,i,s,c,a) for i,(s,c,a) in enumerate(items)]
+        self.composition(key,name,children)
+        if footprint:
+            self.catalog[key]['measure']=footprint
+
+    def camo_run(self,key,name,units):
+        """Game Master camo sandbag wall, one bag per 2.698 m wall slot.
+
+        The 2.97 m bags overlap their neighbour by 0.27 m, so a run that
+        follows the grade still reads as one continuous wall."""
+        start=-PANEL*(len(units)-1)/2
+        def children(out):
+            nodes=[]
+            for i,(bag,net) in enumerate(units):
+                x=start+i*PANEL
+                nodes.append(self.piece(out,len(nodes),bag,(x,-BAG_SINK,0)))
+                if net:
+                    nodes.append(self.piece(out,len(nodes),net,(x+CAMO_NET[0],-BAG_SINK,CAMO_NET[1])))
+            return nodes
+        self.composition(key,name,children)
+
+    def plates(self,rows,cols=2,z0=None):
+        """Flat road plates, row-major, variants alternating like a laid road."""
+        kinds=['plateA','plateC','plateB','plateD']
+        z0=-PLATE_D*(rows-1)/2 if z0 is None else z0
+        return [(kinds[(r*cols+c+r)%4],(PLATE_W*(c-(cols-1)/2),-PLATE_SINK,z0+r*PLATE_D),(0,180*((r+c)%2),0))
+                for r in range(rows) for c in range(cols)]
+
+    def gate(self,key,name,edge):
+        """Formal front gate. Local +Z faces outward like the casemates.
+
+        Concrete wing walls flare out from both wall ends, the stock bar gate
+        stands open over the lane (mesh only, so it never closes on a convoy)
+        and a road-plate apron runs through the opening."""
+        # Clear of the narrow gate's wing panel pillar at x=edge.
+        holder_x=0.1
+        items=[('panelV1',(edge,0,0),(0,270,0)),('panelV3',(-edge,0,0),(0,270,0)),
+               ('signCommand',(edge+1.3,0,1.6),(0,180,0)),('signWarning',(-edge-1.3,0,1.6),(0,180,0)),
+               ('stop',(-3.4,0,4.0),(0,180,0)),
+               ('roadblock',(edge-0.9,0,3.2),(0,90,0)),('roadblock',(-edge+0.9,0,3.2),(0,90,0))]
+        items+=self.plates(4)
+        bar=self.static_mesh('gateBar')
+        bar_path=bar.split('}',1)[1]
+        def children(out):
+            nodes=[self.piece(out,i,s,c,a) for i,(s,c,a) in enumerate(items)]
+            # Holder yawed 180: its socket lands at local x=holder_x-BAR_SOCKET_X
+            # and the raised arm leans back over the lane.
+            holder=self.child(out,len(nodes),self.static_mesh('gateHolder'),(holder_x,0,0),(0,180,0))
+            holder.body.append(Node('',[Node('StaticModelEntity : "'+bar+'"',[
+                'ID "'+guid(out+'/bar')+'"','angles '+fmt((0,BAR_OPEN,0)),
+                Node('components',[Node('Hierarchy "{'+guid(bar_path+'/Hierarchy')+'}"',['Enabled 1','PivotID "socket_bar"','AutoTransform 1'])])])]))
+            return nodes+[holder]
+        self.composition(key,name,children)
+
+    def side_gate(self,key,name,edge):
+        """Side entry closed down to a 4.4-4.8 m walk-through by camo sandbag
+        wings, with a knife-rest chicane outside. Local +Z faces outward."""
+        items=[]
+        for s in (1,-1):
+            items+=[('bagHigh',(s*(edge-1.5),-BAG_SINK,0),(0,0,0)),('netHigh',(s*(edge-1.5)+CAMO_NET[0],-BAG_SINK,CAMO_NET[1]),(0,0,0))]
+            if edge-3>3:
+                items.append(('bagEnd',(s*(edge-3.5),-BAG_SINK,0),(0,0,0)))
+        items+=[('knife',(1.2,0,2.6),(0,90,0)),('stop',(-2.6,0,3.6),(0,180,0)),('signWarning',(edge-1.0,0,2.2),(0,180,0))]
+        self.scene(key,name,items)
+
+    def decals(self,key,name,items,radius):
+        """Ground decals under a replicated root, so clients draw them too.
+
+        Projected down from 0.6 m to 1.4 m below the snapped root, which
+        covers the residual of a terrain-oriented pad without reaching
+        the tops of nearby props."""
+        def children(out):
+            nodes=[]
+            for i,(decal,(x,z),scale) in enumerate(items):
+                ref=STOCK[decal]
+                nodes.append(Node('DecalEntity : "'+ref+'"',['ID "'+guid(out+'/decal/'+str(i))+'"',
+                    Node('components',[Node('Hierarchy "'+self.component_id(stock_path(decal),'Hierarchy')+'"')]),
+                    'coords '+fmt((x,0.6,z)),'angles -90 0 0','scale '+fmt((scale,)),'FarPlane 2']))
+            return nodes
+        self.composition(key,name,children)
+        self.catalog[key]['measure']={'count':len(items),'mins':[-radius,0,-radius],'maxs':[radius,0.2,radius]}
+
+    def vignette(self,key,prefab,hw,hd,expanded):
+        self.catalog[key]={'prefab':prefab,'sockets':[],'source':'dressing',
+                           'measure':{'count':expanded,'mins':[-hw,0,-hd],'maxs':[hw,2.5,hd]}}
+
     def generate(self):
         self.wall_run('HQWallA','WallRun_A',['panelV1','panelV2'])
         self.wall_run('HQWallB','WallRun_B',['panelV3','panelV1'])
@@ -334,8 +538,45 @@ class HeadquartersAuthor(Author):
         self.obstacles('HQTeeth','Belt_Teeth',[('teeth1',(-1.7,0,0),(0,0,0)),('teeth2',(0,0,0.3),(0,90,0)),('teeth1',(1.7,0,-0.1),(0,180,0))])
         self.obstacles('HQHedgehogs','Belt_Hedgehogs',[('hedgehog',(-1.4,0,0.2),(0,15,0)),('hedgehog',(1.4,0,-0.2),(0,-30,0))])
         self.obstacles('HQWire','Belt_Wire',[('wire',(0,0,0),(0,90,0))])
+        high=('bagHigh','netHigh'); window=('bagWindow',None)
+        self.camo_run('HQCamoWallA','CamoWall_A',[high,high])
+        self.camo_run('HQCamoWallB','CamoWall_B',[high,window])
+        self.camo_run('HQCamoWallC','CamoWall_C',[window,high])
+        self.camo_run('HQCamoWallPanel','CamoWall_Panel',[high])
+        # Three-slot runs keep the two largest rings under the root cap.
+        self.camo_run('HQCamoWallLongA','CamoWall_LongA',[high,window,high])
+        self.camo_run('HQCamoWallLongB','CamoWall_LongB',[high,high,high])
+        # Front openings are 4 or 5 wall slots wide depending on panel parity.
+        self.gate('HQGateNarrow','Gate_Narrow',2*PANEL)
+        self.gate('HQGateWide','Gate_Wide',2.5*PANEL)
+        self.side_gate('HQSideGateNarrow','SideGate_Narrow',2*PANEL)
+        self.side_gate('HQSideGateWide','SideGate_Wide',2.5*PANEL)
+        # Inner checkpoint behind the front gate, in three roots so each clears
+        # the casemate reservation boxes on its own. Local +Z faces the HQ.
+        # The knife rests leave a 3.7 m slalom for vehicles.
+        self.scene('HQChicane','Chicane',[('knife',(-2.1,0,-2.5),(0,90,0)),('knife',(2.1,0,2.5),(0,90,0)),
+                                          ('stop',(-3.3,0,-4.3),(0,0,0))])
+        self.scene('HQCheckpointPost','CheckpointPost',[('bagBunker',(0,0,0.3),(0,270,0)),('chair',(-1.6,0,-2.6),(0,200,0)),
+                                                        ('signWarning',(-1.2,0,2.9),(0,0,0))])
+        self.scene('HQCheckpointNest','CheckpointNest',[('bagRound',(0,-BAG_SINK,0),(0,90,0)),('chair',(1.0,0,-1.6),(0,160,0)),
+                                                        ('bagEnd',(0.2,-BAG_SINK,2.4),(0,0,0))])
+        # Parade square in front of the command building.
+        self.scene('HQSquare','Square',[('flag',(0,0,0),(0,0,0)),('signCommand',(1.4,0,-0.8),(0,0,0)),
+                                        ('bagRound',(-2.2,-BAG_SINK,1.2),(0,30,0))])
+        self.scene('HQRoadPlates','Road_Plates',self.plates(4))
+        self.scene('HQRoadPlatesShort','Road_PlatesShort',self.plates(2))
+        self.scene('HQDuckboards','Path_Duckboards',[('duckboard',(0,0,-1.9),(0,0,0)),('duckboard',(0,0,1.9),(0,180,0))])
+        self.scene('HQDuckboard','Path_Duckboard',[('duckboard',(0,0,0),(0,0,0))])
+        self.scene('HQPlateStack','PlateStack',[('plateStack',(0,0,0),(0,0,0)),('plateA',(0,-PLATE_SINK,2.3),(0,8,0))])
+        self.decals('HQDirtPatch','Dirt_Patch',[('decalPatch4',(0,0),5)],2.5)
+        self.decals('HQDirtWorn','Dirt_Worn',[('decalPatch2',(0,-2.6),4),('decalPatch6',(0.7,1.0),4.5),('decalSteps',(-0.5,3.4),2.5)],4)
+        self.decals('HQDirtTrack','Dirt_Track',[('decalPatch1',(0,-3.2),4.5),('decalPatch3',(0.3,0),4.5),('decalPatch4',(-0.2,3.2),4.5)],4)
+        self.decals('HQDirtCross','Dirt_Cross',[('decalCross',(0,0),6)],3)
+        for key,(prefab,hw,hd,expanded) in VIGNETTES.items():
+            self.vignette(key,prefab,hw,hd,expanded)
         self.outputs['docs/headquarters-catalog.json']=json.dumps(self.catalog,indent=2)+'\n'
-        calls='\n'.join(f'\t\tMeasure(world, "{k}", "{v["prefab"]}");' for k,v in self.catalog.items())
+        calls='\n'.join(f'\t\tMeasure(world, "{k}", "{v["prefab"]}");' for k,v in self.catalog.items() if 'measure' not in v)
+        calls+='\n'+'\n'.join(f'\t\tLoad(world, "{k}", "{v["prefab"]}");' for k,v in self.catalog.items() if 'measure' in v)
         calls+='\n'+'\n'.join(f'\t\tCheckPosts(world, "{k}", "{v["prefab"]}", {v["posts"]}, {v["addons"]}, {v["ladders"]});' for k,v in self.catalog.items() if 'posts' in v)
         self.outputs['Scripts/WorkbenchGame/IA_HeadquartersProbe.c']=(
             '#ifdef WORKBENCH\n'
@@ -403,7 +644,7 @@ class Plan:
         self.rng=random.Random(40503+size_id*1999+variant*337)
         self.catalog=catalog; self.measure=measure
         self.Wl,self.Dl=wall_extent(self.W,self.D)
-        self.modules=[]; self.walls=[]; self.belt=[]
+        self.modules=[]; self.walls=[]; self.belt=[]; self.dressing=[]
         self.guns=0; self.heavy=0
         self.lanes=[]
         self.capture=[0,0,0]
@@ -477,6 +718,8 @@ class Plan:
             for o in self.modules:
                 if overlap(a,self.bare(o)):
                     return False
+            if any(overlap(a,self.dbox(d)) for d in self.solid()):
+                return False
         for o in self.modules:
             for a,_ in self.aprons(o):
                 if overlap(own,a):
@@ -500,6 +743,8 @@ class Plan:
             if not self.inside(a):
                 return False
             if any(overlap(a,box(o),0 if o['side']>=0 else 1) for o in self.modules):
+                return False
+            if any(overlap(a,self.dbox(d)) for d in self.solid()):
                 return False
             if not ignore_lane and any(overlap(a,lane,1) for lane in self.lanes):
                 return False
@@ -526,8 +771,20 @@ class Plan:
                 return True
         return False
 
+    def concrete(self,side,i):
+        slots=self.slots[side]
+        if i<CONCRETE_SLOTS or i>=len(slots)-CONCRETE_SLOTS:
+            return True
+        # Concrete shoulders either side of each casemate read as a bastion.
+        if any(isinstance(slots[j],str) and slots[j].startswith('HQCasemate') for j in (i-1,i+1) if 0<=j<len(slots)):
+            return True
+        return side==2 and any(slots[j]=='gate' for j in range(max(0,i-CONCRETE_SLOTS),min(len(slots),i+CONCRETE_SLOTS+1)))
+
     def build_walls(self):
+        """Concrete corners and gate shoulders; Game Master camo sandbag
+        runs everywhere else, so the ring reads as a dug-in permanent camp."""
         mix=['HQWallA','HQWallB','HQWallA','HQWallC'] if self.variant%3!=1 else ['HQWallB','HQWallA','HQWallC','HQWallA']
+        camo=['HQCamoWallA','HQCamoWallB','HQCamoWallA','HQCamoWallC'] if self.variant%2 else ['HQCamoWallA','HQCamoWallC','HQCamoWallA','HQCamoWallB']
         for side in range(4):
             horizontal,fixed,half=side_axis(side,self.Wl,self.Dl)
             slots=self.slots[side]
@@ -535,11 +792,20 @@ class Plan:
             while i<len(slots):
                 if slots[i] is not None:
                     i+=1; continue
-                pair=i+1<len(slots) and slots[i+1] is None
+                hard=self.concrete(side,i)
+                pair=i+1<len(slots) and slots[i+1] is None and self.concrete(side,i+1)==hard
                 width=2 if pair else 1
+                if (not hard and pair and self.size<2 and i+2<len(slots) and slots[i+2] is None
+                        and not self.concrete(side,i+2)):
+                    width=3
                 along=-half+(i+width/2)*PANEL
                 x,z=(along,fixed) if horizontal else (fixed,along)
-                key=mix[(count+self.variant)%len(mix)] if pair else 'HQWallPanel'
+                if hard:
+                    key=mix[(count+self.variant)%len(mix)] if pair else 'HQWallPanel'
+                elif width==3:
+                    key=['HQCamoWallLongA','HQCamoWallLongB'][(count+self.variant)%2]
+                else:
+                    key=camo[(count+self.variant)%len(camo)] if pair else 'HQCamoWallPanel'
                 self.walls.append({'key':key,'position':[round(x,4),0,round(z,4)],'yaw':[0,90,180,270][side],'side':side,
                                    'half_width':round(PANEL*width/2,4),'half_depth':0.6,'expanded':cost(self.measure[key])})
                 count+=1; i+=width
@@ -562,7 +828,7 @@ class Plan:
                 t=-half+2+r*spacing/2
                 k=0
                 while t<=half-2:
-                    gate=(side==2 and abs(t)<8) or (side in (1,3) and -17<t<1)
+                    gate=(side==2 and abs(t)<10) or (side in (1,3) and -17<t<1)
                     if not gate:
                         key=styles[(k+side+self.variant)%len(styles)]
                         if len(rows)>1 and r==0 and key=='HQHedgehogs':
@@ -634,9 +900,209 @@ class Plan:
             return False
         if any(overlap(a,box(o),0 if o['side']>=0 else 1) for o in self.modules):
             return False
+        if any(overlap(a,self.dbox(d)) for d in self.solid()):
+            return False
         if any(overlap(a,lane,1) for lane in self.lanes):
             return False
         return not overlap(a,(self.capture[0]-.5,self.capture[2]-.5,self.capture[0]+.5,self.capture[2]+.5),0)
+
+    # -- dressing ----------------------------------------------------------
+    def solid(self):
+        return [d for d in self.dressing if d['kind'] in SOLID]
+
+    def dbox(self,d):
+        a=mesh_box(d,self.measure)
+        if d['kind']!='gate':
+            return a
+        # Gate wings, signs and chicanes stand outside the wall; inside,
+        # only the road apron across the opening reserves ground.
+        lim_x,lim_z=self.limits()
+        x,z=d['position'][0],d['position'][2]
+        a=(max(a[0],-lim_x,x-4),max(a[1],-lim_z,z-4),min(a[2],lim_x,x+4),min(a[3],lim_z,z+4))
+        if a[0]>=a[2] or a[1]>=a[3]:
+            return (1e6,1e6,1e6,1e6)
+        return a
+
+    def room(self,key,reserve=0):
+        return (self.roots()+1+reserve<=ROOT_LIMIT and
+                self.expanded()+cost(self.measure[key])+self.guns*12<=RECIPE_EXPANDED_BUDGET)
+
+    def gun_conflict(self,item):
+        """Solid dressing stays off each gun's crew box, the same rectangle as
+        IA_StaticGunRecord.ContainsReservedPoint (x +-1.5, z -4..1.25), grown
+        0.5 m for the socket offset. Runtime trusts this (m_bPlannedClearance)
+        instead of its coarse bounding-circle test."""
+        if item['kind']=='decal':
+            return False
+        # Gate wings sit a full slot clear of any face casemate (casemate()).
+        a=self.dbox(item)
+        for g in self.modules:
+            if not self.catalog[g['key']]['sockets']:
+                continue
+            reserve=mesh_box({'key':None,'position':g['position'],'yaw':g['yaw']},{None:{'mins':[-2,0,-4.5],'maxs':[2,0,1.75]}})
+            if overlap(a,reserve):
+                return True
+        return False
+
+    def dress_item(self,key,x,z,yaw,kind):
+        hw,hd=half_extent(self.measure[key])
+        return {'key':key,'position':[round(x,3),0,round(z,3)],'yaw':yaw%360,'kind':kind,'residual':RESIDUAL[kind],
+                'half_width':round(hw,4),'half_depth':round(hd,4),'expanded':cost(self.measure[key])}
+
+    def dress_fits(self,item,lane_ok=False,apron_ok=False,extra=()):
+        a=self.dbox(item)
+        kind=item['kind']
+        if self.gun_conflict(item):
+            return False
+        if kind=='gate':
+            return True
+        if not self.inside(a):
+            return False
+        if kind=='decal':
+            return True
+        if any(overlap(a,self.bare(o),0.6) for o in self.modules):
+            return False
+        # Road segments butt together; everything else keeps a walking gap.
+        if any(overlap(a,self.dbox(d),0.3) for d in self.solid()+list(extra) if kind!='road' or d['kind']!='road'):
+            return False
+        if kind=='road':
+            return True
+        if not lane_ok and any(overlap(a,lane,0.3) for lane in self.lanes):
+            return False
+        if not apron_ok and any(overlap(a,ap) for o in self.modules for ap,_ in self.aprons(o)):
+            return False
+        return not overlap(a,(self.capture[0]-1.5,self.capture[2]-1.5,self.capture[0]+1.5,self.capture[2]+1.5))
+
+    def dress(self,key,x,z,yaw,kind,lane_ok=False,apron_ok=False,owner=None):
+        if not self.room(key):
+            return False
+        item=self.dress_item(key,x,z,yaw,kind)
+        if not self.dress_fits(item,lane_ok,apron_ok):
+            return False
+        if owner is not None:
+            item['owner']=owner
+        self.dressing.append(item)
+        return True
+
+    def opening(self,side):
+        horizontal,fixed,half=side_axis(side,self.Wl,self.Dl)
+        gates=[i for i,s in enumerate(self.slots[side]) if s=='gate']
+        a,b=-half+gates[0]*PANEL,-half+(gates[-1]+1)*PANEL
+        return fixed,(a+b)/2,(b-a)/2
+
+    def build_gates(self):
+        """Formal concrete bar gate on the front, camo sandbag side entries."""
+        _,_,edge=self.opening(2)
+        key='HQGateWide' if edge>2.25*PANEL else 'HQGateNarrow'
+        assert self.dress(key,0,-self.Dl,180,'gate'),(self.name,self.variant,'gate')
+        for side,yaw in ((1,90),(3,270)):
+            fixed,centre,edge=self.opening(side)
+            key='HQSideGateWide' if edge>2.25*PANEL else 'HQSideGateNarrow'
+            self.dress(key,fixed,centre,yaw,'gate')
+
+    def build_checkpoint(self,mirror):
+        """Inner vehicle checkpoint across the lane, far enough in that
+        the gate guard box and throat overwatch keep their ground."""
+        post_w,_=half_extent(self.measure['HQCheckpointPost'])
+        nest_w,_=half_extent(self.measure['HQCheckpointNest'])
+        yaw=0 if mirror>0 else 180
+        for step in range(16):
+            z=-self.Dl+11+step
+            if z>self.capture[2]-14 or not self.room('HQChicane',2):
+                return
+            parts=[self.dress_item('HQChicane',0,z,0,'mesh'),
+                   self.dress_item('HQCheckpointPost',mirror*(LANE_HALF+post_w+0.4),z,yaw,'mesh'),
+                   self.dress_item('HQCheckpointNest',-mirror*(LANE_HALF+nest_w+0.4),z,yaw,'mesh')]
+            if all(self.dress_fits(p,lane_ok=(i==0),extra=parts[:i]) for i,p in enumerate(parts)):
+                self.dressing+=parts
+                return
+
+    def build_square(self,mirror):
+        """Flag and command sign beside the capture point, off the lane."""
+        hw,hd=half_extent(self.measure['HQSquare'])
+        for s in (mirror,-mirror):
+            for dz in (0,-2,-4,-6,2):
+                if self.dress('HQSquare',s*(LANE_HALF+hw+0.8),self.capture[2]-hd-1+dz,0,'mesh'):
+                    return
+
+    def build_roads(self):
+        """Concrete road plates from the gate apron to the command building;
+        worn dirt where the chicane stands so the knife rests keep clear."""
+        z=-self.Dl+PLATE_W
+        end=self.capture[2]-1
+        chicanes=[d for d in self.dressing if d['key']=='HQChicane']
+        while end-z>=PLATE_D:
+            hit=next((c for c in chicanes if self.dbox(c)[1]-0.3<z+2*PLATE_W and self.dbox(c)[3]+0.3>z),None)
+            if hit:
+                a=self.dbox(hit)
+                if z+PLATE_W<=a[1]-0.3 and self.dress('HQRoadPlatesShort',0,z+PLATE_D,0,'road'):
+                    z+=PLATE_W
+                    continue
+                self.dress('HQDirtTrack',0,hit['position'][2],0,'decal')
+                chicanes.remove(hit)
+                z=a[3]+0.3
+                continue
+            key='HQRoadPlates' if end-z>=2*PLATE_W else 'HQRoadPlatesShort'
+            length=2*PLATE_W if key=='HQRoadPlates' else PLATE_W
+            if not self.dress(key,0,z+length/2,0,'road'):
+                break
+            z+=length
+        self.dress('HQDirtCross',0,min(z,end),0,'decal')
+
+    def build_paths(self):
+        """Worn ground and duckboards out of each main door."""
+        for o in list(self.modules):
+            aprons=self.aprons(o)
+            if not aprons:
+                continue
+            if not self.room('HQDirtWorn',4):
+                return
+            a,(wx,wz)=aprons[0]
+            cx,cz=(a[0]+a[2])/2,(a[1]+a[3])/2
+            yaw=0 if wz else 90
+            self.dress('HQDirtPatch' if o['key'] in ('HQTower','HQPillbox') else 'HQDirtWorn',cx+wx,cz+wz,yaw,'decal')
+            # Boards start at the door face and run outward along its normal.
+            ex=a[0] if wx>0 else a[2] if wx<0 else cx
+            ez=a[1] if wz>0 else a[3] if wz<0 else cz
+            for key,length in (('HQDuckboards',7.6),('HQDuckboard',3.8)):
+                if self.dress(key,ex+wx*(0.7+length/2),ez+wz*(0.7+length/2),yaw,'mesh',apron_ok=True):
+                    break
+
+    def build_vignettes(self,per_building):
+        """Lived-in scenes tucked against each building's flanks."""
+        for index,o in enumerate(list(self.modules)):
+            have=[d['key'] for d in self.dressing if d.get('owner')==index]
+            for key in VIGNETTES_BY.get(o['key'],[]):
+                if len(have)>=per_building or not self.room(key,4):
+                    break
+                if key not in have and self.beside(index,o,key):
+                    have.append(key)
+
+    def beside(self,index,o,key):
+        b=self.bare(o)
+        hw,hd=half_extent(self.measure[key])
+        mx,mz=(b[0]+b[2])/2,(b[1]+b[3])/2
+        best=None
+        for yaw in (0,90):
+            w,d=(hw,hd) if yaw==0 else (hd,hw)
+            cands=[]
+            for t in [i*1.5 for i in range(-12,13)]:
+                if b[1]+d-3<=mz+t<=b[3]-d+3:
+                    cands+=[(b[0]-1.0-w,mz+t),(b[2]+1.0+w,mz+t)]
+                if b[0]+w-3<=mx+t<=b[2]-w+3:
+                    cands+=[(mx+t,b[1]-1.0-d),(mx+t,b[3]+1.0+d)]
+            for x,z in cands:
+                item=self.dress_item(key,x,z,yaw,'mesh')
+                if not self.dress_fits(item):
+                    continue
+                score=math.dist((x,z),(mx,mz))
+                if best is None or score<best[0]-1e-6:
+                    best=(score,item)
+        if not best:
+            return False
+        best[1]['owner']=index
+        self.dressing.append(best[1])
+        return True
 
     def build(self):
         size=self.size; arch=self.archetype; v=self.variant%3
@@ -667,6 +1133,7 @@ class Plan:
             if self.guns>=CAPS[size]:
                 break
             self.casemate(side,fraction,'HQCasematePKM')
+        self.build_gates()
         # Towers inside the corners, stairs toward the yard.
         corners=[(-1,1),(1,1),(-1,-1),(1,-1)]
         count=[4,2,2,4][arch] if size<4 else 2
@@ -683,11 +1150,14 @@ class Plan:
             if self.insert('HQTower',x,z,yaw,'Tower',required=False,ignore_lane=True):
                 placed+=1
         # Gate guard box beside the front opening.
-        if arch in (0,3):
-            gate_edge=max(-self.Wl+(i+1)*PANEL for i,s in enumerate(self.slots[2]) if s=='gate')
-            hw,_=half_extent(self.measure['HQGuardBox'])
-            _,z=self.snug('HQGuardBox',0,0,-1)
-            self.insert('HQGuardBox',mirror*(gate_edge+hw+1.5),z,0,'Cover',required=False,ignore_lane=True)
+        gate_edge=max(-self.Wl+(i+1)*PANEL for i,s in enumerate(self.slots[2]) if s=='gate')
+        hw,_=half_extent(self.measure['HQGuardBox'])
+        _,z=self.snug('HQGuardBox',0,0,-1)
+        for gx in (mirror*(gate_edge+hw+1.5),mirror*(gate_edge+hw+4.5)):
+            if self.insert('HQGuardBox',gx,z,0,'Cover',required=False,ignore_lane=True):
+                break
+        self.build_checkpoint(mirror)
+        self.build_square(mirror)
         barracks={0:'HQShelter',1:'HQBarracks' if size<2 else 'HQShelter',2:'LivingSmall',3:'HQShelter'}[arch]
         options=[barracks,'HQShelter','LivingSmall']
         assert any(self.place_row(k,'Barracks',True,mirror) for k in dict.fromkeys(options)),(self.name,self.variant,'barracks')
@@ -707,6 +1177,10 @@ class Plan:
                 placed+=1
         self.build_walls()
         self.build_belt()
+        self.build_roads()
+        self.build_vignettes(1)
+        self.build_paths()
+        self.build_vignettes(99)
         self.check()
         return self.result()
 
@@ -714,7 +1188,7 @@ class Plan:
         guns_by_side={m['side'] for m in self.modules if self.catalog[m['key']]['sockets'] and m['side']>=0}
         assert guns_by_side=={0,1,2,3},(self.name,self.variant,guns_by_side)
         assert self.guns>=4 and self.guns<=CAPS[self.size]
-        roots=len(self.modules)+len(self.walls)+len(self.belt)
+        roots=self.roots()
         assert roots<=ROOT_LIMIT,(self.name,self.variant,'roots',roots)
         assert self.expanded()+self.guns*12<=RECIPE_EXPANDED_BUDGET,(self.name,self.variant,'expanded')
         posts=self.posts()
@@ -722,7 +1196,10 @@ class Plan:
         self._posts=posts
 
     def expanded(self):
-        return sum(m['expanded'] for m in self.modules+self.walls+self.belt)
+        return sum(m['expanded'] for m in self.modules+self.walls+self.belt+self.dressing)
+
+    def roots(self):
+        return len(self.modules)+len(self.walls)+len(self.belt)+len(self.dressing)
 
     def posts(self):
         posts=[]
@@ -733,6 +1210,8 @@ class Plan:
         for p in points+tail:
             a=(p[0]-1.5,p[2]-1.5,p[0]+1.5,p[2]+1.5)
             if any(overlap(a,box(m),1) for m in self.modules):
+                continue
+            if any(overlap(a,self.dbox(d),0.5) for d in self.solid()):
                 continue
             if any(math.dist((p[0],p[2]),(q[0],q[2]))<5 for q in posts):
                 continue
@@ -745,8 +1224,8 @@ class Plan:
         return {'name':f'{self.name} / HQ {ARCHETYPES[self.archetype]} {self.variant%3+1}','size':self.size,'variant':self.variant,
                 'archetype':ARCHETYPES[self.archetype],'half_width':self.W,'half_depth':self.D,'wall_half_width':self.Wl,
                 'wall_half_depth':self.Dl,'garrison':self.garrison,'capture':self.capture,'modules':self.modules,
-                'walls':self.walls,'belt':self.belt,'posts':self._posts,'guns':self.guns,'heavy':self.heavy,
-                'expanded':self.expanded(),'roots':len(self.modules)+len(self.walls)+len(self.belt)}
+                'walls':self.walls,'belt':self.belt,'dressing':self.dressing,'posts':self._posts,'guns':self.guns,'heavy':self.heavy,
+                'expanded':self.expanded(),'roots':self.roots()}
 
 
 def catalog_script(catalog,measure):
@@ -785,10 +1264,15 @@ def recipe_script(recipes):
             lines += [f'\t\tlayout.AddWallRun("{w["key"]}", {vec(w["position"])}, {w["yaw"]}, {w["side"]});']
         for b in r['belt']:
             lines += [f'\t\tlayout.AddObstacle("{b["key"]}", {vec(b["position"])}, {b["yaw"]});']
+        for d in r['dressing']:
+            lines += [f'\t\tlayout.AddDressingItem("{d["key"]}", {vec(d["position"])}, {d["yaw"]}, {d["residual"]});']
         for p in r['posts']:
             lines += [f'\t\tlayout.m_aGuardPosts.Insert({vec(p)});']
         lines += ['\t}']
     return '\n'.join(lines+['}',''])
+
+
+MEASURE_CACHE={}
 
 
 def sheet(recipes):
@@ -806,7 +1290,12 @@ def sheet(recipes):
             rows += [f'<rect x="{cx+a*scale:.2f}" y="{cy-d*scale:.2f}" width="{(c-a)*scale:.2f}" height="{(d-bb)*scale:.2f}" fill="#6b5a3a"/>']
         for w in r['walls']:
             a,bb,c,d=box(w)
-            rows += [f'<rect x="{cx+a*scale:.2f}" y="{cy-d*scale:.2f}" width="{(c-a)*scale:.2f}" height="{(d-bb)*scale:.2f}" fill="#c8c8c0"/>']
+            fill='#7d8a4a' if 'Camo' in w['key'] else '#c8c8c0'
+            rows += [f'<rect x="{cx+a*scale:.2f}" y="{cy-d*scale:.2f}" width="{(c-a)*scale:.2f}" height="{(d-bb)*scale:.2f}" fill="{fill}"/>']
+        tones={'road':'#9a9a92','decal':'#7a5a34','gate':'#d8d8cf','mesh':'#2f8f86'}
+        for x in sorted(r['dressing'],key=lambda x:x['kind']!='decal'):
+            a,bb,c,d=mesh_box(x,MEASURE_CACHE)
+            rows += [f'<rect x="{cx+a*scale:.2f}" y="{cy-d*scale:.2f}" width="{(c-a)*scale:.2f}" height="{(d-bb)*scale:.2f}" fill="{tones[x["kind"]]}" fill-opacity="{0.45 if x["kind"]=="decal" else 0.9}"/>']
         for m in r['modules']:
             a,bb,c,d=box(m)
             rows += [f'<rect x="{cx+a*scale:.2f}" y="{cy-d*scale:.2f}" width="{(c-a)*scale:.2f}" height="{(d-bb)*scale:.2f}" fill="{colors.get(m["role"],"#777")}" fill-opacity="0.85"/>',
@@ -821,6 +1310,10 @@ def load_inputs():
     base_measure=json.loads((ROOT/'docs/base-composition-measurements.json').read_text())['assets']
     hq_catalog=json.loads((ROOT/'docs/headquarters-catalog.json').read_text())
     hq_measure=json.loads((ROOT/'docs/headquarters-measurements.json').read_text())['assets']
+    # Decal scenes and reused vignettes carry authored footprints.
+    for key,entry in hq_catalog.items():
+        if 'measure' in entry:
+            hq_measure[key]=entry['measure']
     catalog={**base_catalog,**hq_catalog}
     measure={**base_measure,**hq_measure}
     return hq_catalog,hq_measure,catalog,measure
@@ -828,6 +1321,7 @@ def load_inputs():
 
 def generate_designs():
     hq_catalog,hq_measure,catalog,measure=load_inputs()
+    MEASURE_CACHE.update(measure)
     recipes=[Plan(size,v,catalog,measure).build() for size in range(6) for v in range(HQ_VARIANTS)]
     return {'Scripts/Game/IA_HeadquartersCatalog.c':catalog_script(hq_catalog,hq_measure),
             'Scripts/Game/IA_HeadquartersRecipes.c':recipe_script(recipes),

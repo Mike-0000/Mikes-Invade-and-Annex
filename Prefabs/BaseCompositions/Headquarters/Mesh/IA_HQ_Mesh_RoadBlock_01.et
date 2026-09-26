@@ -1,0 +1,20 @@
+StaticModelEntity {
+ ID "94D3ED09A0495B52"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   LODFactors {
+    5 2 1.5 1 1 1
+   }
+   Object "{57ED7877A0B116D3}Assets/Props/Infrastructure/RoadBlock_01/RoadBlock_01.xob"
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   Mass 20
+   LinearDamping 0.3
+   AngularDamping 0.3
+   ResponseIndex "TinyDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

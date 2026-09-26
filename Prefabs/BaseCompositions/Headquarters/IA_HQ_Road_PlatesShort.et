@@ -1,0 +1,51 @@
+GenericEntity {
+ ID "E26D9D5C05855B07"
+ components {
+  RplComponent "{80E2CB7B62085948}" {
+  }
+  Hierarchy "{E117A39C0415549F}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{526E4D9A8B865B5C}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcretePanel_01_A.et" {
+   ID "38BF0BA43C40583A"
+   coords -1.93 -0.09 -0.965
+   components {
+    Hierarchy "{2A9C6131B2FE52B8}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{3E0A7752920C53A5}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcretePanel_01_C.et" {
+   ID "C62A8C92B6DE52B6"
+   coords 1.93 -0.09 -0.965
+   angles 0 180 0
+   components {
+    Hierarchy "{AF3A383959CD5EAC}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{2C3B666E668A50A9}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcretePanel_01_D.et" {
+   ID "22DEA549B0CF589D"
+   coords -1.93 -0.09 0.965
+   angles 0 180 0
+   components {
+    Hierarchy "{4BA4304D8D705DDB}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{526E4D9A8B865B5C}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcretePanel_01_A.et" {
+   ID "C6246D1FFBB85C8F"
+   coords 1.93 -0.09 0.965
+   components {
+    Hierarchy "{2A9C6131B2FE52B8}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

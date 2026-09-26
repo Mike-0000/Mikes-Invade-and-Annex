@@ -1,0 +1,17 @@
+StaticModelEntity {
+ ID "C3095117B3E25574"
+ components {
+  MeshObject "{56DE7C8DCD0F4E0A}" {
+   LODFactors {
+    70 50 30 10 2 1 1
+   }
+   Object "{247146B4312F9A2B}Assets/Structures/Infrastructure/Barriers/BarGate_01/BarGate_01.xob"
+  }
+  RigidBody "{56DE7C8DDE282E03}" {
+   ModelGeometry 1
+   Static 1
+   ResponseIndex "LargeDestructible"
+  }
+ }
+ coords 0 0 0
+}

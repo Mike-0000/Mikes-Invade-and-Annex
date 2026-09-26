@@ -1796,7 +1796,7 @@ class IA_DynamicSitePlacer
 		if (!res)
 			return false;
 
-		if (mod.m_iRole == IA_DynamicSiteModuleRole.Dressing)
+		if (mod.m_iRole == IA_DynamicSiteModuleRole.Dressing && !mod.m_bPlannedClearance)
 		{
 			vector siteMat[4];
 			site.GetLayout().BuildRootTransform(site.GetOrigin(), site.GetYawDeg(), siteMat);
@@ -1817,7 +1817,7 @@ class IA_DynamicSitePlacer
 		if (!SampleModuleSupport(worldMat, mod, supportY))
 			return false;
 		IA_DynamicSiteInstance ignoreSite;
-		if (mod.m_iPerimeterSide >= 0)
+		if (mod.m_iPerimeterSide >= 0 || mod.m_bPlannedClearance)
 			ignoreSite = site;
 		if (!IsModuleVolumeClear(worldMat, mod, ignoreSite))
 			return false;

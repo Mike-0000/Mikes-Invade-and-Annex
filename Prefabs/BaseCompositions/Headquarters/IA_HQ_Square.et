@@ -1,0 +1,41 @@
+GenericEntity {
+ ID "745B7473BDF25649"
+ components {
+  RplComponent "{91EFED3A7EE05AD9}" {
+  }
+  Hierarchy "{85662B02007B5973}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{651E545B53BBD034}Prefabs/Structures/Military/Flags/FlagPole_02/FlagPole_02_V1_USSR.et" {
+   ID "81D459A6BEB85C4F"
+   coords 0 0 0
+   components {
+    Hierarchy "{B8F4F497D6EC5C68}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{338958F2896A52C6}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_Sign_CommandPost_USSR_01.et" {
+   ID "5C0EFD8EFBD9538E"
+   coords 1.4 0 -0.8
+   components {
+    Hierarchy "{03BC8335D8B950FF}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{7AF4B627D5C90235}Prefabs/Props/Military/Sandbags/Sandbag_01_round_high_burlap.et" {
+   ID "B4A32639373C53B1"
+   coords -2.2 -0.1 1.2
+   angles 0 30 0
+   components {
+    Hierarchy "{0D7D44C9DF5159F3}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

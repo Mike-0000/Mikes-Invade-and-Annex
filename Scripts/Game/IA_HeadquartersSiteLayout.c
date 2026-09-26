@@ -1,5 +1,6 @@
-// Permanent-headquarters recipes: concrete wall runs, casemates, mesh-only
-// buildings and an obstacle belt. Shares the composed-site survey, ownership,
+// Permanent-headquarters recipes: concrete and camo sandbag wall runs,
+// casemates, mesh-only buildings, an obstacle belt and planned dressing
+// (gates, checkpoint, roads, dirt decals, lived-in vignettes). Shares the composed-site survey, ownership,
 // emplacement and nav lifecycle; only asset lookup and grounding differ.
 class IA_HeadquartersSiteLayout : IA_ComposedSiteLayout
 {
@@ -13,6 +14,10 @@ class IA_HeadquartersSiteLayout : IA_ComposedSiteLayout
 	// Buildings with a buried plinth stand upright instead of tilting with the grade.
 	static const float UPRIGHT_MIN_FOUNDATION_M = 0.6;
 	static const float UPRIGHT_MAX_LIFT_M = 1.0;
+	// Game Master camo sandbag runs have no buried foundation (measured y
+	// -0.17 with the authored 0.1 m sink), so they follow the grade instead.
+	static const float SANDBAG_MAX_FOUNDATION_M = 0.5;
+	static const float SANDBAG_MAX_RESIDUAL_M = 0.5;
 
 	override protected IA_BaseCompositionAsset ResolveAsset(string key)
 	{
@@ -41,8 +46,15 @@ class IA_HeadquartersSiteLayout : IA_ComposedSiteLayout
 		module.m_fMaxSupportDeltaM = Math.Min(module.m_fMaxSupportDeltaM, foundation - 0.2);
 	}
 
-	// One replicated run of concrete panels on the wall line. Coverage is
-	// required collectively (HasPerimeterCoverage), like scrappy sandbag infill.
+	// Concrete panels stand upright on 1 m of foundation; camo sandbag runs
+	// have none and follow the terrain plane.
+	static bool IsSandbagRun(notnull IA_BaseCompositionAsset asset)
+	{
+		return -asset.m_vMins[1] < SANDBAG_MAX_FOUNDATION_M;
+	}
+
+	// One replicated wall run on the wall line. Coverage is required
+	// collectively (HasPerimeterCoverage), like scrappy sandbag infill.
 	void AddWallRun(string key, vector position, float yaw, int side)
 	{
 		ref IA_BaseCompositionAsset asset = IA_HeadquartersCatalog.Get(key);
@@ -60,6 +72,16 @@ class IA_HeadquartersSiteLayout : IA_ComposedSiteLayout
 		module.m_fFloorAboveOriginM = 0.05;
 		module.m_fClearanceHeightM = asset.m_vMaxs[1] + 1;
 		module.SetSupportFootprint(Vector(asset.m_vMins[0], 0, asset.m_vMins[2]), Vector(asset.m_vMaxs[0], 0, asset.m_vMaxs[2]));
+		if (IsSandbagRun(asset))
+		{
+			module.m_iGroundingPolicy = IA_DynamicSiteGrounding.TerrainSegment;
+			module.m_bFollowTerrainPlane = true;
+			module.m_fMaxFoundationLiftM = 0;
+			module.m_fFloorAboveOriginM = 0;
+			module.m_fMaxSupportDeltaM = SANDBAG_MAX_RESIDUAL_M;
+			// Soft camo nets overhang the bags; only the bags bear.
+			module.SetSupportFootprint(Vector(asset.m_vMins[0], 0, -WALL_HALF_DEPTH_M), Vector(asset.m_vMaxs[0], 0, WALL_HALF_DEPTH_M));
+		}
 		m_aPerimeterStations.Insert(position);
 	}
 
@@ -77,6 +99,27 @@ class IA_HeadquartersSiteLayout : IA_ComposedSiteLayout
 		module.m_iGroundingPolicy = IA_DynamicSiteGrounding.TerrainSegment;
 		module.m_fMaxSupportDeltaM = OBSTACLE_MAX_DELTA_M;
 		module.m_fClearanceHeightM = asset.m_vMaxs[1] + 1;
+		module.SetSupportFootprint(Vector(asset.m_vMins[0], 0, asset.m_vMins[2]), Vector(asset.m_vMaxs[0], 0, asset.m_vMaxs[2]));
+	}
+
+	// Generated gates, checkpoint, roads, decals and vignettes. The recipe
+	// planned each mesh box clear of guns, doors and the site's own props;
+	// the spawn trace still rejects foreign obstructions and cliffs.
+	void AddDressingItem(string key, vector position, float yaw, float maxResidualM)
+	{
+		ref IA_BaseCompositionAsset asset = IA_HeadquartersCatalog.Get(key);
+		if (!asset)
+			return;
+		float halfW = Math.Max(Math.AbsFloat(asset.m_vMins[0]), Math.AbsFloat(asset.m_vMaxs[0]));
+		float halfD = Math.Max(Math.AbsFloat(asset.m_vMins[2]), Math.AbsFloat(asset.m_vMaxs[2]));
+		string id = "dress_" + m_aModules.Count().ToString();
+		AddDressing(id, asset.m_Prefab, position[0], position[2], yaw, halfW, halfD, asset.m_iExpanded);
+		IA_DynamicSiteModule module = m_aModules[m_aModules.Count() - 1];
+		module.m_iGroundingPolicy = IA_DynamicSiteGrounding.TerrainSegment;
+		module.m_bFollowTerrainPlane = true;
+		module.m_bPlannedClearance = true;
+		module.m_fMaxSupportDeltaM = maxResidualM;
+		module.m_fClearanceHeightM = Math.Max(0.2, asset.m_vMaxs[1]) + 1;
 		module.SetSupportFootprint(Vector(asset.m_vMins[0], 0, asset.m_vMins[2]), Vector(asset.m_vMaxs[0], 0, asset.m_vMaxs[2]));
 	}
 }

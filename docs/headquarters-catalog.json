@@ -133,5 +133,442 @@
     "prefab": "{465135458FFE52FA}Prefabs/BaseCompositions/Headquarters/IA_HQ_Belt_Wire.et",
     "sockets": [],
     "source": "authored"
+  },
+  "HQCamoWallA": {
+    "prefab": "{E47BBD43DC925CB6}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_A.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQCamoWallB": {
+    "prefab": "{0DD97793B78E5ADC}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_B.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQCamoWallC": {
+    "prefab": "{C7006CDDB3B7538F}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_C.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQCamoWallPanel": {
+    "prefab": "{E2D884FB74355BF1}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_Panel.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQCamoWallLongA": {
+    "prefab": "{DA3973E232785056}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_LongA.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQCamoWallLongB": {
+    "prefab": "{C2AF401CE96E5585}Prefabs/BaseCompositions/Headquarters/IA_HQ_CamoWall_LongB.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQGateNarrow": {
+    "prefab": "{9BE84B07F4705DAC}Prefabs/BaseCompositions/Headquarters/IA_HQ_Gate_Narrow.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQGateWide": {
+    "prefab": "{A6FC6376A38458B5}Prefabs/BaseCompositions/Headquarters/IA_HQ_Gate_Wide.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQSideGateNarrow": {
+    "prefab": "{0DA966BB462B5D7D}Prefabs/BaseCompositions/Headquarters/IA_HQ_SideGate_Narrow.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQSideGateWide": {
+    "prefab": "{2046084A8B5A5910}Prefabs/BaseCompositions/Headquarters/IA_HQ_SideGate_Wide.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQChicane": {
+    "prefab": "{9B720F62DC465ED7}Prefabs/BaseCompositions/Headquarters/IA_HQ_Chicane.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQCheckpointPost": {
+    "prefab": "{5FB4AADCA91A5430}Prefabs/BaseCompositions/Headquarters/IA_HQ_CheckpointPost.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQCheckpointNest": {
+    "prefab": "{28CB2678FEF458A0}Prefabs/BaseCompositions/Headquarters/IA_HQ_CheckpointNest.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQSquare": {
+    "prefab": "{745B7473BDF25649}Prefabs/BaseCompositions/Headquarters/IA_HQ_Square.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQRoadPlates": {
+    "prefab": "{4B1941EDBFF55222}Prefabs/BaseCompositions/Headquarters/IA_HQ_Road_Plates.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQRoadPlatesShort": {
+    "prefab": "{E26D9D5C05855B07}Prefabs/BaseCompositions/Headquarters/IA_HQ_Road_PlatesShort.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQDuckboards": {
+    "prefab": "{EA01F348BC4557D6}Prefabs/BaseCompositions/Headquarters/IA_HQ_Path_Duckboards.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQDuckboard": {
+    "prefab": "{59AE2D0B25E252F2}Prefabs/BaseCompositions/Headquarters/IA_HQ_Path_Duckboard.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQPlateStack": {
+    "prefab": "{D9554A76E19D5AC3}Prefabs/BaseCompositions/Headquarters/IA_HQ_PlateStack.et",
+    "sockets": [],
+    "source": "authored"
+  },
+  "HQDirtPatch": {
+    "prefab": "{26F1DD4512DC595F}Prefabs/BaseCompositions/Headquarters/IA_HQ_Dirt_Patch.et",
+    "sockets": [],
+    "source": "authored",
+    "measure": {
+      "count": 1,
+      "mins": [
+        -2.5,
+        0,
+        -2.5
+      ],
+      "maxs": [
+        2.5,
+        0.2,
+        2.5
+      ]
+    }
+  },
+  "HQDirtWorn": {
+    "prefab": "{9E2F15674C3956B0}Prefabs/BaseCompositions/Headquarters/IA_HQ_Dirt_Worn.et",
+    "sockets": [],
+    "source": "authored",
+    "measure": {
+      "count": 3,
+      "mins": [
+        -4,
+        0,
+        -4
+      ],
+      "maxs": [
+        4,
+        0.2,
+        4
+      ]
+    }
+  },
+  "HQDirtTrack": {
+    "prefab": "{B96691E6DFC05192}Prefabs/BaseCompositions/Headquarters/IA_HQ_Dirt_Track.et",
+    "sockets": [],
+    "source": "authored",
+    "measure": {
+      "count": 3,
+      "mins": [
+        -4,
+        0,
+        -4
+      ],
+      "maxs": [
+        4,
+        0.2,
+        4
+      ]
+    }
+  },
+  "HQDirtCross": {
+    "prefab": "{5688CAA6D35B5507}Prefabs/BaseCompositions/Headquarters/IA_HQ_Dirt_Cross.et",
+    "sockets": [],
+    "source": "authored",
+    "measure": {
+      "count": 1,
+      "mins": [
+        -3,
+        0,
+        -3
+      ],
+      "maxs": [
+        3,
+        0.2,
+        3
+      ]
+    }
+  },
+  "VigBriefing": {
+    "prefab": "{986F4B80B0BE52E0}Prefabs/DynamicBase/IA_Dressing_BriefingLit.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 9,
+      "mins": [
+        -2.3,
+        0,
+        -2.6
+      ],
+      "maxs": [
+        2.3,
+        2.5,
+        2.6
+      ]
+    }
+  },
+  "VigComms": {
+    "prefab": "{D7D10DFBACA05AD0}Prefabs/DynamicBase/IA_Dressing_CommsLit.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 5,
+      "mins": [
+        -2,
+        0,
+        -1.3
+      ],
+      "maxs": [
+        2,
+        2.5,
+        1.3
+      ]
+    }
+  },
+  "VigPower": {
+    "prefab": "{3F22F8B9E0EB5442}Prefabs/DynamicBase/IA_Dressing_Power.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 7,
+      "mins": [
+        -2,
+        0,
+        -2.5
+      ],
+      "maxs": [
+        2,
+        2.5,
+        2.5
+      ]
+    }
+  },
+  "VigKitchen": {
+    "prefab": "{7381F407AD8A54B8}Prefabs/DynamicBase/IA_Dressing_KitchenLit.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 6,
+      "mins": [
+        -3.5,
+        0,
+        -3.2
+      ],
+      "maxs": [
+        3.5,
+        2.5,
+        3.2
+      ]
+    }
+  },
+  "VigMess": {
+    "prefab": "{06111FFC070A5834}Prefabs/DynamicBase/IA_Dressing_MessLit.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 7,
+      "mins": [
+        -1.7,
+        0,
+        -1.5
+      ],
+      "maxs": [
+        1.7,
+        2.5,
+        1.5
+      ]
+    }
+  },
+  "VigRest": {
+    "prefab": "{754823CC537E5D85}Prefabs/DynamicBase/IA_Dressing_Rest.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 4,
+      "mins": [
+        -2,
+        0,
+        -1.8
+      ],
+      "maxs": [
+        2,
+        2.5,
+        1.8
+      ]
+    }
+  },
+  "VigWash": {
+    "prefab": "{AB8A3CB589625084}Prefabs/DynamicBase/IA_Dressing_WaterWash.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 5,
+      "mins": [
+        -1.4,
+        0,
+        -1.2
+      ],
+      "maxs": [
+        1.4,
+        2.5,
+        1.2
+      ]
+    }
+  },
+  "VigWater": {
+    "prefab": "{CE0933F9935A5FD4}Prefabs/DynamicBase/IA_Dressing_BulkWater.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 4,
+      "mins": [
+        -2.2,
+        0,
+        -3.4
+      ],
+      "maxs": [
+        2.2,
+        2.5,
+        3.4
+      ]
+    }
+  },
+  "VigSanitation": {
+    "prefab": "{6F3672FEE4B857A1}Prefabs/DynamicBase/IA_Dressing_Sanitation.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 5,
+      "mins": [
+        -2.4,
+        0,
+        -2.8
+      ],
+      "maxs": [
+        2.4,
+        2.5,
+        2.8
+      ]
+    }
+  },
+  "VigWaste": {
+    "prefab": "{A70917953C1D58AB}Prefabs/DynamicBase/IA_Dressing_Waste.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 3,
+      "mins": [
+        -1,
+        0,
+        -0.7
+      ],
+      "maxs": [
+        1,
+        2.5,
+        0.7
+      ]
+    }
+  },
+  "VigStores": {
+    "prefab": "{EBACA024C71C5CAF}Prefabs/DynamicBase/IA_Dressing_Stores.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 6,
+      "mins": [
+        -1.8,
+        0,
+        -2.9
+      ],
+      "maxs": [
+        1.8,
+        2.5,
+        2.9
+      ]
+    }
+  },
+  "VigStoresCovered": {
+    "prefab": "{674112EA1BA85649}Prefabs/DynamicBase/IA_Dressing_StoresCovered.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 6,
+      "mins": [
+        -1.9,
+        0,
+        -1.6
+      ],
+      "maxs": [
+        1.9,
+        2.5,
+        1.6
+      ]
+    }
+  },
+  "VigWorkshop": {
+    "prefab": "{965FEDAFCD3F54D5}Prefabs/DynamicBase/IA_Dressing_WorkshopLit.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 7,
+      "mins": [
+        -2,
+        0,
+        -1.3
+      ],
+      "maxs": [
+        2,
+        2.5,
+        1.3
+      ]
+    }
+  },
+  "VigMedical": {
+    "prefab": "{A9D76F51AE7B5D37}Prefabs/DynamicBase/IA_Dressing_MedicalLit.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 6,
+      "mins": [
+        -2,
+        0,
+        -2
+      ],
+      "maxs": [
+        2,
+        2.5,
+        2
+      ]
+    }
+  },
+  "VigLight": {
+    "prefab": "{8726E742FEE65661}Prefabs/DynamicBase/IA_Dressing_EntranceLight.et",
+    "sockets": [],
+    "source": "dressing",
+    "measure": {
+      "count": 2,
+      "mins": [
+        -2,
+        0,
+        -1.5
+      ],
+      "maxs": [
+        2,
+        2.5,
+        1.5
+      ]
+    }
   }
 }

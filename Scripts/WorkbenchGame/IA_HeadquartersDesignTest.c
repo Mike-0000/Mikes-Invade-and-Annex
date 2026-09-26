@@ -30,6 +30,8 @@ class IA_HeadquartersDesignTest : IA_BaseFoundationProbe
 				int expanded = 0;
 				int walls = 0;
 				int belt = 0;
+				int camo = 0;
+				int dressed = 0;
 				array<int> sides = {0, 0, 0, 0};
 				foreach (IA_DynamicSiteModule module : layout.m_aModules)
 				{
@@ -40,19 +42,35 @@ class IA_HeadquartersDesignTest : IA_BaseFoundationProbe
 					if (module.m_sId.StartsWith("wall_"))
 					{
 						walls++;
-						Check(module.m_iGroundingPolicy == IA_DynamicSiteGrounding.UprightPad && !module.m_bFollowTerrainPlane, "walls stand upright");
-						Check(module.m_fMaxFoundationLiftM > 0 && module.m_fMaxFoundationLiftM < 1.0, "wall lift within buried foundation");
+						if (module.m_iGroundingPolicy == IA_DynamicSiteGrounding.TerrainSegment)
+						{
+							camo++;
+							Check(module.m_bFollowTerrainPlane && module.m_fMaxFoundationLiftM == 0, "sandbag runs hug the slope");
+						}
+						else
+						{
+							Check(module.m_iGroundingPolicy == IA_DynamicSiteGrounding.UprightPad && !module.m_bFollowTerrainPlane, "concrete walls stand upright");
+							Check(module.m_fMaxFoundationLiftM > 0 && module.m_fMaxFoundationLiftM < 1.0, "wall lift within buried foundation");
+						}
 						Check(!module.m_bRequired, "wall runs are collectively required");
 					}
 					if (module.m_iRole == IA_DynamicSiteModuleRole.Dressing)
 					{
-						belt++;
+						if (module.m_sId.StartsWith("dress_"))
+						{
+							dressed++;
+							Check(module.m_bPlannedClearance, "planned dressing skips the coarse gun test");
+						}
+						else
+							belt++;
 						Check(module.m_iGroundingPolicy == IA_DynamicSiteGrounding.TerrainSegment && !module.m_bRequired, "belt snaps and never vetoes");
 					}
 					if (module.m_iRole == IA_DynamicSiteModuleRole.Tower || module.m_iRole == IA_DynamicSiteModuleRole.Hq)
 						Check(!module.m_bFollowTerrainPlane && module.m_fMaxFoundationLiftM > 0, "buildings stand upright");
 				}
-				Check(walls >= 30, "concrete wall runs");
+				Check(walls >= 30, "wall runs");
+				Check(camo * 2 > walls && camo < walls, "camo sandbag walls with concrete bastions");
+				Check(dressed >= 15, "gates, checkpoint, roads and vignettes");
 				Check(belt >= 10, "obstacle belt");
 				Check(layout.HasPerimeterCoverage(sides), "four-sided coverage");
 				int guns = layout.m_aEmplacements.Count();
