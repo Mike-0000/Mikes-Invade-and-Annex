@@ -45,8 +45,41 @@ class IA_HeadquartersAssetProbe : IA_BaseCompositionProbe
 		Measure(world, "ShelterStorage", "{D7B21E69929A0546}Prefabs/Structures/Military/Camps/Shelters/ShelterStorageUSSR_01.et");
 		Measure(world, "DirtCoverLong", "{39F7EE885940DC8F}Prefabs/Structures/Military/Fortifications/DirtCover_01/DirtCover_01_long_v1.et");
 		Measure(world, "SandbagBunker", "{F0EC223F2A1094C0}Prefabs/Props/Military/Sandbags/Sandbag_01_bunker_burlap.et");
+		// Doors, entries, ladders and slits are mesh sockets; the generator orients buildings from them.
+		ReportAttachments(world, "Pillbox", "{6214C73708EA0E2D}Prefabs/Structures/Military/Fortifications/Bunker_SPS/Bunker_SPS.et", "Socket_Bunker_SPS_DoorFrame_01");
+		ReportAttachments(world, "Command", "{3F91DEEC9C78E473}Prefabs/Structures/Military/Houses/GuardHouse_01/GuardHouse_01.et", "socket_door_ext_right_02");
+		ReportAttachments(world, "Barracks", "{2CB4D91249389DFD}Prefabs/Structures/Military/Houses/Barracks_01/Barracks_USSR_01_military_base.et", "socket_entry_02");
+		ReportAttachments(world, "Shelter", "{4BE4C27399CF3B00}Prefabs/Structures/Military/Bunkers/ShelterMilitary_E_01/ShelterMilitary_E_01.et", "Socket_door_frame");
+		ReportAttachments(world, "Tower", "{52D3F2118C1B68E0}Prefabs/Structures/Military/Houses/GuardTower_USSR_01/GuardTower_USSR_01_green.et", "socket_Guardtower_S_01_Ladder");
+		ReportAttachments(world, "GuardBox", "{F50905235FBAA094}Prefabs/Structures/Military/Houses/GuardBox_01/GuardBox_01_beige.et", string.Empty);
 		Print(string.Format("[IA][HeadquartersAssetProbe] failures=%1", m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
+	}
+
+	// Door faces in tools/author_headquarters.py DOORS come from these sockets.
+	protected void ReportAttachments(BaseWorld world, string key, ResourceName name, string door)
+	{
+		ref EntitySpawnParams params = new EntitySpawnParams();
+		params.TransformMode = ETransformMode.WORLD;
+		Math3D.MatrixIdentity4(params.Transform);
+		IEntity entity = GetGame().SpawnEntityPrefab(Resource.Load(name), world, params);
+		Check(entity != null, "attachment resource " + key);
+		if (!entity)
+			return;
+		array<string> bones = {};
+		entity.GetBoneNames(bones);
+		if (door.IsEmpty())
+			Check(bones.IsEmpty(), "open building has no door sockets " + key);
+		else
+			Check(bones.Find(door) >= 0, "door socket " + key + " " + door);
+		foreach (string bone : bones)
+		{
+			vector mat[4];
+			if (!entity.GetBoneMatrix(entity.GetBoneIndex(bone), mat))
+				continue;
+			Print(string.Format("[IA][HeadquartersAssetProbe] socket key=%1 name=%2 pos=%3 fwd=%4", key, bone, mat[3], mat[2]), LogLevel.NORMAL);
+		}
+		SCR_EntityHelper.DeleteEntityAndChildren(entity);
 	}
 }
 #endif

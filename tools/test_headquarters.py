@@ -58,7 +58,7 @@ class HeadquartersTests(unittest.TestCase):
             self.assertEqual(sum(c.head.startswith('RplComponent ') for c in components),1,key)
             self.assertEqual(sum(c.head.startswith('Hierarchy ') for c in components),1,key)
             text=root.render()
-            self.assertNotRegex(text,r'SCR_Destructible|DoorComponent|SCR_AISmartAction|Persistence')
+            self.assertNotRegex(text,r'SCR_Destructible|DoorComponent|Persistence')
             for ref in REF.finditer(text):
                 target=ref[1]
                 self.assertFalse('/Houses/' in target and 'BuildingAddons' not in target,(key,target))
@@ -68,6 +68,28 @@ class HeadquartersTests(unittest.TestCase):
             self.assertEqual(root.head,'StaticModelEntity',path)
             kinds=[c.head.split(' ',1)[0] for c in root.block('components').body]
             self.assertEqual(kinds,['MeshObject','RigidBody'],path)
+
+    def test_wrappers_keep_vanilla_sentinel_posts(self):
+        """IA area garrisons look up CoverPost/ObservationPost smart actions."""
+        expected={'HQCommand':3,'HQTower':2,'HQGuardBox':1,'HQBarracks':0,'HQShelter':0,'HQPillbox':0}
+        for key,count in expected.items():
+            self.assertEqual(self.catalog[key]['posts'],count,key)
+            text=read(self.catalog[key]['prefab'].split('}',1)[1])
+            self.assertEqual(text.count('SCR_AISmartActionSentinelComponent '),count,key)
+            self.assertEqual(text.count('"CoverPost"')+text.count('"ObservationPost"'),count,key)
+
+    def test_wrappers_keep_frames_and_pillbox_ladder(self):
+        """Door frames stay as mesh trim; the pillbox keeps its only way up."""
+        self.assertEqual({k:self.catalog[k]['frames'] for k in ('HQCommand','HQBarracks','HQShelter','HQPillbox','HQTower','HQGuardBox')},
+                         {'HQCommand':3,'HQBarracks':10,'HQShelter':1,'HQPillbox':1,'HQTower':0,'HQGuardBox':0})
+        for key,entry in self.catalog.items():
+            text=read(entry['prefab'].split('}',1)[1])
+            ladders=text.count('Ladder_Bunker_SPS_B.et')
+            self.assertEqual(ladders,int(key=='HQPillbox'),key)
+            self.assertNotIn('Prefabs/Structures/BuildingParts/Doors/',text,key)
+        pillbox=read(self.catalog['HQPillbox']['prefab'].split('}',1)[1])
+        self.assertIn('PivotID "Socket_Bunker_SPS_Ladder"',pillbox)
+        self.assertIn('"Parent Node From Parent Entity" 1',pillbox)
 
     def test_casemate_geometry(self):
         for key,kind in (('HQCasematePKM',0),('HQCasemateNSV',1)):
@@ -157,6 +179,30 @@ class HeadquartersTests(unittest.TestCase):
             for b in r['belt']:
                 a=box(b)
                 self.assertTrue(a[0]>=-r['half_width'] and a[2]<=r['half_width'] and a[1]>=-r['half_depth'] and a[3]<=r['half_depth'],(r['name'],b))
+
+    def test_doors_open_onto_clear_yard(self):
+        """Measured door sockets get a clear apron; flank buildings face the lane."""
+        def bare(m):
+            pad=0 if m['side']>=0 else 1
+            return box(dict(m,half_width=m['half_width']-pad,half_depth=m['half_depth']-pad))
+        checked=0
+        for r in self.recipes:
+            inner_x,inner_z=r['wall_half_width']-0.5,r['wall_half_depth']-0.5
+            for m in r['modules']:
+                aprons=hq.Plan.aprons(None,m)
+                self.assertEqual(len(aprons),len(hq.DOORS.get(m['key'],[])))
+                for a,_ in aprons:
+                    checked+=1
+                    self.assertTrue(a[0]>=-inner_x and a[2]<=inner_x and a[1]>=-inner_z and a[3]<=inner_z,(r['name'],m['key'],a))
+                    for n in r['modules']:
+                        if n is not m:
+                            self.assertFalse(overlap(a,bare(n)),(r['name'],m['key'],n['key']))
+                if aprons and m['role'] not in ('Hq','Tower') and m['side']<0:
+                    wx,_=aprons[0][1]
+                    self.assertLessEqual(wx*m['position'][0],0,(r['name'],m['key']))
+            hq_door=hq.Plan.aprons(None,r['modules'][0])[0]
+            self.assertEqual(hq_door[1],(0,-1),r['name'])  # command door looks down the lane at the gate
+        self.assertGreater(checked,500)
 
     def test_posts_inside_walls_and_clear(self):
         for r in self.recipes:

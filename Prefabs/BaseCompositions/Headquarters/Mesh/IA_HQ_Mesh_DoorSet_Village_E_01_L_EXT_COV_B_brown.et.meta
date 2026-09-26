@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{AC9A790A13745F9F}IA_HQ_Mesh_DoorSet_Village_E_01_L_EXT_COV_B_brown.et"
+ Configurations {
+  EntityTemplateResourceClass PC {
+  }
+  EntityTemplateResourceClass XBOX_ONE : PC {
+  }
+  EntityTemplateResourceClass XBOX_SERIES : PC {
+  }
+  EntityTemplateResourceClass PS4 : PC {
+  }
+  EntityTemplateResourceClass PS5 : PC {
+  }
+  EntityTemplateResourceClass HEADLESS : PC {
+  }
+ }
+}

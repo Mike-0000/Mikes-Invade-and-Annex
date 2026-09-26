@@ -28,7 +28,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -208,7 +208,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -223,7 +223,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Supply",
@@ -268,7 +268,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -292,13 +292,13 @@
           0,
           -22.53
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Fuel",
@@ -2649,7 +2649,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1140,
+    "expanded": 1149,
     "roots": 185
   },
   {
@@ -2681,7 +2681,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -2855,13 +2855,13 @@
           0,
           -2.53
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -2906,7 +2906,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -2936,7 +2936,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Fuel",
@@ -2960,13 +2960,13 @@
           0,
           20.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -5302,7 +5302,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1140,
+    "expanded": 1149,
     "roots": 185
   },
   {
@@ -5334,7 +5334,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -5508,13 +5508,13 @@
           0,
           -2.53
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Medical",
@@ -5538,13 +5538,13 @@
           0,
           34.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -5574,7 +5574,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Fuel",
@@ -5598,13 +5598,13 @@
           0,
           20.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Supply",
@@ -7955,7 +7955,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1140,
+    "expanded": 1149,
     "roots": 185
   },
   {
@@ -7987,7 +7987,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -8116,13 +8116,13 @@
           0,
           -4.47
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 8.9685,
         "half_depth": 22.5845,
-        "expanded": 5
+        "expanded": 15
       },
       {
         "key": "HQShelter",
@@ -8137,7 +8137,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -8176,13 +8176,13 @@
           0,
           26.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -8227,7 +8227,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -10563,7 +10563,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1252,
+    "expanded": 1270,
     "roots": 182
   },
   {
@@ -10595,7 +10595,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -10724,13 +10724,13 @@
           0,
           -4.47
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 8.9685,
         "half_depth": 22.5845,
-        "expanded": 5
+        "expanded": 15
       },
       {
         "key": "Supply",
@@ -10769,13 +10769,13 @@
           0,
           36.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -10814,13 +10814,13 @@
           0,
           55.47
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -10835,7 +10835,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -13171,7 +13171,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1252,
+    "expanded": 1270,
     "roots": 182
   },
   {
@@ -13203,7 +13203,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -13332,13 +13332,13 @@
           0,
           -6.47
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 8.9685,
         "half_depth": 22.5845,
-        "expanded": 5
+        "expanded": 15
       },
       {
         "key": "Hospital",
@@ -13362,13 +13362,13 @@
           0,
           34.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -13413,7 +13413,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -13437,13 +13437,13 @@
           0,
           20.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -15779,7 +15779,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1254,
+    "expanded": 1272,
     "roots": 182
   },
   {
@@ -15811,7 +15811,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -15955,13 +15955,13 @@
           0,
           -12.53
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -16045,13 +16045,13 @@
           0,
           55.47
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -18387,7 +18387,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1309,
+    "expanded": 1314,
     "roots": 182
   },
   {
@@ -18419,7 +18419,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -18644,7 +18644,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQShelter",
@@ -18659,7 +18659,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -20995,7 +20995,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1309,
+    "expanded": 1314,
     "roots": 182
   },
   {
@@ -21027,7 +21027,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -21237,7 +21237,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQShelter",
@@ -21246,13 +21246,13 @@
           0,
           19.47
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -23603,7 +23603,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1309,
+    "expanded": 1314,
     "roots": 182
   },
   {
@@ -23635,7 +23635,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -23809,13 +23809,13 @@
           0,
           -2.53
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -23830,7 +23830,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -23839,13 +23839,13 @@
           0,
           34.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -23875,7 +23875,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -23914,13 +23914,13 @@
           0,
           22.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -26724,7 +26724,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1340,
+    "expanded": 1351,
     "roots": 221
   },
   {
@@ -26756,7 +26756,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -26936,7 +26936,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -26951,7 +26951,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -26981,7 +26981,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -27026,7 +27026,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -27041,7 +27041,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -29845,7 +29845,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1342,
+    "expanded": 1353,
     "roots": 221
   },
   {
@@ -29877,7 +29877,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -30057,7 +30057,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Ammo",
@@ -30081,13 +30081,13 @@
           0,
           35.47
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -30132,7 +30132,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -30141,13 +30141,13 @@
           0,
           20.84
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -30162,7 +30162,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -32966,7 +32966,7 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1334,
+    "expanded": 1345,
     "roots": 221
   },
   {
@@ -32998,7 +32998,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -33157,13 +33157,13 @@
           0,
           -2.39
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -33178,7 +33178,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Supply",
@@ -33217,13 +33217,13 @@
           0,
           20.98
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -33253,7 +33253,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -35017,7 +35017,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 891,
+    "expanded": 900,
     "roots": 139
   },
   {
@@ -35049,7 +35049,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -35214,7 +35214,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -35253,13 +35253,13 @@
           0,
           20.98
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -35283,13 +35283,13 @@
           0,
           11.61
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Fuel",
@@ -37068,7 +37068,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 905,
+    "expanded": 912,
     "roots": 139
   },
   {
@@ -37100,7 +37100,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -37265,7 +37265,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Medical",
@@ -37289,13 +37289,13 @@
           0,
           26.98
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -37325,7 +37325,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Fuel",
@@ -37355,7 +37355,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -39132,7 +39132,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 798,
+    "expanded": 807,
     "roots": 140
   },
   {
@@ -39164,7 +39164,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -39278,13 +39278,13 @@
           0,
           -4.33
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 8.9685,
         "half_depth": 22.5845,
-        "expanded": 5
+        "expanded": 15
       },
       {
         "key": "HQShelter",
@@ -39293,13 +39293,13 @@
           0,
           -14.39
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -39329,7 +39329,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -39368,13 +39368,13 @@
           0,
           32.98
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -41138,7 +41138,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 819,
+    "expanded": 837,
     "roots": 136
   },
   {
@@ -41170,7 +41170,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -41284,13 +41284,13 @@
           0,
           -4.33
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 8.9685,
         "half_depth": 22.5845,
-        "expanded": 5
+        "expanded": 15
       },
       {
         "key": "Supply",
@@ -41329,13 +41329,13 @@
           0,
           46.98
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -41374,13 +41374,13 @@
           0,
           17.61
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -43144,7 +43144,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1030,
+    "expanded": 1046,
     "roots": 136
   },
   {
@@ -43176,7 +43176,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -43290,13 +43290,13 @@
           0,
           -6.33
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 8.9685,
         "half_depth": 22.5845,
-        "expanded": 5
+        "expanded": 15
       },
       {
         "key": "Hospital",
@@ -43326,7 +43326,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -43365,13 +43365,13 @@
           0,
           31.61
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -45163,7 +45163,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1035,
+    "expanded": 1051,
     "roots": 137
   },
   {
@@ -45195,7 +45195,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -45330,7 +45330,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -47169,7 +47169,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1084,
+    "expanded": 1088,
     "roots": 136
   },
   {
@@ -47201,7 +47201,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -47411,7 +47411,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -49175,7 +49175,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1084,
+    "expanded": 1088,
     "roots": 136
   },
   {
@@ -49207,7 +49207,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -49396,13 +49396,13 @@
           0,
           -34.39
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQShelter",
@@ -49417,7 +49417,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -51194,7 +51194,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 977,
+    "expanded": 982,
     "roots": 137
   },
   {
@@ -51226,7 +51226,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -51391,7 +51391,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -51406,7 +51406,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -51415,13 +51415,13 @@
           0,
           26.98
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -51451,7 +51451,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -53778,7 +53778,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1125,
+    "expanded": 1134,
     "roots": 180
   },
   {
@@ -53810,7 +53810,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -53969,13 +53969,13 @@
           0,
           -2.39
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -53990,7 +53990,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -54014,13 +54014,13 @@
           0,
           27.61
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -54065,7 +54065,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -56362,7 +56362,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1125,
+    "expanded": 1134,
     "roots": 180
   },
   {
@@ -56394,7 +56394,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -56553,13 +56553,13 @@
           0,
           -2.39
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Ammo",
@@ -56583,13 +56583,13 @@
           0,
           27.61
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -56634,7 +56634,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -56649,7 +56649,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -58959,7 +58959,7 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1124,
+    "expanded": 1133,
     "roots": 181
   },
   {
@@ -58991,7 +58991,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -59135,13 +59135,13 @@
           0,
           -4.99
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -59156,7 +59156,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Supply",
@@ -59195,13 +59195,13 @@
           0,
           24.38
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -60660,7 +60660,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 772,
+    "expanded": 780,
     "roots": 117
   },
   {
@@ -60692,7 +60692,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -60842,7 +60842,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -60881,13 +60881,13 @@
           0,
           20.38
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -60911,13 +60911,13 @@
           0,
           31.01
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -62361,7 +62361,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 774,
+    "expanded": 781,
     "roots": 117
   },
   {
@@ -62393,7 +62393,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -62537,13 +62537,13 @@
           0,
           -4.99
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Medical",
@@ -62567,13 +62567,13 @@
           0,
           24.38
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -62603,7 +62603,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Fuel",
@@ -64062,7 +64062,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 676,
+    "expanded": 683,
     "roots": 117
   },
   {
@@ -64094,7 +64094,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -64193,13 +64193,13 @@
           0,
           -38.99
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQShelter",
@@ -64214,7 +64214,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -64253,13 +64253,13 @@
           0,
           24.38
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -65718,7 +65718,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 895,
+    "expanded": 902,
     "roots": 114
   },
   {
@@ -65750,7 +65750,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -65849,13 +65849,13 @@
           0,
           -12.99
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -65894,13 +65894,13 @@
           0,
           8.38
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -67374,7 +67374,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 917,
+    "expanded": 923,
     "roots": 114
   },
   {
@@ -67406,7 +67406,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -67505,13 +67505,13 @@
           0,
           -38.99
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Hospital",
@@ -67541,7 +67541,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -67580,13 +67580,13 @@
           0,
           -22.99
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -69030,7 +69030,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 808,
+    "expanded": 815,
     "roots": 114
   },
   {
@@ -69062,7 +69062,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -69182,7 +69182,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -70686,7 +70686,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 824,
+    "expanded": 828,
     "roots": 114
   },
   {
@@ -70718,7 +70718,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -70892,13 +70892,13 @@
           0,
           15.01
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -72342,7 +72342,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 825,
+    "expanded": 829,
     "roots": 114
   },
   {
@@ -72374,7 +72374,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -72533,13 +72533,13 @@
           0,
           -38.99
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQShelter",
@@ -72548,13 +72548,13 @@
           0,
           11.01
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -73998,7 +73998,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 714,
+    "expanded": 719,
     "roots": 114
   },
   {
@@ -74030,7 +74030,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -74180,7 +74180,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -74195,7 +74195,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -74204,13 +74204,13 @@
           0,
           24.38
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -74234,13 +74234,13 @@
           0,
           7.01
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -75699,7 +75699,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 755,
+    "expanded": 764,
     "roots": 117
   },
   {
@@ -75731,7 +75731,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -75875,13 +75875,13 @@
           0,
           -6.99
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -75896,7 +75896,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -75920,13 +75920,13 @@
           0,
           23.01
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -77400,7 +77400,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 784,
+    "expanded": 791,
     "roots": 117
   },
   {
@@ -77432,7 +77432,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -77582,7 +77582,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Ammo",
@@ -77606,13 +77606,13 @@
           0,
           9.01
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -77651,13 +77651,13 @@
           0,
           26.38
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -79101,7 +79101,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 782,
+    "expanded": 789,
     "roots": 117
   },
   {
@@ -79133,7 +79133,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -79283,7 +79283,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -79298,7 +79298,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Supply",
@@ -79343,7 +79343,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -80702,7 +80702,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 706,
+    "expanded": 714,
     "roots": 111
   },
   {
@@ -80734,7 +80734,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -80878,13 +80878,13 @@
           0,
           -13.09
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -80923,13 +80923,13 @@
           0,
           30.29
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -82303,7 +82303,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 745,
+    "expanded": 751,
     "roots": 111
   },
   {
@@ -82335,7 +82335,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -82485,7 +82485,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Medical",
@@ -82509,13 +82509,13 @@
           0,
           12.29
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -82545,7 +82545,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -83904,7 +83904,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 635,
+    "expanded": 642,
     "roots": 111
   },
   {
@@ -83936,7 +83936,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -84035,13 +84035,13 @@
           0,
           -43.09
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQShelter",
@@ -84056,7 +84056,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -84101,7 +84101,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -85460,7 +85460,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 855,
+    "expanded": 862,
     "roots": 108
   },
   {
@@ -85492,7 +85492,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -85591,13 +85591,13 @@
           0,
           -13.09
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -85642,7 +85642,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -87016,7 +87016,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 871,
+    "expanded": 877,
     "roots": 108
   },
   {
@@ -87048,7 +87048,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -87147,13 +87147,13 @@
           0,
           -43.09
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Hospital",
@@ -87177,13 +87177,13 @@
           0,
           8.29
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -88572,7 +88572,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 781,
+    "expanded": 787,
     "roots": 108
   },
   {
@@ -88604,7 +88604,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -88724,7 +88724,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -90128,7 +90128,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 777,
+    "expanded": 781,
     "roots": 108
   },
   {
@@ -90160,7 +90160,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -91684,7 +91684,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 923,
+    "expanded": 926,
     "roots": 108
   },
   {
@@ -91716,7 +91716,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -93240,7 +93240,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 834,
+    "expanded": 837,
     "roots": 108
   },
   {
@@ -93272,7 +93272,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -93416,13 +93416,13 @@
           0,
           -13.09
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -93437,7 +93437,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -93446,13 +93446,13 @@
           0,
           12.29
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -93476,13 +93476,13 @@
           0,
           -21.09
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -95023,7 +95023,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 692,
+    "expanded": 701,
     "roots": 125
   },
   {
@@ -95055,7 +95055,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -95205,7 +95205,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -95220,7 +95220,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -95250,7 +95250,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -96806,7 +96806,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 796,
+    "expanded": 803,
     "roots": 125
   },
   {
@@ -96838,7 +96838,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -96982,13 +96982,13 @@
           0,
           -13.09
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Ammo",
@@ -97018,7 +97018,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -98589,7 +98589,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 829,
+    "expanded": 834,
     "roots": 125
   },
   {
@@ -98621,7 +98621,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -98735,13 +98735,13 @@
           0,
           -18.9
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -98756,7 +98756,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Supply",
@@ -99839,7 +99839,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 585,
+    "expanded": 591,
     "roots": 86
   },
   {
@@ -99871,7 +99871,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -99991,7 +99991,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -100036,7 +100036,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -101102,7 +101102,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 590,
+    "expanded": 596,
     "roots": 87
   },
   {
@@ -101134,7 +101134,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -101248,13 +101248,13 @@
           0,
           -18.9
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Medical",
@@ -101278,13 +101278,13 @@
           0,
           4.47
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -102365,7 +102365,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 517,
+    "expanded": 523,
     "roots": 87
   },
   {
@@ -102397,7 +102397,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -102496,13 +102496,13 @@
           0,
           -26.9
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQShelter",
@@ -102517,7 +102517,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -103600,7 +103600,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 567,
+    "expanded": 572,
     "roots": 85
   },
   {
@@ -103632,7 +103632,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -103731,13 +103731,13 @@
           0,
           -6.9
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -103782,7 +103782,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -104848,7 +104848,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 571,
+    "expanded": 577,
     "roots": 86
   },
   {
@@ -104880,7 +104880,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -104979,13 +104979,13 @@
           0,
           -26.9
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Medical",
@@ -105009,13 +105009,13 @@
           0,
           4.47
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Fuel",
@@ -106096,7 +106096,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 475,
+    "expanded": 481,
     "roots": 86
   },
   {
@@ -106128,7 +106128,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -106248,7 +106248,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -107331,7 +107331,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 654,
+    "expanded": 658,
     "roots": 85
   },
   {
@@ -107363,7 +107363,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -108579,7 +108579,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 672,
+    "expanded": 675,
     "roots": 86
   },
   {
@@ -108611,7 +108611,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -109827,7 +109827,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 582,
+    "expanded": 585,
     "roots": 86
   },
   {
@@ -109859,7 +109859,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -109979,7 +109979,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -109994,7 +109994,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -110003,13 +110003,13 @@
           0,
           6.47
         ],
-        "yaw": 0,
+        "yaw": 180,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -111207,7 +111207,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 547,
+    "expanded": 555,
     "roots": 96
   },
   {
@@ -111239,7 +111239,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -111353,13 +111353,13 @@
           0,
           -18.9
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -111374,7 +111374,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Ammo",
@@ -111404,7 +111404,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -112600,7 +112600,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 546,
+    "expanded": 553,
     "roots": 97
   },
   {
@@ -112632,7 +112632,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -112752,7 +112752,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Ammo",
@@ -112776,13 +112776,13 @@
           0,
           9.1
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -113993,7 +113993,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 658,
+    "expanded": 663,
     "roots": 97
   },
   {
@@ -114025,7 +114025,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -114145,7 +114145,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -114160,7 +114160,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "Supply",
@@ -115039,7 +115039,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 485,
+    "expanded": 491,
     "roots": 72
   },
   {
@@ -115071,7 +115071,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -115185,13 +115185,13 @@
           0,
           -22.15
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -116085,7 +116085,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 520,
+    "expanded": 524,
     "roots": 72
   },
   {
@@ -116117,7 +116117,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -116237,7 +116237,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Medical",
@@ -116267,7 +116267,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -117144,7 +117144,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 409,
+    "expanded": 415,
     "roots": 73
   },
   {
@@ -117176,7 +117176,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -117275,13 +117275,13 @@
           0,
           -22.15
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQShelter",
@@ -117296,7 +117296,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -118175,7 +118175,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 471,
+    "expanded": 476,
     "roots": 71
   },
   {
@@ -118207,7 +118207,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -118312,7 +118312,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Supply",
@@ -118342,7 +118342,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -119206,7 +119206,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 471,
+    "expanded": 477,
     "roots": 71
   },
   {
@@ -119238,7 +119238,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -119337,13 +119337,13 @@
           0,
           -22.15
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Medical",
@@ -119373,7 +119373,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -120250,7 +120250,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 394,
+    "expanded": 400,
     "roots": 72
   },
   {
@@ -120282,7 +120282,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -120402,7 +120402,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Fuel",
@@ -121281,7 +121281,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 452,
+    "expanded": 456,
     "roots": 71
   },
   {
@@ -121313,7 +121313,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -122312,7 +122312,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 564,
+    "expanded": 567,
     "roots": 71
   },
   {
@@ -122344,7 +122344,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -123356,7 +123356,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 494,
+    "expanded": 497,
     "roots": 72
   },
   {
@@ -123388,7 +123388,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -123502,13 +123502,13 @@
           0,
           -22.15
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -123523,7 +123523,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQPillbox",
@@ -123538,7 +123538,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       }
     ],
     "walls": [
@@ -124597,7 +124597,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 463,
+    "expanded": 471,
     "roots": 87
   },
   {
@@ -124629,7 +124629,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -124749,7 +124749,7 @@
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "HQPillbox",
@@ -124764,7 +124764,7 @@
         "required": true,
         "half_width": 2.4914,
         "half_depth": 3.8946,
-        "expanded": 3
+        "expanded": 5
       },
       {
         "key": "HQShelter",
@@ -124773,13 +124773,13 @@
           0,
           1.85
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -125838,7 +125838,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 463,
+    "expanded": 470,
     "roots": 87
   },
   {
@@ -125870,7 +125870,7 @@
         "required": true,
         "half_width": 10.1986,
         "half_depth": 9.7841,
-        "expanded": 6
+        "expanded": 9
       },
       {
         "key": "HQCasematePKM",
@@ -125984,13 +125984,13 @@
           0,
           -22.15
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Barracks",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       },
       {
         "key": "Ammo",
@@ -126014,13 +126014,13 @@
           0,
           -2.15
         ],
-        "yaw": 90,
+        "yaw": 270,
         "role": "Supply",
         "side": -1,
         "required": true,
         "half_width": 6.5239,
         "half_depth": 5.6532,
-        "expanded": 3
+        "expanded": 4
       }
     ],
     "walls": [
@@ -127092,7 +127092,7 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 507,
+    "expanded": 512,
     "roots": 88
   }
 ]

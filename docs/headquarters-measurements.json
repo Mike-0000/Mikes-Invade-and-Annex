@@ -1,5 +1,5 @@
 {
-  "evidence": "Workbench ResourceManager -plugin=IA_HeadquartersProbe, 2026-09-25 22:49:52, failures=0",
+  "evidence": "Workbench ResourceManager -plugin=IA_HeadquartersProbe, logs_2026-09-25_23-18-45, failures=0",
   "scope": "Workbench Preview mesh bounds and hierarchy; not live physics/AI/RPL certification",
   "assets": {
     "HQWallA": {
@@ -81,7 +81,7 @@
       ]
     },
     "HQCommand": {
-      "count": 4,
+      "count": 7,
       "mins": [
         -9.15488,
         -3.76303,
@@ -94,7 +94,7 @@
       ]
     },
     "HQBarracks": {
-      "count": 3,
+      "count": 13,
       "mins": [
         -7.96795,
         -5.8833,
@@ -107,7 +107,7 @@
       ]
     },
     "HQShelter": {
-      "count": 1,
+      "count": 2,
       "mins": [
         -5.01992,
         -0.968736,
@@ -120,7 +120,7 @@
       ]
     },
     "HQPillbox": {
-      "count": 1,
+      "count": 3,
       "mins": [
         -1.47213,
         -0.019368,

@@ -20,6 +20,25 @@ GenericEntity {
    ModelGeometry 1
    Static 1
   }
+  SCR_AISmartActionSentinelComponent "{5E84D5DE510622A9}" {
+   AIBehaviorTree "{12B4838160EDE026}AI/BehaviorTrees/SmartActions/SA_CoverPost.bt"
+   Tags {
+    "CoverPost"
+   }
+   ActionOffset 0 7.203 0.041
+   m_vLookPosition 0 8 4.69
+   m_fLookDirectionRange 120
+  }
+  SCR_AISmartActionSentinelComponent "{5E84D5DE510622AB}" {
+   AIBehaviorTree "{BC53D77D23308CD6}AI/BehaviorTrees/SmartActions/SA_ObservationPost.bt"
+   Tags {
+    "ObservationPost"
+   }
+   ActionOffset 0 7.203 0.041
+   m_vLookPosition 0 8 4.69
+   m_fLookDirectionRange 120
+   m_bUseBinoculars 1
+  }
  }
  coords 0 0 0
   {

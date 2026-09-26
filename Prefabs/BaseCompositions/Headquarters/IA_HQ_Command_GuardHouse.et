@@ -20,9 +20,72 @@ GenericEntity {
    ModelGeometry 1
    Static 1
   }
+  SCR_AISmartActionSentinelComponent "{5720DAD3F3783009}" {
+   AIBehaviorTree "{BC53D77D23308CD6}AI/BehaviorTrees/SmartActions/SA_ObservationPost.bt"
+   Tags {
+    "ObservationPost"
+   }
+   ActionOffset 0.26 0.2 0.889
+   m_vLookPosition 2.53 1 9.032
+   m_fLookDirectionRange 45
+  }
+  SCR_AISmartActionSentinelComponent "{5728A97052133C1B}" {
+   AIBehaviorTree "{BC53D77D23308CD6}AI/BehaviorTrees/SmartActions/SA_ObservationPost.bt"
+   Tags {
+    "ObservationPost"
+   }
+   ActionOffset -1.946 0.198 4.06
+   m_vLookPosition -1.794 1 8.688
+   m_fLookDirectionRange 90
+  }
+  SCR_AISmartActionSentinelComponent "{58B297799736B387}" {
+   AIBehaviorTree "{12B4838160EDE026}AI/BehaviorTrees/SmartActions/SA_CoverPost.bt"
+   Tags {
+    "CoverPost"
+   }
+   ActionOffset -1.344 0.37 -1.923
+   m_vLookPosition -0.606 1 -3.108
+   m_fLookDirectionRange 45
+   m_iCharacterStance CROUCH
+  }
  }
  coords 0 0 0
   {
+  StaticModelEntity : "{AFFBCCD90EEE53DD}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_INT_COV_B.et" {
+   ID "AF673A638D8F5BC9"
+   coords 0 0 0
+   components {
+    Hierarchy "{ABBB364296D65CFE}" {
+     Enabled 1
+     PivotID "socket_door_int_right_03"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AC9A790A13745F9F}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_L_EXT_COV_B_brown.et" {
+   ID "1A4E2DC9813F5C47"
+   coords 0 0 0
+   angles 0 -180 0
+   components {
+    Hierarchy "{EAB275B96BD3519F}" {
+     Enabled 1
+     PivotID "socket_door_ext_right_01"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{3F2E87FF1B29563B}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_EXT_COV_B_brown.et" {
+   ID "87971FFF908D5869"
+   coords 0 0 0
+   angles 0 -180 0
+   components {
+    Hierarchy "{A739A22F885B5C43}" {
+     Enabled 1
+     PivotID "socket_door_ext_right_02"
+     AutoTransform 1
+    }
+   }
+  }
   StaticModelEntity : "{FA188839C5E6DAD3}Prefabs/Structures/BuildingParts/Entry/Entry_Direct_01_narrow.et" {
    ID "55AE947DDEEF1A0C"
    coords 0 0 0

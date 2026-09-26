@@ -30,16 +30,16 @@ class IA_HeadquartersCatalog
 				socket.Append("0.016 0.656 -0.147", "0 0 0");
 				break;
 			case "HQCommand":
-				asset = IA_BaseCompositionAsset.Create(key, "{6C2174ECD0E05F93}Prefabs/BaseCompositions/Headquarters/IA_HQ_Command_GuardHouse.et", "-9.15488 -3.76303 -8.78409", "9.19859 5.74314 5.19055", 6);
+				asset = IA_BaseCompositionAsset.Create(key, "{6C2174ECD0E05F93}Prefabs/BaseCompositions/Headquarters/IA_HQ_Command_GuardHouse.et", "-9.15488 -3.76303 -8.78409", "9.19859 5.74314 5.19055", 9);
 				break;
 			case "HQBarracks":
-				asset = IA_BaseCompositionAsset.Create(key, "{5D729180F6AA55B4}Prefabs/BaseCompositions/Headquarters/IA_HQ_Barracks.et", "-7.96795 -5.8833 -21.5845", "7.9685 5.79926 19.1445", 5);
+				asset = IA_BaseCompositionAsset.Create(key, "{5D729180F6AA55B4}Prefabs/BaseCompositions/Headquarters/IA_HQ_Barracks.et", "-7.96795 -5.8833 -21.5845", "7.9685 5.79926 19.1445", 15);
 				break;
 			case "HQShelter":
-				asset = IA_BaseCompositionAsset.Create(key, "{6D804238B8E85DF1}Prefabs/BaseCompositions/Headquarters/IA_HQ_Shelter.et", "-5.01992 -0.968736 -4.65319", "5.52391 5.57435 2.45377", 3);
+				asset = IA_BaseCompositionAsset.Create(key, "{6D804238B8E85DF1}Prefabs/BaseCompositions/Headquarters/IA_HQ_Shelter.et", "-5.01992 -0.968736 -4.65319", "5.52391 5.57435 2.45377", 4);
 				break;
 			case "HQPillbox":
-				asset = IA_BaseCompositionAsset.Create(key, "{3522264FEE8A542D}Prefabs/BaseCompositions/Headquarters/IA_HQ_Pillbox.et", "-1.47213 -0.019368 -2.89458", "1.49141 4.86042 2.70566", 3);
+				asset = IA_BaseCompositionAsset.Create(key, "{3522264FEE8A542D}Prefabs/BaseCompositions/Headquarters/IA_HQ_Pillbox.et", "-1.47213 -0.019368 -2.89458", "1.49141 4.86042 2.70566", 5);
 				break;
 			case "HQTower":
 				asset = IA_BaseCompositionAsset.Create(key, "{22675F12AD125CE2}Prefabs/BaseCompositions/Headquarters/IA_HQ_Tower.et", "-1.14041 -1.97537 -1.13225", "1.15152 6.78584 3.92874", 4);

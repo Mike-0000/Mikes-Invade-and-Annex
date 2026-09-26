@@ -33,6 +33,94 @@ GenericEntity {
  }
  coords 0 0 0
   {
+  StaticModelEntity : "{A4D5D7BA8B655909}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Barracks_01_EXT_white.et" {
+   ID "7F47ED73743E5522"
+   coords 0 0 0
+   components {
+    Hierarchy "{B3BA7162D2135F23}" {
+     Enabled 1
+     PivotID "socket_doorframe_int_01"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AFFBCCD90EEE53DD}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_INT_COV_B.et" {
+   ID "4B9753F13B805BE2"
+   coords 0 0 0
+   components {
+    Hierarchy "{ABBB364296D65CFE}" {
+     Enabled 1
+     PivotID "socket_door_int_M1_01"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AFFBCCD90EEE53DD}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_INT_COV_B.et" {
+   ID "AB09F40FA9765CB7"
+   coords 0 0 0
+   components {
+    Hierarchy "{ABBB364296D65CFE}" {
+     Enabled 1
+     PivotID "socket_door_int_B_05"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AFFBCCD90EEE53DD}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_INT_COV_B.et" {
+   ID "540FE974E7305407"
+   coords 0 0 0
+   components {
+    Hierarchy "{ABBB364296D65CFE}" {
+     Enabled 1
+     PivotID "socket_door_int_B_06"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AFFBCCD90EEE53DD}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_INT_COV_B.et" {
+   ID "C9B6B862609457D8"
+   coords 0 0 0
+   components {
+    Hierarchy "{ABBB364296D65CFE}" {
+     Enabled 1
+     PivotID "socket_door_int_B_03"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AFFBCCD90EEE53DD}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_INT_COV_B.et" {
+   ID "D496FCB929525136"
+   coords 0 0 0
+   components {
+    Hierarchy "{ABBB364296D65CFE}" {
+     Enabled 1
+     PivotID "socket_door_int_B_04"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AFFBCCD90EEE53DD}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_INT_COV_B.et" {
+   ID "9A9BA0A8F42554C7"
+   coords 0 0 0
+   components {
+    Hierarchy "{ABBB364296D65CFE}" {
+     Enabled 1
+     PivotID "socket_door_int_B_01"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AFFBCCD90EEE53DD}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Village_E_01_R_INT_COV_B.et" {
+   ID "F4B03132F93C58FA"
+   coords 0 0 0
+   components {
+    Hierarchy "{ABBB364296D65CFE}" {
+     Enabled 1
+     PivotID "socket_door_int_B_02"
+     AutoTransform 1
+    }
+   }
+  }
   StaticModelEntity : "{69A8FFE5527CB776}Prefabs/Structures/BuildingParts/Entry/Entry_Direct_01.et" {
    ID "64F4855215743A27"
    coords 0 0 0
@@ -51,6 +139,28 @@ GenericEntity {
     Hierarchy "{5488F0388A297CDE}" {
      Enabled 1
      PivotID "socket_entry_01"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{48200401D05753BC}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Barracks_01_EXT_brown.et" {
+   ID "171A035A4ACF501D"
+   coords 0 0 0
+   components {
+    Hierarchy "{5B3FDD8C00E95C00}" {
+     Enabled 1
+     PivotID "socket_doorframe_ext_02"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{48200401D05753BC}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Barracks_01_EXT_brown.et" {
+   ID "E1789DEB55E35128"
+   coords 0 0 0
+   components {
+    Hierarchy "{5B3FDD8C00E95C00}" {
+     Enabled 1
+     PivotID "socket_doorframe_ext_01"
      AutoTransform 1
     }
    }

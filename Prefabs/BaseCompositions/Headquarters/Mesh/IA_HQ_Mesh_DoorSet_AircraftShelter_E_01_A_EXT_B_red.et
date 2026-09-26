@@ -1,0 +1,23 @@
+StaticModelEntity {
+ ID "568FBBEEB63C53B8"
+ components {
+  MeshObject "{61B367470698533A}" {
+   Object "{0B462BAB6F3D0760}Assets/Structures/BuildingsParts/Doors/Door_AircraftShelter_E_01/DoorFrame_AircraftShelter_E_01_A_EXT_B.xob"
+   Materials {
+    MaterialAssignClass "{5A2EDE59EA4155CD}" {
+     SourceMaterial "AircraftShelter_E_01_Metal_EXT"
+     AssignedMaterial "{9DE856DE922497F1}Assets/Structures/BuildingsParts/Doors/Door_AircraftShelter_E_01/Data/Door_AircraftShelter_E_01_Side_RED_EXT.emat"
+    }
+    MaterialAssignClass "{5A2EDE59EA4155A5}" {
+     SourceMaterial "AircraftShelter_E_01_Metal_INT"
+     AssignedMaterial "{61829D2F94FAD618}Assets/Structures/BuildingsParts/Doors/Door_AircraftShelter_E_01/Data/Door_AircraftShelter_E_01_Side_RED_INT.emat"
+    }
+   }
+  }
+  RigidBody "{61B367470704E02F}" {
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

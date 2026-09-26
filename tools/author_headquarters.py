@@ -59,6 +59,59 @@ STOCK={
 # concrete parapet top is placed at exactly that height.
 TRIPOD={'pkm':(0.004,0.656,-0.224),'nsv':(0.016,0.656,-0.147)}
 PARAPET_HALF_HEIGHT=1.85
+# Outward door faces from the stock mesh sockets (Workbench bone dump,
+# logs_2026-09-25_23-20-44): (local outward normal x,z, offset along the face,
+# required clear depth). The first entry is the main door and must face the yard.
+DOORS={
+    'HQCommand':[((0,1),-2.12,3.0),((0,-1),2.18,2.0),((-1,0),3.78,2.0),((1,0),3.78,2.0)],
+    'HQBarracks':[((0,-1),0.0,3.0),((0,1),0.0,3.0)],
+    'HQShelter':[((0,1),0.24,3.0)],
+    'HQPillbox':[((0,1),-0.56,3.0)],
+    'HQTower':[((0,1),0.0,3.0)],
+}
+APRON_HALF=1.5
+
+
+# Emitted into IA_HeadquartersProbe: vanilla CoverPost/ObservationPost smart
+# actions must survive the mesh-only wrapper (IA area garrisons query them).
+PROBE_POSTS='''
+	protected void CheckPosts(BaseWorld world, string key, ResourceName name, int expected, int addons, int ladders)
+	{
+		ref EntitySpawnParams params = new EntitySpawnParams();
+		params.TransformMode = ETransformMode.WORLD;
+		Math3D.MatrixIdentity4(params.Transform);
+		IEntity entity = GetGame().SpawnEntityPrefab(Resource.Load(name), world, params);
+		Check(entity != null, "post resource " + key);
+		if (!entity)
+			return;
+		array<Managed> found = {};
+		entity.FindComponents(SCR_AISmartActionSentinelComponent, found);
+		Check(found.Count() == expected, "sentinel post count " + key);
+		foreach (Managed item : found)
+		{
+			SCR_AISmartActionSentinelComponent post = SCR_AISmartActionSentinelComponent.Cast(item);
+			array<string> tags = {};
+			post.GetTags(tags);
+			Check(tags.Find("CoverPost") >= 0 || tags.Find("ObservationPost") >= 0, "sentinel post tag " + key);
+			Print(string.Format("[IA][HeadquartersProbe] post key=%1 tags=%2 offset=%3 accessible=%4", key, tags, post.GetActionOffset(), post.IsActionAccessible()), LogLevel.NORMAL);
+		}
+		// Stairs, entry steps, door frames and the pillbox ladder spawn as children.
+		int children = 0;
+		int climbable = 0;
+		IEntity child = entity.GetChildren();
+		while (child)
+		{
+			children++;
+			if (child.FindComponent(LadderComponent))
+				climbable++;
+			child = child.GetSibling();
+		}
+		Check(children == addons, "wrapper add-ons " + key);
+		Check(climbable == ladders, "wrapper ladders " + key);
+		Print(string.Format("[IA][HeadquartersProbe] addons key=%1 children=%2 ladders=%3", key, children, climbable), LogLevel.NORMAL);
+		SCR_EntityHelper.DeleteEntityAndChildren(entity);
+	}
+'''
 
 
 def stock_path(name):
@@ -95,6 +148,13 @@ class HeadquartersAuthor(Author):
                 return True
         return False
 
+    def has_component(self,path,kind):
+        for node in self.chain(path):
+            components=node.block('components')
+            if components and any(isinstance(c,Node) and c.head.split(' ',1)[0]==kind for c in components.body):
+                return True
+        return False
+
     def mesh_components(self,path):
         merged={}
         for ancestor in reversed(self.chain(path)):
@@ -111,6 +171,23 @@ class HeadquartersAuthor(Author):
         assert set(merged)==set(MESH_KEYS),(path,sorted(merged))
         return [merged[k] for k in MESH_KEYS]
 
+    def smart_actions(self,path):
+        """Vanilla cover/observation posts, merged by component id down the chain.
+
+        Stock GenericEntity prefabs (camo-net observation posts) carry the same
+        component, so it does not need the destructible building class.
+        """
+        merged={}
+        for ancestor in reversed(self.chain(path)):
+            components=ancestor.block('components')
+            if not components:
+                continue
+            for c in components.body:
+                if not isinstance(c,Node) or not c.head.startswith('SCR_AISmartActionSentinelComponent '):
+                    continue
+                merged[c.head]=self.merge(merged[c.head],c) if c.head in merged else copy.deepcopy(c)
+        return list(merged.values())
+
     def write(self,out,root):
         self.outputs[out]=root.render()
         self.outputs[out+'.meta']=metadata(out)
@@ -118,10 +195,13 @@ class HeadquartersAuthor(Author):
 
     def static_mesh(self,name):
         """Non-replicated StaticModelEntity, the same shape as vanilla DirtCover."""
-        out=OUT+'Mesh/IA_HQ_Mesh_'+Path(stock_path(name)).stem+'.et'
+        return self.static_mesh_path(stock_path(name))
+
+    def static_mesh_path(self,path):
+        out=OUT+'Mesh/IA_HQ_Mesh_'+Path(path).stem+'.et'
         if out in self.outputs:
             return resource(out)
-        root=Node('StaticModelEntity',['ID "'+guid(out)+'"',Node('components',self.mesh_components(stock_path(name))),'coords 0 0 0'])
+        root=Node('StaticModelEntity',['ID "'+guid(out)+'"',Node('components',self.mesh_components(path)),'coords 0 0 0'])
         return self.write(out,root)
 
     def root(self,out,extra=None):
@@ -150,23 +230,51 @@ class HeadquartersAuthor(Author):
         """Mesh-only building: no doors, windows, persistence or destruction."""
         path=stock_path(stock)
         out=OUT+'IA_HQ_'+name+'.et'
-        root=self.root(out,self.mesh_components(path))
+        posts=self.smart_actions(path)
+        root=self.root(out,self.mesh_components(path)+posts)
         kept=[]
+        ladders=0
+        frames=0
         for child in self.children(path):
             match=REF.search(child.head)
-            if not match or self.excluded(match[1]) or self.has_rpl(match[1]):
+            if not match or self.excluded(match[1]):
                 continue
-            if child.head.split(' : ',1)[0]!='StaticModelEntity':
+            if self.has_component(match[1],'DoorSlotComponent'):
+                # Door frame trim only; the replicated door leaf is dropped so
+                # the opening stays walkable and never needs door AI.
+                kept.append(self.pivot_mesh(out,len(kept),self.static_mesh_path(match[1]),child))
+                frames+=1
+                continue
+            ladder=self.has_component(match[1],'LadderComponent')
+            if not ladder and (self.has_rpl(match[1]) or child.head.split(' : ',1)[0]!='StaticModelEntity'):
                 continue
             node=Node(child.head,[x for x in child.body if isinstance(x,str) and x.split(' ',1)[0] in ('ID','coords','angles','scale')])
             components=child.block('components')
             hierarchy=next((c for c in components.body if isinstance(c,Node) and c.head.startswith('Hierarchy ')),None) if components else None
             assert hierarchy and hierarchy.prop('PivotID'),(path,child.head)
-            node.body.append(Node('components',[copy.deepcopy(hierarchy)]))
+            kept_components=[copy.deepcopy(hierarchy)]
+            if ladder:
+                # Plain replicated ladder (no destruction): the only way up to
+                # the observation slits. Parented to the wrapper's RPL node like
+                # the casemate tripods.
+                ladders+=1
+                kept_components.insert(0,Node('RplComponent "'+self.component_id(match[1],'RplComponent')+'"',['"Parent Node From Parent Entity" 1']))
+            node.body.append(Node('components',kept_components))
             kept.append(node)
         if kept:
             root.body.append(Node('',kept))
-        self.catalog[key]={'prefab':self.write(out,root),'sockets':[],'source':STOCK[stock],'addons':len(kept)}
+        self.catalog[key]={'prefab':self.write(out,root),'sockets':[],'source':STOCK[stock],'addons':len(kept),'posts':len(posts),'ladders':ladders,'frames':frames}
+
+    def pivot_mesh(self,out,index,mesh,child):
+        """IA mesh prefab on the stock child's building socket."""
+        components=child.block('components')
+        hierarchy=next((c for c in components.body if isinstance(c,Node) and c.head.startswith('Hierarchy ')),None) if components else None
+        assert hierarchy and hierarchy.prop('PivotID'),(out,child.head)
+        body=['ID "'+guid(out+'/frame/'+str(index))+'"']
+        body+=[x for x in child.body if isinstance(x,str) and x.split(' ',1)[0] in ('coords','angles','scale')]
+        path=mesh.split('}',1)[1]
+        body.append(Node('components',[Node('Hierarchy "{'+guid(path+'/Hierarchy')+'}"',['Enabled 1','PivotID '+hierarchy.prop('PivotID'),'AutoTransform 1'])]))
+        return Node('StaticModelEntity : "'+mesh+'"',body)
 
     def wall_run(self,key,name,panels):
         """Panels start at their own pillar and span +x; the run is centred."""
@@ -228,6 +336,7 @@ class HeadquartersAuthor(Author):
         self.obstacles('HQWire','Belt_Wire',[('wire',(0,0,0),(0,90,0))])
         self.outputs['docs/headquarters-catalog.json']=json.dumps(self.catalog,indent=2)+'\n'
         calls='\n'.join(f'\t\tMeasure(world, "{k}", "{v["prefab"]}");' for k,v in self.catalog.items())
+        calls+='\n'+'\n'.join(f'\t\tCheckPosts(world, "{k}", "{v["prefab"]}", {v["posts"]}, {v["addons"]}, {v["ladders"]});' for k,v in self.catalog.items() if 'posts' in v)
         self.outputs['Scripts/WorkbenchGame/IA_HeadquartersProbe.c']=(
             '#ifdef WORKBENCH\n'
             '// Generated by tools/author_headquarters.py. Preview geometry only: proves\n'
@@ -239,7 +348,9 @@ class HeadquartersAuthor(Author):
             '\t\tBaseWorld world = preview.GetRef();\n\t\tm_World = world;\n'
             +calls+'\n'
             '\t\tPrint(string.Format("[IA][HeadquartersProbe] failures=%1", m_iFailures), LogLevel.NORMAL);\n'
-            '\t\tWorkbench.Exit(m_iFailures);\n\t}\n}\n#endif\n')
+            '\t\tWorkbench.Exit(m_iFailures);\n\t}\n'
+            +PROBE_POSTS+
+            '}\n#endif\n')
         return self.outputs
 
 
@@ -331,6 +442,51 @@ class Plan:
         # Round inward so the 3-decimal recipe never pokes past the limit.
         return cx*math.floor((lim_x-hw-1)*100)/100,cz*math.floor((lim_z-hd-1)*100)/100
 
+    def aprons(self,item):
+        """Clear ground in front of each door, from the unpadded mesh edge out.
+        Returns (box, depth) per door, main door first."""
+        pad=0 if item['side']>=0 else 1
+        x,z=item['position'][0],item['position'][2]
+        hw,hd=item['half_width']-pad,item['half_depth']-pad
+        c,s=round(math.cos(math.radians(item['yaw']))),round(math.sin(math.radians(item['yaw'])))
+        W,D=(hd,hw) if item['yaw']%180 else (hw,hd)
+        out=[]
+        for (nx,nz),along,depth in DOORS.get(item['key'],[]):
+            lx,lz=(along,nz*hd) if nz else (nx*hw,along)
+            # Yaw 90 turns local +Z to world +X.
+            px,pz=x+lx*c+lz*s,z-lx*s+lz*c
+            wx,wz=nx*c+nz*s,-nx*s+nz*c
+            if wx:
+                edge=x+wx*W
+                a=(min(edge,edge+wx*depth),pz-APRON_HALF,max(edge,edge+wx*depth),pz+APRON_HALF)
+            else:
+                edge=z+wz*D
+                a=(px-APRON_HALF,min(edge,edge+wz*depth),px+APRON_HALF,max(edge,edge+wz*depth))
+            out.append((tuple(round(v,3) for v in a),(wx,wz)))
+        return out
+
+    def doors_clear(self,item):
+        """Doors open onto walkable yard: inside the inner wall face and off
+        every other module; the new item also stays off existing aprons."""
+        inner_x,inner_z=self.Wl-0.5,self.Dl-0.5
+        own=box(dict(item,half_width=item['half_width']-(0 if item['side']>=0 else 1),
+                     half_depth=item['half_depth']-(0 if item['side']>=0 else 1)))
+        for a,_ in self.aprons(item):
+            if a[0]<-inner_x or a[2]>inner_x or a[1]<-inner_z or a[3]>inner_z:
+                return False
+            for o in self.modules:
+                if overlap(a,self.bare(o)):
+                    return False
+        for o in self.modules:
+            for a,_ in self.aprons(o):
+                if overlap(own,a):
+                    return False
+        return True
+
+    def bare(self,o):
+        pad=0 if o['side']>=0 else 1
+        return box(dict(o,half_width=o['half_width']-pad,half_depth=o['half_depth']-pad))
+
     def insert(self,key,x,z,yaw,role,side=-1,required=False,ignore_lane=False):
         socks=self.catalog[key]['sockets']
         heavy=sum(s['kind']>0 for s in socks)
@@ -338,6 +494,8 @@ class Plan:
             return False
         item=self.item(key,x,z,yaw,role,side,required)
         a=box(item)
+        if not self.doors_clear(item):
+            return False
         if side<0:
             if not self.inside(a):
                 return False
@@ -445,7 +603,7 @@ class Plan:
         for s in (mirror,-mirror):
             for x in columns:
                 for z in rows:
-                    for flip in (0,180):
+                    for flip in self.door_flips(key,s*x,z,yaw,role,required):
                         item=self.item(key,s*x,z,(yaw+flip)%360,role,-1,required)
                         if not self.fits(item):
                             continue
@@ -458,9 +616,21 @@ class Plan:
             return False
         return self.insert(key,best[1],best[2],best[3],role,required=required)
 
+    def door_flips(self,key,x,z,yaw,role,required):
+        """Main door toward the lane (x=0) first, then toward the yard middle."""
+        def facing(flip):
+            aprons=self.aprons(self.item(key,x,z,(yaw+flip)%360,role,-1,required))
+            if not aprons:
+                return 0
+            wx,wz=aprons[0][1]
+            return -wx*math.copysign(1,x)*2-wz*math.copysign(1,z)
+        return sorted((0,180),key=lambda f:-facing(f))
+
     def fits(self,item):
         a=box(item)
         if not self.inside(a):
+            return False
+        if not self.doors_clear(item):
             return False
         if any(overlap(a,box(o),0 if o['side']>=0 else 1) for o in self.modules):
             return False

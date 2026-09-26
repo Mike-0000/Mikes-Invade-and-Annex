@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{568FBBEEB63C53B8}IA_HQ_Mesh_DoorSet_AircraftShelter_E_01_A_EXT_B_red.et"
+ Configurations {
+  EntityTemplateResourceClass PC {
+  }
+  EntityTemplateResourceClass XBOX_ONE : PC {
+  }
+  EntityTemplateResourceClass XBOX_SERIES : PC {
+  }
+  EntityTemplateResourceClass PS4 : PC {
+  }
+  EntityTemplateResourceClass PS5 : PC {
+  }
+  EntityTemplateResourceClass HEADLESS : PC {
+  }
+ }
+}

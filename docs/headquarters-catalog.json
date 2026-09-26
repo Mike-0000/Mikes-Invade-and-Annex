@@ -69,37 +69,55 @@
     "prefab": "{6C2174ECD0E05F93}Prefabs/BaseCompositions/Headquarters/IA_HQ_Command_GuardHouse.et",
     "sockets": [],
     "source": "{3F91DEEC9C78E473}Prefabs/Structures/Military/Houses/GuardHouse_01/GuardHouse_01.et",
-    "addons": 3
+    "addons": 6,
+    "posts": 3,
+    "ladders": 0,
+    "frames": 3
   },
   "HQBarracks": {
     "prefab": "{5D729180F6AA55B4}Prefabs/BaseCompositions/Headquarters/IA_HQ_Barracks.et",
     "sockets": [],
     "source": "{2CB4D91249389DFD}Prefabs/Structures/Military/Houses/Barracks_01/Barracks_USSR_01_military_base.et",
-    "addons": 2
+    "addons": 12,
+    "posts": 0,
+    "ladders": 0,
+    "frames": 10
   },
   "HQShelter": {
     "prefab": "{6D804238B8E85DF1}Prefabs/BaseCompositions/Headquarters/IA_HQ_Shelter.et",
     "sockets": [],
     "source": "{4BE4C27399CF3B00}Prefabs/Structures/Military/Bunkers/ShelterMilitary_E_01/ShelterMilitary_E_01.et",
-    "addons": 0
+    "addons": 1,
+    "posts": 0,
+    "ladders": 0,
+    "frames": 1
   },
   "HQPillbox": {
     "prefab": "{3522264FEE8A542D}Prefabs/BaseCompositions/Headquarters/IA_HQ_Pillbox.et",
     "sockets": [],
     "source": "{6214C73708EA0E2D}Prefabs/Structures/Military/Fortifications/Bunker_SPS/Bunker_SPS.et",
-    "addons": 0
+    "addons": 2,
+    "posts": 0,
+    "ladders": 1,
+    "frames": 1
   },
   "HQTower": {
     "prefab": "{22675F12AD125CE2}Prefabs/BaseCompositions/Headquarters/IA_HQ_Tower.et",
     "sockets": [],
     "source": "{52D3F2118C1B68E0}Prefabs/Structures/Military/Houses/GuardTower_USSR_01/GuardTower_USSR_01_green.et",
-    "addons": 1
+    "addons": 1,
+    "posts": 2,
+    "ladders": 0,
+    "frames": 0
   },
   "HQGuardBox": {
     "prefab": "{A36090ED85CF5A3A}Prefabs/BaseCompositions/Headquarters/IA_HQ_GuardBox.et",
     "sockets": [],
     "source": "{F50905235FBAA094}Prefabs/Structures/Military/Houses/GuardBox_01/GuardBox_01_beige.et",
-    "addons": 0
+    "addons": 0,
+    "posts": 1,
+    "ladders": 0,
+    "frames": 0
   },
   "HQTeeth": {
     "prefab": "{84852BA8BD7157AA}Prefabs/BaseCompositions/Headquarters/IA_HQ_Belt_Teeth.et",

@@ -24,8 +24,51 @@ class IA_HeadquartersProbe : IA_BaseCompositionProbe
 		Measure(world, "HQTeeth", "{84852BA8BD7157AA}Prefabs/BaseCompositions/Headquarters/IA_HQ_Belt_Teeth.et");
 		Measure(world, "HQHedgehogs", "{021016CFA51A5DEF}Prefabs/BaseCompositions/Headquarters/IA_HQ_Belt_Hedgehogs.et");
 		Measure(world, "HQWire", "{465135458FFE52FA}Prefabs/BaseCompositions/Headquarters/IA_HQ_Belt_Wire.et");
+		CheckPosts(world, "HQCommand", "{6C2174ECD0E05F93}Prefabs/BaseCompositions/Headquarters/IA_HQ_Command_GuardHouse.et", 3, 6, 0);
+		CheckPosts(world, "HQBarracks", "{5D729180F6AA55B4}Prefabs/BaseCompositions/Headquarters/IA_HQ_Barracks.et", 0, 12, 0);
+		CheckPosts(world, "HQShelter", "{6D804238B8E85DF1}Prefabs/BaseCompositions/Headquarters/IA_HQ_Shelter.et", 0, 1, 0);
+		CheckPosts(world, "HQPillbox", "{3522264FEE8A542D}Prefabs/BaseCompositions/Headquarters/IA_HQ_Pillbox.et", 0, 2, 1);
+		CheckPosts(world, "HQTower", "{22675F12AD125CE2}Prefabs/BaseCompositions/Headquarters/IA_HQ_Tower.et", 2, 1, 0);
+		CheckPosts(world, "HQGuardBox", "{A36090ED85CF5A3A}Prefabs/BaseCompositions/Headquarters/IA_HQ_GuardBox.et", 1, 0, 0);
 		Print(string.Format("[IA][HeadquartersProbe] failures=%1", m_iFailures), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
+	}
+
+	protected void CheckPosts(BaseWorld world, string key, ResourceName name, int expected, int addons, int ladders)
+	{
+		ref EntitySpawnParams params = new EntitySpawnParams();
+		params.TransformMode = ETransformMode.WORLD;
+		Math3D.MatrixIdentity4(params.Transform);
+		IEntity entity = GetGame().SpawnEntityPrefab(Resource.Load(name), world, params);
+		Check(entity != null, "post resource " + key);
+		if (!entity)
+			return;
+		array<Managed> found = {};
+		entity.FindComponents(SCR_AISmartActionSentinelComponent, found);
+		Check(found.Count() == expected, "sentinel post count " + key);
+		foreach (Managed item : found)
+		{
+			SCR_AISmartActionSentinelComponent post = SCR_AISmartActionSentinelComponent.Cast(item);
+			array<string> tags = {};
+			post.GetTags(tags);
+			Check(tags.Find("CoverPost") >= 0 || tags.Find("ObservationPost") >= 0, "sentinel post tag " + key);
+			Print(string.Format("[IA][HeadquartersProbe] post key=%1 tags=%2 offset=%3 accessible=%4", key, tags, post.GetActionOffset(), post.IsActionAccessible()), LogLevel.NORMAL);
+		}
+		// Stairs, entry steps, door frames and the pillbox ladder spawn as children.
+		int children = 0;
+		int climbable = 0;
+		IEntity child = entity.GetChildren();
+		while (child)
+		{
+			children++;
+			if (child.FindComponent(LadderComponent))
+				climbable++;
+			child = child.GetSibling();
+		}
+		Check(children == addons, "wrapper add-ons " + key);
+		Check(climbable == ladders, "wrapper ladders " + key);
+		Print(string.Format("[IA][HeadquartersProbe] addons key=%1 children=%2 ladders=%3", key, children, climbable), LogLevel.NORMAL);
+		SCR_EntityHelper.DeleteEntityAndChildren(entity);
 	}
 }
 #endif

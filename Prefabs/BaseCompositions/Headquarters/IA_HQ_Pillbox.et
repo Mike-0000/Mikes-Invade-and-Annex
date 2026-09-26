@@ -22,4 +22,30 @@ GenericEntity {
   }
  }
  coords 0 0 0
+  {
+  GenericEntity : "{CF9CD408B686DC88}Prefabs/Structures/BuildingParts/Ladders/Ladder_Bunker_SPS/Ladder_Bunker_SPS_B.et" {
+   ID "65B30801EA619925"
+   coords 0 0 0
+   components {
+    RplComponent "{58E0F951517F7F1D}" {
+     "Parent Node From Parent Entity" 1
+    }
+    Hierarchy "{557E8CF8B87AB6F6}" {
+     Enabled 1
+     PivotID "Socket_Bunker_SPS_Ladder"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{AC402F08E1635FAC}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_Bunker_SPS_A_LEFT_EXT_B.et" {
+   ID "1305DD70CD4E5F8F"
+   components {
+    Hierarchy "{9E5E8ED19BF05BEB}" {
+     Enabled 1
+     PivotID "Socket_Bunker_SPS_DoorFrame_01"
+     AutoTransform 1
+    }
+   }
+  }
+ }
 }

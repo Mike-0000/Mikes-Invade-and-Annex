@@ -1,0 +1,20 @@
+StaticModelEntity {
+ ID "48200401D05753BC"
+ components {
+  MeshObject "{61B367470698533A}" {
+   PixelSizeScale 10
+   Object "{0B067986C4843B98}Assets/Structures/BuildingsParts/Doors/Door_Barracks_01/DoorFrame_Barracks_EXT_B.xob"
+   Materials {
+    MaterialAssignClass "{6628992655B65BD4}" {
+     SourceMaterial "Barracks_01_Door"
+     AssignedMaterial "{10E90ECBD65ACE96}Assets/Structures/BuildingsParts/Doors/Data/Door_Barracks_01_brown_B.emat"
+    }
+   }
+  }
+  RigidBody "{61B367470704E02F}" {
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

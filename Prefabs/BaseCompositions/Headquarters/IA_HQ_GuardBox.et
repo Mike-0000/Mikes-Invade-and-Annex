@@ -26,6 +26,14 @@ GenericEntity {
    ModelGeometry 1
    Static 1
   }
+  SCR_AISmartActionSentinelComponent "{58B2977FDE364D4E}" {
+   AIBehaviorTree "{BC53D77D23308CD6}AI/BehaviorTrees/SmartActions/SA_ObservationPost.bt"
+   Tags {
+    "ObservationPost"
+   }
+   m_vLookPosition 0 1.5 -6.574
+   m_fLookDirectionRange 90
+  }
  }
  coords 0 0 0
 }

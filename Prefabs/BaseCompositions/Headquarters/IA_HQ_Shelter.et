@@ -22,4 +22,17 @@ GenericEntity {
   }
  }
  coords 0 0 0
+  {
+  StaticModelEntity : "{568FBBEEB63C53B8}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_AircraftShelter_E_01_A_EXT_B_red.et" {
+   ID "56F4A7EB1CE0510E"
+   coords 0 0 0
+   components {
+    Hierarchy "{11FC97F508CE548C}" {
+     Enabled 1
+     PivotID "Socket_door_frame"
+     AutoTransform 1
+    }
+   }
+  }
+ }
 }

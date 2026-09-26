@@ -76,10 +76,19 @@ already used for `IA_Antenna_02_USSR` (the `mesh_only` path in
 
 - A wrapper is a `GenericEntity` with RPL, `Hierarchy`, and the merged
   `MeshObject` and `RigidBody`.
+- The vanilla `SCR_AISmartActionSentinelComponent` blocks are kept on the
+  root, so IA garrisons still find the CoverPost/ObservationPost spots.
+  Vanilla already puts this component on 18 `GenericEntity` camo-net posts.
+  Measured posts: GuardHouse 3, GuardTower 2, GuardBox 1, the others 0.
 - Static `PivotID` add-ons without RPL are kept: tower stairs, and the entry
   steps on buildings.
-- Doors, windows and furniture are dropped. The results are permanent and
-  indestructible.
+- Door frames (`DoorSet_*` frame meshes) are kept as mesh-only children on
+  their stock `PivotID` sockets: GuardHouse 3, Barracks 10, Shelter 1,
+  Pillbox 1. The replicated door leaves are dropped, so doorways stay open.
+- The pillbox keeps `Ladder_Bunker_SPS_B`, its only way up to the cupola. It
+  keeps its own RPL node with "Parent Node From Parent Entity" on its socket.
+- Windows, door leaves and furniture are dropped. The results are permanent
+  and indestructible.
 
 | Building | Measured size | Use |
 |---|---|---|
@@ -217,8 +226,19 @@ Layers, from the outside in:
 - Survey collision uses the unchanged per-module `TraceOBB` clearance, with
   `ENTS` flags.
 - Construction still calls `RequestNavRebuild`, so the HQ buildings' own
-  interiors get navmesh. Mesh-only wrappers have no doors, so the openings stay
+  interiors get navmesh. Wrappers have no door leaves, so the openings stay
   walkable.
+- **Door aprons.** The Workbench socket dump gives each building's outward
+  door faces (`DOORS` in `author_headquarters.py`, evidence
+  `logs_2026-09-25_23-20-44`). Each door gets a 3 m wide apron from the mesh
+  edge: 3 m deep for the main door, 2 m for secondary doors. Aprons must stay
+  inside the inner wall face and off every module, and later modules must stay
+  off existing aprons.
+- **Door-driven facing.** Row buildings take the flip whose main door faces
+  the lane, then the yard middle. The command post's porch door looks down the
+  lane at the gate, and tower stairs face the yard. `Bunker_SPS` has four
+  observation slits at 4.08 m facing ±X/±Z, so it has no firing face; its
+  facing is chosen by the door.
 - Wall gates line up with the scrappy entry vectors, so garrison, QRF and
   route validation are unchanged.
 
@@ -272,6 +292,8 @@ Layers, from the outside in:
   - root and expanded budgets
   - wall coverage and gates
   - casemate sockets
+  - kept sentinel posts, door frames and the pillbox ladder
+  - door aprons clear, and main doors facing the lane
 - **Python**: existing scrappy tests unchanged. `author_base_designs.py
   --check` proves the scrappy outputs are byte-identical.
 - **Workbench**:
@@ -331,8 +353,10 @@ and the config default. Critique:
 Remaining honest gaps, which keep it from 10:
 
 - Mesh-only buildings lose vanilla AI smart actions (tower sentinel posts).
+  *Closed in iteration 4.*
 - Pillbox facing is chosen from the mesh bounds, not from a verified
-  firing-slit socket.
+  firing-slit socket. *Closed in iteration 4: the bunker is all-round, and
+  facing is door-driven.*
 - Live multiplayer, AI and navigation behaviour can only be proven in game.
 
 ## 15. As built (supersedes the plan where they differ)
@@ -372,6 +396,15 @@ Remaining honest gaps, which keep it from 10:
   multiplicative hash was correlated for sequential seeds, and the Workbench
   split test caught it. Enforce int32 wrap and masked shifts were verified to
   match a Python int32 emulation.
+- **Iteration 4 fidelity pass.**
+  - Sentinel posts, door frames and the pillbox ladder are restored on the
+    wrappers (see §3). The expanded costs rise to Command 9, Barracks 15,
+    Shelter 4 and Pillbox 5. The largest recipe is 1425 expanded (limit 2000)
+    and 221 roots (limit 240).
+  - Door aprons and door-driven facing (see §8) flipped 90 row buildings. The
+    module mix and positions are otherwise unchanged.
+  - `IA_HeadquartersAssetProbe` asserts that the door sockets the `DOORS`
+    table relies on exist, and that GuardBox has none.
 - **History order.** Style and HQ histories use `RemoveOrdered(0)`. The
   scrappy `s_aRecent.Remove(0)` swap-removes, so its history is unordered. That
   bug predates this change and is left untouched to keep scrappy selection
@@ -389,16 +422,26 @@ explicitly bounded:
 - All 72 recipes are validated by the real Enforce classes.
 
 It is still not 10, because live multiplayer, JIP and AI behaviour are
-unproven. Mesh-only buildings also have no doors or smart actions.
+unproven. Wrappers are `GenericEntity`, not `Building`, so
+`IA_BuildingHoldFinder` does not offer them as indoor hold buildings. Their
+sentinel posts and the outdoor posts still garrison them. Doorways have no
+door leaves.
 
 ## Verification record
 
-All results are from 2026-09-25, on this branch's working tree.
+Results from the iteration 4 tree, 2026-09-26, supersede the earlier rows.
 
 **Workbench CLI** (Steam must be running, `-wbModule=ResourceManager -plugin=... -run`):
 
 | Plugin | Log | Result |
 |---|---|---|
+| `IA_HeadquartersAssetProbe` | `logs_2026-09-25_23-27-14` | failures=0; door sockets present, GuardBox none |
+| `IA_HeadquartersProbe` | `logs_2026-09-26_01-12-35` | failures=0; posts, children and ladders match |
+| `IA_HeadquartersDesignTest` | `logs_2026-09-26_01-12-43` | failures=0 (72 recipes) |
+| `IA_BaseFoundationProbe` | `logs_2026-09-26_01-12-51` | failures=0 |
+| `IA_BaseGarrisonTest` | `logs_2026-09-26_01-12-59` | failures=0 |
+| `IA_BaseSelectionTest` | `logs_2026-09-26_01-13-08` | failures=0 |
+| (earlier) socket dump | `logs_2026-09-25_23-20-44` | door and ladder sockets, source of `DOORS` |
 | `IA_HeadquartersDesignTest` | `logs_2026-09-25_23-06-13` | failures=0; selection hq=199/400 |
 | `IA_HeadquartersProbe` | `logs_2026-09-25_23-06-20` | failures=0 (15 HQ prefabs spawned and measured) |
 | `IA_BaseFoundationProbe` | `logs_2026-09-25_23-06-27` | failures=0 |
@@ -418,9 +461,10 @@ All results are from 2026-09-25, on this branch's working tree.
 - `author_base_compositions.py <data007> --check`: 28 entries / 268 files,
   unchanged.
 - `author_base_designs.py --check`: unchanged.
-- `author_headquarters.py assets <data007> --check`: 46 outputs.
+- `author_headquarters.py assets <data007> --check`: 60 outputs (was 46
+  before the door-frame meshes).
 - `author_headquarters.py designs --check`: 4 outputs.
-- `unittest discover -s tools`: 52 tests. Three failures are identical on
+- `unittest discover -s tools`: 55 tests (15 headquarters). Three failures are identical on
   clean `HEAD`, so they predate this change:
   - `test_capture_and_failed_paths_stop_assignment` (missing
     `IA_StaticGunCombat.c`)
@@ -435,6 +479,8 @@ All results are from 2026-09-25, on this branch's working tree.
 
 - replication and JIP of wall runs, casemates and wrappers on a dedicated
   server
-- AI pathing through the gates and navmesh around buildings
+- AI pathing through the gates, doorways and navmesh around buildings
+- AI use of the restored sentinel posts, and replication of the pillbox
+  ladder and door frames under JIP
 - casemate crewing and firing arcs from under the roof
 - how long an HQ survey plus scrappy fallback takes on rough maps
