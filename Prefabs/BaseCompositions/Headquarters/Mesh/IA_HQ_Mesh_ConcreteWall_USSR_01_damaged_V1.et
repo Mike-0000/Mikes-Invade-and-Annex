@@ -1,0 +1,18 @@
+StaticModelEntity {
+ ID "89C016CA78275B9F"
+ components {
+  MeshObject "{56DE7C8DCD0F4E0A}" {
+   LODFactors {
+    70 50 30 10 2 1 1
+    250 70 40 40 1 1
+   }
+   Object "{BBC538CCBB007060}Assets/Structures/Walls/Concrete/ConcreteWall_USSR_01/ConcreteWall_USSR_01_damaged_V1.xob"
+  }
+  RigidBody "{56DE7C8DDE282E03}" {
+   ResponseIndex "HugeDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

@@ -40,6 +40,7 @@ class IA_DynamicSitePlacer
 	protected ref RandomGenerator m_Rng;
 	protected int m_iSeed;
 	protected int m_iDesignVariant = -1;
+	protected bool m_bHeadquartersFallback;
 	protected ref array<ref IA_DynamicSiteCandidate> m_aShortlist;
 	protected ref IA_DynamicSiteResult m_Result;
 	protected ref IA_DynamicSiteInstance m_Building;
@@ -124,7 +125,8 @@ class IA_DynamicSitePlacer
 		m_iSerial = serial;
 		m_iGroupId = groupId;
 		m_iSeed = serial * 7919 + groupId * 104729 + System.GetUnixTime();
-		m_iDesignVariant = IA_BaseDesignLibrary.Select(m_iSeed);
+		m_bHeadquartersFallback = false;
+		m_iDesignVariant = SelectDesignVariant();
 		m_Rng.SetSeed(m_iSeed);
 		m_aShortlist.Clear();
 		m_bComplete = false;
@@ -214,6 +216,11 @@ class IA_DynamicSitePlacer
 		if (m_bPrecomputeOnly)
 		{
 			StepSurvey();
+			if (m_bSurveyDone && m_aShortlist.IsEmpty() && TryFallbackToScrappy())
+			{
+				QueueWork();
+				return;
+			}
 			if (!m_bSurveyDone && m_aShortlist.Count() < MAX_SHORTLIST && (HasSurveyWork() || m_aShortlist.IsEmpty()))
 				QueueWork();
 			return;
@@ -275,6 +282,12 @@ class IA_DynamicSitePlacer
 			if (m_bSurveyDone)
 			{
 				if (TryBeginRelaxedTerrainPass())
+				{
+					StepSurvey();
+					RefreshShortlistScores();
+					return;
+				}
+				if (TryFallbackToScrappy())
 				{
 					StepSurvey();
 					RefreshShortlistScores();
@@ -791,16 +804,60 @@ class IA_DynamicSitePlacer
 		m_aLayouts = new array<ref IA_DynamicSiteLayout>();
 		array<int> layoutIds = {};
 		IA_DynamicSiteLayout.GetAllowedLayoutIds(sizeMode, layoutIds);
+		if (m_iDesignVariant < 0)
+			m_iDesignVariant = SelectDesignVariant();
 		foreach (int layoutId : layoutIds)
 		{
-			if (m_iDesignVariant < 0)
-				m_iDesignVariant = IA_BaseDesignLibrary.Select(m_iSeed);
-			ref IA_DynamicSiteLayout layout = IA_BaseDesignRecipes.Create(layoutId, m_iDesignVariant);
-			if (PreflightResources(layout))
+			ref IA_DynamicSiteLayout layout = IA_BaseDesignLibrary.CreateLayout(layoutId, m_iDesignVariant);
+			if (layout && PreflightResources(layout))
 				m_aLayouts.Insert(layout);
 			else
 				RecordRejection("missing_resource");
 		}
+		// A headquarters asset that failed to load must not cost the AO its base.
+		if (m_aLayouts.IsEmpty() && IA_BaseDesignLibrary.IsHeadquarters(m_iDesignVariant))
+		{
+			Print(string.Format("[IA][Base] Headquarters variant %1 failed preflight; using scrappy base", m_iDesignVariant), LogLevel.WARNING);
+			m_bHeadquartersFallback = true;
+			m_iDesignVariant = IA_BaseDesignLibrary.Select(m_iSeed);
+			foreach (int fallbackId : layoutIds)
+			{
+				ref IA_DynamicSiteLayout fallback = IA_BaseDesignLibrary.CreateLayout(fallbackId, m_iDesignVariant);
+				if (fallback && PreflightResources(fallback))
+					m_aLayouts.Insert(fallback);
+				else
+					RecordRejection("missing_resource");
+			}
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected int SelectDesignVariant()
+	{
+		int chance = 50;
+		IA_Config cfg = IA_MissionInitializer.GetGlobalConfig();
+		if (cfg)
+			chance = cfg.m_iDynamicBaseHeadquartersChancePct;
+		int variant = IA_BaseDesignLibrary.SelectDesign(m_iSeed, chance);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][Base] Design pick variant=%1 headquarters=%2 chance=%3", variant, IA_BaseDesignLibrary.IsHeadquarters(variant), chance), LogLevel.NORMAL);
+		}
+		return variant;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Headquarters walls need the same footprint as scrappy bases but more of
+	//! it must pass. When no headquarters fits anywhere, re-survey once as scrappy.
+	protected bool TryFallbackToScrappy()
+	{
+		if (m_bHeadquartersFallback || !IA_BaseDesignLibrary.IsHeadquarters(m_iDesignVariant))
+			return false;
+		m_bHeadquartersFallback = true;
+		IA_Log.Info(string.Format("[IA][Base] No legal site for headquarters variant %1; re-surveying as scrappy base.", m_iDesignVariant));
+		m_iDesignVariant = IA_BaseDesignLibrary.Select(m_iSeed);
+		InitializeSurvey(m_iSearchSizeMode);
+		return true;
 	}
 
 	// Progressive disk coverage avoids random clusters. Circle-local sequence
@@ -1195,7 +1252,7 @@ class IA_DynamicSitePlacer
 			if (layout.m_iLayoutId == layoutId)
 				return layout;
 		}
-		return IA_BaseDesignRecipes.Create(layoutId, m_iDesignVariant);
+		return IA_BaseDesignLibrary.CreateLayout(layoutId, m_iDesignVariant);
 	}
 
 	protected bool ValidateCandidate(notnull IA_DynamicSiteCandidate cand)

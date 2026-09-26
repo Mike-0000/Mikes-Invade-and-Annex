@@ -1,0 +1,42 @@
+GenericEntity {
+ ID "84852BA8BD7157AA"
+ components {
+  RplComponent "{D3E6678BA8F45A56}" {
+  }
+  Hierarchy "{BED64FBCAA0E5876}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{C16C62041E2AAAB2}Prefabs/Structures/Military/Fortifications/Dragontooth_01/Dragontooth_01_V1.et" {
+   ID "A5A62B18B5225A20"
+   coords -1.7 0 0
+   components {
+    Hierarchy "{61A4D5A6AD036F70}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{8B7B5323534404A7}Prefabs/Structures/Military/Fortifications/Dragontooth_01/Dragontooth_01_V2.et" {
+   ID "5C1A8AA332655D82"
+   coords 0 0 0.3
+   angles 0 90 0
+   components {
+    Hierarchy "{61A4D5A6AD036F70}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{C16C62041E2AAAB2}Prefabs/Structures/Military/Fortifications/Dragontooth_01/Dragontooth_01_V1.et" {
+   ID "C049DC515218508E"
+   coords 1.7 0 -0.1
+   angles 0 180 0
+   components {
+    Hierarchy "{61A4D5A6AD036F70}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

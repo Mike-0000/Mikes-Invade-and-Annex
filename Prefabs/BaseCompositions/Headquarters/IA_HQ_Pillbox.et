@@ -1,0 +1,25 @@
+GenericEntity {
+ ID "3522264FEE8A542D"
+ components {
+  RplComponent "{3A75071066E750FE}" {
+  }
+  Hierarchy "{ECC5D0B896FB58A9}" {
+   Enabled 1
+  }
+  MeshObject "{506EDA9D46FC6C06}" {
+   LODFactors {
+    20 15 10 1 1
+   }
+   PixelSizeScale 1
+   ClutterOccluder 1
+   ClutterOccluderClipPlane 1.5
+   Object "{235C152CD5627D4B}Assets/Structures/Military/Fortifications/Bunker_SPS/Bunker_SPS.xob"
+  }
+  RigidBody "{506EDA9CBE1B57FF}" {
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

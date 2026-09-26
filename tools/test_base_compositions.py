@@ -202,7 +202,9 @@ class CompositionTests(unittest.TestCase):
         self.assertNotIn('CallLater',source)
         self.assertNotIn('EOnFrame',source)
         placer=read('Scripts/Game/IA_DynamicSitePlacer.c')
-        self.assertIn('IA_BaseDesignRecipes.Create(layoutId, m_iDesignVariant)',placer)
+        # Scrappy recipes now route through the style dispatcher (HQ variants >= 100).
+        self.assertIn('IA_BaseDesignLibrary.CreateLayout(layoutId, m_iDesignVariant)',placer)
+        self.assertIn('return IA_BaseDesignRecipes.Create(size, variant);',read('Scripts/Game/IA_BaseDesignLibrary.c'))
         self.assertIn('m_bEmplacementPhaseDone = !m_Settings || !m_Settings.m_bEmplacementsEnabled',placer)
         self.assertIn('m_bAuthoredAccess',placer)
         self.assertIn('m_bFollowTerrainPlane',placer)

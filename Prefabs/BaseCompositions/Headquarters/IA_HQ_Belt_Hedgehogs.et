@@ -1,0 +1,33 @@
+GenericEntity {
+ ID "021016CFA51A5DEF"
+ components {
+  RplComponent "{848BD10449725BDE}" {
+  }
+  Hierarchy "{2B33CD30C9B45261}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "35C81D8D2BCA5547"
+   coords -1.4 0 0.2
+   angles 0 15 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{A46D45922F8CAD6C}Prefabs/Props/Military/Fortification/CzechHedgehog_01_painted.et" {
+   ID "4291A74C90BC5D03"
+   coords 1.4 0 -0.2
+   angles 0 -30 0
+   components {
+    Hierarchy "{F9FF61CC8A015D74}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

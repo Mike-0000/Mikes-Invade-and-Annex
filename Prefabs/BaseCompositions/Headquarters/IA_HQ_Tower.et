@@ -1,0 +1,35 @@
+GenericEntity {
+ ID "22675F12AD125CE2"
+ components {
+  RplComponent "{D0F4ADD0EEBA540E}" {
+  }
+  Hierarchy "{4F3E325848C75392}" {
+   Enabled 1
+  }
+  MeshObject "{506EDA9D46FC6C06}" {
+   LODFactors {
+    20 15 10 1 1
+   }
+   PixelSizeScale 1
+   ClutterOccluderClipPlane 1.5
+   Object "{BC7FF356FBADA028}Assets/Structures/Military/Houses/GuardTower_USSR_01/GuardTower_USSR_01.xob"
+   ClutterOccluder 0
+  }
+  RigidBody "{506EDA9CBE1B57FF}" {
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{D2D7B4DDC43D80DA}Prefabs/Structures/Military/Houses/GuardTower_USSR_01/BuildingAddons/GuardTower_USSR_01_stairs_green.et" {
+   ID "662AAA9491DF9AD2"
+   components {
+    Hierarchy "{5488F0388A297CDE}" {
+     PivotID "socket_Guardtower_S_01_Ladder"
+    }
+   }
+  }
+ }
+}

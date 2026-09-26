@@ -1,0 +1,22 @@
+GenericEntity {
+ ID "1A3697B90FF35A30"
+ components {
+  RplComponent "{615DC0A8E5C652A2}" {
+  }
+  Hierarchy "{A7C24B4CD3995148}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{C7746318D58B59C9}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcreteWall_USSR_01_V3.et" {
+   ID "6E7E290DC0FA555E"
+   coords -1.349 0 0
+   components {
+    Hierarchy "{1D86E68810E65848}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

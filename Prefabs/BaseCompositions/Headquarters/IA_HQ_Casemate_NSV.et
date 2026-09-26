@@ -1,0 +1,66 @@
+GenericEntity {
+ ID "6456466BBC0C5745"
+ components {
+  RplComponent "{B66B8677A4575345}" {
+  }
+  Hierarchy "{D597BDCE2E4C5CE5}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{2F7AF47D307951AF}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcreteWall_02_4m.et" {
+   ID "636BC80D1B555158"
+   coords 0 -1.194 0
+   components {
+    Hierarchy "{730E4311729A5947}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{E07A9F6D7E8A5424}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcreteWall_01_camo_3m.et" {
+   ID "B699DB47EB92583A"
+   coords -2.45 0 0.4
+   angles 0 90 0
+   components {
+    Hierarchy "{7B45C73CB07C5D52}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{E07A9F6D7E8A5424}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcreteWall_01_camo_3m.et" {
+   ID "99353891F3CC57AD"
+   coords 2.45 0 0.4
+   angles 0 90 0
+   components {
+    Hierarchy "{7B45C73CB07C5D52}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{890F8B8033805C4A}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcreteWall_01_camo_6m_A.et" {
+   ID "72D3E862C9E85A60"
+   coords -3 3.09 -0.25
+   angles 90 0 0
+   components {
+    Hierarchy "{DA1A72A3CB8359C4}" {
+     Enabled 1
+    }
+   }
+  }
+  Turret : "{29F0CC704A582154}Prefabs/Weapons/Tripods/6T7/Tripod_6T7_NSV.et" {
+   ID "03C534B075435993"
+   coords 0.016 0.656 -0.147
+   components {
+    IA_StaticGunComponent "{9174DCB56EA3529A}" {
+    }
+    RplComponent "{51ACD09DAD530767}" {
+     "Parent Node From Parent Entity" 1
+    }
+    Hierarchy "{51ACD09C446C017C}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

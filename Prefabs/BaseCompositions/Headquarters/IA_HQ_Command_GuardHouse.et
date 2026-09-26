@@ -1,0 +1,60 @@
+GenericEntity {
+ ID "6C2174ECD0E05F93"
+ components {
+  RplComponent "{B227C892DED35CB9}" {
+  }
+  Hierarchy "{64EF848B35965EA4}" {
+   Enabled 1
+  }
+  MeshObject "{506EDA9D46FC6C06}" {
+   LODFactors {
+    20 15 10 1 1
+   }
+   PixelSizeScale 1
+   ClutterOccluder 1
+   ClutterOccluderClipPlane 1.5
+   Object "{C2762B07289BE0D9}Assets/Structures/Military/Houses/GuardHouse_01/GuardHouse_01.xob"
+  }
+  RigidBody "{506EDA9CBE1B57FF}" {
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{FA188839C5E6DAD3}Prefabs/Structures/BuildingParts/Entry/Entry_Direct_01_narrow.et" {
+   ID "55AE947DDEEF1A0C"
+   coords 0 0 0
+   components {
+    Hierarchy "{5488F0388A297CDE}" {
+     Enabled 1
+     PivotID "socket_entry_02"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{FA188839C5E6DAD3}Prefabs/Structures/BuildingParts/Entry/Entry_Direct_01_narrow.et" {
+   ID "55AE947DDEEF1A26"
+   coords 0 0 0
+   components {
+    Hierarchy "{5488F0388A297CDE}" {
+     Enabled 1
+     PivotID "socket_entry_03"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{FA188839C5E6DAD3}Prefabs/Structures/BuildingParts/Entry/Entry_Direct_01_narrow.et" {
+   ID "55AE947DDEEF1AEC"
+   coords 0 0 0
+   components {
+    Hierarchy "{5488F0388A297CDE}" {
+     Enabled 1
+     PivotID "socket_entry_01"
+     AutoTransform 1
+    }
+   }
+  }
+ }
+}

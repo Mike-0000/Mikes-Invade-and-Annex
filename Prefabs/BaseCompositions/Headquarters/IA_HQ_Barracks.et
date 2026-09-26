@@ -1,0 +1,59 @@
+GenericEntity {
+ ID "5D729180F6AA55B4"
+ components {
+  RplComponent "{B93240753A5E5A2C}" {
+  }
+  Hierarchy "{18782C3F130455A2}" {
+   Enabled 1
+  }
+  MeshObject "{506EDA9D46FC6C06}" {
+   LODFactors {
+    20 15 10 1 1
+   }
+   PixelSizeScale 1
+   ClutterOccluder 1
+   ClutterOccluderClipPlane 1.5
+   Object "{2AC19919F221C8C2}Assets/Structures/Military/Houses/Barracks_01/Barracks_01.xob"
+   Materials {
+    MaterialAssignClass "{64F48555C6277A45}" {
+     SourceMaterial "Barracks_01_EXT_Walls"
+     AssignedMaterial "{58320DC5F08FDA14}Assets/Structures/Military/Houses/Barracks_01/Data/Barracks_01_EXT_Walls_Pink.emat"
+    }
+    MaterialAssignClass "{64F48555C6277A3A}" {
+     SourceMaterial "Barracks_01_MLOD"
+     AssignedMaterial "{162BD969180C2B17}Assets/Structures/Military/Houses/Barracks_01/Data/Barracks_01_MLOD_pink.emat"
+    }
+   }
+  }
+  RigidBody "{506EDA9CBE1B57FF}" {
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{69A8FFE5527CB776}Prefabs/Structures/BuildingParts/Entry/Entry_Direct_01.et" {
+   ID "64F4855215743A27"
+   coords 0 0 0
+   components {
+    Hierarchy "{5488F0388A297CDE}" {
+     Enabled 1
+     PivotID "socket_entry_02"
+     AutoTransform 1
+    }
+   }
+  }
+  StaticModelEntity : "{69A8FFE5527CB776}Prefabs/Structures/BuildingParts/Entry/Entry_Direct_01.et" {
+   ID "64F4855215743A2A"
+   coords 0 0 0
+   components {
+    Hierarchy "{5488F0388A297CDE}" {
+     Enabled 1
+     PivotID "socket_entry_01"
+     AutoTransform 1
+    }
+   }
+  }
+ }
+}
