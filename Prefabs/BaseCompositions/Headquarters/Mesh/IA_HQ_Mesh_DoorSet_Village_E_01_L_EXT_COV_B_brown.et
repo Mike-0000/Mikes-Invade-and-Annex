@@ -1,0 +1,14 @@
+StaticModelEntity {
+ ID "AC9A790A13745F9F"
+ components {
+  MeshObject "{61B367470698533A}" {
+   PixelSizeScale 10
+   Object "{6BCB935E08746F03}Assets/Structures/BuildingsParts/Doors/Door_Village_E/DoorFrame_Village_E_A_EXT_B.xob"
+  }
+  RigidBody "{61B367470704E02F}" {
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

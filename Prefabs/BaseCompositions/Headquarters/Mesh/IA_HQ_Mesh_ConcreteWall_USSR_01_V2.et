@@ -1,0 +1,28 @@
+StaticModelEntity {
+ ID "0218793D1A6E5F30"
+ components {
+  MeshObject "{56DE7C8DCD0F4E0A}" {
+   LODFactors {
+    70 50 30 10 2 1 1
+    250 70 40 40 1 1
+   }
+   Object "{8E58C4CEDCB1320C}Assets/Structures/Walls/Concrete/ConcreteWall_USSR_01/ConcreteWall_USSR_01.xob"
+   Materials {
+    MaterialAssignClass "{6244256EA196B5A5}" {
+     SourceMaterial "ConcreteWall_USSR_01_V1"
+     AssignedMaterial "{8AC5A644A7D814D8}Assets/Structures/Walls/Concrete/ConcreteWall_USSR_01/Data/ConcreteWall_USSR_01_V2.emat"
+    }
+    MaterialAssignClass "{6244256EA196B5FE}" {
+     SourceMaterial "ConcreteWall_USSR_01_V1_MLOD"
+     AssignedMaterial "{0022E33372F2794A}Assets/Structures/Walls/Concrete/ConcreteWall_USSR_01/Data/ConcreteWall_USSR_01_V2_MLOD.emat"
+    }
+   }
+  }
+  RigidBody "{56DE7C8DDE282E03}" {
+   ResponseIndex "HugeDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

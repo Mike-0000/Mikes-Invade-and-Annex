@@ -1,0 +1,19 @@
+StaticModelEntity {
+ ID "1547C4322530576A"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   LODFactors {
+    5 2 1.5 1 1 1
+    30 15 9 1 1 1
+   }
+   Object "{B051A30831725920}Assets/Props/Industrial/ConcretePanel_01/ConcretePanel_01_stack.xob"
+   ClutterOccluder 1
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   ModelGeometry 1
+   ResponseIndex "HugeDestructible"
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

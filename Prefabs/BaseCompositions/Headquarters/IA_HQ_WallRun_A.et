@@ -1,0 +1,31 @@
+GenericEntity {
+ ID "DA1FB8F1819C5BB1"
+ components {
+  RplComponent "{FD685AB7FB1A5363}" {
+  }
+  Hierarchy "{4166FD86D9155E80}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{CFF3CFAAF0AF5A1C}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcreteWall_USSR_01_V1.et" {
+   ID "50BDAF7C896554BE"
+   coords -2.698 0 0
+   components {
+    Hierarchy "{8904C16021D1599D}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{0218793D1A6E5F30}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_ConcreteWall_USSR_01_V2.et" {
+   ID "E58A0953AC7C5D80"
+   coords 0 0 0
+   components {
+    Hierarchy "{3DE2FB99B3BD5F2D}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

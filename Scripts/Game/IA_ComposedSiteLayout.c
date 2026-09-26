@@ -47,9 +47,15 @@ class IA_ComposedSiteLayout : IA_DynamicSiteLayout
 		return maxDelta;
 	}
 
+	// Headquarters layouts add their own catalog; scrappy recipes resolve here only.
+	protected IA_BaseCompositionAsset ResolveAsset(string key)
+	{
+		return IA_BaseCompositionCatalog.Get(key);
+	}
+
 	void AddComposition(string key, vector position, float yaw, int role, int side, bool required)
 	{
-		ref IA_BaseCompositionAsset asset = IA_BaseCompositionCatalog.Get(key);
+		ref IA_BaseCompositionAsset asset = ResolveAsset(key);
 		if (!asset)
 			return;
 		string id = key + "_" + m_aModules.Count().ToString();

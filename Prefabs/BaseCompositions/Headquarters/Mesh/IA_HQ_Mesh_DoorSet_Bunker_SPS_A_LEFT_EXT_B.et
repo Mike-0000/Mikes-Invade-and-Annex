@@ -1,0 +1,13 @@
+StaticModelEntity {
+ ID "AC402F08E1635FAC"
+ components {
+  MeshObject "{61B367470698533A}" {
+   Object "{067E6064B9F808D8}Assets/Structures/BuildingsParts/Doors/Door_Bunker_SPS/DoorFrame_Bunker_SPS_A_EXT_B.xob"
+  }
+  RigidBody "{61B367470704E02F}" {
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

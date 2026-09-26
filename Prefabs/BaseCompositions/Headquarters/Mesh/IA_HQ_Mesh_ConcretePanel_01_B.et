@@ -1,0 +1,23 @@
+StaticModelEntity {
+ ID "83E01E7B11DF5D8E"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   LODFactors {
+    5 2 1.5 1 1 1
+   }
+   Object "{C7E179853641985E}Assets/Props/Industrial/ConcretePanel_01/ConcretePanel_01_V1.xob"
+   Materials {
+    MaterialAssignClass "{5528DB2148330C03}" {
+     SourceMaterial "ConcretePanel_01"
+     AssignedMaterial "{C81F6A28358CA979}Assets/Props/Industrial/ConcretePanel_01/Data/ConcretePanel_01_clean.emat"
+    }
+   }
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   ModelGeometry 1
+   ResponseIndex "HugeDestructible"
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

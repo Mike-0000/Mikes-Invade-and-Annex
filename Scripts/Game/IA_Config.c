@@ -246,6 +246,9 @@ class IA_Config{
 	[Attribute(defvalue: "0", UIWidgets.EditBox, category: "Dynamic Base", desc: "0 Auto, 1 Full, 2 Compact, 3 Courtyard, 4 Roadside, 5 Command post, 6 Rally post.")]
 	int m_iDynamicBaseSizeMode = 0;
 
+	[Attribute(defvalue: "50", UIWidgets.EditBox, category: "Dynamic Base", desc: "Chance (0-100) that a dynamic base is a permanent concrete headquarters instead of a scrappy sandbag base. Falls back to scrappy when no headquarters fits the terrain.")]
+	int m_iDynamicBaseHeadquartersChancePct = 50;
+
 	[Attribute(defvalue: "90", UIWidgets.EditBox, category: "Dynamic Base", desc: "Uncontested command-zone capture seconds.")]
 	int m_iDynamicBaseCaptureSec = 90;
 
@@ -562,6 +565,11 @@ class IA_Config{
 
 		if (m_iDynamicBaseSizeMode < 0 || m_iDynamicBaseSizeMode > IA_DynamicSiteSizeMode.RallyPost)
 			m_iDynamicBaseSizeMode = 0;
+
+		if (m_iDynamicBaseHeadquartersChancePct < 0)
+			m_iDynamicBaseHeadquartersChancePct = 0;
+		if (m_iDynamicBaseHeadquartersChancePct > 100)
+			m_iDynamicBaseHeadquartersChancePct = 100;
 
 		if (m_iDynamicBaseCaptureSec < 30)
 			m_iDynamicBaseCaptureSec = 30;

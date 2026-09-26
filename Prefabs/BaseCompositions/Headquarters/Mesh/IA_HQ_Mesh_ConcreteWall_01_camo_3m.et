@@ -1,0 +1,24 @@
+StaticModelEntity {
+ ID "E07A9F6D7E8A5424"
+ components {
+  MeshObject "{56DE7C8DCD0F4E0A}" {
+   LODFactors {
+    70 50 30 10 2 1 1
+    250 70 40 40 1 1
+   }
+   Object "{0B96D139FEBCA006}Assets/Structures/Walls/Concrete/ConcreteWall_01_3m.xob"
+   Materials {
+    MaterialAssignClass "{5A2E78C80C9AA2CC}" {
+     SourceMaterial "ConcreteWall_01_mat"
+     AssignedMaterial "{AFDB93B6E968BF6F}Assets/Structures/Walls/Concrete/Data/ConcreteWall_01_Camo.emat"
+    }
+   }
+  }
+  RigidBody "{56DE7C8DDE282E03}" {
+   ResponseIndex "HugeDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

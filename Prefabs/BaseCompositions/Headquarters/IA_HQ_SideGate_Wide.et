@@ -1,0 +1,97 @@
+GenericEntity {
+ ID "2046084A8B5A5910"
+ components {
+  RplComponent "{6E054FA4DA59578B}" {
+  }
+  Hierarchy "{92D6AE2C831059C5}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et" {
+   ID "61106185C1025EF2"
+   coords 5.245 -0.1 0
+   components {
+    Hierarchy "{62C605633F07553B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{0667675C48220BD6}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Wall_high_Soviet.et" {
+   ID "5F8FB72F04CE5384"
+   coords 5.225 -0.1 -0.022
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "3564B55971FA58D8"
+   coords 3.245 -0.1 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et" {
+   ID "8D6EE59E4C2E55F2"
+   coords -5.245 -0.1 0
+   components {
+    Hierarchy "{62C605633F07553B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{0667675C48220BD6}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Wall_high_Soviet.et" {
+   ID "2BB07309257A5787"
+   coords -5.265 -0.1 -0.022
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{B547CF929FCC6BB7}Prefabs/Props/Military/Sandbags/Sandbag_01_end_high_burlap.et" {
+   ID "46B34BC122485A60"
+   coords -3.245 -0.1 0
+   components {
+    Hierarchy "{13DE2E5839CC544F}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{DDF59362051B28BC}Prefabs/Props/Military/Fortification/BarbedTape_KnifeRest.et" {
+   ID "776DF1A4710F5F52"
+   coords 1.2 0 2.6
+   angles 0 90 0
+   components {
+    Hierarchy "{12BFD527A0725D79}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C1977A326F2AA011}Prefabs/Structures/Signs/Military/SignCheckpoint_01_stop.et" {
+   ID "F0E32A40708C5B10"
+   coords -2.6 0 3.6
+   angles 0 180 0
+   components {
+    Hierarchy "{64F10C3B247C5CAC}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{4AB4255D4FFB54A1}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_Sign_Warning_USSR_01.et" {
+   ID "A75E7B2EEAA05209"
+   coords 5.745 0 2.2
+   angles 0 180 0
+   components {
+    Hierarchy "{2271D14B7C765FD1}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

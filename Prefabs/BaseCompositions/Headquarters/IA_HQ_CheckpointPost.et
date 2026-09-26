@@ -1,0 +1,42 @@
+GenericEntity {
+ ID "5FB4AADCA91A5430"
+ components {
+  RplComponent "{0C4F977FF6545EF4}" {
+  }
+  Hierarchy "{8C5F0F0D78DE5ED8}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{5821AF9613353C80}Prefabs/Props/Military/Sandbags/Sandbag_01_bunker_burlap_camonet.et" {
+   ID "AFB6DAEA35A65BBE"
+   coords 0 0 0.3
+   angles 0 270 0
+   components {
+    Hierarchy "{5A58883F8844E6E8}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{172DD50ACF177B9E}Prefabs/Props/Military/Furniture/ChairMilitary_USSR_01.et" {
+   ID "06B4F4E717465687"
+   coords -1.6 0 -2.6
+   angles 0 200 0
+   components {
+    Hierarchy "{CAFB38C0AD945880}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{4AB4255D4FFB54A1}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_Sign_Warning_USSR_01.et" {
+   ID "44B93835E2F25B01"
+   coords -1.2 0 2.9
+   components {
+    Hierarchy "{2271D14B7C765FD1}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

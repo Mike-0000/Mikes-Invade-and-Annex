@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{AC402F08E1635FAC}IA_HQ_Mesh_DoorSet_Bunker_SPS_A_LEFT_EXT_B.et"
+ Configurations {
+  EntityTemplateResourceClass PC {
+  }
+  EntityTemplateResourceClass XBOX_ONE : PC {
+  }
+  EntityTemplateResourceClass XBOX_SERIES : PC {
+  }
+  EntityTemplateResourceClass PS4 : PC {
+  }
+  EntityTemplateResourceClass PS5 : PC {
+  }
+  EntityTemplateResourceClass HEADLESS : PC {
+  }
+ }
+}

@@ -1,0 +1,39 @@
+GenericEntity {
+ ID "A36090ED85CF5A3A"
+ components {
+  RplComponent "{BF339ABC15CB5D92}" {
+  }
+  Hierarchy "{ADD6F379F7045EDA}" {
+   Enabled 1
+  }
+  MeshObject "{506EDA9D46FC6C06}" {
+   LODFactors {
+    20 15 10 1 1
+   }
+   PixelSizeScale 1
+   ClutterOccluder 1
+   ClutterOccluderClipPlane 1.5
+   Object "{8B56875CC2F31D40}Assets/Structures/Military/Houses/GuardBox_01/GuardBox_01.xob"
+   Materials {
+    MaterialAssignClass "{52A0C0605FCD2A67}" {
+     SourceMaterial "GUARDBox_exterior01"
+     AssignedMaterial "{53435FFEA669744B}Assets/Structures/Military/Houses/GuardBox_01/Data/GUARDBox_exterior01.emat"
+    }
+   }
+  }
+  RigidBody "{506EDA9CBE1B57FF}" {
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+  SCR_AISmartActionSentinelComponent "{58B2977FDE364D4E}" {
+   AIBehaviorTree "{BC53D77D23308CD6}AI/BehaviorTrees/SmartActions/SA_ObservationPost.bt"
+   Tags {
+    "ObservationPost"
+   }
+   m_vLookPosition 0 1.5 -6.574
+   m_fLookDirectionRange 90
+  }
+ }
+ coords 0 0 0
+}

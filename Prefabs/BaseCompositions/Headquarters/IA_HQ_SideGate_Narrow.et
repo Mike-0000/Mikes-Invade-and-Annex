@@ -1,0 +1,79 @@
+GenericEntity {
+ ID "0DA966BB462B5D7D"
+ components {
+  RplComponent "{DF17041B75395248}" {
+  }
+  Hierarchy "{37CD873C2AF952E3}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  GenericEntity : "{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et" {
+   ID "A916CFA13CDA5F13"
+   coords 3.896 -0.1 0
+   components {
+    Hierarchy "{62C605633F07553B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{0667675C48220BD6}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Wall_high_Soviet.et" {
+   ID "C3ECBEBFA1F3585A"
+   coords 3.876 -0.1 -0.022
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{9C9C4BED9E19C374}Prefabs/Props/Military/Sandbags/Sandbag_01_wall_solid_burlap.et" {
+   ID "4EFB49D33F5B5452"
+   coords -3.896 -0.1 0
+   components {
+    Hierarchy "{62C605633F07553B}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{0667675C48220BD6}Prefabs/Structures/Military/CamoNets/Soviet/CamoNet_Wall_high_Soviet.et" {
+   ID "61EE8D1B9C5C5B02"
+   coords -3.916 -0.1 -0.022
+   components {
+    Hierarchy "{58489A7BAB68DC3D}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{DDF59362051B28BC}Prefabs/Props/Military/Fortification/BarbedTape_KnifeRest.et" {
+   ID "5F3AFBC0BE5D5F09"
+   coords 1.2 0 2.6
+   angles 0 90 0
+   components {
+    Hierarchy "{12BFD527A0725D79}" {
+     Enabled 1
+    }
+   }
+  }
+  GenericEntity : "{C1977A326F2AA011}Prefabs/Structures/Signs/Military/SignCheckpoint_01_stop.et" {
+   ID "98DB3DFEA18F5AE3"
+   coords -2.6 0 3.6
+   angles 0 180 0
+   components {
+    Hierarchy "{64F10C3B247C5CAC}" {
+     Enabled 1
+    }
+   }
+  }
+  StaticModelEntity : "{4AB4255D4FFB54A1}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_Sign_Warning_USSR_01.et" {
+   ID "07A462CB58385CFA"
+   coords 4.396 0 2.2
+   angles 0 180 0
+   components {
+    Hierarchy "{2271D14B7C765FD1}" {
+     Enabled 1
+    }
+   }
+  }
+ }
+}

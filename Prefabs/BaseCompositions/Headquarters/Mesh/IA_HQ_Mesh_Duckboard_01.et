@@ -1,0 +1,15 @@
+StaticModelEntity {
+ ID "498E9C542B8C5E92"
+ components {
+  MeshObject "{5872F0EB7FA40561}" {
+   Object "{F356AC5D838DB36F}Assets/Props/Military/Camps/Duckboard_01/Duckboard_01.xob"
+   ClutterOccluder 1
+  }
+  RigidBody "{5872F0EB7DFB5A9D}" {
+   ResponseIndex "SmallDestructible"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+}

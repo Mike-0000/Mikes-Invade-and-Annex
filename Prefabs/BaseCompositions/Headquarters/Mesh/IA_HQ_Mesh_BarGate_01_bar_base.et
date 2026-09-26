@@ -1,0 +1,20 @@
+StaticModelEntity {
+ ID "4D3635AF92115CDA"
+ components {
+  MeshObject "{309366462BDAFB24}" {
+   LODFactors {
+    20 5 1 1 1
+   }
+   PixelSizeScale 10
+   Object "{57E3492722497EC6}Assets/Structures/Infrastructure/Barriers/BarGate_01/BarGate_01_bar.xob"
+  }
+  RigidBody "{309366462BDAFB2D}" {
+   AngularSleepingThreashold 1
+   ModelGeometry 1
+   Static 1
+   Kinematic 1
+   ResponseIndex "SmallDestructible"
+  }
+ }
+ coords 0 0 0
+}

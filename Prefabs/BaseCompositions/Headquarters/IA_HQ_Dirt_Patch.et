@@ -1,0 +1,24 @@
+GenericEntity {
+ ID "26F1DD4512DC595F"
+ components {
+  RplComponent "{B1C0323A87F758DF}" {
+  }
+  Hierarchy "{CA5FC654ED505C5F}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  DecalEntity : "{ACAEDB73441F87DB}Prefabs/Decals/Dirt/Decal_Dirt_Patch_04.et" {
+   ID "460245819B545C1D"
+   components {
+    Hierarchy "{1E35DC8363EC56C3}" {
+    }
+   }
+   coords 0 0.6 0
+   angles -90 0 0
+   scale 5
+   FarPlane 2
+  }
+ }
+}

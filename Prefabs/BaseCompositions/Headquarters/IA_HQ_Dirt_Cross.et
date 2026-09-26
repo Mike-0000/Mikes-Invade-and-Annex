@@ -1,0 +1,24 @@
+GenericEntity {
+ ID "5688CAA6D35B5507"
+ components {
+  RplComponent "{78785E2D89B056AA}" {
+  }
+  Hierarchy "{B7E8CFE117475BDC}" {
+   Enabled 1
+  }
+ }
+ coords 0 0 0
+  {
+  DecalEntity : "{D0ADBF5A3B6783C0}Prefabs/Decals/Dirt/Decal_Dirt_Crossroad_01.et" {
+   ID "1CEFFC505E585C70"
+   components {
+    Hierarchy "{B155D995189C544B}" {
+    }
+   }
+   coords 0 0.6 0
+   angles -90 0 0
+   scale 6
+   FarPlane 2
+  }
+ }
+}

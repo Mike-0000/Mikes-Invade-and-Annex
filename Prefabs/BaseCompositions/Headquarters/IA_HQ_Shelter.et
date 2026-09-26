@@ -1,0 +1,38 @@
+GenericEntity {
+ ID "6D804238B8E85DF1"
+ components {
+  RplComponent "{DFCE27A553FA5F6A}" {
+  }
+  Hierarchy "{333BB056A6D458F1}" {
+   Enabled 1
+  }
+  MeshObject "{506EDA9D46FC6C06}" {
+   LODFactors {
+    20 15 10 1 1
+   }
+   PixelSizeScale 1
+   ClutterOccluder 1
+   ClutterOccluderClipPlane 1.5
+   Object "{FC478065C7D6B4E3}Assets/Structures/Military/Bunkers/ShelterMilitary_E_01/ShelterMilitary_E_01.xob"
+  }
+  RigidBody "{506EDA9CBE1B57FF}" {
+   ResponseIndex "Normal"
+   ModelGeometry 1
+   Static 1
+  }
+ }
+ coords 0 0 0
+  {
+  StaticModelEntity : "{568FBBEEB63C53B8}Prefabs/BaseCompositions/Headquarters/Mesh/IA_HQ_Mesh_DoorSet_AircraftShelter_E_01_A_EXT_B_red.et" {
+   ID "56F4A7EB1CE0510E"
+   coords 0 0 0
+   components {
+    Hierarchy "{11FC97F508CE548C}" {
+     Enabled 1
+     PivotID "Socket_door_frame"
+     AutoTransform 1
+    }
+   }
+  }
+ }
+}
