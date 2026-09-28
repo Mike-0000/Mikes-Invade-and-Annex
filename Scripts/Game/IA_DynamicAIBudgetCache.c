@@ -164,6 +164,36 @@ class IA_DynamicAIBudgetCache : IA_DynamicAIGroupCache
 		return PhysicalAliveCount() == 0;
 	}
 
+	// True when this paused squad still has a living reserve the capture census
+	// should wait on. Intersects() uses the flag disk; occupying-ring seeds sit
+	// outside RadioTower 30 m / SmallMilitary 35 m / Town 90 m.
+	bool HasCaptureSeedCandidate(vector center, float radius)
+	{
+		if (!m_bBudgetActive || !m_bCached || m_bFinished)
+			return false;
+		if (PhysicalAliveCount() > 0)
+			return false;
+		float assoc = CaptureSeedAssociationM(radius);
+		foreach (IA_DynamicAIUnit unit : m_aUnits)
+		{
+			if (!unit || unit.m_bRestored || unit.m_bDead)
+				continue;
+			if (unit.IsInside(center, assoc))
+				return true;
+		}
+		return false;
+	}
+
+	protected float CaptureSeedAssociationM(float captureRadius)
+	{
+		// Occupying spawn is 80-250 m from assembly. Capture may be an inscribed
+		// disk around HQ, so add the disk radius to the occupying ring.
+		float assoc = IA_SpawnPlacement.OCCUPY_MAX_M;
+		if (captureRadius > 0)
+			assoc = assoc + captureRadius;
+		return assoc;
+	}
+
 	protected int CaptureSeedWindowMs()
 	{
 		int seconds = IA_DynamicAISpawning.GetTuning().m_iDynamicAICaptureSeedSec;

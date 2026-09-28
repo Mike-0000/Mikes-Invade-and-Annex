@@ -317,20 +317,23 @@ class IA_DynamicAISpawning
 		bool ready = true;
 		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
 		{
-			if (!cache || !cache.IsOwnerLive() || !cache.Intersects(center, radius))
+			if (!cache || !cache.IsOwnerLive())
 				continue;
 			ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(cache);
 			if (budgetCache && budgetCache.IsBudgetActive())
 			{
-				// A contested objective needs one physical defender per group so
-				// the fight and capture can progress; the rest fill nearest-first.
-				if (cache.IsPaused())
+				// A contested objective needs one physical defender per paused
+				// group so the fight and capture can progress. Occupying-ring
+				// reserves sit outside the inscribed capture disk.
+				if (budgetCache.HasCaptureSeedCandidate(center, radius))
 				{
 					budgetCache.RequestCaptureSeed();
 					ready = false;
 				}
 				continue;
 			}
+			if (!cache.Intersects(center, radius))
+				continue;
 			if (cache.IsCached())
 			{
 				cache.RequestWake();

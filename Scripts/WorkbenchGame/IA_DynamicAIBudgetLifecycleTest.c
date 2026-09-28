@@ -13,6 +13,7 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		TestRetuningPreservesAdmittedWork();
 		TestApproachDoesNotForceFull();
 		TestReserveSeedAdopt();
+		TestCaptureSeedFindsOccupyingReserves();
 		TestHardCapCombatEviction();
 		TestNearbyPreemptionEvictionGates();
 		TestGroupLocationUsesLatestMembers();
@@ -187,6 +188,49 @@ class IA_DynamicAIBudgetLifecycleTest : WorkbenchPlugin
 		cache.AdoptReserveSeeds(seeds);
 		Check(cache.IsBudgetActive() && cache.IsCached() && cache.GetUnrestoredCount() == 1 && cache.GetLogicalAliveCount() == 1, "reserve-first spawn records enter the ledger as unrestored survivors");
 		Check(!seed.m_bRestored && !seed.m_bBudgetAdmitted && seed.GetPosition() == "200 20 200", "a seeded reserve keeps its prefab transform and waits for nearest-first restore");
+	}
+
+	protected void TestCaptureSeedFindsOccupyingReserves()
+	{
+		ref IA_DynamicAIBudgetCacheFixture cache = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup owner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(cache, 0);
+		cache.Init(owner);
+		ref IA_DynamicAIUnit deadLeader = new IA_DynamicAIUnit();
+		deadLeader.SeedReserve("{0000000000000000}Prefabs/Characters/Test.et", "5 0 0");
+		deadLeader.m_bRestored = true;
+		deadLeader.m_bDead = true;
+		ref IA_DynamicAIUnit occupying = new IA_DynamicAIUnit();
+		occupying.SeedReserve("{0000000000000000}Prefabs/Characters/Test.et", "150 20 0");
+		cache.AddForTest(deadLeader);
+		cache.AddForTest(occupying);
+		cache.EnableBudget();
+		cache.ReconcileForTest();
+		Check(cache.IsPaused() && cache.GetUnrestoredCount() == 1 && cache.GetLogicalAliveCount() == 1, "killing the in-circle leader leaves a paused occupying reserve");
+		Check(!cache.Intersects("0 0 0", 30), "a Radio Tower 30 m disk does not contain occupying-ring reserves");
+		Check(cache.HasCaptureSeedCandidate("0 0 0", 30), "capture still seeds the paused squad from its occupying reserve");
+
+		ref IA_DynamicAIBudgetCacheFixture far = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup farOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(far, 0);
+		far.Init(farOwner);
+		ref IA_DynamicAIUnit distant = new IA_DynamicAIUnit();
+		distant.SeedReserve("{0000000000000000}Prefabs/Characters/Test.et", "400 0 0");
+		far.AddForTest(distant);
+		far.EnableBudget();
+		far.ReconcileForTest();
+		Check(far.IsPaused() && !far.HasCaptureSeedCandidate("0 0 0", 30), "a paused squad outside the occupying ring does not steal a capture seed");
+
+		ref IA_DynamicAIBudgetCacheFixture hybrid = new IA_DynamicAIBudgetCacheFixture();
+		ref IA_AiGroup hybridOwner = IA_AiGroup.CreateDynamicAIBudgetOwnerForTest(hybrid, 1);
+		hybrid.Init(hybridOwner);
+		ref IA_DynamicAIUnit live = new IA_DynamicAIUnit();
+		live.m_bRestored = true;
+		ref IA_DynamicAIUnit waiting = new IA_DynamicAIUnit();
+		waiting.SeedReserve("{0000000000000000}Prefabs/Characters/Test.et", "150 20 0");
+		hybrid.AddForTest(live);
+		hybrid.AddForTest(waiting);
+		hybrid.EnableBudget();
+		hybrid.ReconcileForTest();
+		Check(!hybrid.IsPaused() && !hybrid.HasCaptureSeedCandidate("0 0 0", 30), "a still-physical occupying 1-up does not freeze capture for a seed");
 	}
 
 	protected void TestHardCapCombatEviction()
