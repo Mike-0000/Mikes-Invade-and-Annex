@@ -460,6 +460,22 @@ door leaves.
   (limit 2000). Every recipe has 1 front gate, 2 side gates, a checkpoint, a
   square, at least 3 road segments and at least 5 vignettes.
 
+## 17. Air-raid bunkers (2026-09-27)
+
+- Every recipe carries the camouflaged bunkers for the air-raid drill: 6 on
+  Full, 4 on Compact, 3 on Courtyard and 2 on each smaller size. See
+  [Air-raid bunkers](dynamic-base-compositions.md#air-raid-bunkers-2026-09-27).
+- `build_shelters` plans them after the buildings, gates, checkpoint and
+  square, and before walls, roads, vignettes and door paths. Dressing and
+  guard posts keep off bunker bodies and entrances.
+- Bunkers count inside the budgets: the largest recipe is 236 roots (limit
+  240) and 1889 expanded (limit 2000). The three Full Border recipes lose
+  some door-path duckboards and decals to the root cap.
+- `Build` emits them before the first `AddObstacle` / `AddDressingItem`,
+  because the first dressing module starts the gun phase.
+- `test_headquarters.py` checks the count, capture-circle reach, clearances,
+  facing and emission order for all 72 recipes.
+
 ## Verification record
 
 Iteration 5 (2026-09-26): `IA_HeadquartersDesignTest` `logs_2026-09-26_03-48-08`,

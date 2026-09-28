@@ -217,6 +217,12 @@
 <rect x="303.62" y="106.37" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="303.62" y="102.31" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="303.62" y="98.26" width="2.24" height="5.04" fill="#7d929f"/>
+<rect x="156.55" y="177.15" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="195.75" y="177.15" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="148.15" y="146.35" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="206.95" y="149.15" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="169.15" y="113.45" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="209.75" y="186.95" width="7.70" height="7.70" fill="#253d50"/>
 <rect x="196.38" y="122.76" width="6.44" height="7.28" fill="#253d50"/>
 <rect x="109.30" y="116.32" width="9.80" height="8.96" fill="#253d50"/>
 <rect x="113.22" y="195.70" width="4.76" height="4.20" fill="#253d50"/>
@@ -403,6 +409,10 @@
 <rect x="621.62" y="134.40" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="621.62" y="130.33" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="621.62" y="126.26" width="2.24" height="5.04" fill="#7d929f"/>
+<rect x="517.95" y="179.95" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="558.55" y="174.35" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="513.75" y="137.25" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="558.55" y="137.25" width="7.70" height="7.70" fill="#253d50"/>
 <rect x="559.18" y="149.36" width="6.44" height="7.28" fill="#253d50"/>
 <rect x="505.70" y="152.72" width="9.80" height="8.96" fill="#253d50"/>
 <rect x="468.32" y="176.24" width="6.16" height="9.52" fill="#253d50"/>
@@ -546,6 +556,9 @@
 <rect x="959.22" y="151.08" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="959.22" y="147.07" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="959.22" y="143.06" width="2.24" height="5.04" fill="#7d929f"/>
+<rect x="882.15" y="182.75" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="910.15" y="182.75" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="905.25" y="202.00" width="7.70" height="7.70" fill="#253d50"/>
 <rect x="919.18" y="149.36" width="6.44" height="7.28" fill="#253d50"/>
 <rect x="860.10" y="147.12" width="9.80" height="8.96" fill="#253d50"/>
 <rect x="889.64" y="228.32" width="3.92" height="3.36" fill="#253d50"/>
@@ -681,6 +694,8 @@
 <rect x="219.62" y="422.21" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="219.62" y="418.14" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="219.62" y="414.06" width="2.24" height="5.04" fill="#7d929f"/>
+<rect x="154.10" y="437.30" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="198.90" y="439.05" width="7.70" height="7.70" fill="#253d50"/>
 <rect x="200.58" y="430.16" width="6.44" height="7.28" fill="#253d50"/>
 <rect x="153.82" y="445.70" width="4.76" height="4.20" fill="#253d50"/>
 <rect x="154.24" y="486.72" width="3.92" height="3.36" fill="#253d50"/>
@@ -786,6 +801,8 @@
 <rect x="582.42" y="450.23" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="582.42" y="446.14" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="582.42" y="442.06" width="2.24" height="5.04" fill="#7d929f"/>
+<rect x="529.15" y="488.75" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="543.15" y="488.75" width="7.70" height="7.70" fill="#253d50"/>
 <rect x="561.98" y="449.76" width="6.44" height="7.28" fill="#253d50"/>
 <rect x="511.02" y="466.70" width="4.76" height="4.20" fill="#253d50"/>
 <rect x="528.24" y="506.32" width="3.92" height="3.36" fill="#253d50"/>
@@ -863,6 +880,8 @@
 <rect x="922.82" y="455.59" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="922.82" y="451.63" width="2.24" height="5.04" fill="#7d929f"/>
 <rect x="922.82" y="447.66" width="2.24" height="5.04" fill="#7d929f"/>
+<rect x="890.41" y="483.15" width="7.70" height="7.70" fill="#253d50"/>
+<rect x="901.89" y="483.15" width="7.70" height="7.70" fill="#253d50"/>
 <rect x="885.02" y="486.30" width="4.76" height="4.20" fill="#253d50"/>
 <rect x="908.54" y="498.48" width="8.12" height="5.04" fill="#253d50"/>
 <rect x="884.04" y="502.12" width="3.92" height="3.36" fill="#253d50"/>

@@ -36,6 +36,18 @@ class IA_ComposedSiteLayout : IA_DynamicSiteLayout
 		m_aModules[m_aModules.Count() - 1].m_bRequired = true;
 	}
 
+	// Optional air-raid bunker inside the capture circle. The recipe planned it
+	// clear of this site's own props, doors, lanes and gun crews.
+	void AddAirRaidBunker(vector position, float yaw)
+	{
+		AddShelter("shelter_" + m_aModules.Count().ToString(), position[0], position[2], yaw);
+		IA_DynamicSiteModule module = m_aModules[m_aModules.Count() - 1];
+		// Sandbags follow the grade like the interior compositions; the stock
+		// horizontal-align component only runs in Workbench.
+		module.m_bFollowTerrainPlane = true;
+		module.m_bPlannedClearance = true;
+	}
+
 	protected float InteriorSupportDelta(float meshW, float meshD)
 	{
 		float spanM = Math.Max(meshW, meshD) * 2;

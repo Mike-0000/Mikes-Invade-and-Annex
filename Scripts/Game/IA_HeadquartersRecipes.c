@@ -336,6 +336,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallA", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("8 0 38", 90);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-36 0 -14", 180);
+		layout.AddAirRaidBunker("24 0 -20", 180);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("58 0 10", 90);
 		layout.AddObstacle("HQTeeth", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQTeeth", "-65.487 0 67.626", 0);
@@ -426,7 +432,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigMedical", "-54.721 0 23.27", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "27.663 0 17.6", 90, 0.35);
 		layout.AddDressingItem("VigRest", "77.63 0 -30.854", 0, 0.35);
-		layout.AddDressingItem("VigPower", "20.42 0 -25.83", 0, 0.35);
+		layout.AddDressingItem("VigPower", "20.42 0 -27.33", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 41.976", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-81.13 0 49.691", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "81.13 0 49.691", 0, 0.35);
@@ -455,9 +461,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-48 0 -36");
 		layout.m_aGuardPosts.Insert("72 0 44");
 		layout.m_aGuardPosts.Insert("-48 0 -4");
-		layout.m_aGuardPosts.Insert("52 0 12");
 		layout.m_aGuardPosts.Insert("32 0 20");
-		layout.m_aGuardPosts.Insert("28 0 -16");
 		layout.m_aGuardPosts.Insert("-60 0 -20");
 		layout.m_aGuardPosts.Insert("-24 0 -28");
 		layout.m_aGuardPosts.Insert("-44 0 0");
@@ -483,6 +487,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-16 0 24");
 		layout.m_aGuardPosts.Insert("-72 0 40");
 		layout.m_aGuardPosts.Insert("36 0 4");
+		layout.m_aGuardPosts.Insert("52 0 -32");
+		layout.m_aGuardPosts.Insert("-72 0 4");
 	}
 	protected static void Build1(IA_HeadquartersSiteLayout layout)
 	{
@@ -588,6 +594,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallA", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("-8 0 38", 270);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("36 0 -14", 180);
+		layout.AddAirRaidBunker("-24 0 -20", 180);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-58 0 10", 270);
 		layout.AddObstacle("HQWire", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQTeeth", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-65.487 0 67.626", 0);
@@ -672,14 +684,14 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 36.605", 0, 0.3);
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 40.465", 0, 0.3);
 		layout.AddDressingItem("HQDirtCross", "0 0 41.676", 0, 0.8);
-		layout.AddDressingItem("VigBriefing", "-7 0 41.176", 90, 0.35);
+		layout.AddDressingItem("VigBriefing", "-16.499 0 54.76", 0, 0.35);
 		layout.AddDressingItem("VigLight", "12.999 0 -60.9", 90, 0.35);
 		layout.AddDressingItem("VigRest", "19.103 0 -2.53", 90, 0.35);
 		layout.AddDressingItem("VigStores", "-54.636 0 -12.7", 0, 0.35);
 		layout.AddDressingItem("VigMedical", "34.559 0 35.27", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-56.273 0 25.6", 90, 0.35);
 		layout.AddDressingItem("VigRest", "-77.63 0 -30.854", 0, 0.35);
-		layout.AddDressingItem("VigPower", "-20.42 0 -25.83", 0, 0.35);
+		layout.AddDressingItem("VigPower", "-20.42 0 -27.33", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-1.88 0 41.976", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-81.13 0 49.691", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "81.13 0 49.691", 0, 0.35);
@@ -692,8 +704,8 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "-68.477 0 -22.77", 90, 0.35);
 		layout.AddDressingItem("HQDirtPatch", "-7.93 0 15.445", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-7.93 0 13.445", 0, 0.35);
-		layout.AddDressingItem("VigComms", "-15.499 0 53.26", 90, 0.35);
-		layout.AddDressingItem("VigPower", "8.199 0 54.76", 0, 0.35);
+		layout.AddDressingItem("VigComms", "7.499 0 53.26", 90, 0.35);
+		layout.AddDressingItem("VigPower", "8.699 0 57.76", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "11.65 0 -10.654", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "5.297 0 -5.53", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-34.844 0 -12.7", 90, 0.35);
@@ -710,7 +722,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("60 0 24");
 		layout.m_aGuardPosts.Insert("-56 0 -44");
 		layout.m_aGuardPosts.Insert("72 0 8");
-		layout.m_aGuardPosts.Insert("-64 0 52");
 		layout.m_aGuardPosts.Insert("68 0 -60");
 		layout.m_aGuardPosts.Insert("-20 0 12");
 		layout.m_aGuardPosts.Insert("-72 0 -4");
@@ -718,7 +729,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("56 0 0");
 		layout.m_aGuardPosts.Insert("44 0 -44");
 		layout.m_aGuardPosts.Insert("-20 0 -36");
-		layout.m_aGuardPosts.Insert("-8 0 36");
 		layout.m_aGuardPosts.Insert("56 0 -24");
 		layout.m_aGuardPosts.Insert("-40 0 56");
 		layout.m_aGuardPosts.Insert("-40 0 -28");
@@ -736,6 +746,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-80 0 8");
 		layout.m_aGuardPosts.Insert("32 0 -20");
 		layout.m_aGuardPosts.Insert("16 0 44");
+		layout.m_aGuardPosts.Insert("72 0 -44");
+		layout.m_aGuardPosts.Insert("-68 0 -44");
 	}
 	protected static void Build2(IA_HeadquartersSiteLayout layout)
 	{
@@ -841,6 +853,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallA", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("8 0 38", 90);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-32 0 -16", 180);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("28 0 -18", 180);
+		layout.AddAirRaidBunker("58 0 12", 90);
 		layout.AddObstacle("HQTeeth", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQTeeth", "-65.487 0 67.626", 0);
@@ -949,14 +967,13 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigPower", "8.699 0 57.76", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "11.65 0 -10.654", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "5.297 0 -5.53", 90, 0.35);
-		layout.AddDressingItem("VigWater", "-34.359 0 -12.73", 0, 0.35);
+		layout.AddDressingItem("VigWater", "-44.64 0 -23.251", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-44.64 0 19.346", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "-38.287 0 24.47", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-75.09 0 -34.651", 0, 0.35);
 		layout.m_aGuardPosts.Insert("-79.987 0 -8");
 		layout.m_aGuardPosts.Insert("79.987 0 -8");
-		layout.m_aGuardPosts.Insert("-60 0 52");
-		layout.m_aGuardPosts.Insert("-48 0 -24");
+		layout.m_aGuardPosts.Insert("-52 0 -24");
 		layout.m_aGuardPosts.Insert("-60 0 -24");
 		layout.m_aGuardPosts.Insert("-72 0 -52");
 		layout.m_aGuardPosts.Insert("68 0 -56");
@@ -983,6 +1000,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("48 0 20");
 		layout.m_aGuardPosts.Insert("8 0 -28");
 		layout.m_aGuardPosts.Insert("-56 0 -8");
+		layout.m_aGuardPosts.Insert("-48 0 -28");
 		layout.m_aGuardPosts.Insert("72 0 -4");
 		layout.m_aGuardPosts.Insert("20 0 -28");
 		layout.m_aGuardPosts.Insert("16 0 12");
@@ -1092,6 +1110,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallC", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("-8 0 38", 270);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("36 0 -14", 180);
+		layout.AddAirRaidBunker("-24 0 -20", 180);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-58 0 10", 270);
 		layout.AddObstacle("HQWire", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQHedgehogs", "-65.487 0 67.626", 0);
@@ -1182,7 +1206,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigRest", "-52.093 0 -12.53", 90, 0.35);
 		layout.AddDressingItem("VigStores", "65.094 0 -26.7", 0, 0.35);
 		layout.AddDressingItem("VigMedical", "27.965 0 33.78", 0, 0.35);
-		layout.AddDressingItem("VigPower", "-20.42 0 -23.83", 0, 0.35);
+		layout.AddDressingItem("VigPower", "-20.42 0 -26.83", 0, 0.35);
 		layout.AddDressingItem("VigWorkshop", "-17.619 0 20.37", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 41.976", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "81.13 0 49.691", 0, 0.35);
@@ -1347,6 +1371,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallB", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("8 0 36", 90);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-36 0 -14", 180);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("24 0 -20", 180);
+		layout.AddAirRaidBunker("58 0 10", 90);
 		layout.AddObstacle("HQWire", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQHedgehogs", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-65.487 0 67.626", 0);
@@ -1440,7 +1470,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWorkshop", "17.619 0 20.37", 90, 0.35);
 		layout.AddDressingItem("VigRest", "77.63 0 47.146", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 41.976", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "6.12 0 39.976", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "6.12 0 41.876", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-81.13 0 49.691", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "81.13 0 -49.691", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-14.97 0 21.614", 0, 0.8);
@@ -1448,7 +1478,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtPatch", "45.2 0 31.445", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "45.2 0 29.445", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "70.477 0 55.71", 90, 0.8);
-		layout.AddDressingItem("HQDuckboards", "68.477 0 55.71", 90, 0.35);
 		layout.AddDressingItem("HQDirtPatch", "7.93 0 -19.765", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "7.93 0 -17.765", 0, 0.35);
 		layout.AddDressingItem("VigComms", "15.499 0 53.26", 90, 0.35);
@@ -1462,8 +1491,8 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStoresCovered", "54.436 0 -12.7", 90, 0.35);
 		layout.AddDressingItem("VigWater", "-51.735 0 -32.22", 0, 0.35);
 		layout.AddDressingItem("HQPlateStack", "18.536 0 24.87", 0, 0.35);
-		layout.AddDressingItem("VigStoresCovered", "70.077 0 52.47", 0, 0.35);
-		layout.AddDressingItem("VigWaste", "71.277 0 58.47", 90, 0.35);
+		layout.AddDressingItem("VigStoresCovered", "70.377 0 59.97", 90, 0.35);
+		layout.AddDressingItem("VigWaste", "71.277 0 52.47", 90, 0.35);
 		layout.m_aGuardPosts.Insert("79.987 0 -8");
 		layout.m_aGuardPosts.Insert("68 0 8");
 		layout.m_aGuardPosts.Insert("-44 0 40");
@@ -1603,6 +1632,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallB", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("-8 0 38", 270);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("24 0 -20", 180);
+		layout.AddAirRaidBunker("-36 0 -14", 180);
+		layout.AddAirRaidBunker("-66 0 36", 270);
+		layout.AddAirRaidBunker("58 0 10", 90);
 		layout.AddObstacle("HQHedgehogs", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-65.487 0 67.626", 0);
@@ -1724,7 +1759,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-32 0 -24");
 		layout.m_aGuardPosts.Insert("36 0 56");
 		layout.m_aGuardPosts.Insert("-56 0 60");
-		layout.m_aGuardPosts.Insert("20 0 -20");
 		layout.m_aGuardPosts.Insert("8 0 12");
 		layout.m_aGuardPosts.Insert("-64 0 -16");
 		layout.m_aGuardPosts.Insert("-36 0 -4");
@@ -1755,6 +1789,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("68 0 16");
 		layout.m_aGuardPosts.Insert("76 0 32");
 		layout.m_aGuardPosts.Insert("-32 0 -40");
+		layout.m_aGuardPosts.Insert("-48 0 12");
 	}
 	protected static void Build6(IA_HeadquartersSiteLayout layout)
 	{
@@ -1858,6 +1893,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallA", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("8 0 38", 90);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-36 0 -14", 180);
+		layout.AddAirRaidBunker("24 0 -20", 180);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("58 0 10", 90);
 		layout.AddObstacle("HQHedgehogs", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQHedgehogs", "-65.487 0 67.626", 0);
@@ -1957,7 +1998,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtWorn", "37.487 0 -12.29", 90, 0.8);
 		layout.AddDressingItem("HQDuckboards", "35.487 0 -12.29", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "70.477 0 55.71", 90, 0.8);
-		layout.AddDressingItem("HQDuckboards", "68.477 0 55.71", 90, 0.35);
 		layout.AddDressingItem("VigComms", "11.499 0 53.26", 90, 0.35);
 		layout.AddDressingItem("VigPower", "12.699 0 57.76", 90, 0.35);
 		layout.AddDressingItem("VigMess", "-24.736 0 -8.44", 90, 0.35);
@@ -1968,12 +2008,11 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWaste", "38.287 0 -15.53", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "54.436 0 41.3", 90, 0.35);
 		layout.AddDressingItem("HQPlateStack", "20.91 0 -3.272", 90, 0.35);
-		layout.AddDressingItem("HQPlateStack", "18.536 0 -21.13", 0, 0.35);
-		layout.AddDressingItem("VigStoresCovered", "70.077 0 52.47", 0, 0.35);
-		layout.AddDressingItem("VigWaste", "71.277 0 58.47", 90, 0.35);
+		layout.AddDressingItem("HQPlateStack", "11.16 0 -35.265", 90, 0.35);
+		layout.AddDressingItem("VigStoresCovered", "70.377 0 59.97", 90, 0.35);
+		layout.AddDressingItem("VigWaste", "71.277 0 52.47", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-79.987 0 -8");
 		layout.m_aGuardPosts.Insert("79.987 0 -8");
-		layout.m_aGuardPosts.Insert("-32 0 -12");
 		layout.m_aGuardPosts.Insert("-48 0 -52");
 		layout.m_aGuardPosts.Insert("52 0 -24");
 		layout.m_aGuardPosts.Insert("-24 0 -28");
@@ -2007,6 +2046,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("12 0 -12");
 		layout.m_aGuardPosts.Insert("64 0 48");
 		layout.m_aGuardPosts.Insert("72 0 24");
+		layout.m_aGuardPosts.Insert("68 0 44");
 	}
 	protected static void Build7(IA_HeadquartersSiteLayout layout)
 	{
@@ -2110,6 +2150,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallA", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("-8 0 38", 270);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("24 0 -20", 180);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-32 0 -14", 180);
+		layout.AddAirRaidBunker("58 0 10", 90);
 		layout.AddObstacle("HQWire", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQHedgehogs", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-65.487 0 67.626", 0);
@@ -2194,7 +2240,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 36.605", 0, 0.3);
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 40.465", 0, 0.3);
 		layout.AddDressingItem("HQDirtCross", "0 0 41.676", 0, 0.8);
-		layout.AddDressingItem("VigBriefing", "-7 0 41.176", 90, 0.35);
+		layout.AddDressingItem("VigBriefing", "-16.499 0 54.76", 0, 0.35);
 		layout.AddDressingItem("VigLight", "12.999 0 -60.9", 90, 0.35);
 		layout.AddDressingItem("VigKitchen", "26.436 0 -2.44", 90, 0.35);
 		layout.AddDressingItem("VigStores", "-54.636 0 -12.7", 0, 0.35);
@@ -2208,19 +2254,18 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "-81.13 0 -49.691", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "81.13 0 -49.691", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-70.477 0 55.23", 90, 0.8);
-		layout.AddDressingItem("HQDuckboards", "-68.477 0 55.23", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-70.477 0 -22.77", 90, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-68.477 0 -22.77", 90, 0.35);
-		layout.AddDressingItem("VigComms", "-15.499 0 53.26", 90, 0.35);
-		layout.AddDressingItem("VigPower", "8.199 0 54.76", 0, 0.35);
+		layout.AddDressingItem("VigComms", "7.499 0 53.26", 90, 0.35);
+		layout.AddDressingItem("VigPower", "8.699 0 57.76", 90, 0.35);
 		layout.AddDressingItem("VigMess", "24.736 0 -8.44", 90, 0.35);
 		layout.AddDressingItem("VigWash", "24.436 0 3.56", 90, 0.35);
 		layout.AddDressingItem("VigSanitation", "14.62 0 -15.454", 90, 0.35);
 		layout.AddDressingItem("VigWaste", "5.304 0 -2.44", 90, 0.35);
-		layout.AddDressingItem("VigStoresCovered", "-34.844 0 -12.7", 90, 0.35);
+		layout.AddDressingItem("VigStoresCovered", "-44.64 0 -22.651", 0, 0.35);
 		layout.AddDressingItem("HQPlateStack", "61.766 0 -26.03", 0, 0.35);
 		layout.AddDressingItem("HQPlateStack", "-18.536 0 24.87", 0, 0.35);
-		layout.AddDressingItem("VigStoresCovered", "-70.077 0 58.47", 0, 0.35);
+		layout.AddDressingItem("VigStoresCovered", "-70.377 0 59.97", 90, 0.35);
 		layout.AddDressingItem("VigWaste", "-71.277 0 52.47", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-77.63 0 -14.406", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "-71.277 0 -25.53", 90, 0.35);
@@ -2363,6 +2408,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallA", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("8 0 38", 90);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-28 0 -18", 180);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("32 0 -16", 180);
+		layout.AddAirRaidBunker("60 0 14", 90);
 		layout.AddObstacle("HQHedgehogs", "-83.487 0 67.626", 0);
 		layout.AddObstacle("HQWire", "-74.487 0 67.626", 0);
 		layout.AddObstacle("HQHedgehogs", "-65.487 0 67.626", 0);
@@ -2461,7 +2512,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "-81.13 0 -49.691", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "81.13 0 -49.691", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-70.477 0 55.23", 90, 0.8);
-		layout.AddDressingItem("HQDuckboards", "-68.477 0 55.23", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-4.497 0 -24.77", 90, 0.8);
 		layout.AddDressingItem("VigComms", "7.499 0 53.26", 90, 0.35);
 		layout.AddDressingItem("VigPower", "8.699 0 57.76", 90, 0.35);
@@ -2471,7 +2521,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWaste", "5.304 0 -0.44", 90, 0.35);
 		layout.AddDressingItem("HQPlateStack", "-27.514 0 27.97", 0, 0.35);
 		layout.AddDressingItem("HQPlateStack", "52.016 0 -25.63", 0, 0.35);
-		layout.AddDressingItem("VigStoresCovered", "-70.077 0 58.47", 0, 0.35);
+		layout.AddDressingItem("VigStoresCovered", "-70.377 0 59.97", 90, 0.35);
 		layout.AddDressingItem("VigWaste", "-71.277 0 52.47", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-11.65 0 -32.654", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "-5.297 0 -27.53", 90, 0.35);
@@ -2488,7 +2538,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("60 0 -48");
 		layout.m_aGuardPosts.Insert("-48 0 60");
 		layout.m_aGuardPosts.Insert("8 0 -16");
-		layout.m_aGuardPosts.Insert("-60 0 56");
 		layout.m_aGuardPosts.Insert("60 0 24");
 		layout.m_aGuardPosts.Insert("-36 0 -44");
 		layout.m_aGuardPosts.Insert("12 0 32");
@@ -2512,6 +2561,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("36 0 20");
 		layout.m_aGuardPosts.Insert("-20 0 -12");
 		layout.m_aGuardPosts.Insert("52 0 24");
+		layout.m_aGuardPosts.Insert("40 0 -36");
 	}
 	protected static void Build9(IA_HeadquartersSiteLayout layout)
 	{
@@ -2617,6 +2667,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallB", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("-8 0 38", 270);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("28 0 -18", 180);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-32 0 -16", 180);
+		layout.AddAirRaidBunker("34 0 26", 90);
 		layout.AddObstacle("HQTeeth", "-83.487 0 66.452", 0);
 		layout.AddObstacle("HQTeeth", "-74.487 0 66.452", 0);
 		layout.AddObstacle("HQWire", "-65.487 0 66.452", 0);
@@ -2747,13 +2803,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 41.976", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-81.13 0 49.691", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "81.13 0 49.691", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "-81.13 0 -49.691", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "81.13 0 -49.691", 0, 0.35);
-		layout.AddDressingItem("HQDirtWorn", "4.497 0 -2.29", 90, 0.8);
-		layout.AddDressingItem("HQDirtPatch", "-45.2 0 -7.765", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "-45.2 0 -5.765", 0, 0.35);
-		layout.AddDressingItem("HQDirtPatch", "45.2 0 29.445", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "45.2 0 27.445", 0, 0.35);
 		layout.m_aGuardPosts.Insert("-79.987 0 -8");
 		layout.m_aGuardPosts.Insert("12 0 20");
 		layout.m_aGuardPosts.Insert("64 0 40");
@@ -2767,7 +2816,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-56 0 36");
 		layout.m_aGuardPosts.Insert("68 0 -32");
 		layout.m_aGuardPosts.Insert("44 0 -44");
-		layout.m_aGuardPosts.Insert("36 0 24");
 		layout.m_aGuardPosts.Insert("48 0 -56");
 		layout.m_aGuardPosts.Insert("52 0 40");
 		layout.m_aGuardPosts.Insert("-32 0 -40");
@@ -2790,6 +2838,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-44 0 4");
 		layout.m_aGuardPosts.Insert("-56 0 -12");
 		layout.m_aGuardPosts.Insert("-68 0 24");
+		layout.m_aGuardPosts.Insert("-16 0 0");
 	}
 	protected static void Build10(IA_HeadquartersSiteLayout layout)
 	{
@@ -2895,6 +2944,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallC", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("8 0 36", 90);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-38 0 -12", 180);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("24 0 -20", 180);
+		layout.AddAirRaidBunker("58 0 10", 90);
 		layout.AddObstacle("HQTeeth", "-83.487 0 66.452", 0);
 		layout.AddObstacle("HQWire", "-74.487 0 66.452", 0);
 		layout.AddObstacle("HQTeeth", "-65.487 0 66.452", 0);
@@ -3023,14 +3078,8 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStores", "-54.636 0 -24.7", 0, 0.35);
 		layout.AddDressingItem("VigMedical", "24.161 0 19.27", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 41.976", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "6.12 0 39.976", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "6.12 0 41.876", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-81.13 0 49.691", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "81.13 0 49.691", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "-81.13 0 -49.691", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "81.13 0 -49.691", 0, 0.35);
-		layout.AddDressingItem("HQDirtWorn", "-4.497 0 -2.77", 90, 0.8);
-		layout.AddDressingItem("HQDirtPatch", "44.08 0 -7.765", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "44.08 0 -5.765", 0, 0.35);
 		layout.m_aGuardPosts.Insert("-79.987 0 -8");
 		layout.m_aGuardPosts.Insert("79.987 0 -8");
 		layout.m_aGuardPosts.Insert("12 0 -16");
@@ -3046,6 +3095,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-60 0 -48");
 		layout.m_aGuardPosts.Insert("-32 0 -16");
 		layout.m_aGuardPosts.Insert("-64 0 20");
+		layout.m_aGuardPosts.Insert("44 0 0");
 		layout.m_aGuardPosts.Insert("56 0 60");
 		layout.m_aGuardPosts.Insert("12 0 -52");
 		layout.m_aGuardPosts.Insert("-44 0 -12");
@@ -3066,7 +3116,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-68 0 24");
 		layout.m_aGuardPosts.Insert("36 0 16");
 		layout.m_aGuardPosts.Insert("36 0 -8");
-		layout.m_aGuardPosts.Insert("-64 0 -36");
 	}
 	protected static void Build11(IA_HeadquartersSiteLayout layout)
 	{
@@ -3172,6 +3221,12 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-84.987 0 52.611", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-84.987 0 58.007", 270, 3);
 		layout.AddWallRun("HQWallC", "-84.987 0 62.054", 270, 3);
+		layout.AddAirRaidBunker("-8 0 38", 270);
+		layout.AddAirRaidBunker("66 0 54", 90);
+		layout.AddAirRaidBunker("28 0 -18", 180);
+		layout.AddAirRaidBunker("-66 0 54", 270);
+		layout.AddAirRaidBunker("-32 0 -16", 180);
+		layout.AddAirRaidBunker("34 0 26", 90);
 		layout.AddObstacle("HQWire", "-83.487 0 66.452", 0);
 		layout.AddObstacle("HQTeeth", "-74.487 0 66.452", 0);
 		layout.AddObstacle("HQTeeth", "-65.487 0 66.452", 0);
@@ -3302,13 +3357,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 41.976", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-81.13 0 49.691", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "81.13 0 49.691", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "-81.13 0 -49.691", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "81.13 0 -49.691", 0, 0.35);
-		layout.AddDressingItem("HQDirtWorn", "-4.497 0 -2.77", 90, 0.8);
-		layout.AddDressingItem("HQDirtWorn", "37.487 0 35.71", 90, 0.8);
-		layout.AddDressingItem("HQDuckboards", "35.487 0 35.71", 90, 0.35);
-		layout.AddDressingItem("HQDirtPatch", "7.93 0 -21.765", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "7.93 0 -19.765", 0, 0.35);
 		layout.m_aGuardPosts.Insert("-79.987 0 -8");
 		layout.m_aGuardPosts.Insert("79.987 0 -8");
 		layout.m_aGuardPosts.Insert("-72 0 48");
@@ -3326,9 +3374,9 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("48 0 16");
 		layout.m_aGuardPosts.Insert("-80 0 40");
 		layout.m_aGuardPosts.Insert("40 0 24");
-		layout.m_aGuardPosts.Insert("-64 0 52");
 		layout.m_aGuardPosts.Insert("72 0 -40");
 		layout.m_aGuardPosts.Insert("-12 0 -40");
+		layout.m_aGuardPosts.Insert("-80 0 -44");
 		layout.m_aGuardPosts.Insert("-72 0 40");
 		layout.m_aGuardPosts.Insert("28 0 -36");
 		layout.m_aGuardPosts.Insert("-28 0 48");
@@ -3342,9 +3390,9 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("64 0 -12");
 		layout.m_aGuardPosts.Insert("-40 0 -36");
 		layout.m_aGuardPosts.Insert("12 0 -36");
+		layout.m_aGuardPosts.Insert("8 0 -20");
 		layout.m_aGuardPosts.Insert("64 0 8");
 		layout.m_aGuardPosts.Insert("-60 0 -20");
-		layout.m_aGuardPosts.Insert("40 0 12");
 	}
 	protected static void Build12(IA_HeadquartersSiteLayout layout)
 	{
@@ -3431,6 +3479,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallB", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("-8 0 27", 270);
+		layout.AddAirRaidBunker("54 0 41", 90);
+		layout.AddAirRaidBunker("34 0 -13", 180);
+		layout.AddAirRaidBunker("-24 0 -19", 180);
 		layout.AddObstacle("HQTeeth", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQTeeth", "-43.252 0 55.555", 0);
@@ -3497,7 +3549,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStores", "24.534 0 -26.56", 0, 0.35);
 		layout.AddDressingItem("VigMedical", "24.449 0 27.41", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-27.663 0 5.74", 90, 0.35);
-		layout.AddDressingItem("VigRest", "-19.103 0 -20.39", 90, 0.35);
+		layout.AddDressingItem("VigRest", "-11.65 0 -28.714", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 29.836", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-60.9 0 37.551", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "60.9 0 37.551", 0, 0.35);
@@ -3515,7 +3567,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWaste", "5.297 0 -5.39", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "44.326 0 -26.56", 90, 0.35);
 		layout.AddDressingItem("VigWater", "44.811 0 27.41", 0, 0.35);
-		layout.AddDressingItem("VigStoresCovered", "-11.65 0 -28.514", 0, 0.35);
+		layout.AddDressingItem("VigStoresCovered", "-18.903 0 -20.39", 90, 0.35);
 		layout.AddDressingItem("VigWaste", "-5.297 0 -23.39", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-59.752 0 -8");
 		layout.m_aGuardPosts.Insert("59.752 0 -8");
@@ -3531,10 +3583,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-20 0 -32");
 		layout.m_aGuardPosts.Insert("-16 0 28");
 		layout.m_aGuardPosts.Insert("44 0 44");
-		layout.m_aGuardPosts.Insert("-28 0 -16");
 		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("-52 0 -28");
-		layout.m_aGuardPosts.Insert("-8 0 28");
 		layout.m_aGuardPosts.Insert("-36 0 32");
 		layout.m_aGuardPosts.Insert("40 0 12");
 		layout.m_aGuardPosts.Insert("-52 0 -36");
@@ -3549,10 +3599,12 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("52 0 -28");
 		layout.m_aGuardPosts.Insert("44 0 -12");
 		layout.m_aGuardPosts.Insert("-44 0 12");
-		layout.m_aGuardPosts.Insert("-24 0 -20");
 		layout.m_aGuardPosts.Insert("-56 0 40");
 		layout.m_aGuardPosts.Insert("-48 0 -4");
 		layout.m_aGuardPosts.Insert("-36 0 44");
+		layout.m_aGuardPosts.Insert("-28 0 -32");
+		layout.m_aGuardPosts.Insert("24 0 -4");
+		layout.m_aGuardPosts.Insert("-40 0 -24");
 	}
 	protected static void Build13(IA_HeadquartersSiteLayout layout)
 	{
@@ -3639,6 +3691,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallC", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("8 0 25", 90);
+		layout.AddAirRaidBunker("-54 0 41", 270);
+		layout.AddAirRaidBunker("-20 0 -21", 180);
+		layout.AddAirRaidBunker("52 0 47", 90);
 		layout.AddObstacle("HQWire", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQTeeth", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-43.252 0 55.555", 0);
@@ -3709,7 +3765,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigRest", "19.103 0 11.61", 90, 0.35);
 		layout.AddDressingItem("VigPower", "-48.63 0 -9.68", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 29.836", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "6.12 0 27.836", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-60.9 0 37.551", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "60.9 0 37.551", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-60.9 0 -37.551", 0, 0.35);
@@ -3848,6 +3903,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallC", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("-8 0 27", 270);
+		layout.AddAirRaidBunker("54 0 41", 90);
+		layout.AddAirRaidBunker("20 0 -21", 180);
+		layout.AddAirRaidBunker("-52 0 47", 270);
 		layout.AddObstacle("HQTeeth", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQTeeth", "-43.252 0 55.555", 0);
@@ -3950,14 +4009,12 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("48 0 12");
 		layout.m_aGuardPosts.Insert("-44 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -44");
-		layout.m_aGuardPosts.Insert("56 0 44");
 		layout.m_aGuardPosts.Insert("12 0 -24");
 		layout.m_aGuardPosts.Insert("32 0 12");
 		layout.m_aGuardPosts.Insert("52 0 -12");
 		layout.m_aGuardPosts.Insert("-16 0 -12");
 		layout.m_aGuardPosts.Insert("-12 0 12");
 		layout.m_aGuardPosts.Insert("-52 0 -20");
-		layout.m_aGuardPosts.Insert("52 0 40");
 		layout.m_aGuardPosts.Insert("40 0 40");
 		layout.m_aGuardPosts.Insert("-12 0 -36");
 		layout.m_aGuardPosts.Insert("-56 0 12");
@@ -3970,6 +4027,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-8 0 16");
 		layout.m_aGuardPosts.Insert("8 0 -20");
 		layout.m_aGuardPosts.Insert("16 0 -40");
+		layout.m_aGuardPosts.Insert("-40 0 -4");
+		layout.m_aGuardPosts.Insert("-20 0 -32");
 	}
 	protected static void Build15(IA_HeadquartersSiteLayout layout)
 	{
@@ -4054,6 +4113,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallA", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("8 0 27", 90);
+		layout.AddAirRaidBunker("-54 0 41", 270);
+		layout.AddAirRaidBunker("-34 0 -13", 180);
+		layout.AddAirRaidBunker("20 0 -21", 180);
 		layout.AddObstacle("HQWire", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQHedgehogs", "-43.252 0 55.555", 0);
@@ -4136,9 +4199,9 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigPower", "12.699 0 45.62", 90, 0.35);
 		layout.AddDressingItem("VigMess", "-25.439 0 -8.33", 90, 0.35);
 		layout.AddDressingItem("VigWash", "-25.139 0 3.67", 90, 0.35);
-		layout.AddDressingItem("VigWater", "-27.338 0 -12.83", 90, 0.35);
-		layout.AddDressingItem("VigSanitation", "-26.338 0 8.17", 0, 0.35);
-		layout.AddDressingItem("VigRest", "-25.939 0 -17.33", 0, 0.35);
+		layout.AddDressingItem("VigWater", "-27.338 0 8.17", 90, 0.35);
+		layout.AddDressingItem("VigSanitation", "-26.739 0 -12.83", 90, 0.35);
+		layout.AddDressingItem("VigRest", "-25.939 0 12.67", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "-5.301 0 -2.33", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "34.53 0 -22.514", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "28.177 0 -17.39", 90, 0.35);
@@ -4150,7 +4213,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("28 0 -28");
 		layout.m_aGuardPosts.Insert("-56 0 20");
 		layout.m_aGuardPosts.Insert("28 0 -4");
-		layout.m_aGuardPosts.Insert("12 0 28");
 		layout.m_aGuardPosts.Insert("-40 0 -16");
 		layout.m_aGuardPosts.Insert("-8 0 -28");
 		layout.m_aGuardPosts.Insert("-52 0 8");
@@ -4165,13 +4227,11 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-44 0 12");
 		layout.m_aGuardPosts.Insert("40 0 20");
 		layout.m_aGuardPosts.Insert("-16 0 -32");
-		layout.m_aGuardPosts.Insert("8 0 24");
 		layout.m_aGuardPosts.Insert("40 0 28");
 		layout.m_aGuardPosts.Insert("56 0 48");
 		layout.m_aGuardPosts.Insert("32 0 0");
 		layout.m_aGuardPosts.Insert("16 0 36");
 		layout.m_aGuardPosts.Insert("-36 0 -4");
-		layout.m_aGuardPosts.Insert("-32 0 12");
 		layout.m_aGuardPosts.Insert("36 0 40");
 		layout.m_aGuardPosts.Insert("28 0 32");
 		layout.m_aGuardPosts.Insert("48 0 12");
@@ -4180,6 +4240,9 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("56 0 -20");
 		layout.m_aGuardPosts.Insert("-44 0 32");
 		layout.m_aGuardPosts.Insert("-52 0 -44");
+		layout.m_aGuardPosts.Insert("-24 0 32");
+		layout.m_aGuardPosts.Insert("16 0 28");
+		layout.m_aGuardPosts.Insert("-20 0 36");
 	}
 	protected static void Build16(IA_HeadquartersSiteLayout layout)
 	{
@@ -4264,6 +4327,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallA", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("-8 0 27", 270);
+		layout.AddAirRaidBunker("54 0 41", 90);
+		layout.AddAirRaidBunker("34 0 -13", 180);
+		layout.AddAirRaidBunker("-20 0 -21", 180);
 		layout.AddObstacle("HQWire", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQHedgehogs", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-43.252 0 55.555", 0);
@@ -4325,7 +4392,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 25.586", 0, 0.3);
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 29.446", 0, 0.3);
 		layout.AddDressingItem("HQDirtCross", "0 0 29.536", 0, 0.8);
-		layout.AddDressingItem("VigBriefing", "-7 0 29.036", 90, 0.35);
+		layout.AddDressingItem("VigBriefing", "-16.499 0 42.62", 0, 0.35);
 		layout.AddDressingItem("VigLight", "11.65 0 -48.76", 90, 0.35);
 		layout.AddDressingItem("VigKitchen", "27.139 0 -2.33", 90, 0.35);
 		layout.AddDressingItem("VigStores", "-44.526 0 -12.56", 0, 0.35);
@@ -4342,19 +4409,19 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "35.09 0 39.585", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "27.377 0 17.85", 90, 0.8);
 		layout.AddDressingItem("HQDuckboard", "27.277 0 17.85", 90, 0.35);
-		layout.AddDressingItem("VigComms", "-15.499 0 41.12", 90, 0.35);
-		layout.AddDressingItem("VigPower", "8.199 0 42.62", 0, 0.35);
+		layout.AddDressingItem("VigComms", "7.499 0 41.12", 90, 0.35);
+		layout.AddDressingItem("VigPower", "8.699 0 45.62", 90, 0.35);
 		layout.AddDressingItem("VigMess", "25.439 0 -8.33", 90, 0.35);
 		layout.AddDressingItem("VigWash", "25.139 0 3.67", 90, 0.35);
-		layout.AddDressingItem("VigWater", "27.338 0 -12.83", 90, 0.35);
-		layout.AddDressingItem("VigSanitation", "26.338 0 8.17", 0, 0.35);
-		layout.AddDressingItem("VigRest", "25.939 0 -17.33", 0, 0.35);
+		layout.AddDressingItem("VigWater", "27.338 0 8.17", 90, 0.35);
+		layout.AddDressingItem("VigSanitation", "26.739 0 -12.83", 90, 0.35);
+		layout.AddDressingItem("VigRest", "25.939 0 12.67", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "5.301 0 -2.33", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-24.734 0 -12.56", 90, 0.35);
 		layout.AddDressingItem("VigWater", "-17.655 0 21.92", 0, 0.35);
 		layout.AddDressingItem("HQPlateStack", "-50.514 0 -28.99", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "34.53 0 9.486", 0, 0.35);
-		layout.AddDressingItem("VigWaste", "28.177 0 14.61", 90, 0.35);
+		layout.AddDressingItem("VigWaste", "28.177 0 20.61", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-59.752 0 -8");
 		layout.m_aGuardPosts.Insert("59.752 0 -8");
 		layout.m_aGuardPosts.Insert("20 0 28");
@@ -4371,7 +4438,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-16 0 -12");
 		layout.m_aGuardPosts.Insert("56 0 -44");
 		layout.m_aGuardPosts.Insert("52 0 -20");
-		layout.m_aGuardPosts.Insert("-20 0 -16");
 		layout.m_aGuardPosts.Insert("-60 0 -44");
 		layout.m_aGuardPosts.Insert("52 0 -48");
 		layout.m_aGuardPosts.Insert("16 0 36");
@@ -4384,13 +4450,14 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("48 0 12");
 		layout.m_aGuardPosts.Insert("-24 0 -40");
 		layout.m_aGuardPosts.Insert("60 0 -24");
-		layout.m_aGuardPosts.Insert("36 0 -12");
 		layout.m_aGuardPosts.Insert("28 0 -40");
 		layout.m_aGuardPosts.Insert("-40 0 48");
-		layout.m_aGuardPosts.Insert("56 0 44");
 		layout.m_aGuardPosts.Insert("-60 0 4");
 		layout.m_aGuardPosts.Insert("32 0 32");
 		layout.m_aGuardPosts.Insert("48 0 -28");
+		layout.m_aGuardPosts.Insert("-52 0 36");
+		layout.m_aGuardPosts.Insert("48 0 20");
+		layout.m_aGuardPosts.Insert("-16 0 -40");
 	}
 	protected static void Build17(IA_HeadquartersSiteLayout layout)
 	{
@@ -4475,6 +4542,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallA", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("8 0 27", 90);
+		layout.AddAirRaidBunker("-54 0 41", 270);
+		layout.AddAirRaidBunker("-12 0 -23", 180);
+		layout.AddAirRaidBunker("52 0 47", 90);
 		layout.AddObstacle("HQHedgehogs", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-43.252 0 55.555", 0);
@@ -4569,7 +4640,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-59.752 0 -8");
 		layout.m_aGuardPosts.Insert("59.752 0 -8");
 		layout.m_aGuardPosts.Insert("-16 0 -32");
-		layout.m_aGuardPosts.Insert("48 0 48");
 		layout.m_aGuardPosts.Insert("24 0 -32");
 		layout.m_aGuardPosts.Insert("36 0 8");
 		layout.m_aGuardPosts.Insert("52 0 -20");
@@ -4588,10 +4658,10 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-36 0 44");
 		layout.m_aGuardPosts.Insert("-52 0 0");
 		layout.m_aGuardPosts.Insert("-20 0 36");
-		layout.m_aGuardPosts.Insert("-8 0 -20");
 		layout.m_aGuardPosts.Insert("-28 0 -36");
 		layout.m_aGuardPosts.Insert("36 0 -40");
 		layout.m_aGuardPosts.Insert("52 0 28");
+		layout.m_aGuardPosts.Insert("-8 0 -16");
 		layout.m_aGuardPosts.Insert("44 0 0");
 		layout.m_aGuardPosts.Insert("-36 0 -36");
 		layout.m_aGuardPosts.Insert("-28 0 -44");
@@ -4599,9 +4669,10 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("12 0 36");
 		layout.m_aGuardPosts.Insert("44 0 16");
 		layout.m_aGuardPosts.Insert("-44 0 -36");
-		layout.m_aGuardPosts.Insert("-48 0 40");
 		layout.m_aGuardPosts.Insert("-20 0 -44");
 		layout.m_aGuardPosts.Insert("40 0 48");
+		layout.m_aGuardPosts.Insert("-48 0 28");
+		layout.m_aGuardPosts.Insert("20 0 48");
 	}
 	protected static void Build18(IA_HeadquartersSiteLayout layout)
 	{
@@ -4686,6 +4757,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallC", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("-8 0 27", 270);
+		layout.AddAirRaidBunker("54 0 41", 90);
+		layout.AddAirRaidBunker("34 0 -13", 180);
+		layout.AddAirRaidBunker("-20 0 -21", 180);
 		layout.AddObstacle("HQHedgehogs", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQHedgehogs", "-43.252 0 55.555", 0);
@@ -4782,7 +4857,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-36 0 -40");
 		layout.m_aGuardPosts.Insert("32 0 4");
 		layout.m_aGuardPosts.Insert("-28 0 -40");
-		layout.m_aGuardPosts.Insert("48 0 44");
 		layout.m_aGuardPosts.Insert("-48 0 -28");
 		layout.m_aGuardPosts.Insert("36 0 8");
 		layout.m_aGuardPosts.Insert("28 0 -12");
@@ -4809,6 +4883,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-52 0 -40");
 		layout.m_aGuardPosts.Insert("40 0 -48");
 		layout.m_aGuardPosts.Insert("52 0 12");
+		layout.m_aGuardPosts.Insert("-24 0 28");
 	}
 	protected static void Build19(IA_HeadquartersSiteLayout layout)
 	{
@@ -4893,6 +4968,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallB", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("8 0 25", 90);
+		layout.AddAirRaidBunker("-54 0 41", 270);
+		layout.AddAirRaidBunker("-28 0 -17", 180);
+		layout.AddAirRaidBunker("52 0 47", 90);
 		layout.AddObstacle("HQWire", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQHedgehogs", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-43.252 0 55.555", 0);
@@ -4960,11 +5039,10 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStores", "24.534 0 -12.56", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "22.897 0 27.74", 90, 0.35);
 		layout.AddDressingItem("VigPower", "-42.74 0 22.32", 0, 0.35);
-		layout.AddDressingItem("VigWorkshop", "-31.93 0 -13.88", 90, 0.35);
+		layout.AddDressingItem("VigWorkshop", "-48.14 0 -30.206", 0, 0.35);
 		layout.AddDressingItem("VigWorkshop", "17.619 0 10.51", 90, 0.35);
 		layout.AddDressingItem("VigRest", "19.103 0 -22.39", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 29.836", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "6.12 0 27.836", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-60.9 0 -37.551", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "60.9 0 -37.551", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "4.497 0 -22.15", 90, 0.8);
@@ -4975,14 +5053,13 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigSanitation", "-14.62 0 -15.314", 90, 0.35);
 		layout.AddDressingItem("VigWaste", "-5.304 0 -2.3", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "44.326 0 -12.56", 90, 0.35);
-		layout.AddDressingItem("HQPlateStack", "-48.14 0 -31.122", 90, 0.35);
+		layout.AddDressingItem("HQPlateStack", "-48.14 0 3.362", 90, 0.35);
 		layout.AddDressingItem("HQPlateStack", "18.536 0 15.01", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "11.65 0 -30.514", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "5.297 0 -25.39", 90, 0.35);
 		layout.m_aGuardPosts.Insert("59.752 0 -8");
 		layout.m_aGuardPosts.Insert("8 0 0");
 		layout.m_aGuardPosts.Insert("56 0 -48");
-		layout.m_aGuardPosts.Insert("56 0 48");
 		layout.m_aGuardPosts.Insert("-48 0 16");
 		layout.m_aGuardPosts.Insert("32 0 4");
 		layout.m_aGuardPosts.Insert("24 0 -32");
@@ -5003,18 +5080,19 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-32 0 -36");
 		layout.m_aGuardPosts.Insert("-28 0 -44");
 		layout.m_aGuardPosts.Insert("-56 0 8");
-		layout.m_aGuardPosts.Insert("-48 0 4");
 		layout.m_aGuardPosts.Insert("-28 0 40");
 		layout.m_aGuardPosts.Insert("52 0 4");
 		layout.m_aGuardPosts.Insert("-52 0 20");
 		layout.m_aGuardPosts.Insert("-16 0 36");
 		layout.m_aGuardPosts.Insert("-36 0 44");
-		layout.m_aGuardPosts.Insert("52 0 44");
 		layout.m_aGuardPosts.Insert("36 0 48");
 		layout.m_aGuardPosts.Insert("24 0 -44");
 		layout.m_aGuardPosts.Insert("56 0 -16");
 		layout.m_aGuardPosts.Insert("40 0 44");
 		layout.m_aGuardPosts.Insert("36 0 -36");
+		layout.m_aGuardPosts.Insert("52 0 36");
+		layout.m_aGuardPosts.Insert("32 0 -48");
+		layout.m_aGuardPosts.Insert("-12 0 -36");
 	}
 	protected static void Build20(IA_HeadquartersSiteLayout layout)
 	{
@@ -5099,6 +5177,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallB", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("-8 0 27", 270);
+		layout.AddAirRaidBunker("54 0 41", 90);
+		layout.AddAirRaidBunker("20 0 -21", 180);
+		layout.AddAirRaidBunker("-52 0 47", 270);
 		layout.AddObstacle("HQHedgehogs", "-63.252 0 55.555", 0);
 		layout.AddObstacle("HQWire", "-53.252 0 55.555", 0);
 		layout.AddObstacle("HQHedgehogs", "-43.252 0 55.555", 0);
@@ -5205,14 +5287,12 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("16 0 -44");
 		layout.m_aGuardPosts.Insert("-44 0 16");
 		layout.m_aGuardPosts.Insert("-16 0 32");
-		layout.m_aGuardPosts.Insert("-52 0 48");
 		layout.m_aGuardPosts.Insert("36 0 0");
 		layout.m_aGuardPosts.Insert("-36 0 36");
 		layout.m_aGuardPosts.Insert("48 0 -32");
 		layout.m_aGuardPosts.Insert("-16 0 20");
 		layout.m_aGuardPosts.Insert("-56 0 20");
 		layout.m_aGuardPosts.Insert("-40 0 8");
-		layout.m_aGuardPosts.Insert("56 0 44");
 		layout.m_aGuardPosts.Insert("44 0 4");
 		layout.m_aGuardPosts.Insert("32 0 16");
 		layout.m_aGuardPosts.Insert("52 0 -12");
@@ -5223,6 +5303,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-40 0 -32");
 		layout.m_aGuardPosts.Insert("-24 0 20");
 		layout.m_aGuardPosts.Insert("-32 0 44");
+		layout.m_aGuardPosts.Insert("-28 0 -40");
+		layout.m_aGuardPosts.Insert("-28 0 -28");
 	}
 	protected static void Build21(IA_HeadquartersSiteLayout layout)
 	{
@@ -5309,6 +5391,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallA", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("8 0 27", 90);
+		layout.AddAirRaidBunker("-54 0 41", 270);
+		layout.AddAirRaidBunker("-34 0 -11", 180);
+		layout.AddAirRaidBunker("20 0 -21", 180);
 		layout.AddObstacle("HQTeeth", "-63.252 0 54.311", 0);
 		layout.AddObstacle("HQTeeth", "-53.252 0 54.311", 0);
 		layout.AddObstacle("HQWire", "-43.252 0 54.311", 0);
@@ -5461,17 +5547,17 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("48 0 32");
 		layout.m_aGuardPosts.Insert("16 0 -8");
 		layout.m_aGuardPosts.Insert("-24 0 48");
-		layout.m_aGuardPosts.Insert("24 0 -20");
 		layout.m_aGuardPosts.Insert("-24 0 0");
 		layout.m_aGuardPosts.Insert("-36 0 4");
 		layout.m_aGuardPosts.Insert("-20 0 -28");
-		layout.m_aGuardPosts.Insert("-36 0 -12");
 		layout.m_aGuardPosts.Insert("-36 0 36");
 		layout.m_aGuardPosts.Insert("32 0 36");
 		layout.m_aGuardPosts.Insert("12 0 -12");
 		layout.m_aGuardPosts.Insert("-52 0 -32");
 		layout.m_aGuardPosts.Insert("-32 0 44");
 		layout.m_aGuardPosts.Insert("40 0 -12");
+		layout.m_aGuardPosts.Insert("-56 0 -40");
+		layout.m_aGuardPosts.Insert("-16 0 -32");
 	}
 	protected static void Build22(IA_HeadquartersSiteLayout layout)
 	{
@@ -5558,6 +5644,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongB", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallA", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("-8 0 27", 270);
+		layout.AddAirRaidBunker("54 0 41", 90);
+		layout.AddAirRaidBunker("34 0 -11", 180);
+		layout.AddAirRaidBunker("-20 0 -21", 180);
 		layout.AddObstacle("HQTeeth", "-63.252 0 54.311", 0);
 		layout.AddObstacle("HQWire", "-53.252 0 54.311", 0);
 		layout.AddObstacle("HQTeeth", "-43.252 0 54.311", 0);
@@ -5659,7 +5749,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 25.586", 0, 0.3);
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 29.446", 0, 0.3);
 		layout.AddDressingItem("HQDirtCross", "0 0 29.536", 0, 0.8);
-		layout.AddDressingItem("VigBriefing", "-7 0 29.036", 90, 0.35);
+		layout.AddDressingItem("VigBriefing", "-16.499 0 42.62", 0, 0.35);
 		layout.AddDressingItem("VigLight", "11.65 0 -48.76", 90, 0.35);
 		layout.AddDressingItem("VigRest", "19.103 0 -2.39", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "22.897 0 -26.26", 90, 0.35);
@@ -5678,8 +5768,8 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "25.377 0 27.85", 90, 0.35);
 		layout.AddDressingItem("HQDirtPatch", "60 0 -9.625", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "60 0 -7.625", 0, 0.35);
-		layout.AddDressingItem("VigComms", "-15.499 0 41.12", 90, 0.35);
-		layout.AddDressingItem("VigPower", "8.199 0 42.62", 0, 0.35);
+		layout.AddDressingItem("VigComms", "7.499 0 41.12", 90, 0.35);
+		layout.AddDressingItem("VigPower", "8.699 0 45.62", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "11.65 0 -10.514", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "5.297 0 -5.39", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "34.53 0 19.486", 0, 0.35);
@@ -5687,9 +5777,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStoresCovered", "-24.734 0 21.44", 90, 0.35);
 		layout.AddDressingItem("VigWater", "-14.08 0 -5.111", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-59.752 0 -8");
-		layout.m_aGuardPosts.Insert("52 0 40");
 		layout.m_aGuardPosts.Insert("-56 0 -44");
-		layout.m_aGuardPosts.Insert("-20 0 -16");
 		layout.m_aGuardPosts.Insert("52 0 32");
 		layout.m_aGuardPosts.Insert("-60 0 -28");
 		layout.m_aGuardPosts.Insert("-52 0 28");
@@ -5712,7 +5800,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("44 0 36");
 		layout.m_aGuardPosts.Insert("36 0 44");
 		layout.m_aGuardPosts.Insert("-40 0 -48");
-		layout.m_aGuardPosts.Insert("48 0 44");
 		layout.m_aGuardPosts.Insert("16 0 -40");
 		layout.m_aGuardPosts.Insert("24 0 12");
 		layout.m_aGuardPosts.Insert("-24 0 -36");
@@ -5722,6 +5809,9 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-32 0 8");
 		layout.m_aGuardPosts.Insert("44 0 -40");
 		layout.m_aGuardPosts.Insert("-56 0 48");
+		layout.m_aGuardPosts.Insert("-40 0 40");
+		layout.m_aGuardPosts.Insert("52 0 8");
+		layout.m_aGuardPosts.Insert("12 0 32");
 	}
 	protected static void Build23(IA_HeadquartersSiteLayout layout)
 	{
@@ -5808,6 +5898,10 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallLongA", "-64.752 0 40.47", 270, 3);
 		layout.AddWallRun("HQCamoWallPanel", "-64.752 0 45.866", 270, 3);
 		layout.AddWallRun("HQWallA", "-64.752 0 49.913", 270, 3);
+		layout.AddAirRaidBunker("8 0 27", 90);
+		layout.AddAirRaidBunker("-54 0 41", 270);
+		layout.AddAirRaidBunker("-20 0 -21", 180);
+		layout.AddAirRaidBunker("52 0 47", 90);
 		layout.AddObstacle("HQWire", "-63.252 0 54.311", 0);
 		layout.AddObstacle("HQTeeth", "-53.252 0 54.311", 0);
 		layout.AddObstacle("HQTeeth", "-43.252 0 54.311", 0);
@@ -5937,7 +6031,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWater", "54.97 0 -25.111", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-20 0 24");
 		layout.m_aGuardPosts.Insert("-20 0 -4");
-		layout.m_aGuardPosts.Insert("52 0 48");
 		layout.m_aGuardPosts.Insert("36 0 8");
 		layout.m_aGuardPosts.Insert("-32 0 36");
 		layout.m_aGuardPosts.Insert("-20 0 -12");
@@ -5948,13 +6041,11 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("8 0 8");
 		layout.m_aGuardPosts.Insert("-8 0 12");
 		layout.m_aGuardPosts.Insert("36 0 48");
-		layout.m_aGuardPosts.Insert("12 0 24");
 		layout.m_aGuardPosts.Insert("-12 0 -32");
 		layout.m_aGuardPosts.Insert("12 0 -24");
 		layout.m_aGuardPosts.Insert("28 0 40");
 		layout.m_aGuardPosts.Insert("-16 0 8");
 		layout.m_aGuardPosts.Insert("-52 0 0");
-		layout.m_aGuardPosts.Insert("-20 0 -20");
 		layout.m_aGuardPosts.Insert("12 0 -40");
 		layout.m_aGuardPosts.Insert("56 0 36");
 		layout.m_aGuardPosts.Insert("20 0 48");
@@ -5971,6 +6062,9 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("36 0 -48");
 		layout.m_aGuardPosts.Insert("16 0 32");
 		layout.m_aGuardPosts.Insert("-44 0 4");
+		layout.m_aGuardPosts.Insert("32 0 44");
+		layout.m_aGuardPosts.Insert("-56 0 20");
+		layout.m_aGuardPosts.Insert("28 0 -40");
 	}
 	protected static void Build24(IA_HeadquartersSiteLayout layout)
 	{
@@ -6061,6 +6155,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallA", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("8 0 22", 90);
+		layout.AddAirRaidBunker("-48 0 28", 270);
+		layout.AddAirRaidBunker("-14 0 -22", 180);
 		layout.AddObstacle("HQTeeth", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQTeeth", "-31.809 0 49.858", 0);
@@ -6117,7 +6214,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigMedical", "-24.161 0 10.81", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-41.433 0 -28.86", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 24.446", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "-51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "-51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 -32.151", 0, 0.35);
@@ -6147,7 +6244,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-27 0 17");
 		layout.m_aGuardPosts.Insert("-19 0 -7");
 		layout.m_aGuardPosts.Insert("25 0 -43");
-		layout.m_aGuardPosts.Insert("-47 0 29");
 		layout.m_aGuardPosts.Insert("-35 0 13");
 		layout.m_aGuardPosts.Insert("17 0 -39");
 		layout.m_aGuardPosts.Insert("-47 0 -15");
@@ -6156,6 +6252,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-19 0 -43");
 		layout.m_aGuardPosts.Insert("17 0 -15");
 		layout.m_aGuardPosts.Insert("-35 0 33");
+		layout.m_aGuardPosts.Insert("37 0 37");
 	}
 	protected static void Build25(IA_HeadquartersSiteLayout layout)
 	{
@@ -6246,6 +6343,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallA", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("-8 0 22", 270);
+		layout.AddAirRaidBunker("48 0 28", 90);
+		layout.AddAirRaidBunker("14 0 -22", 180);
 		layout.AddObstacle("HQWire", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQTeeth", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-31.809 0 49.858", 0);
@@ -6295,7 +6395,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQRoadPlates", "0 0 17.472", 0, 0.3);
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 23.262", 0, 0.3);
 		layout.AddDressingItem("HQDirtCross", "0 0 24.146", 0, 0.8);
-		layout.AddDressingItem("VigBriefing", "-7 0 23.646", 90, 0.35);
+		layout.AddDressingItem("VigBriefing", "-16.499 0 37.23", 0, 0.35);
 		layout.AddDressingItem("VigLight", "12.999 0 -43.36", 90, 0.35);
 		layout.AddDressingItem("VigRest", "-19.103 0 -6.99", 90, 0.35);
 		layout.AddDressingItem("VigStores", "19.804 0 -11.16", 0, 0.35);
@@ -6304,7 +6404,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigRest", "37.253 0 29.01", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-1.88 0 24.446", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 32.151", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-4.497 0 -7.23", 90, 0.8);
@@ -6312,8 +6412,8 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "-29.24 0 12.985", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "22.647 0 29.25", 90, 0.8);
 		layout.AddDressingItem("HQDuckboards", "20.647 0 29.25", 90, 0.35);
-		layout.AddDressingItem("VigComms", "-15.499 0 35.73", 90, 0.35);
-		layout.AddDressingItem("VigPower", "8.199 0 37.23", 0, 0.35);
+		layout.AddDressingItem("VigComms", "7.499 0 35.73", 90, 0.35);
+		layout.AddDressingItem("VigPower", "8.699 0 40.23", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-11.65 0 -15.114", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "-5.297 0 -9.99", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "39.596 0 -11.16", 90, 0.35);
@@ -6434,6 +6534,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallA", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("8 0 22", 90);
+		layout.AddAirRaidBunker("-48 0 28", 270);
+		layout.AddAirRaidBunker("-14 0 -22", 180);
 		layout.AddObstacle("HQTeeth", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQTeeth", "-31.809 0 49.858", 0);
@@ -6491,7 +6594,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigRest", "-19.103 0 9.01", 90, 0.35);
 		layout.AddDressingItem("VigPower", "-38.01 0 25.71", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-1.88 0 24.446", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "-51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "-51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 -32.151", 0, 0.35);
@@ -6618,6 +6721,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallB", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("-8 0 22", 270);
+		layout.AddAirRaidBunker("48 0 28", 90);
+		layout.AddAirRaidBunker("18 0 -20", 180);
 		layout.AddObstacle("HQWire", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQHedgehogs", "-31.809 0 49.858", 0);
@@ -6675,7 +6781,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigMedical", "-22.255 0 -14.69", 0, 0.35);
 		layout.AddDressingItem("VigPower", "-38.01 0 19.71", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 24.446", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboard", "-51.45 0 -34.051", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-4.497 0 -5.23", 90, 0.8);
 		layout.AddDressingItem("HQDirtWorn", "22.647 0 -12.75", 90, 0.8);
@@ -6707,13 +6813,13 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("45 0 17");
 		layout.m_aGuardPosts.Insert("21 0 -35");
 		layout.m_aGuardPosts.Insert("-19 0 41");
-		layout.m_aGuardPosts.Insert("-11 0 17");
 		layout.m_aGuardPosts.Insert("25 0 -23");
 		layout.m_aGuardPosts.Insert("25 0 13");
 		layout.m_aGuardPosts.Insert("33 0 -31");
 		layout.m_aGuardPosts.Insert("37 0 17");
 		layout.m_aGuardPosts.Insert("45 0 -23");
 		layout.m_aGuardPosts.Insert("29 0 -35");
+		layout.m_aGuardPosts.Insert("9 0 17");
 	}
 	protected static void Build28(IA_HeadquartersSiteLayout layout)
 	{
@@ -6802,6 +6908,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallC", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("8 0 20", 90);
+		layout.AddAirRaidBunker("-48 0 28", 270);
+		layout.AddAirRaidBunker("-14 0 -22", 180);
 		layout.AddObstacle("HQWire", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQHedgehogs", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-31.809 0 49.858", 0);
@@ -6859,8 +6968,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigPower", "-20.42 0 11.71", 0, 0.35);
 		layout.AddDressingItem("VigWorkshop", "-36.259 0 25.9", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 24.446", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "6.12 0 22.446", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "-51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "-51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboard", "51.45 0 -34.051", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "4.497 0 -6.75", 90, 0.8);
 		layout.AddDressingItem("HQDirtPatch", "30.36 0 20.985", 0, 0.8);
@@ -6889,13 +6997,13 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-51 0 -35");
 		layout.m_aGuardPosts.Insert("29 0 41");
 		layout.m_aGuardPosts.Insert("-39 0 33");
-		layout.m_aGuardPosts.Insert("-19 0 -23");
 		layout.m_aGuardPosts.Insert("29 0 -35");
 		layout.m_aGuardPosts.Insert("-43 0 1");
 		layout.m_aGuardPosts.Insert("-51 0 9");
 		layout.m_aGuardPosts.Insert("-31 0 -39");
 		layout.m_aGuardPosts.Insert("45 0 -43");
 		layout.m_aGuardPosts.Insert("45 0 5");
+		layout.m_aGuardPosts.Insert("-51 0 -15");
 	}
 	protected static void Build29(IA_HeadquartersSiteLayout layout)
 	{
@@ -6984,6 +7092,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallC", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("-8 0 22", 270);
+		layout.AddAirRaidBunker("48 0 28", 90);
+		layout.AddAirRaidBunker("-14 0 -22", 180);
 		layout.AddObstacle("HQHedgehogs", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-31.809 0 49.858", 0);
@@ -7041,13 +7152,13 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWorkshop", "17.619 0 -16.1", 90, 0.35);
 		layout.AddDressingItem("VigRest", "-37.253 0 -22.99", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 24.446", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-4.497 0 -5.23", 90, 0.8);
 		layout.AddDressingItem("HQDirtPatch", "30.36 0 18.985", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "30.36 0 16.985", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-22.647 0 -23.23", 90, 0.8);
-		layout.AddDressingItem("HQDuckboards", "-20.647 0 -23.23", 90, 0.35);
+		layout.AddDressingItem("HQDuckboard", "-22.547 0 -23.23", 90, 0.35);
 		layout.AddDressingItem("VigComms", "15.499 0 35.73", 90, 0.35);
 		layout.AddDressingItem("VigPower", "16.699 0 40.23", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-11.65 0 -13.114", 0, 0.35);
@@ -7066,7 +7177,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-35 0 -35");
 		layout.m_aGuardPosts.Insert("-43 0 37");
 		layout.m_aGuardPosts.Insert("29 0 33");
-		layout.m_aGuardPosts.Insert("-11 0 -19");
 		layout.m_aGuardPosts.Insert("21 0 21");
 		layout.m_aGuardPosts.Insert("-43 0 13");
 		layout.m_aGuardPosts.Insert("-51 0 -15");
@@ -7080,6 +7190,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-47 0 -31");
 		layout.m_aGuardPosts.Insert("-19 0 -35");
 		layout.m_aGuardPosts.Insert("-47 0 33");
+		layout.m_aGuardPosts.Insert("21 0 -31");
 	}
 	protected static void Build30(IA_HeadquartersSiteLayout layout)
 	{
@@ -7168,6 +7279,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallA", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("8 0 22", 90);
+		layout.AddAirRaidBunker("-48 0 36", 270);
+		layout.AddAirRaidBunker("-18 0 -20", 180);
 		layout.AddObstacle("HQHedgehogs", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQHedgehogs", "-31.809 0 49.858", 0);
@@ -7254,16 +7368,16 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("45 0 -7");
 		layout.m_aGuardPosts.Insert("-19 0 41");
 		layout.m_aGuardPosts.Insert("37 0 -7");
-		layout.m_aGuardPosts.Insert("-19 0 -15");
 		layout.m_aGuardPosts.Insert("21 0 -43");
 		layout.m_aGuardPosts.Insert("9 0 9");
 		layout.m_aGuardPosts.Insert("33 0 17");
-		layout.m_aGuardPosts.Insert("-43 0 41");
 		layout.m_aGuardPosts.Insert("25 0 17");
 		layout.m_aGuardPosts.Insert("25 0 9");
 		layout.m_aGuardPosts.Insert("45 0 -31");
 		layout.m_aGuardPosts.Insert("-27 0 -23");
 		layout.m_aGuardPosts.Insert("-43 0 -7");
+		layout.m_aGuardPosts.Insert("-43 0 -27");
+		layout.m_aGuardPosts.Insert("45 0 -19");
 	}
 	protected static void Build31(IA_HeadquartersSiteLayout layout)
 	{
@@ -7352,6 +7466,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallA", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("-8 0 22", 270);
+		layout.AddAirRaidBunker("48 0 36", 90);
+		layout.AddAirRaidBunker("14 0 -22", 180);
 		layout.AddObstacle("HQWire", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQHedgehogs", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-31.809 0 49.858", 0);
@@ -7401,7 +7518,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQRoadPlates", "0 0 17.472", 0, 0.3);
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 23.262", 0, 0.3);
 		layout.AddDressingItem("HQDirtCross", "0 0 24.146", 0, 0.8);
-		layout.AddDressingItem("VigBriefing", "-7 0 23.646", 90, 0.35);
+		layout.AddDressingItem("VigBriefing", "-16.499 0 37.23", 0, 0.35);
 		layout.AddDressingItem("VigLight", "12.999 0 -43.36", 90, 0.35);
 		layout.AddDressingItem("VigKitchen", "-26.436 0 -6.9", 90, 0.35);
 		layout.AddDressingItem("VigStores", "19.804 0 -11.16", 0, 0.35);
@@ -7414,8 +7531,8 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "22.647 0 -34.75", 90, 0.8);
 		layout.AddDressingItem("HQDuckboards", "20.647 0 -34.75", 90, 0.35);
-		layout.AddDressingItem("VigComms", "-15.499 0 35.73", 90, 0.35);
-		layout.AddDressingItem("VigPower", "8.199 0 37.23", 0, 0.35);
+		layout.AddDressingItem("VigComms", "7.499 0 35.73", 90, 0.35);
+		layout.AddDressingItem("VigPower", "8.699 0 40.23", 90, 0.35);
 		layout.AddDressingItem("VigMess", "-24.736 0 -12.9", 90, 0.35);
 		layout.AddDressingItem("VigWash", "-24.436 0 -0.9", 90, 0.35);
 		layout.AddDressingItem("VigSanitation", "-14.62 0 -19.914", 90, 0.35);
@@ -7426,9 +7543,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWaste", "23.447 0 -37.99", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-50.309 0 -8");
 		layout.m_aGuardPosts.Insert("50.309 0 -8");
-		layout.m_aGuardPosts.Insert("17 0 -23");
 		layout.m_aGuardPosts.Insert("41 0 -27");
-		layout.m_aGuardPosts.Insert("13 0 -27");
 		layout.m_aGuardPosts.Insert("49 0 -19");
 		layout.m_aGuardPosts.Insert("33 0 13");
 		layout.m_aGuardPosts.Insert("-31 0 33");
@@ -7438,7 +7553,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-35 0 -27");
 		layout.m_aGuardPosts.Insert("-51 0 41");
 		layout.m_aGuardPosts.Insert("13 0 25");
-		layout.m_aGuardPosts.Insert("13 0 37");
 		layout.m_aGuardPosts.Insert("49 0 25");
 		layout.m_aGuardPosts.Insert("-35 0 -15");
 		layout.m_aGuardPosts.Insert("17 0 -31");
@@ -7448,6 +7562,9 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("45 0 17");
 		layout.m_aGuardPosts.Insert("13 0 -11");
 		layout.m_aGuardPosts.Insert("-11 0 -39");
+		layout.m_aGuardPosts.Insert("-27 0 -39");
+		layout.m_aGuardPosts.Insert("-51 0 21");
+		layout.m_aGuardPosts.Insert("-39 0 41");
 	}
 	protected static void Build32(IA_HeadquartersSiteLayout layout)
 	{
@@ -7536,6 +7653,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallA", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("8 0 22", 90);
+		layout.AddAirRaidBunker("-48 0 36", 270);
+		layout.AddAirRaidBunker("-14 0 -22", 180);
 		layout.AddObstacle("HQHedgehogs", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQHedgehogs", "-31.809 0 49.858", 0);
@@ -7618,7 +7738,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-43 0 -43");
 		layout.m_aGuardPosts.Insert("49 0 17");
 		layout.m_aGuardPosts.Insert("49 0 -15");
-		layout.m_aGuardPosts.Insert("-15 0 -23");
 		layout.m_aGuardPosts.Insert("-43 0 -31");
 		layout.m_aGuardPosts.Insert("-31 0 41");
 		layout.m_aGuardPosts.Insert("45 0 -7");
@@ -7631,10 +7750,11 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-39 0 5");
 		layout.m_aGuardPosts.Insert("-7 0 -15");
 		layout.m_aGuardPosts.Insert("41 0 1");
-		layout.m_aGuardPosts.Insert("13 0 21");
 		layout.m_aGuardPosts.Insert("-31 0 9");
 		layout.m_aGuardPosts.Insert("37 0 17");
 		layout.m_aGuardPosts.Insert("21 0 13");
+		layout.m_aGuardPosts.Insert("41 0 -43");
+		layout.m_aGuardPosts.Insert("33 0 9");
 	}
 	protected static void Build33(IA_HeadquartersSiteLayout layout)
 	{
@@ -7725,6 +7845,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallC", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("-8 0 22", 270);
+		layout.AddAirRaidBunker("48 0 28", 90);
+		layout.AddAirRaidBunker("22 0 -18", 180);
 		layout.AddObstacle("HQTeeth", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQTeeth", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-31.809 0 49.858", 0);
@@ -7782,7 +7905,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStores", "-35.414 0 -13.16", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 24.446", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 32.151", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-4.497 0 -5.23", 90, 0.8);
@@ -7820,8 +7943,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-15 0 -39");
 		layout.m_aGuardPosts.Insert("17 0 25");
 		layout.m_aGuardPosts.Insert("17 0 -31");
-		layout.m_aGuardPosts.Insert("-7 0 17");
 		layout.m_aGuardPosts.Insert("41 0 5");
+		layout.m_aGuardPosts.Insert("-35 0 -27");
 	}
 	protected static void Build34(IA_HeadquartersSiteLayout layout)
 	{
@@ -7912,6 +8035,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallB", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("8 0 20", 90);
+		layout.AddAirRaidBunker("-48 0 28", 270);
+		layout.AddAirRaidBunker("-22 0 -18", 180);
 		layout.AddObstacle("HQTeeth", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQWire", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQTeeth", "-31.809 0 49.858", 0);
@@ -7969,8 +8095,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStores", "35.414 0 -13.16", 0, 0.35);
 		layout.AddDressingItem("VigMedical", "19.719 0 -31.19", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 24.446", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "6.12 0 22.446", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "-51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "-51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 -32.151", 0, 0.35);
@@ -8000,16 +8125,16 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("29 0 1");
 		layout.m_aGuardPosts.Insert("49 0 25");
 		layout.m_aGuardPosts.Insert("21 0 -11");
-		layout.m_aGuardPosts.Insert("-19 0 -11");
 		layout.m_aGuardPosts.Insert("17 0 -19");
 		layout.m_aGuardPosts.Insert("25 0 5");
 		layout.m_aGuardPosts.Insert("-39 0 -23");
 		layout.m_aGuardPosts.Insert("-43 0 -35");
 		layout.m_aGuardPosts.Insert("45 0 1");
 		layout.m_aGuardPosts.Insert("-19 0 41");
-		layout.m_aGuardPosts.Insert("-23 0 -15");
 		layout.m_aGuardPosts.Insert("-23 0 25");
 		layout.m_aGuardPosts.Insert("-27 0 -31");
+		layout.m_aGuardPosts.Insert("13 0 13");
+		layout.m_aGuardPosts.Insert("-35 0 -43");
 	}
 	protected static void Build35(IA_HeadquartersSiteLayout layout)
 	{
@@ -8100,6 +8225,9 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-55.309 0 33.725", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-55.309 0 39.121", 270, 3);
 		layout.AddWallRun("HQWallB", "-55.309 0 44.517", 270, 3);
+		layout.AddAirRaidBunker("-8 0 22", 270);
+		layout.AddAirRaidBunker("48 0 28", 90);
+		layout.AddAirRaidBunker("14 0 -22", 180);
 		layout.AddObstacle("HQWire", "-53.809 0 49.858", 0);
 		layout.AddObstacle("HQTeeth", "-42.809 0 49.858", 0);
 		layout.AddObstacle("HQTeeth", "-31.809 0 49.858", 0);
@@ -8158,7 +8286,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigMedical", "-39.881 0 22.81", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 24.446", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 32.151", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "51.45 0 32.151", 0, 0.35);
+		layout.AddDressingItem("HQDuckboard", "51.45 0 34.051", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "51.45 0 -32.151", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-4.497 0 -5.23", 90, 0.8);
@@ -8179,13 +8307,11 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("33 0 -27");
 		layout.m_aGuardPosts.Insert("29 0 9");
 		layout.m_aGuardPosts.Insert("-15 0 -35");
-		layout.m_aGuardPosts.Insert("-7 0 17");
 		layout.m_aGuardPosts.Insert("-35 0 9");
 		layout.m_aGuardPosts.Insert("-39 0 -35");
 		layout.m_aGuardPosts.Insert("45 0 -31");
 		layout.m_aGuardPosts.Insert("45 0 -19");
 		layout.m_aGuardPosts.Insert("-23 0 1");
-		layout.m_aGuardPosts.Insert("45 0 25");
 		layout.m_aGuardPosts.Insert("45 0 41");
 		layout.m_aGuardPosts.Insert("29 0 33");
 		layout.m_aGuardPosts.Insert("-11 0 -43");
@@ -8195,8 +8321,10 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-11 0 9");
 		layout.m_aGuardPosts.Insert("-23 0 -31");
 		layout.m_aGuardPosts.Insert("-51 0 21");
-		layout.m_aGuardPosts.Insert("13 0 -19");
 		layout.m_aGuardPosts.Insert("25 0 5");
+		layout.m_aGuardPosts.Insert("41 0 -35");
+		layout.m_aGuardPosts.Insert("25 0 -31");
+		layout.m_aGuardPosts.Insert("-15 0 41");
 	}
 	protected static void Build36(IA_HeadquartersSiteLayout layout)
 	{
@@ -8286,6 +8414,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallA", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("-15 0 34", 270);
+		layout.AddAirRaidBunker("37 0 4", 90);
 		layout.AddObstacle("HQTeeth", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQTeeth", "-19.017 0 57.904", 0);
@@ -8366,7 +8496,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("40 0 -15");
 		layout.m_aGuardPosts.Insert("40 0 -27");
 		layout.m_aGuardPosts.Insert("28 0 21");
-		layout.m_aGuardPosts.Insert("32 0 1");
 		layout.m_aGuardPosts.Insert("-28 0 -3");
 		layout.m_aGuardPosts.Insert("-28 0 -31");
 		layout.m_aGuardPosts.Insert("-16 0 -51");
@@ -8376,6 +8505,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("40 0 25");
 		layout.m_aGuardPosts.Insert("16 0 29");
 		layout.m_aGuardPosts.Insert("8 0 1");
+		layout.m_aGuardPosts.Insert("28 0 33");
 	}
 	protected static void Build37(IA_HeadquartersSiteLayout layout)
 	{
@@ -8465,6 +8595,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallA", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("9 0 28", 90);
+		layout.AddAirRaidBunker("-39 0 8", 270);
 		layout.AddObstacle("HQWire", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQTeeth", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-19.017 0 57.904", 0);
@@ -8521,7 +8653,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigMedical", "-24.161 0 14.71", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "21.147 0 -24.95", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 32.536", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "6.12 0 30.536", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-40.66 0 40.251", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "40.66 0 40.251", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-40.66 0 -40.251", 0, 0.35);
@@ -8644,6 +8775,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallA", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("-11 0 36", 270);
+		layout.AddAirRaidBunker("37 0 4", 90);
 		layout.AddObstacle("HQTeeth", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQTeeth", "-19.017 0 57.904", 0);
@@ -8823,6 +8956,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallB", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("9 0 30", 90);
+		layout.AddAirRaidBunker("-37 0 4", 270);
 		layout.AddObstacle("HQWire", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQHedgehogs", "-19.017 0 57.904", 0);
@@ -8899,20 +9034,20 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("32 0 9");
 		layout.m_aGuardPosts.Insert("24 0 -27");
 		layout.m_aGuardPosts.Insert("-28 0 29");
-		layout.m_aGuardPosts.Insert("12 0 29");
-		layout.m_aGuardPosts.Insert("-40 0 5");
 		layout.m_aGuardPosts.Insert("-20 0 9");
 		layout.m_aGuardPosts.Insert("16 0 -19");
 		layout.m_aGuardPosts.Insert("-28 0 -3");
 		layout.m_aGuardPosts.Insert("-28 0 45");
 		layout.m_aGuardPosts.Insert("-40 0 33");
 		layout.m_aGuardPosts.Insert("-20 0 1");
-		layout.m_aGuardPosts.Insert("-32 0 5");
 		layout.m_aGuardPosts.Insert("24 0 25");
 		layout.m_aGuardPosts.Insert("-12 0 1");
 		layout.m_aGuardPosts.Insert("-36 0 -35");
 		layout.m_aGuardPosts.Insert("20 0 37");
 		layout.m_aGuardPosts.Insert("-28 0 -27");
+		layout.m_aGuardPosts.Insert("-12 0 -39");
+		layout.m_aGuardPosts.Insert("20 0 -31");
+		layout.m_aGuardPosts.Insert("12 0 -7");
 	}
 	protected static void Build40(IA_HeadquartersSiteLayout layout)
 	{
@@ -9000,6 +9135,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallC", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("11 0 36", 90);
+		layout.AddAirRaidBunker("-23 0 -8", 180);
 		layout.AddObstacle("HQWire", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQHedgehogs", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-19.017 0 57.904", 0);
@@ -9051,10 +9188,10 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtCross", "0 0 32.236", 0, 0.8);
 		layout.AddDressingItem("VigBriefing", "-16.499 0 45.32", 0, 0.35);
 		layout.AddDressingItem("VigLight", "12.999 0 -51.46", 90, 0.35);
-		layout.AddDressingItem("VigRest", "-19.103 0 -13.09", 90, 0.35);
+		layout.AddDressingItem("VigRest", "-19.103 0 -14.59", 90, 0.35);
 		layout.AddDressingItem("VigStores", "14.414 0 -15.26", 0, 0.35);
 		layout.AddDressingItem("VigMedical", "-37.355 0 13.22", 0, 0.35);
-		layout.AddDressingItem("VigPower", "16.2 0 41.62", 0, 0.35);
+		layout.AddDressingItem("VigPower", "32.62 0 41.62", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-1.88 0 32.536", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-40.66 0 40.251", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "40.66 0 -40.251", 0, 0.35);
@@ -9064,7 +9201,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigComms", "-7 0 32.736", 0, 0.35);
 		layout.AddDressingItem("VigPower", "8.199 0 45.32", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-11.65 0 -21.214", 0, 0.35);
-		layout.AddDressingItem("VigWaste", "-5.297 0 -16.09", 90, 0.35);
+		layout.AddDressingItem("VigWaste", "-18.303 0 -11.59", 0, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "34.206 0 -15.26", 90, 0.35);
 		layout.AddDressingItem("VigWater", "-37.555 0 7.22", 0, 0.35);
 		layout.m_aGuardPosts.Insert("-39.517 0 -8");
@@ -9174,6 +9311,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallC", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("9 0 30", 90);
+		layout.AddAirRaidBunker("-39 0 8", 270);
 		layout.AddObstacle("HQHedgehogs", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-19.017 0 57.904", 0);
@@ -9248,7 +9387,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-24 0 17");
 		layout.m_aGuardPosts.Insert("-8 0 21");
 		layout.m_aGuardPosts.Insert("-40 0 25");
-		layout.m_aGuardPosts.Insert("8 0 25");
 		layout.m_aGuardPosts.Insert("32 0 -23");
 		layout.m_aGuardPosts.Insert("28 0 5");
 		layout.m_aGuardPosts.Insert("28 0 -3");
@@ -9262,6 +9400,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("8 0 -51");
 		layout.m_aGuardPosts.Insert("20 0 -35");
 		layout.m_aGuardPosts.Insert("32 0 9");
+		layout.m_aGuardPosts.Insert("16 0 9");
 	}
 	protected static void Build42(IA_HeadquartersSiteLayout layout)
 	{
@@ -9349,6 +9488,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallA", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("-15 0 34", 270);
+		layout.AddAirRaidBunker("37 0 4", 90);
 		layout.AddObstacle("HQHedgehogs", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQHedgehogs", "-19.017 0 57.904", 0);
@@ -9433,12 +9574,12 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-32 0 -15");
 		layout.m_aGuardPosts.Insert("-36 0 5");
 		layout.m_aGuardPosts.Insert("36 0 17");
-		layout.m_aGuardPosts.Insert("40 0 1");
 		layout.m_aGuardPosts.Insert("28 0 21");
 		layout.m_aGuardPosts.Insert("40 0 -15");
 		layout.m_aGuardPosts.Insert("-24 0 -35");
 		layout.m_aGuardPosts.Insert("-8 0 -35");
 		layout.m_aGuardPosts.Insert("24 0 49");
+		layout.m_aGuardPosts.Insert("12 0 -31");
 	}
 	protected static void Build43(IA_HeadquartersSiteLayout layout)
 	{
@@ -9526,6 +9667,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallA", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("9 0 28", 90);
+		layout.AddAirRaidBunker("-39 0 8", 270);
 		layout.AddObstacle("HQWire", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQHedgehogs", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-19.017 0 57.904", 0);
@@ -9583,7 +9726,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigPower", "20.42 0 15.62", 0, 0.35);
 		layout.AddDressingItem("VigWorkshop", "17.951 0 35.81", 90, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "6.12 0 32.536", 0, 0.8);
-		layout.AddDressingItem("HQDuckboards", "6.12 0 30.536", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-40.66 0 -40.251", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "40.66 0 -40.251", 0, 0.35);
 		layout.AddDressingItem("VigComms", "15.499 0 43.82", 90, 0.35);
@@ -9701,6 +9843,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallA", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("19 0 46", 90);
+		layout.AddAirRaidBunker("-37 0 4", 270);
 		layout.AddObstacle("HQHedgehogs", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQHedgehogs", "-19.017 0 57.904", 0);
@@ -9750,7 +9894,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQRoadPlates", "0 0 24.818", 0, 0.3);
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 30.608", 0, 0.3);
 		layout.AddDressingItem("HQDirtCross", "0 0 32.236", 0, 0.8);
-		layout.AddDressingItem("VigBriefing", "16.499 0 45.32", 0, 0.35);
+		layout.AddDressingItem("VigBriefing", "-8.499 0 49.82", 0, 0.35);
 		layout.AddDressingItem("VigLight", "12.999 0 -51.46", 90, 0.35);
 		layout.AddDressingItem("VigKitchen", "-26.436 0 -12.99", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "12.777 0 -14.95", 90, 0.35);
@@ -9761,7 +9905,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "-40.66 0 -40.251", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "40.66 0 -40.251", 0, 0.35);
 		layout.AddDressingItem("VigComms", "-7.499 0 43.82", 90, 0.35);
-		layout.AddDressingItem("VigPower", "-8.699 0 48.32", 90, 0.35);
+		layout.AddDressingItem("VigPower", "13 0 31.536", 0, 0.35);
 		layout.AddDressingItem("VigMess", "-24.736 0 -18.99", 90, 0.35);
 		layout.AddDressingItem("VigWash", "-24.436 0 -6.99", 90, 0.35);
 		layout.AddDressingItem("VigSanitation", "-14.62 0 -26.004", 90, 0.35);
@@ -9775,7 +9919,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("12 0 -35");
 		layout.m_aGuardPosts.Insert("40 0 -19");
 		layout.m_aGuardPosts.Insert("-28 0 -7");
-		layout.m_aGuardPosts.Insert("-40 0 1");
 		layout.m_aGuardPosts.Insert("-32 0 -31");
 		layout.m_aGuardPosts.Insert("-20 0 1");
 		layout.m_aGuardPosts.Insert("16 0 1");
@@ -9788,6 +9931,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("36 0 -43");
 		layout.m_aGuardPosts.Insert("40 0 45");
 		layout.m_aGuardPosts.Insert("-28 0 13");
+		layout.m_aGuardPosts.Insert("-36 0 -3");
 	}
 	protected static void Build45(IA_HeadquartersSiteLayout layout)
 	{
@@ -9877,6 +10021,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallC", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("-9 0 22", 180);
+		layout.AddAirRaidBunker("39 0 38", 90);
 		layout.AddObstacle("HQTeeth", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQTeeth", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-19.017 0 57.904", 0);
@@ -9947,7 +10093,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigRest", "37.16 0 -29.414", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 32.536", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-40.66 0 40.251", 0, 0.35);
-		layout.AddDressingItem("HQDuckboards", "40.66 0 40.251", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "-40.66 0 -40.251", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "40.66 0 -40.251", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "4.497 0 -12.85", 90, 0.8);
@@ -9981,8 +10126,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-20 0 13");
 		layout.m_aGuardPosts.Insert("28 0 -35");
 		layout.m_aGuardPosts.Insert("16 0 5");
-		layout.m_aGuardPosts.Insert("32 0 41");
 		layout.m_aGuardPosts.Insert("32 0 5");
+		layout.m_aGuardPosts.Insert("36 0 -43");
 	}
 	protected static void Build46(IA_HeadquartersSiteLayout layout)
 	{
@@ -10072,6 +10217,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallB", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("-9 0 30", 270);
+		layout.AddAirRaidBunker("37 0 4", 90);
 		layout.AddObstacle("HQTeeth", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQWire", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQTeeth", "-19.017 0 57.904", 0);
@@ -10135,7 +10282,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQRoadPlates", "0 0 24.818", 0, 0.3);
 		layout.AddDressingItem("HQRoadPlatesShort", "0 0 30.608", 0, 0.3);
 		layout.AddDressingItem("HQDirtCross", "0 0 32.236", 0, 0.8);
-		layout.AddDressingItem("VigBriefing", "-7 0 31.736", 90, 0.35);
+		layout.AddDressingItem("VigBriefing", "-16.499 0 45.32", 0, 0.35);
 		layout.AddDressingItem("VigLight", "12.999 0 -51.46", 90, 0.35);
 		layout.AddDressingItem("VigRest", "-19.103 0 -13.09", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "27.663 0 13.05", 90, 0.35);
@@ -10150,8 +10297,8 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtPatch", "23.85 0 -10.315", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "23.85 0 -8.315", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-4.497 0 16.67", 90, 0.8);
-		layout.AddDressingItem("VigComms", "-15.499 0 43.82", 90, 0.35);
-		layout.AddDressingItem("VigPower", "8.199 0 45.32", 0, 0.35);
+		layout.AddDressingItem("VigComms", "7.499 0 43.82", 90, 0.35);
+		layout.AddDressingItem("VigPower", "8.699 0 48.32", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-11.65 0 -21.214", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "-5.297 0 -16.09", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-11.65 0 8.786", 0, 0.35);
@@ -10160,7 +10307,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-39.517 0 -8");
 		layout.m_aGuardPosts.Insert("39.517 0 -8");
 		layout.m_aGuardPosts.Insert("32 0 -31");
-		layout.m_aGuardPosts.Insert("36 0 1");
 		layout.m_aGuardPosts.Insert("-20 0 21");
 		layout.m_aGuardPosts.Insert("16 0 -7");
 		layout.m_aGuardPosts.Insert("-32 0 13");
@@ -10177,6 +10323,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -7");
 		layout.m_aGuardPosts.Insert("-32 0 -3");
 		layout.m_aGuardPosts.Insert("-36 0 29");
+		layout.m_aGuardPosts.Insert("-24 0 33");
 	}
 	protected static void Build47(IA_HeadquartersSiteLayout layout)
 	{
@@ -10266,6 +10413,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-44.517 0 41.819", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-44.517 0 47.215", 270, 3);
 		layout.AddWallRun("HQWallB", "-44.517 0 52.611", 270, 3);
+		layout.AddAirRaidBunker("11 0 36", 90);
+		layout.AddAirRaidBunker("-37 0 4", 270);
 		layout.AddObstacle("HQWire", "-43.017 0 57.904", 0);
 		layout.AddObstacle("HQTeeth", "-31.017 0 57.904", 0);
 		layout.AddObstacle("HQTeeth", "-19.017 0 57.904", 0);
@@ -10359,7 +10508,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("36 0 41");
 		layout.m_aGuardPosts.Insert("20 0 41");
 		layout.m_aGuardPosts.Insert("36 0 -15");
-		layout.m_aGuardPosts.Insert("-40 0 9");
 		layout.m_aGuardPosts.Insert("-8 0 -39");
 		layout.m_aGuardPosts.Insert("24 0 1");
 		layout.m_aGuardPosts.Insert("-32 0 45");
@@ -10371,6 +10519,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("40 0 33");
 		layout.m_aGuardPosts.Insert("12 0 -27");
 		layout.m_aGuardPosts.Insert("-32 0 13");
+		layout.m_aGuardPosts.Insert("-24 0 9");
 	}
 	protected static void Build48(IA_HeadquartersSiteLayout layout)
 	{
@@ -10444,6 +10593,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallA", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("-15 0 20", 270);
+		layout.AddAirRaidBunker("35 0 0", 90);
 		layout.AddObstacle("HQTeeth", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQTeeth", "-14.97 0 41.811", 0);
@@ -10510,11 +10661,11 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("28 0 9");
 		layout.m_aGuardPosts.Insert("32 0 17");
 		layout.m_aGuardPosts.Insert("12 0 -27");
-		layout.m_aGuardPosts.Insert("36 0 1");
 		layout.m_aGuardPosts.Insert("20 0 25");
 		layout.m_aGuardPosts.Insert("-24 0 29");
 		layout.m_aGuardPosts.Insert("32 0 -27");
-		layout.m_aGuardPosts.Insert("-16 0 17");
+		layout.m_aGuardPosts.Insert("-32 0 9");
+		layout.m_aGuardPosts.Insert("-36 0 -3");
 	}
 	protected static void Build49(IA_HeadquartersSiteLayout layout)
 	{
@@ -10587,6 +10738,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallA", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("-9 0 14", 270);
+		layout.AddAirRaidBunker("35 0 0", 90);
 		layout.AddObstacle("HQWire", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQTeeth", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-14.97 0 41.811", 0);
@@ -10644,10 +10797,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-35.47 0 -8");
 		layout.m_aGuardPosts.Insert("-24 0 33");
 		layout.m_aGuardPosts.Insert("28 0 -35");
-		layout.m_aGuardPosts.Insert("32 0 -3");
 		layout.m_aGuardPosts.Insert("-36 0 -23");
 		layout.m_aGuardPosts.Insert("-28 0 -15");
-		layout.m_aGuardPosts.Insert("36 0 5");
 		layout.m_aGuardPosts.Insert("-12 0 -31");
 		layout.m_aGuardPosts.Insert("-36 0 -3");
 		layout.m_aGuardPosts.Insert("-8 0 -35");
@@ -10657,6 +10808,8 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-28 0 9");
 		layout.m_aGuardPosts.Insert("24 0 33");
 		layout.m_aGuardPosts.Insert("-32 0 21");
+		layout.m_aGuardPosts.Insert("28 0 9");
+		layout.m_aGuardPosts.Insert("24 0 -31");
 	}
 	protected static void Build50(IA_HeadquartersSiteLayout layout)
 	{
@@ -10729,6 +10882,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallA", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("-15 0 20", 270);
+		layout.AddAirRaidBunker("35 0 0", 90);
 		layout.AddObstacle("HQTeeth", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQTeeth", "-14.97 0 41.811", 0);
@@ -10785,7 +10940,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWater", "-14.08 0 -15.621", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-35.47 0 -8");
 		layout.m_aGuardPosts.Insert("35.47 0 -8");
-		layout.m_aGuardPosts.Insert("28 0 1");
 		layout.m_aGuardPosts.Insert("-24 0 -23");
 		layout.m_aGuardPosts.Insert("8 0 -15");
 		layout.m_aGuardPosts.Insert("-28 0 -15");
@@ -10793,12 +10947,13 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("32 0 -31");
 		layout.m_aGuardPosts.Insert("16 0 -3");
 		layout.m_aGuardPosts.Insert("-24 0 21");
+		layout.m_aGuardPosts.Insert("28 0 5");
 		layout.m_aGuardPosts.Insert("12 0 -31");
-		layout.m_aGuardPosts.Insert("-20 0 17");
 		layout.m_aGuardPosts.Insert("-12 0 9");
 		layout.m_aGuardPosts.Insert("-32 0 -3");
 		layout.m_aGuardPosts.Insert("-12 0 -23");
 		layout.m_aGuardPosts.Insert("36 0 -35");
+		layout.m_aGuardPosts.Insert("28 0 -35");
 	}
 	protected static void Build51(IA_HeadquartersSiteLayout layout)
 	{
@@ -10872,6 +11027,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallC", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("-9 0 14", 270);
+		layout.AddAirRaidBunker("35 0 0", 90);
 		layout.AddObstacle("HQWire", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQHedgehogs", "-14.97 0 41.811", 0);
@@ -10937,7 +11094,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-8 0 -19");
 		layout.m_aGuardPosts.Insert("28 0 5");
 		layout.m_aGuardPosts.Insert("12 0 -3");
-		layout.m_aGuardPosts.Insert("-12 0 13");
 		layout.m_aGuardPosts.Insert("36 0 -31");
 		layout.m_aGuardPosts.Insert("-32 0 25");
 		layout.m_aGuardPosts.Insert("-20 0 17");
@@ -10945,6 +11101,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-24 0 33");
 		layout.m_aGuardPosts.Insert("-28 0 21");
 		layout.m_aGuardPosts.Insert("32 0 -27");
+		layout.m_aGuardPosts.Insert("8 0 5");
 	}
 	protected static void Build52(IA_HeadquartersSiteLayout layout)
 	{
@@ -11017,6 +11174,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallB", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("9 0 14", 90);
+		layout.AddAirRaidBunker("-35 0 0", 270);
 		layout.AddObstacle("HQWire", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQHedgehogs", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-14.97 0 41.811", 0);
@@ -11066,7 +11225,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtPatch", "-7.93 0 1.075", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-7.93 0 -0.925", 0, 0.35);
 		layout.AddDressingItem("VigComms", "11.499 0 33.63", 90, 0.35);
-		layout.AddDressingItem("VigPower", "7.5 0 15.846", 90, 0.35);
+		layout.AddDressingItem("VigPower", "-12.699 0 20.13", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "11.65 0 -15.024", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "5.297 0 -9.9", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-12.584 0 -11.07", 90, 0.35);
@@ -11078,15 +11237,15 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("24 0 9");
 		layout.m_aGuardPosts.Insert("16 0 -31");
 		layout.m_aGuardPosts.Insert("20 0 -19");
-		layout.m_aGuardPosts.Insert("-16 0 17");
 		layout.m_aGuardPosts.Insert("-32 0 17");
 		layout.m_aGuardPosts.Insert("32 0 9");
-		layout.m_aGuardPosts.Insert("-32 0 1");
 		layout.m_aGuardPosts.Insert("-8 0 -7");
 		layout.m_aGuardPosts.Insert("28 0 -11");
 		layout.m_aGuardPosts.Insert("-12 0 -23");
+		layout.m_aGuardPosts.Insert("-20 0 17");
 		layout.m_aGuardPosts.Insert("8 0 -23");
 		layout.m_aGuardPosts.Insert("16 0 9");
+		layout.m_aGuardPosts.Insert("-24 0 5");
 	}
 	protected static void Build53(IA_HeadquartersSiteLayout layout)
 	{
@@ -11159,6 +11318,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallB", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("-9 0 14", 270);
+		layout.AddAirRaidBunker("35 0 0", 90);
 		layout.AddObstacle("HQHedgehogs", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-14.97 0 41.811", 0);
@@ -11222,12 +11383,12 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-12 0 -23");
 		layout.m_aGuardPosts.Insert("-32 0 13");
 		layout.m_aGuardPosts.Insert("-24 0 -31");
-		layout.m_aGuardPosts.Insert("36 0 1");
 		layout.m_aGuardPosts.Insert("36 0 -31");
 		layout.m_aGuardPosts.Insert("16 0 17");
 		layout.m_aGuardPosts.Insert("24 0 5");
 		layout.m_aGuardPosts.Insert("8 0 -15");
 		layout.m_aGuardPosts.Insert("20 0 13");
+		layout.m_aGuardPosts.Insert("32 0 25");
 	}
 	protected static void Build54(IA_HeadquartersSiteLayout layout)
 	{
@@ -11301,6 +11462,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallA", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("9 0 14", 90);
+		layout.AddAirRaidBunker("-35 0 32", 270);
 		layout.AddObstacle("HQHedgehogs", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQHedgehogs", "-14.97 0 41.811", 0);
@@ -11348,7 +11511,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "-36.61 0 -24.061", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "36.61 0 -24.061", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "-4.497 0 0.86", 90, 0.8);
-		layout.AddDressingItem("VigComms", "6 0 15.846", 90, 0.35);
+		layout.AddDressingItem("VigComms", "-12.199 0 33.63", 0, 0.35);
 		layout.AddDressingItem("VigPower", "-12.699 0 20.13", 90, 0.35);
 		layout.AddDressingItem("VigMess", "24.736 0 -14.81", 90, 0.35);
 		layout.AddDressingItem("VigWash", "24.436 0 -2.81", 90, 0.35);
@@ -11445,6 +11608,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallA", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("-9 0 14", 270);
+		layout.AddAirRaidBunker("35 0 0", 90);
 		layout.AddObstacle("HQWire", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQHedgehogs", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-14.97 0 41.811", 0);
@@ -11491,7 +11656,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 16.346", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-36.61 0 -24.061", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "36.61 0 -24.061", 0, 0.35);
-		layout.AddDressingItem("VigComms", "-6 0 15.846", 90, 0.35);
+		layout.AddDressingItem("VigComms", "-12.199 0 33.63", 0, 0.35);
 		layout.AddDressingItem("VigPower", "-12.699 0 20.13", 90, 0.35);
 		layout.AddDressingItem("VigMess", "-24.736 0 -12.81", 90, 0.35);
 		layout.AddDressingItem("VigWash", "-24.436 0 -0.81", 90, 0.35);
@@ -11510,10 +11675,10 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("36 0 21");
 		layout.m_aGuardPosts.Insert("-32 0 13");
 		layout.m_aGuardPosts.Insert("-24 0 33");
-		layout.m_aGuardPosts.Insert("-8 0 9");
 		layout.m_aGuardPosts.Insert("-8 0 -35");
 		layout.m_aGuardPosts.Insert("28 0 -31");
 		layout.m_aGuardPosts.Insert("-36 0 -3");
+		layout.m_aGuardPosts.Insert("16 0 -23");
 	}
 	protected static void Build56(IA_HeadquartersSiteLayout layout)
 	{
@@ -11586,6 +11751,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallA", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("9 0 14", 90);
+		layout.AddAirRaidBunker("-35 0 32", 270);
 		layout.AddObstacle("HQHedgehogs", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQHedgehogs", "-14.97 0 41.811", 0);
@@ -11632,8 +11799,8 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDirtWorn", "2.12 0 16.346", 0, 0.8);
 		layout.AddDressingItem("HQDuckboards", "-36.61 0 -24.061", 0, 0.35);
 		layout.AddDressingItem("HQDuckboards", "36.61 0 -24.061", 0, 0.35);
-		layout.AddDressingItem("VigComms", "6 0 15.846", 90, 0.35);
-		layout.AddDressingItem("VigPower", "-12.699 0 20.13", 90, 0.35);
+		layout.AddDressingItem("VigComms", "-11.499 0 20.13", 90, 0.35);
+		layout.AddDressingItem("VigPower", "12.699 0 20.13", 90, 0.35);
 		layout.AddDressingItem("VigMess", "24.736 0 -14.81", 90, 0.35);
 		layout.AddDressingItem("VigWash", "24.436 0 -2.81", 90, 0.35);
 		layout.AddDressingItem("VigSanitation", "14.62 0 -21.824", 90, 0.35);
@@ -11647,14 +11814,14 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("32 0 5");
 		layout.m_aGuardPosts.Insert("28 0 -19");
 		layout.m_aGuardPosts.Insert("-24 0 33");
-		layout.m_aGuardPosts.Insert("12 0 13");
 		layout.m_aGuardPosts.Insert("8 0 -23");
 		layout.m_aGuardPosts.Insert("-8 0 9");
 		layout.m_aGuardPosts.Insert("-32 0 -23");
 		layout.m_aGuardPosts.Insert("-20 0 -31");
-		layout.m_aGuardPosts.Insert("-36 0 33");
 		layout.m_aGuardPosts.Insert("36 0 33");
 		layout.m_aGuardPosts.Insert("24 0 -31");
+		layout.m_aGuardPosts.Insert("-28 0 -19");
+		layout.m_aGuardPosts.Insert("28 0 13");
 	}
 	protected static void Build57(IA_HeadquartersSiteLayout layout)
 	{
@@ -11728,6 +11895,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallB", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("15 0 18", 90);
+		layout.AddAirRaidBunker("-35 0 0", 270);
 		layout.AddObstacle("HQTeeth", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQTeeth", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-14.97 0 41.811", 0);
@@ -11794,7 +11963,6 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-35.47 0 -8");
 		layout.m_aGuardPosts.Insert("35.47 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -27");
-		layout.m_aGuardPosts.Insert("-36 0 5");
 		layout.m_aGuardPosts.Insert("12 0 -19");
 		layout.m_aGuardPosts.Insert("-24 0 -15");
 		layout.m_aGuardPosts.Insert("8 0 -15");
@@ -11807,6 +11975,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-16 0 -23");
 		layout.m_aGuardPosts.Insert("-12 0 -19");
 		layout.m_aGuardPosts.Insert("-16 0 -31");
+		layout.m_aGuardPosts.Insert("-8 0 -23");
 	}
 	protected static void Build58(IA_HeadquartersSiteLayout layout)
 	{
@@ -11879,6 +12048,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallC", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("-15 0 20", 270);
+		layout.AddAirRaidBunker("35 0 0", 90);
 		layout.AddObstacle("HQTeeth", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQWire", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQTeeth", "-14.97 0 41.811", 0);
@@ -11949,13 +12120,13 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-35.47 0 -8");
 		layout.m_aGuardPosts.Insert("35.47 0 -8");
 		layout.m_aGuardPosts.Insert("20 0 -31");
-		layout.m_aGuardPosts.Insert("-20 0 17");
 		layout.m_aGuardPosts.Insert("-32 0 13");
 		layout.m_aGuardPosts.Insert("8 0 -35");
 		layout.m_aGuardPosts.Insert("-28 0 25");
 		layout.m_aGuardPosts.Insert("-28 0 17");
 		layout.m_aGuardPosts.Insert("-32 0 21");
 		layout.m_aGuardPosts.Insert("-24 0 9");
+		layout.m_aGuardPosts.Insert("-20 0 13");
 		layout.m_aGuardPosts.Insert("-32 0 -35");
 		layout.m_aGuardPosts.Insert("12 0 -31");
 		layout.m_aGuardPosts.Insert("16 0 -35");
@@ -12034,6 +12205,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-40.47 0 25.631", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-40.47 0 31.027", 270, 3);
 		layout.AddWallRun("HQWallC", "-40.47 0 36.423", 270, 3);
+		layout.AddAirRaidBunker("-9 0 14", 270);
+		layout.AddAirRaidBunker("35 0 4", 90);
 		layout.AddObstacle("HQWire", "-38.97 0 41.811", 0);
 		layout.AddObstacle("HQTeeth", "-26.97 0 41.811", 0);
 		layout.AddObstacle("HQTeeth", "-14.97 0 41.811", 0);
@@ -12113,9 +12286,9 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-32 0 -3");
 		layout.m_aGuardPosts.Insert("8 0 1");
 		layout.m_aGuardPosts.Insert("32 0 17");
-		layout.m_aGuardPosts.Insert("32 0 9");
 		layout.m_aGuardPosts.Insert("-16 0 -19");
 		layout.m_aGuardPosts.Insert("32 0 25");
+		layout.m_aGuardPosts.Insert("-32 0 9");
 	}
 	protected static void Build60(IA_HeadquartersSiteLayout layout)
 	{
@@ -12177,6 +12350,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallA", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("-9 0 7", 270);
+		layout.AddAirRaidBunker("21 0 -17", 180);
 		layout.AddObstacle("HQTeeth", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQTeeth", "-6.876 0 35.438", 0);
@@ -12234,9 +12409,9 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("16 0 16");
 		layout.m_aGuardPosts.Insert("24 0 12");
 		layout.m_aGuardPosts.Insert("-8 0 -28");
-		layout.m_aGuardPosts.Insert("20 0 -20");
 		layout.m_aGuardPosts.Insert("24 0 -28");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
+		layout.m_aGuardPosts.Insert("28 0 -24");
 	}
 	protected static void Build61(IA_HeadquartersSiteLayout layout)
 	{
@@ -12298,6 +12473,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallA", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("15 0 11", 90);
+		layout.AddAirRaidBunker("-21 0 -17", 180);
 		layout.AddObstacle("HQWire", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQTeeth", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-6.876 0 35.438", 0);
@@ -12348,17 +12525,17 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStoresCovered", "-14.2 0 -14.271", 0, 0.35);
 		layout.AddDressingItem("VigWater", "14.08 0 -12.871", 90, 0.35);
 		layout.m_aGuardPosts.Insert("27.376 0 -8");
-		layout.m_aGuardPosts.Insert("-16 0 -20");
 		layout.m_aGuardPosts.Insert("20 0 28");
 		layout.m_aGuardPosts.Insert("-16 0 16");
 		layout.m_aGuardPosts.Insert("8 0 -16");
-		layout.m_aGuardPosts.Insert("16 0 16");
 		layout.m_aGuardPosts.Insert("-24 0 8");
+		layout.m_aGuardPosts.Insert("16 0 20");
 		layout.m_aGuardPosts.Insert("-24 0 -24");
 		layout.m_aGuardPosts.Insert("-28 0 4");
-		layout.m_aGuardPosts.Insert("-24 0 -16");
 		layout.m_aGuardPosts.Insert("-20 0 12");
+		layout.m_aGuardPosts.Insert("-28 0 -16");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
+		layout.m_aGuardPosts.Insert("-20 0 24");
 	}
 	protected static void Build62(IA_HeadquartersSiteLayout layout)
 	{
@@ -12419,6 +12596,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallA", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("-9 0 7", 270);
+		layout.AddAirRaidBunker("21 0 -17", 180);
 		layout.AddObstacle("HQTeeth", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQTeeth", "-6.876 0 35.438", 0);
@@ -12472,13 +12651,13 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -24");
 		layout.m_aGuardPosts.Insert("-24 0 -28");
 		layout.m_aGuardPosts.Insert("-20 0 0");
-		layout.m_aGuardPosts.Insert("-8 0 4");
 		layout.m_aGuardPosts.Insert("24 0 16");
 		layout.m_aGuardPosts.Insert("16 0 20");
-		layout.m_aGuardPosts.Insert("16 0 -20");
 		layout.m_aGuardPosts.Insert("-20 0 16");
 		layout.m_aGuardPosts.Insert("-24 0 -16");
 		layout.m_aGuardPosts.Insert("-28 0 4");
+		layout.m_aGuardPosts.Insert("-20 0 -24");
+		layout.m_aGuardPosts.Insert("20 0 -24");
 	}
 	protected static void Build63(IA_HeadquartersSiteLayout layout)
 	{
@@ -12540,6 +12719,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallB", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("15 0 11", 90);
+		layout.AddAirRaidBunker("-21 0 -17", 180);
 		layout.AddObstacle("HQWire", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQHedgehogs", "-6.876 0 35.438", 0);
@@ -12597,12 +12778,12 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-24 0 0");
 		layout.m_aGuardPosts.Insert("8 0 -28");
 		layout.m_aGuardPosts.Insert("-16 0 8");
-		layout.m_aGuardPosts.Insert("-20 0 -16");
 		layout.m_aGuardPosts.Insert("8 0 -16");
 		layout.m_aGuardPosts.Insert("-16 0 16");
-		layout.m_aGuardPosts.Insert("20 0 16");
 		layout.m_aGuardPosts.Insert("-20 0 24");
 		layout.m_aGuardPosts.Insert("-20 0 -24");
+		layout.m_aGuardPosts.Insert("-8 0 -16");
+		layout.m_aGuardPosts.Insert("28 0 4");
 	}
 	protected static void Build64(IA_HeadquartersSiteLayout layout)
 	{
@@ -12664,6 +12845,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallC", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("-9 0 7", 270);
+		layout.AddAirRaidBunker("25 0 25", 90);
 		layout.AddObstacle("HQWire", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQHedgehogs", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-6.876 0 35.438", 0);
@@ -12711,18 +12894,18 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStoresCovered", "-11.65 0 -14.274", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "-5.297 0 -9.15", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "14.2 0 -14.271", 0, 0.35);
-		layout.m_aGuardPosts.Insert("24 0 28");
 		layout.m_aGuardPosts.Insert("16 0 20");
 		layout.m_aGuardPosts.Insert("-16 0 -20");
 		layout.m_aGuardPosts.Insert("16 0 -28");
 		layout.m_aGuardPosts.Insert("-20 0 4");
-		layout.m_aGuardPosts.Insert("28 0 24");
 		layout.m_aGuardPosts.Insert("28 0 4");
 		layout.m_aGuardPosts.Insert("-24 0 -8");
 		layout.m_aGuardPosts.Insert("-24 0 0");
 		layout.m_aGuardPosts.Insert("-24 0 16");
 		layout.m_aGuardPosts.Insert("-16 0 8");
 		layout.m_aGuardPosts.Insert("28 0 -4");
+		layout.m_aGuardPosts.Insert("-28 0 -24");
+		layout.m_aGuardPosts.Insert("-20 0 24");
 	}
 	protected static void Build65(IA_HeadquartersSiteLayout layout)
 	{
@@ -12783,6 +12966,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallC", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("15 0 11", 90);
+		layout.AddAirRaidBunker("-21 0 -17", 180);
 		layout.AddObstacle("HQHedgehogs", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-6.876 0 35.438", 0);
@@ -12838,12 +13023,12 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-28 0 0");
 		layout.m_aGuardPosts.Insert("-24 0 24");
 		layout.m_aGuardPosts.Insert("24 0 -4");
-		layout.m_aGuardPosts.Insert("12 0 8");
 		layout.m_aGuardPosts.Insert("-20 0 12");
-		layout.m_aGuardPosts.Insert("20 0 12");
 		layout.m_aGuardPosts.Insert("8 0 -8");
 		layout.m_aGuardPosts.Insert("-20 0 20");
-		layout.m_aGuardPosts.Insert("-16 0 -20");
+		layout.m_aGuardPosts.Insert("12 0 -12");
+		layout.m_aGuardPosts.Insert("20 0 28");
+		layout.m_aGuardPosts.Insert("8 0 -16");
 	}
 	protected static void Build66(IA_HeadquartersSiteLayout layout)
 	{
@@ -12905,6 +13090,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallA", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("-15 0 11", 270);
+		layout.AddAirRaidBunker("21 0 -17", 180);
 		layout.AddObstacle("HQHedgehogs", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQHedgehogs", "-6.876 0 35.438", 0);
@@ -12948,7 +13135,7 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "28.52 0 -17.311", 0, 0.35);
 		layout.AddDressingItem("HQDirtWorn", "4.497 0 -3.91", 90, 0.8);
 		layout.AddDressingItem("VigComms", "-6 0 9.106", 90, 0.35);
-		layout.AddDressingItem("VigPower", "-12.699 0 13.39", 90, 0.35);
+		layout.AddDressingItem("VigPower", "12.699 0 13.39", 90, 0.35);
 		layout.AddDressingItem("VigMess", "-24.736 0 -12.06", 90, 0.35);
 		layout.AddDressingItem("VigWash", "-24.436 0 -0.06", 90, 0.35);
 		layout.AddDressingItem("VigSanitation", "-14.62 0 -19.074", 90, 0.35);
@@ -12963,10 +13150,10 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("20 0 8");
 		layout.m_aGuardPosts.Insert("28 0 0");
 		layout.m_aGuardPosts.Insert("-24 0 16");
-		layout.m_aGuardPosts.Insert("16 0 -20");
 		layout.m_aGuardPosts.Insert("24 0 12");
+		layout.m_aGuardPosts.Insert("16 0 -24");
 		layout.m_aGuardPosts.Insert("20 0 0");
-		layout.m_aGuardPosts.Insert("-16 0 8");
+		layout.m_aGuardPosts.Insert("-20 0 20");
 	}
 	protected static void Build67(IA_HeadquartersSiteLayout layout)
 	{
@@ -13028,6 +13215,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallA", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("15 0 11", 90);
+		layout.AddAirRaidBunker("-21 0 -17", 180);
 		layout.AddObstacle("HQWire", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQHedgehogs", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-6.876 0 35.438", 0);
@@ -13077,10 +13266,10 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigWaste", "5.304 0 -6.06", 90, 0.35);
 		layout.AddDressingItem("VigStoresCovered", "-14.2 0 -14.271", 0, 0.35);
 		layout.m_aGuardPosts.Insert("-20 0 -24");
-		layout.m_aGuardPosts.Insert("20 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 0");
 		layout.m_aGuardPosts.Insert("-24 0 20");
 		layout.m_aGuardPosts.Insert("20 0 -20");
+		layout.m_aGuardPosts.Insert("24 0 8");
 		layout.m_aGuardPosts.Insert("16 0 -24");
 		layout.m_aGuardPosts.Insert("-24 0 28");
 		layout.m_aGuardPosts.Insert("-24 0 12");
@@ -13148,6 +13337,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallC", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallA", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("-15 0 11", 270);
+		layout.AddAirRaidBunker("23 0 9", 90);
 		layout.AddObstacle("HQHedgehogs", "-30.876 0 35.438", 0);
 		layout.AddObstacle("HQWire", "-18.876 0 35.438", 0);
 		layout.AddObstacle("HQHedgehogs", "-6.876 0 35.438", 0);
@@ -13190,23 +13381,23 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("HQDuckboards", "-28.52 0 -17.311", 0, 0.35);
 		layout.AddDressingItem("HQDuckboard", "28.52 0 -19.211", 0, 0.35);
 		layout.AddDressingItem("VigComms", "-6 0 9.106", 90, 0.35);
-		layout.AddDressingItem("VigPower", "-12.699 0 13.39", 90, 0.35);
+		layout.AddDressingItem("VigPower", "12.699 0 13.39", 90, 0.35);
 		layout.AddDressingItem("VigMess", "-24.736 0 -12.06", 90, 0.35);
 		layout.AddDressingItem("VigWash", "-24.436 0 -0.06", 90, 0.35);
 		layout.AddDressingItem("VigSanitation", "-14.62 0 -19.074", 90, 0.35);
 		layout.AddDressingItem("VigWaste", "-5.304 0 -6.06", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-28 0 28");
-		layout.m_aGuardPosts.Insert("-20 0 12");
 		layout.m_aGuardPosts.Insert("-16 0 -24");
 		layout.m_aGuardPosts.Insert("16 0 -20");
 		layout.m_aGuardPosts.Insert("-24 0 20");
-		layout.m_aGuardPosts.Insert("16 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("-20 0 -20");
 		layout.m_aGuardPosts.Insert("20 0 -28");
 		layout.m_aGuardPosts.Insert("-24 0 8");
 		layout.m_aGuardPosts.Insert("-20 0 24");
-		layout.m_aGuardPosts.Insert("-16 0 8");
+		layout.m_aGuardPosts.Insert("28 0 28");
+		layout.m_aGuardPosts.Insert("8 0 -12");
+		layout.m_aGuardPosts.Insert("8 0 0");
 	}
 	protected static void Build69(IA_HeadquartersSiteLayout layout)
 	{
@@ -13268,6 +13459,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallB", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallC", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("9 0 7", 90);
+		layout.AddAirRaidBunker("-21 0 -17", 180);
 		layout.AddObstacle("HQTeeth", "-30.876 0 34.076", 0);
 		layout.AddObstacle("HQTeeth", "-18.876 0 34.076", 0);
 		layout.AddObstacle("HQWire", "-6.876 0 34.076", 0);
@@ -13337,11 +13530,11 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("20 0 -4");
 		layout.m_aGuardPosts.Insert("-24 0 16");
 		layout.m_aGuardPosts.Insert("8 0 -16");
-		layout.m_aGuardPosts.Insert("-24 0 -20");
 		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("8 0 0");
 		layout.m_aGuardPosts.Insert("-20 0 -4");
 		layout.m_aGuardPosts.Insert("16 0 12");
+		layout.m_aGuardPosts.Insert("20 0 28");
 	}
 	protected static void Build70(IA_HeadquartersSiteLayout layout)
 	{
@@ -13403,6 +13596,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallB", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallB", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("-9 0 7", 270);
+		layout.AddAirRaidBunker("21 0 -17", 180);
 		layout.AddObstacle("HQTeeth", "-30.876 0 34.076", 0);
 		layout.AddObstacle("HQWire", "-18.876 0 34.076", 0);
 		layout.AddObstacle("HQTeeth", "-6.876 0 34.076", 0);
@@ -13469,7 +13664,6 @@ class IA_HeadquartersRecipes
 		layout.AddDressingItem("VigStoresCovered", "11.65 0 -10.274", 0, 0.35);
 		layout.AddDressingItem("VigWaste", "5.297 0 -5.15", 90, 0.35);
 		layout.m_aGuardPosts.Insert("-27.376 0 -8");
-		layout.m_aGuardPosts.Insert("-8 0 4");
 		layout.m_aGuardPosts.Insert("20 0 -8");
 		layout.m_aGuardPosts.Insert("-16 0 4");
 		layout.m_aGuardPosts.Insert("20 0 -28");
@@ -13480,6 +13674,7 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-24 0 16");
 		layout.m_aGuardPosts.Insert("-8 0 -28");
 		layout.m_aGuardPosts.Insert("16 0 20");
+		layout.m_aGuardPosts.Insert("-28 0 0");
 	}
 	protected static void Build71(IA_HeadquartersSiteLayout layout)
 	{
@@ -13540,6 +13735,8 @@ class IA_HeadquartersRecipes
 		layout.AddWallRun("HQCamoWallC", "-32.376 0 18.886", 270, 3);
 		layout.AddWallRun("HQCamoWallA", "-32.376 0 24.282", 270, 3);
 		layout.AddWallRun("HQWallB", "-32.376 0 29.678", 270, 3);
+		layout.AddAirRaidBunker("15 0 13", 90);
+		layout.AddAirRaidBunker("-21 0 -17", 180);
 		layout.AddObstacle("HQWire", "-30.876 0 34.076", 0);
 		layout.AddObstacle("HQTeeth", "-18.876 0 34.076", 0);
 		layout.AddObstacle("HQTeeth", "-6.876 0 34.076", 0);
@@ -13608,14 +13805,14 @@ class IA_HeadquartersRecipes
 		layout.m_aGuardPosts.Insert("-27.376 0 -8");
 		layout.m_aGuardPosts.Insert("-12 0 -16");
 		layout.m_aGuardPosts.Insert("-20 0 24");
-		layout.m_aGuardPosts.Insert("16 0 16");
 		layout.m_aGuardPosts.Insert("-24 0 -28");
 		layout.m_aGuardPosts.Insert("24 0 12");
 		layout.m_aGuardPosts.Insert("-20 0 0");
-		layout.m_aGuardPosts.Insert("-24 0 -20");
 		layout.m_aGuardPosts.Insert("20 0 28");
 		layout.m_aGuardPosts.Insert("-24 0 8");
 		layout.m_aGuardPosts.Insert("12 0 -28");
 		layout.m_aGuardPosts.Insert("-24 0 16");
+		layout.m_aGuardPosts.Insert("-20 0 12");
+		layout.m_aGuardPosts.Insert("-24 0 -4");
 	}
 }

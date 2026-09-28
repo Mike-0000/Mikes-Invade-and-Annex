@@ -85,6 +85,11 @@ class IA_DynamicSiteLayout
 	static const ResourceName PREFAB_TOWER = "{DFBF655559915333}Prefabs/Compositions/Slotted/SlotFlatSmall/GuardTower_S_USSR_01.et";
 	static const ResourceName PREFAB_WORKSHOP = "{EE2DA99D3A9B5F46}Prefabs/DynamicBase/IA_VehicleMaintenance_M_USSR_01.et";
 	static const ResourceName PREFAB_FUEL = "{490B2E7D9EB95EC7}Prefabs/DynamicBase/IA_FuelStorage_S_USSR_01.et";
+	// Stock burlap bunker under a Soviet camouflage net: overhead concealment,
+	// sandbag walls, and three native CoverPost smart actions facing local +Z.
+	static const ResourceName PREFAB_SHELTER = "{5B5D8AEA342E1AAB}Prefabs/Compositions/Misc/CustomEntities/DestructionEntities/Sandbag_01_bunker_burlap_camonet_CompositionDestruction.et";
+	static const float SHELTER_HALF_EXTENT_M = 2.75;
+	static const int SHELTER_EXPANDED_ENTITIES = 4;
 
 	static const ResourceName PREFAB_DRESSING_BRIEFING = "{C1DC3475A54F5B8B}Prefabs/DynamicBase/IA_Dressing_Briefing.et";
 	static const ResourceName PREFAB_DRESSING_MESS = "{C5FCEDF014885D44}Prefabs/DynamicBase/IA_Dressing_Mess.et";
@@ -379,6 +384,13 @@ class IA_DynamicSiteLayout
 		layout.AddCover("wall_eastN_23", 89.100, 64.404, 90, 2, 1);
 		layout.AddCover("wall_eastN_24", 89.100, 67.300, 90, 3, 1);
 
+		// Camouflaged bunkers: overhead cover for defenders during air attacks.
+		layout.AddShelter("shelter_0", -14, 10, 180);
+		layout.AddShelter("shelter_1", 14, 10, 180);
+		layout.AddShelter("shelter_2", -20, 32, 180);
+		layout.AddShelter("shelter_3", 22, 30, 180);
+		layout.AddShelter("shelter_4", -5, 55.5, 0);
+		layout.AddShelter("shelter_5", 24, 3, 90);
 		// INTERIOR DRESSING BEGIN
 		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 14, 49, 0, 2.3, 2.6, 9);
 		layout.AddDressing("dressing_kitchenlit_1", PREFAB_DRESSING_KITCHENLIT, -47, 53, 0, 3.5, 3.2, 6);
@@ -574,6 +586,11 @@ class IA_DynamicSiteLayout
 		layout.AddCover("wall_eastN_15", 59.100, 44.394, 90, 2, 1);
 		layout.AddCover("wall_eastN_16", 59.100, 47.300, 90, 3, 1);
 
+		// Camouflaged bunkers: overhead cover for defenders during air attacks.
+		layout.AddShelter("shelter_0", -13, 8, 180);
+		layout.AddShelter("shelter_1", 16, 12, 180);
+		layout.AddShelter("shelter_2", -16, 38.5, 0);
+		layout.AddShelter("shelter_3", 16, 38.5, 0);
 		// INTERIOR DRESSING BEGIN
 		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 16, 30, 0, 2.3, 2.6, 9);
 		layout.AddDressing("dressing_kitchenlit_1", PREFAB_DRESSING_KITCHENLIT, -21, 27, 0, 3.5, 3.2, 6);
@@ -712,6 +729,10 @@ class IA_DynamicSiteLayout
 		layout.m_aGuardPosts.Insert(Vector(-15, 0, 33));
 		layout.m_aGuardPosts.Insert(Vector(-7, 0, -20));
 		layout.m_aGuardPosts.Insert(Vector(10, 0, -20));
+		// Camouflaged bunkers: overhead cover for defenders during air attacks.
+		layout.AddShelter("shelter_0", -10, 6, 180);
+		layout.AddShelter("shelter_1", 10, 6, 180);
+		layout.AddShelter("shelter_2", 6.5, -7.75, 180);
 		// INTERIOR DRESSING BEGIN
 		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 16, 30, 0, 2.3, 2.6, 9);
 		layout.AddDressing("dressing_kitchenlit_1", PREFAB_DRESSING_KITCHENLIT, -25, 31, 0, 3.5, 3.2, 6);
@@ -840,6 +861,9 @@ class IA_DynamicSiteLayout
 		layout.m_aGuardPosts.Insert(Vector(0, 0, -24));
 		layout.m_aGuardPosts.Insert(Vector(0, 0, 6));
 		layout.m_aGuardPosts.Insert(Vector(0, 0, 44.7));
+		// Camouflaged bunkers: overhead cover for defenders during air attacks.
+		layout.AddShelter("shelter_0", -15.75, 27.75, 180);
+		layout.AddShelter("shelter_1", 16.25, 26.5, 180);
 		// INTERIOR DRESSING BEGIN
 		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 17, 33, 0, 2.3, 2.6, 9);
 		layout.AddDressing("dressing_mess_1", PREFAB_DRESSING_MESS, -17, 23, 0, 1.7, 1.5, 7);
@@ -941,6 +965,9 @@ class IA_DynamicSiteLayout
 		layout.m_aGuardPosts.Insert(Vector(-20, 0, 14));
 		layout.m_aGuardPosts.Insert(Vector(20, 0, 14));
 		layout.m_aGuardPosts.Insert(Vector(-15, 0, 24));
+		// Camouflaged bunkers: overhead cover for defenders during air attacks.
+		layout.AddShelter("shelter_0", -5, -9, 180);
+		layout.AddShelter("shelter_1", 5, -9, 180);
 		// INTERIOR DRESSING BEGIN
 		layout.AddDressing("dressing_briefinglit_0", PREFAB_DRESSING_BRIEFINGLIT, 18, 19, 0, 2.3, 2.6, 9);
 		layout.AddDressing("dressing_mess_1", PREFAB_DRESSING_MESS, -19, 8, 0, 1.7, 1.5, 7);
@@ -1016,6 +1043,9 @@ class IA_DynamicSiteLayout
 		layout.m_aGuardPosts.Insert(Vector(4, 0, -18));
 		layout.m_aGuardPosts.Insert(Vector(-13.5, 0, 8));
 		layout.m_aGuardPosts.Insert(Vector(13.5, 0, 8));
+		// Camouflaged bunkers: overhead cover for defenders during air attacks.
+		layout.AddShelter("shelter_0", -4.1, -5, 180);
+		layout.AddShelter("shelter_1", 4.1, -5, 180);
 		// INTERIOR DRESSING BEGIN
 		layout.AddDressing("dressing_messlit_0", PREFAB_DRESSING_MESSLIT, -9, -6, 0, 1.7, 1.5, 7);
 		layout.AddDressing("dressing_stores_1", PREFAB_DRESSING_STORES, 9, -15, 90, 1.8, 2.9, 6);
@@ -1148,6 +1178,16 @@ class IA_DynamicSiteLayout
 		IA_DynamicSiteModule mod = m_aModules[m_aModules.Count() - 1];
 		mod.m_bRequired = false;
 		mod.SetSupportFootprint(Vector(-halfW, 0, -halfD), Vector(halfW, 0, halfD));
+	}
+
+	// Optional air-raid bunker. A blocked or sloped pad skips it without
+	// vetoing the site; its sandbag body bears on the central 4 x 4 m.
+	protected void AddShelter(string id, float x, float z, float yawDeg)
+	{
+		AddModule(id, PREFAB_SHELTER, x, z, yawDeg, SHELTER_HALF_EXTENT_M, SHELTER_HALF_EXTENT_M, IA_DynamicSiteModuleRole.Shelter, 0.35, SHELTER_EXPANDED_ENTITIES);
+		IA_DynamicSiteModule mod = m_aModules[m_aModules.Count() - 1];
+		mod.m_bRequired = false;
+		mod.SetSupportFootprint(Vector(-2, 0, -2), Vector(2, 0, 2));
 	}
 
 	// Defend circles stay inside the authored wall faces, with a one-metre

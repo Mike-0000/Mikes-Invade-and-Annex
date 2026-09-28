@@ -21,6 +21,7 @@ class IA_BaseAssaultObjective
 	protected ref map<string, int> m_CaptureLedger;
 	protected ref IA_DefendMission m_Defend;
 	protected IA_DynamicObjectiveDirector m_Director;
+	protected ref IA_BaseAirRaidCover m_AirRaid;
 
 	//------------------------------------------------------------------------------------------------
 	void IA_BaseAssaultObjective()
@@ -50,6 +51,7 @@ class IA_BaseAssaultObjective
 		m_bResultSent = false;
 		m_bCaptureRosterReady = true;
 		m_Sampler = sampler;
+		ReleaseAirRaid();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -89,7 +91,11 @@ class IA_BaseAssaultObjective
 		if (m_Site)
 			m_Site.TickEmplacements(false);
 		if (m_ePhase == IA_BaseObjectivePhase.Seize)
+		{
 			TickSeize(dt);
+			if (m_ePhase == IA_BaseObjectivePhase.Seize && m_AirRaid)
+				m_AirRaid.Tick(nowMs);
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -103,9 +109,13 @@ class IA_BaseAssaultObjective
 			return;
 		}
 
+		// Release before swapping sites: the controller only holds a weak site pointer.
+		ReleaseAirRaid();
 		m_Site = site;
 		m_ePhase = IA_BaseObjectivePhase.Seize;
 		m_iCaptureAccMs = 0;
+		m_AirRaid = new IA_BaseAirRaidCover();
+		m_AirRaid.Init(site);
 		m_Site.SpawnMapMarker();
 		IA_MissionInitializer init = IA_MissionInitializer.GetInstance();
 		if (init)
@@ -160,6 +170,7 @@ class IA_BaseAssaultObjective
 			return;
 
 		m_ePhase = IA_BaseObjectivePhase.Cancelled;
+		ReleaseAirRaid();
 		DismissTask();
 		if (m_Defend)
 		{
@@ -195,6 +206,7 @@ class IA_BaseAssaultObjective
 			if (m_Site)
 				m_Site.StopEmplacementAssignments(false);
 			m_ePhase = IA_BaseObjectivePhase.Failed;
+			ReleaseAirRaid();
 			PublishStatus(true);
 			EmitResult(IA_DynamicObjectiveResult.Failed, "site_lost");
 			return;
@@ -243,6 +255,7 @@ class IA_BaseAssaultObjective
 		// Includes admin bypass. Release original hostile crew before the normal
 		// defense host can retask groups; never convert allegiance or refill guns.
 		m_Site.StopEmplacementAssignments(true);
+		ReleaseAirRaid();
 		DismissTask();
 		IA_Config defenseCfg = null;
 		if (m_Settings)
@@ -262,6 +275,16 @@ class IA_BaseAssaultObjective
 			game.SetActiveDefendMission(m_Defend);
 		m_Defend.StartDefendMission();
 		PublishStatus(true);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Every exit from Seize returns sheltered garrison groups to their posts.
+	protected void ReleaseAirRaid()
+	{
+		if (!m_AirRaid)
+			return;
+		m_AirRaid.Release();
+		m_AirRaid = null;
 	}
 
 	//------------------------------------------------------------------------------------------------

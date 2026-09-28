@@ -4566,6 +4566,69 @@ class IA_AiGroup
         return m_holdPost;
     }
 
+    float GetHoldRadius()
+    {
+        return m_holdRadius;
+    }
+
+    // False while the group crews a static gun or holds without a Defend waypoint.
+    bool IsDefendPost()
+    {
+        return m_bDefendPost;
+    }
+
+    // Move a defend post without removing its waypoint, so the typed Defend
+    // tree never sees a gap. The moved waypoint's properties-changed invoker
+    // makes ActivityDefend.bt re-read origin/radius and search cover there.
+    bool RepinDefendPost(vector pos, float radius)
+    {
+        if (!m_bDefendPost)
+        {
+            Print("[IA][Base] RepinDefendPost ignored: group has no defend post", LogLevel.WARNING);
+            return false;
+        }
+        if (!m_group)
+        {
+            Print("[IA][Base] RepinDefendPost ignored: group has no AI group", LogLevel.WARNING);
+            return false;
+        }
+
+        m_holdPost = pos;
+        m_holdRadius = radius;
+        SetDefendWaypointRadiusOverride(radius);
+
+        array<SCR_AIWaypoint> moved = {};
+        array<AIWaypoint> wps = {};
+        m_group.GetWaypoints(wps);
+        foreach (AIWaypoint wp : wps)
+        {
+            SCR_DefendWaypoint defendWp = SCR_DefendWaypoint.Cast(wp);
+            if (!defendWp)
+                continue;
+            defendWp.SetOrigin(pos);
+            defendWp.Update();
+            moved.Insert(defendWp);
+        }
+        foreach (SCR_AIWaypoint pendingWp : m_pendingWaypoints)
+        {
+            SCR_DefendWaypoint pendingDefend = SCR_DefendWaypoint.Cast(pendingWp);
+            if (!pendingDefend)
+                continue;
+            pendingDefend.SetOrigin(pos);
+            pendingDefend.Update();
+        }
+
+        // Vanilla never releases a group's smart-action allocation, so the old
+        // area's cover posts would stay locked and the new search find none.
+        m_group.ReleaseSmartActions();
+        foreach (SCR_AIWaypoint movedWp : moved)
+        {
+            movedWp.GetOnWaypointPropertiesChanged().Invoke();
+        }
+        SetTacticalState(IA_GroupTacticalState.Holding, pos, null, true);
+        return true;
+    }
+
     bool IsPinnedGarrison()
     {
         if (HasStaticGunAssignment())

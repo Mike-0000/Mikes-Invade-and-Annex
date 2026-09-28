@@ -11,6 +11,7 @@ import unittest
 sys.dont_write_bytecode=True
 from author_base_compositions import Author,REF,parse
 from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,connection_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW,RECIPE_EXPANDED_BUDGET
+from author_base_designs import SHELTERS,SHELTER_ALLOWANCE,SHELTER_HALF,SHELTER_EXPANDED,SHELTER_POST_REACH,shelter_box,shelter_entrance,gun_reserves
 
 ROOT=Path(__file__).resolve().parents[1]
 BASE=Path('D:/ReforgerGameSources/data/data007')
@@ -96,8 +97,10 @@ class CompositionTests(unittest.TestCase):
             modules=r['modules']; W,D=r['half_width'],r['half_depth']
             self.assertEqual(modules[0]['role'],'Hq')
             self.assertTrue(any(m['role']=='Barracks' and m['required'] for m in modules))
-            self.assertLessEqual(r['expanded']+r['guns']*12,RECIPE_EXPANDED_BUDGET)
-            self.assertLessEqual(len(modules)+len(r['walls'])+r['guns'],256)
+            shelter_cost=len(r['shelters'])*SHELTER_EXPANDED
+            self.assertLessEqual(r['expanded']+r['guns']*12-shelter_cost,RECIPE_EXPANDED_BUDGET)
+            self.assertLessEqual(shelter_cost,SHELTER_ALLOWANCE)
+            self.assertLessEqual(len(modules)+len(r['walls'])+r['guns']+len(r['shelters']),256)
             self.assertLessEqual(r['guns'],CAPS[r['size']])
             self.assertLessEqual(r['heavy'],int(r['size']<2))
             interiors=[m for m in modules if m['side']<0]
@@ -132,12 +135,52 @@ class CompositionTests(unittest.TestCase):
                     z=-p[0]*math.sin(a)+p[2]*math.cos(a)
                     self.assertAlmostEqual(math.hypot(x,z),math.hypot(p[0],p[2]),places=5)
 
+    def test_air_raid_bunkers_inside_capture_circle(self):
+        """Cover posts stay inside the capture circle; bunkers keep off
+        compositions, the south walk, gate throats, gun crews and posts."""
+        for r in self.recipes:
+            name=r['name']; W,D=r['half_width'],r['half_depth']
+            capture=r['capture']
+            shelters=r['shelters']
+            self.assertEqual(len(shelters),SHELTERS[r['size']],name)
+            lane=(-4,-D,4,capture[2])
+            reserves=gun_reserves(r['modules'],self.catalog)
+            throats=[(-W,-13,-W+12,-3),(W-12,-13,W,-3)]
+            for i,s in enumerate(shelters):
+                body=shelter_box(s); door=shelter_entrance(s)
+                x,z=s['position'][0],s['position'][2]
+                self.assertLessEqual(math.dist((x,z),(capture[0],capture[2]))+SHELTER_POST_REACH,min(W,D)-1,(name,s))
+                for a in (body,door):
+                    self.assertTrue(a[0]>=-W+3-1e-6 and a[2]<=W-3+1e-6 and a[1]>=-D+3-1e-6 and a[3]<=D-3+1e-6,(name,s))
+                for m in r['modules']:
+                    self.assertFalse(overlap(body,box(m),1),(name,s,m['key']))
+                    self.assertFalse(overlap(door,box(m)),(name,s,m['key']))
+                self.assertFalse(overlap(body,lane,1),(name,s))
+                self.assertFalse(any(overlap(body,a) for a in reserves+throats),(name,s))
+                for other in shelters[i+1:]:
+                    self.assertFalse(overlap(body,shelter_box(other),1),(name,s,other))
+                    self.assertFalse(overlap(body,shelter_entrance(other)) or overlap(door,shelter_box(other)),(name,s,other))
+                for p in r['posts']:
+                    a=(p[0]-1.5,p[2]-1.5,p[0]+1.5,p[2]+1.5)
+                    self.assertFalse(overlap(a,body,1) or overlap(a,door,1),(name,p,s))
+                # Cover posts (local +Z) face away from the capture point.
+                yaw=math.radians(s['yaw'])
+                self.assertGreater((x-capture[0])*math.sin(yaw)+(z-capture[2])*math.cos(yaw),0,(name,s))
+        layout=read('Scripts/Game/IA_DynamicSiteLayout.c')
+        self.assertIn(f'SHELTER_HALF_EXTENT_M = {SHELTER_HALF};',layout)
+        self.assertIn(f'SHELTER_EXPANDED_ENTITIES = {SHELTER_EXPANDED};',layout)
+        composed=read('Scripts/Game/IA_ComposedSiteLayout.c')
+        self.assertIn('void AddAirRaidBunker(vector position, float yaw)',composed)
+        self.assertIn('module.m_bPlannedClearance = true;',composed)
+        recipes=read('Scripts/Game/IA_BaseDesignRecipes.c')
+        self.assertEqual(recipes.count('layout.AddAirRaidBunker('),sum(SHELTERS)*20)
+
     def test_wall_infill_gates_and_accounting(self):
         for r in self.recipes:
             walls=r['walls']
             self.assertEqual(walls,perimeter_walls(r['half_width'],r['half_depth'],r['modules'],self.catalog,self.measure))
             self.assertGreater(len(walls),30)
-            self.assertEqual(r['expanded'],sum(m['expanded'] for m in r['modules'])+len(walls))
+            self.assertEqual(r['expanded'],sum(m['expanded'] for m in r['modules'])+len(walls)+len(r['shelters'])*SHELTER_EXPANDED)
             styles={w.get('style',0) for w in walls}
             self.assertIn(3,styles,(r['name'],styles))
             if r['size']<3:

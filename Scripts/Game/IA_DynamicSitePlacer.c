@@ -1439,9 +1439,9 @@ class IA_DynamicSitePlacer
 			IA_DynamicSiteModule mod = layout.m_aModules[i];
 			if (!mod)
 				continue;
-			// Decorative vignettes never veto a site or consume terrain survey
-			// traces. SpawnModule still checks their support and obstructions.
-			if (mod.m_iRole == IA_DynamicSiteModuleRole.Dressing)
+			// Optional vignettes and bunkers never veto a site or consume terrain
+			// survey traces. SpawnModule still checks their support and obstructions.
+			if (mod.m_iRole == IA_DynamicSiteModuleRole.Dressing || mod.m_iRole == IA_DynamicSiteModuleRole.Shelter)
 				continue;
 			// Survey screened this exact HQ pose immediately before this call.
 			// Live candidate validation uses the default and checks every module.
@@ -1783,7 +1783,7 @@ class IA_DynamicSitePlacer
 			if (!mod)
 				continue;
 			Resource res = Resource.Load(mod.m_Prefab);
-			if (!res && mod.m_iRole != IA_DynamicSiteModuleRole.Dressing)
+			if (!res && mod.m_iRole != IA_DynamicSiteModuleRole.Dressing && mod.m_iRole != IA_DynamicSiteModuleRole.Shelter)
 				return false;
 		}
 		return true;
@@ -1840,6 +1840,8 @@ class IA_DynamicSitePlacer
 		site.AddRoot(ent);
 		if (mod.m_iPerimeterSide >= 0)
 			site.RegisterPanel(mod.m_sId, ent);
+		if (mod.m_iRole == IA_DynamicSiteModuleRole.Shelter)
+			site.AddShelter(ent);
 		return true;
 	}
 

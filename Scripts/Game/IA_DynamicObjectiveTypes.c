@@ -71,7 +71,8 @@ enum IA_DynamicSiteModuleRole
 	Fuel,
 	Cover,
 	Tower,
-	Dressing
+	Dressing,
+	Shelter
 }
 
 class IA_BaseObjectiveSettings
