@@ -181,6 +181,16 @@ class IA_GmDirector
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Live append / PlaceSite Live must join the active mission group. Director
+	//! Live id stays -1 during authored map AOs, so GetLiveGroupId() is not enough.
+	static int PickLiveGroupForAppend(int liveGroupId, int activeGroupId)
+	{
+		if (activeGroupId >= 0)
+			return activeGroupId;
+		return liveGroupId;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	int GetGroupIdForBucket(IA_GmBucket bucket)
 	{
 		EnsureStarted();
@@ -190,12 +200,13 @@ class IA_GmDirector
 			int activeGroup = -1;
 			if (init)
 				activeGroup = init.GetActiveGroup();
-			if (activeGroup >= 0)
+			int picked = PickLiveGroupForAppend(m_iLiveGroup, activeGroup);
+			if (picked >= 0)
 			{
-				m_iLiveGroup = activeGroup;
-				return activeGroup;
+				m_iLiveGroup = picked;
+				return picked;
 			}
-			if (m_iLiveGroup < 0 && Replication.IsServer())
+			if (Replication.IsServer())
 				BeginLiveGroup();
 			if (m_iLiveGroup >= 0)
 				return m_iLiveGroup;
