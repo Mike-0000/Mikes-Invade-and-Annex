@@ -19,9 +19,9 @@
      "class": "MatPBRMulti",
      "paint": {
       "Color_1": {"primary": 1},
-      "Color_2": {"color": [0.004, 0.004, 0.004]},
-      "Color_3": {"color": [0.117, 0.112, 0.109]},
-      "Color_4": {"primary": 14}
+      "Color_2": {"primary": 1.55},
+      "Color_4": {"primary": 9},
+      "Roughness_4": {"value": 3}
      },
      "stock": {
       "SpecularMul": 0.701,

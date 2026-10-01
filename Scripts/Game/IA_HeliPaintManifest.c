@@ -27,9 +27,9 @@ class IA_HeliPaintManifest
 		IA_HeliPaintSurface surface;
 		surface = family.AddSurface("{6224CA051369DE45}Assets/Vehicles/Helicopters/UH1H/Data/UH_1H_Body01.emat", "Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Body01_Paint%1.emat", "D3A91F5C7E20A001 D3A91F5C7E20A002 D3A91F5C7E20A003 D3A91F5C7E20A004 D3A91F5C7E20A005 D3A91F5C7E20A006 D3A91F5C7E20A007 D3A91F5C7E20A008 D3A91F5C7E20A009 D3A91F5C7E20A010 D3A91F5C7E20A011 D3A91F5C7E20A012");
 		surface.AddPrimary("Color_1", 1, true, 0.042, 0.037, 0.026);
-		surface.AddColor("Color_2", 0.004, 0.004, 0.004, true, 0.065, 0.061, 0.038);
-		surface.AddColor("Color_3", 0.117, 0.112, 0.109, true, 0.965, 0.926, 0.897);
-		surface.AddPrimary("Color_4", 14, true, 0.591, 0.591, 0.591);
+		surface.AddPrimary("Color_2", 1.55, true, 0.065, 0.061, 0.038);
+		surface.AddPrimary("Color_4", 9, true, 0.591, 0.591, 0.591);
+		surface.AddScalar("Roughness_4", 3, true, 1.4);
 		surface = family.AddSurface("{04455994F64CAB1E}Assets/Vehicles/Helicopters/UH1H/Data/UH_1H_Interior01.emat", "Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Interior01_Paint%1.emat", "D3A91F5C7E20A101 D3A91F5C7E20A102 D3A91F5C7E20A103 D3A91F5C7E20A104 D3A91F5C7E20A105 D3A91F5C7E20A106 D3A91F5C7E20A107 D3A91F5C7E20A108 D3A91F5C7E20A109 D3A91F5C7E20A110 D3A91F5C7E20A111 D3A91F5C7E20A112");
 		surface.AddColor("Color_1", 0.184, 0.184, 0.184, true, 0.366, 0.366, 0.366);
 		surface.AddColor("Color_2", 0.209, 0, 0, true, 0.235, 0.235, 0.235);

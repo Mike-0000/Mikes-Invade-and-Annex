@@ -246,9 +246,13 @@ compatibility addon that depends on both (last step).
 4. **Write the recipe** in the registry, per surface under `paint`:
    `{"primary": 1}` for a layer that takes the livery colour (the number is a
    gain: each layer has its own texture, and a dark one needs a high gain to
-   look like the hull, 14 on the Huey's walkway),
+   look like the hull, 9 on the Huey's walkway, which also takes
+   `Roughness_4` 3 to lose its sheen),
    `{"color": [r, g, b]}` for a fixed colour while a livery is on, and
-   `{"value": n}` for a number. Set `Specular` / `SpecularIBL` to a neutral
+   `{"value": n}` for a number. Give a wear layer the livery colour times its
+   stock ratio to the hull (1.55 on the Huey's `Color_2`) and leave a bare
+   metal layer out (the Huey's `Color_3`: rotor head and skids): fixed dark
+   colours there dull the whole helicopter. Set `Specular` / `SpecularIBL` to a neutral
    value if the stock material tints them (the Mi-8's khaki sheen shows through
    dark paint otherwise). Set `stock_swatch` to the stock colour in sRGB bytes.
    A refresh (`--adopt` on a family the registry has) keeps the recipe.
