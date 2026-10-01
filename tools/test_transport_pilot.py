@@ -156,6 +156,81 @@ class TransportPilotTests(unittest.TestCase):
         menu = (ROOT / "Scripts" / "Game" / "UI" / "Menus" / "IA_AdminConfigMenu.c").read_text(encoding="utf-8")
         self.assertIn("pc.IA_AskPreviewHeliSkin()", method(menu, "OnSkinPreview"))
 
+    def test_the_paint_bay_asks_and_the_server_decides(self):
+        # The client names a skin; the seat, the channel and the unlock are checked on the server, in that order.
+        service = source("IA_HeliPaintService.c")
+        attempt = method(service, "TrySetSkin")
+        order = [
+            "if (!Replication.IsServer())",
+            "GetPilotedHelicopter(pawn)",
+            "IA_HeliPaintChannels.CHANNEL_NONE",
+            "IA_HeliSkinCatalog.FindDef(skinId)",
+            "if (rating < 0)",
+            "IA_HeliSkinCatalog.IsUnlocked(def, rating)",
+            "skins.SetVehicleSkin(vehicle, skinId, true)",
+        ]
+        positions = [attempt.index(step) for step in order]
+        self.assertEqual(positions, sorted(positions))
+        # The pilot's seat, not the co-pilot's or a passenger's.
+        self.assertIn("vehicle.GetPilot() != pawn", method(service, "GetPilotedHelicopter"))
+
+        controller = source("IA_PlayerController.c")
+        answer = method(controller, "IA_AnswerHeliPaint")
+        # The rating and the admin flag are read on the server; the request carries neither.
+        self.assertIn("IA_HeliPaintService.ReadRating(GetPlayerId())", answer)
+        self.assertIn("IA_HeliPaintService.TrySetSkin(GetControlledEntity(), skinId, rating, admin)", answer)
+        self.assertLess(answer.index("IA_HELI_PAINT_MIN_GAP_MS"), answer.index("IA_HeliPaintService.ReadRating("))
+        self.assertRegex(controller, r"RplRcver\.Server\)\]\s*protected void RpcAsk_IA_SetHeliSkin\(int skinId\)")
+        self.assertRegex(controller, r"RplRcver\.Owner\)\]\s*protected void RpcDo_IA_HeliPaintReply\(")
+
+        # The menu and its widgets never set a skin or paint a material themselves.
+        ui = ROOT / "Scripts" / "Game" / "UI"
+        for path in (ui / "Menus" / "IA_HeliPaintMenu.c", ui / "IA_HeliPaintBay.c", ui / "IA_HeliPaintTile.c", ROOT / "Scripts" / "Game" / "IA_HeliPaintHotkey.c"):
+            self.assertNotRegex(path.read_text(encoding="utf-8"), r"SetVehicleSkin\(|IA_HeliSkinPaint\.|TrySetSkin\(|Material\.", path.name)
+        menu = (ui / "Menus" / "IA_HeliPaintMenu.c").read_text(encoding="utf-8")
+        self.assertIn("controller.IA_AskSetHeliSkin(skinId)", method(menu, "OnPick"))
+        # It shows what the replicated skin manager says the airframe wears, and leaves with the seat.
+        self.assertIn("skins.GetVehicleSkin(vehicle)", method(menu, "Refresh"))
+        self.assertLess(method(menu, "Refresh").index("Close();"), method(menu, "Refresh").rindex("m_Bay.SetContext("))
+        # A livery the bay believes locked is refused locally and never sent.
+        picked = method((ui / "IA_HeliPaintBay.c").read_text(encoding="utf-8"), "OnTilePicked")
+        self.assertEqual(picked.count("m_OnPick.Invoke("), 1)
+        self.assertLess(picked.index("IA_HeliPaintTile.STATE_READY"), picked.index("m_OnPick.Invoke("))
+
+        # A skin the pilot chose is not taken back by the pad service.
+        pads = source("IA_HeliSkinPadService.c")
+        self.assertIn("skins.IsPilotChoice(vehicle)", pads)
+        self.assertIn("m_aPilotChoice[channel - 1] = pilotChoice", method(source("IA_HeliSkinManagerComponent.c"), "SetVehicleSkin"))
+
+    def test_the_paint_bay_key_is_declared_and_only_live_in_the_pilot_seat(self):
+        hotkey = source("IA_HeliPaintHotkey.c")
+        action = re.search(r'ACTION = "(\w+)"', hotkey).group(1)
+        context = re.search(r'CONTEXT = "(\w+)"', hotkey).group(1)
+        inputs = (ROOT / "Configs" / "System" / "chimeraInputCommon.conf").read_text(encoding="utf-8")
+        self.assertIn("Action " + action + " {", inputs)
+        self.assertRegex(inputs, r"ActionContext " + context + r" \{[^}]*ActionRefs \{\s*\"" + action + r"\"")
+        self.assertIn('"keyboard:KC_I"', inputs)
+        self.assertIn('"gamepad0:pad_left"', inputs)
+        bindings = (ROOT / "Configs" / "System" / "keyBindingMenu.conf").read_text(encoding="utf-8")
+        self.assertIn('m_sActionName "' + action + '"', bindings)
+
+        # The context is kept alive only while the local player is the pilot; it is never reset.
+        self.assertNotIn("ResetContext", hotkey)
+        tick = method(hotkey, "Tick")
+        self.assertIn("IA_HeliPaintService.GetPilotedHelicopter(", tick)
+        opened = method(hotkey, "OnHotkey")
+        self.assertLess(opened.index("IA_HeliPaintService.GetPilotedHelicopter("), opened.index("OpenMenu(ChimeraMenuPreset.IA_HeliPaintMenu)"))
+        self.assertIn("IsAnyMenuOpen()", opened)
+        self.assertIn("EditBoxWidget", opened)
+
+        display = source("IA_NotificationDisplay.c")
+        self.assertIn("m_PaintHotkey.Tick(", method(display, "DisplayUpdate"))
+        self.assertIn("m_PaintHotkey.Stop();", method(display, "CloseMikesUI"))
+
+        presets = (ROOT / "Configs" / "System" / "chimeraMenus.conf").read_text(encoding="utf-8")
+        self.assertRegex(presets, r'MenuPreset IA_HeliPaintMenu \{\s*Layout "[^"]+"\s*Class "IA_HeliPaintMenu"')
+        self.assertIn("IA_HeliPaintMenu", source("IA_ChimeraMenuPresets.c"))
+
     def test_feature_is_wired_into_the_mission(self):
         self.assertIn("IA_TransportPilotTracker.EnsureStarted();", source("IA_MissionInitializer.c"))
         self.assertIn("IA_HeliSkinPadService.Tick(pm, players, now)", method(source("IA_TransportPilotTracker.c"), "Tick"))

@@ -20,6 +20,8 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 
 	// Skin this machine's materials show for each channel.
 	protected ref array<int> m_aShown = {};
+	// Server: channels whose skin the pilot picked in the paint bay.
+	protected ref array<bool> m_aPilotChoice = {};
 	protected static IA_HeliSkinManagerComponent s_Instance;
 
 	//------------------------------------------------------------------------------------------------
@@ -57,6 +59,7 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 		{
 			m_aChannelSkins.Insert(IA_HeliSkinCatalog.SKIN_NONE);
 			m_aShown.Insert(IA_HeliSkinCatalog.SKIN_NONE);
+			m_aPilotChoice.Insert(false);
 		}
 		SetEventMask(owner, EntityEvent.INIT);
 	}
@@ -101,8 +104,9 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 
 	//------------------------------------------------------------------------------------------------
 	//! Server: put a skin on a helicopter where it stands, or stock paint with IA_HeliSkinCatalog.SKIN_NONE.
+	//! \param pilotChoice the pilot picked it in the paint bay, so the pad service leaves it alone
 	//! \return true when the helicopter now wears that skin; false when it has no paint channel
-	bool SetVehicleSkin(IEntity vehicle, int skinId)
+	bool SetVehicleSkin(IEntity vehicle, int skinId, bool pilotChoice = false)
 	{
 		if (!Replication.IsServer())
 			return false;
@@ -112,6 +116,9 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 			return false;
 		if (skinId != IA_HeliSkinCatalog.SKIN_NONE && !IA_HeliSkinCatalog.FindDef(skinId))
 			return false;
+
+		// A new airframe on the pad is set to stock without the flag, which clears it.
+		m_aPilotChoice[channel - 1] = pilotChoice;
 		if (m_aChannelSkins[channel - 1] == skinId)
 			return true;
 
@@ -136,6 +143,16 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 		if (channel == IA_HeliPaintChannels.CHANNEL_NONE || channel > m_aChannelSkins.Count())
 			return IA_HeliSkinCatalog.SKIN_NONE;
 		return m_aChannelSkins[channel - 1];
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server. \return true when the skin this helicopter wears was picked by its pilot
+	bool IsPilotChoice(IEntity vehicle)
+	{
+		int channel = GetVehicleChannel(vehicle);
+		if (channel == IA_HeliPaintChannels.CHANNEL_NONE || channel > m_aPilotChoice.Count())
+			return false;
+		return m_aPilotChoice[channel - 1];
 	}
 
 	//------------------------------------------------------------------------------------------------

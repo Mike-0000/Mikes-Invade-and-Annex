@@ -45,6 +45,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected ref IA_PilotHud m_PilotHud;
 	protected ref IA_PilotDropoffPayload m_PendingPilotLine;
 	protected ref IA_PilotHudPreview m_PilotPreview;
+	protected ref IA_HeliPaintHotkey m_PaintHotkey;
 
 	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
 	protected bool m_bIsDisplaying = false;
@@ -84,12 +85,16 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			m_HudHost.Tick(timeSlice);
 		if (m_RankHud)
 			m_RankHud.Tick(timeSlice);
+		if (m_PaintHotkey)
+			m_PaintHotkey.Tick(timeSlice);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	override void DisplayControlledEntityChanged(IEntity from, IEntity to)
 	{
 		super.DisplayControlledEntityChanged(from, to);
+		if (m_PaintHotkey)
+			m_PaintHotkey.Reset();
 		if (!m_RankHud)
 			return;
 		if (from == to)
@@ -128,6 +133,11 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected void CloseMikesUI()
 	{
 		m_Runtime = null;
+		if (m_PaintHotkey)
+		{
+			m_PaintHotkey.Stop();
+			m_PaintHotkey = null;
+		}
 		if (m_Toast)
 		{
 			m_Toast.GetOnFinished().Remove(OnToastFinished);
@@ -180,6 +190,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		m_RankHud.PulseSpawn();
 		IA_LocalOptions.Get().GetOnChanged().Insert(this.ApplyLocalOptions);
 		ApplyLocalOptions();
+		m_PaintHotkey = new IA_HeliPaintHotkey();
 	}
 
 	//------------------------------------------------------------------------------------------------

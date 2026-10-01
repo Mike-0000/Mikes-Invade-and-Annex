@@ -187,6 +187,57 @@ next skin; press again to step through the skins and back to stock. It works
 from the pilot's seat with the engine running. Everyone sees it. No rating is
 needed or earned.
 
+## Paint bay
+
+The pilot of a helicopter (the pilot's seat only, not the co-pilot's) opens the
+paint bay with **I**, or by holding **D-pad left** on a gamepad. The key can be
+rebound under Controls, Helicopter, as *Paint bay (pilot seat)*. A hint names
+the key the first time a pilot sits in a helicopter that can be repainted.
+
+The bay sits along the bottom of the screen so the helicopter stays in view. It
+shows the airframe as a blueprint, one tile per livery, and for the livery
+pointed at: its name, the pilot's rating against its threshold, and whether it
+is on the airframe, ready, locked, or waiting for the rating. Selecting a ready
+livery repaints the helicopter in place, on the ground or in flight. The bay
+closes with Back, with the key again, or when the pilot leaves the seat.
+
+| Shown | Meaning |
+| --- | --- |
+| ON AIRFRAME | The livery the helicopter wears now |
+| READY TO PAINT | Earned; select it to repaint |
+| LOCKED | Rating below the threshold; the bar and the blueprint show how far |
+| SYNCING | The rating has not arrived from the backend yet; nothing unlocks |
+| UNAVAILABLE | This helicopter has no paint channel (not spawned by a pad) |
+| ADMIN OVERRIDE | An admin may paint a livery they have not earned |
+
+How it works:
+
+- `IA_HeliPaintHotkey` (ticked by `IA_NotificationDisplay`) keeps the input
+  context `IA_HeliPilotContext` alive only while the local player is a
+  helicopter pilot and opens `IA_HeliPaintMenu`. The action and context are in
+  `Configs/System/chimeraInputCommon.conf`.
+- The menu asks; the server decides. The client sends only a skin id through
+  the player controller (`IA_AskSetHeliSkin`). The server
+  (`IA_HeliPaintService.TrySetSkin`) checks the seat, the paint channel and the
+  unlock against the rating it holds, then sets the skin through
+  `IA_HeliSkinManagerComponent.SetVehicleSkin`. The reply carries the result,
+  the rating and the thresholds in force.
+- The bay shows the worn livery from the replicated skin manager, so it follows
+  the airframe and celebrates only when the repaint has arrived.
+- A skin the pilot chose stays until they change it or the helicopter respawns;
+  the pad service no longer paints over it.
+
+### Looking at the bay alone
+
+Host a game alone (Workbench play mode or a listen server): the host is admin,
+so every livery is selectable with ADMIN OVERRIDE. Take the pilot's seat of a
+pad Huey and press **I**.
+
+The Workbench plugin **IA paint bay menu probe** (`IA_HeliPaintMenuProbe`)
+opens the bay over a Huey in a small world and steps it through every state. It
+feeds the menu its state directly, so it shows the drawing and that the input
+context exists, not the key in a seat or the server's side.
+
 ## Pilot HUD
 
 The pilot sees one card (`IA_PilotHud`), docked top-right under the rank chip.
@@ -254,6 +305,11 @@ skips the server side: crediting, batching per pilot, and the RPC.
   a player who joins afterwards, on a dedicated server, and after the
   helicopter streams out and back in. Check with **Cycle nearest heli skin**
   from the pilot's seat, with a second pad's Huey in view staying green.
+- The paint bay in a seat. The bay's drawing, its states and its input
+  context were seen in Workbench through the probe. Not yet seen: the key
+  opening it from the pilot's seat, flight controls while it is open, the
+  gamepad hold against the helicopter's own D-pad bindings, the entry in the
+  keybinding menu, and a repaint asked by a client of a dedicated server.
 - The tan in a published build. The materials are registered and load in
   Workbench, but only a packed build proves they ship and that their colour
   values can still be read there.

@@ -11,6 +11,11 @@ class IA_HeliSkinDef
 	string m_sDisplayName;
 	int m_iRequiredPoints;		// global transport rating
 
+	// Hull colour as sRGB bytes, for drawing the skin in the paint bay.
+	int m_iSwatchR = 78;
+	int m_iSwatchG = 88;
+	int m_iSwatchB = 60;
+
 	// By IA_HeliPaintChannels surface; an empty entry keeps that surface stock.
 	ref array<ResourceName> m_aPaints = {};
 

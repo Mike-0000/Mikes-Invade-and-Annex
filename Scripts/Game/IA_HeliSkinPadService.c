@@ -37,6 +37,10 @@ class IA_HeliSkinPadService
 		if (IA_HeliSkinManagerComponent.GetVehicleChannel(vehicle) == IA_HeliPaintChannels.CHANNEL_NONE)
 			return;
 
+		// A pilot who chose a skin in the paint bay keeps it, stock included.
+		if (skins.IsPilotChoice(vehicle))
+			return;
+
 		int pilotId = NearestPlayerOnFoot(pm, players, vehicle);
 		if (pilotId <= 0)
 			return;

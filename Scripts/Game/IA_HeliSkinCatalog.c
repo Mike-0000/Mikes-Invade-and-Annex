@@ -20,6 +20,7 @@ class IA_HeliSkinCatalog
 
 		s_aDefs = new array<ref IA_HeliSkinDef>();
 		IA_HeliSkinDef tan = AddDef(SKIN_HUEY_TAN, "huey_tan", "Desert Tan Huey", 50000);
+		AddSwatch(tan, 226, 192, 132);
 		AddPaint(tan, IA_HeliPaintChannels.SURFACE_BODY, "{E3D8521BB1595CE0}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Body01_Tan.emat");
 		AddPaint(tan, IA_HeliPaintChannels.SURFACE_INTERIOR_1, "{6F6BE8E1E361B2BE}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Interior01_Tan.emat");
 		AddPaint(tan, IA_HeliPaintChannels.SURFACE_INTERIOR_2, "{2F9BC9C4557D30F9}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Interior02_Tan.emat");
@@ -41,6 +42,15 @@ class IA_HeliSkinCatalog
 	protected static void AddPaint(notnull IA_HeliSkinDef def, int surface, ResourceName paint)
 	{
 		def.m_aPaints[surface] = paint;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Hull colour of the skin as sRGB bytes; the paint bay draws the skin with it.
+	protected static void AddSwatch(notnull IA_HeliSkinDef def, int r, int g, int b)
+	{
+		def.m_iSwatchR = r;
+		def.m_iSwatchG = g;
+		def.m_iSwatchB = b;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -89,6 +99,40 @@ class IA_HeliSkinCatalog
 		IA_HeliSkinDef def = FindDefByKey(key);
 		if (def && requiredPoints > 0)
 			def.m_iRequiredPoints = requiredPoints;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: the thresholds in force as "key=points;key=points", for a client that draws them.
+	static string PackThresholds()
+	{
+		EnsureDefs();
+		string packed;
+		foreach (IA_HeliSkinDef def : s_aDefs)
+		{
+			if (!packed.IsEmpty())
+				packed = packed + ";";
+			packed = packed + string.Format("%1=%2", def.m_sKey, def.m_iRequiredPoints);
+		}
+		return packed;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Client: take the server's thresholds. Unknown keys and nonsense values are ignored.
+	static void ApplyPackedThresholds(string packed)
+	{
+		if (packed.IsEmpty())
+			return;
+
+		ref array<string> entries = {};
+		packed.Split(";", entries, true);
+		ref array<string> pair = {};
+		foreach (string entry : entries)
+		{
+			pair.Clear();
+			entry.Split("=", pair, true);
+			if (pair.Count() == 2)
+				SetRequiredPoints(pair[0], pair[1].ToInt());
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
