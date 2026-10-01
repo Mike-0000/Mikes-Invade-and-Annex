@@ -313,6 +313,8 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 	//!   -iaSkinPrefab <prefab>           the airframe
 	//!   -iaSkinMaterial <emat[,emat]>    the stock materials to mark
 	//!   -iaSkinSpacing <metres>          gap between the three views (side, nose, tail)
+	//!   -iaSkinParam <name> -iaSkinColors <r,g,b[/r,g,b]>   instead of marking layers, set this one
+	//!                                    colour to each value in turn (screenshots tint_0, tint_1, ...)
 	protected int ProbeLayers(BaseWorld world, vector origin)
 	{
 		string prefab;
@@ -354,14 +356,78 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 				continue;
 			}
 			held.Insert(material);
-			material.SetParam("Color_1", red);
-			material.SetParam("Color_2", green);
-			material.SetParam("Color_3", blue);
-			material.SetParam("Color_4", yellow);
+			MarkColourParams(name);
+		}
+
+		// A hull with no colour layers has one tint instead: try each given colour on it.
+		string paramArg;
+		string coloursArg;
+		if (System.GetCLIParam("iaSkinParam", paramArg) && !paramArg.IsEmpty() && System.GetCLIParam("iaSkinColors", coloursArg) && !coloursArg.IsEmpty())
+		{
+			ref array<string> colours = {};
+			coloursArg.Split("/", colours, true);
+			ref array<string> channels = {};
+			float tint[4];
+			bool taken;
+			int index;
+			foreach (string colour : colours)
+			{
+				channels.Clear();
+				colour.Split(",", channels, true);
+				if (channels.Count() < 3)
+					continue;
+
+				tint[0] = channels[0].ToFloat();
+				tint[1] = channels[1].ToFloat();
+				tint[2] = channels[2].ToFloat();
+				tint[3] = 1;
+				taken = true;
+				foreach (Material tinted : held)
+				{
+					if (!tinted.SetParam(paramArg, tint))
+						taken = false;
+				}
+				failures = failures + Expect(taken, string.Format("every material took %1 = %2", paramArg, colour));
+				Sleep(2500);
+				Shot(string.Format("tint_%1", index));
+				index = index + 1;
+			}
+			return failures;
+		}
+
+		foreach (Material layered : held)
+		{
+			layered.SetParam("Color_1", red);
+			layered.SetParam("Color_2", green);
+			layered.SetParam("Color_3", blue);
+			layered.SetParam("Color_4", yellow);
 		}
 		Sleep(3000);
 		Shot("layers");
 		return failures;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Logs the class of a material and every colour its class has, set by the file or not.
+	protected void MarkColourParams(ResourceName name)
+	{
+		Resource resource = Resource.Load(name);
+		if (!resource || !resource.IsValid())
+			return;
+
+		BaseContainer source = resource.GetResource().ToBaseContainer();
+		if (!source)
+			return;
+
+		string colours;
+		int count = source.GetNumVars();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			if (source.GetDataVarType(i) == DataVarType.COLOR)
+				colours = colours + " " + source.GetVarName(i);
+		}
+		Mark(string.Format("%1 is %2 with colours:%3", name, source.GetClassName(), colours));
 	}
 
 	//------------------------------------------------------------------------------------------------

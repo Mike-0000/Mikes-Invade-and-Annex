@@ -6,8 +6,8 @@
 //! SetVObjectFromPrefab free the mesh instance the vehicle animation is bound
 //! to, and the engine crashes on a later frame.
 //! What is set comes from the channel's family (IA_HeliPaintManifest): which
-//! parameters take the livery's colour, which take a fixed value, and what
-//! each is in stock paint. No material file is read here.
+//! parameters take the livery's colour, which tint a painted texture towards
+//! it, which take a fixed value, and what each is in stock paint. No material file is read here.
 //! Local to the machine that calls it; IA_HeliSkinManagerComponent replicates.
 //------------------------------------------------------------------------------------------------
 class IA_HeliSkinPaint
@@ -82,6 +82,8 @@ class IA_HeliSkinPaint
 				value = param.m_vStock;
 			else if (param.m_iKind == IA_HeliPaintParam.KIND_PRIMARY)
 				value = def.m_vPaint * param.m_fGain;
+			else if (param.m_iKind == IA_HeliPaintParam.KIND_TINT)
+				value = Vector(def.m_vPaint[0] / param.m_vPaint[0], def.m_vPaint[1] / param.m_vPaint[1], def.m_vPaint[2] / param.m_vPaint[2]);
 			else
 				value = param.m_vPaint;
 

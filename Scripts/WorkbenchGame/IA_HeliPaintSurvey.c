@@ -19,6 +19,16 @@ class IA_HeliPaintSurvey : WorkbenchPlugin
 	protected static const string DEFAULT_OUT = "IA_HeliPaintSurvey.json";
 	protected static const string MESH_CLASS = "MeshObject";
 	protected static const string SLOT_CLASS = "SlotManagerComponent";
+	protected static const string MATERIAL_SUFFIX = ".emat";
+	protected static const string TEXTURE_SUFFIX = ".edds";
+	protected static const int MATERIAL_MAX_LINES = 2000;
+	// Where a slot's material was found.
+	protected static const string ORIGIN_PREFAB = "prefab";
+	protected static const string ORIGIN_MESH = "mesh";
+	protected static const string ORIGIN_NAME = "name";
+	// How much of a mesh file is searched for its table of slot names and materials.
+	protected static const int MESH_HEAD_BYTES = 262144;
+	protected static const int MESH_TEXT_MAX = 300;
 
 	protected ref array<ref Resource> m_aLoaded = {};
 	// Every material a surveyed mesh shows, each once.
@@ -193,14 +203,15 @@ class IA_HeliPaintSurvey : WorkbenchPlugin
 
 		ref array<string> names = {};
 		ref array<ResourceName> materials = {};
+		ref array<string> origins = {};
 		if (meshComponent)
-			MeshSlots(meshComponent, mesh, names, materials);
+			MeshSlots(meshComponent, mesh, names, materials, origins);
 
 		int count = names.Count();
 		int i;
 		for (i = 0; i < count; i++)
 		{
-			text = text + string.Format("%1 {\"slot\": %2, \"material\": %3}", indent, Quote(names[i]), Quote(materials[i]));
+			text = text + string.Format("%1 {\"slot\": %2, \"material\": %3, \"from\": %4}", indent, Quote(names[i]), Quote(materials[i]), Quote(origins[i]));
 			if (i + 1 < count)
 				text = text + ",";
 			text = text + "\n";
@@ -211,8 +222,9 @@ class IA_HeliPaintSurvey : WorkbenchPlugin
 
 	//------------------------------------------------------------------------------------------------
 	//! Each material slot of a mesh, once, with the material the prefab shows on it: the one its
-	//! MeshObject assigns, else the default the slot name carries as a GUID suffix.
-	protected void MeshSlots(notnull BaseContainer meshComponent, ResourceName mesh, notnull array<string> names, notnull array<ResourceName> materials)
+	//! MeshObject assigns, else the one the slot name carries as a GUID suffix, else the default
+	//! the mesh file names for the slot. origins says which of the three it was.
+	protected void MeshSlots(notnull BaseContainer meshComponent, ResourceName mesh, notnull array<string> names, notnull array<ResourceName> materials, notnull array<string> origins)
 	{
 		if (mesh.IsEmpty())
 			return;
@@ -230,11 +242,15 @@ class IA_HeliPaintSurvey : WorkbenchPlugin
 		if (assigned)
 			assignedCount = assigned.Count();
 
+		ref map<string, ResourceName> defaults = new map<string, ResourceName>();
+		bool defaultsRead;
+
 		string slots[256];
 		int count = vobj.GetMaterials(slots);
 		BaseContainer entry;
 		ResourceName material;
 		string source;
+		string origin;
 		int cut;
 		int i;
 		int a;
@@ -254,14 +270,79 @@ class IA_HeliPaintSurvey : WorkbenchPlugin
 					entry.Get("AssignedMaterial", material);
 			}
 
+			origin = ORIGIN_PREFAB;
 			cut = slots[i].LastIndexOf("_");
 			if (material.IsEmpty() && cut >= 0)
+			{
+				origin = ORIGIN_NAME;
 				material = ResolveGuid(slots[i].Substring(cut + 1, slots[i].Length() - cut - 1));
+			}
+
+			// The mesh file is read only for a slot whose name does not give its material.
+			if (material.IsEmpty())
+			{
+				if (!defaultsRead)
+					MeshDefaults(mesh, defaults);
+				defaultsRead = true;
+				origin = ORIGIN_MESH;
+				defaults.Find(slots[i], material);
+			}
 
 			names.Insert(slots[i]);
 			materials.Insert(material);
+			origins.Insert(origin);
 			if (!material.IsEmpty() && !m_aMaterials.Contains(material))
 				m_aMaterials.Insert(material);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! The default material of each slot of a mesh. The engine gives only the slot names, and a
+	//! modded mesh rarely carries the material GUID in them, so this reads the table the mesh file
+	//! starts with: each slot name, then its material, as zero-terminated text.
+	protected void MeshDefaults(ResourceName mesh, notnull map<string, ResourceName> defaults)
+	{
+		FileHandle file = FileIO.OpenFile(mesh.GetPath(), FileMode.READ);
+		if (!file)
+			return;
+
+		int length = file.GetLength();
+		if (length > MESH_HEAD_BYTES)
+			length = MESH_HEAD_BYTES;
+
+		ref array<int> bytes = {};
+		file.ReadArray(bytes, 1, length);
+		file.Close();
+
+		string previous;
+		string current;
+		int run;
+		int value;
+		int count = bytes.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			value = bytes[i];
+			if (value >= 32 && value < 127)
+			{
+				// Mesh data can be printable for a long stretch; a name or a path is short.
+				run = run + 1;
+				if (run <= MESH_TEXT_MAX)
+					current = current + value.AsciiToString();
+				continue;
+			}
+
+			if (run == 0)
+				continue;
+
+			if (run > MESH_TEXT_MAX)
+				current = string.Empty;
+			else if (current.StartsWith("{") && current.EndsWith(MATERIAL_SUFFIX) && !previous.IsEmpty() && !defaults.Contains(previous))
+				defaults.Insert(previous, current);
+
+			previous = current;
+			current = string.Empty;
+			run = 0;
 		}
 	}
 
@@ -337,8 +418,8 @@ class IA_HeliPaintSurvey : WorkbenchPlugin
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! \return one material as a JSON member: its class and every colour and number its file, or a
-	//! file that one inherits, sets
+	//! \return one material as a JSON member: its class, and every colour, number and texture its
+	//! file, or a file that one inherits, sets
 	protected string SurveyMaterial(ResourceName material)
 	{
 		string text = string.Format("  %1: {", Quote(material));
@@ -391,7 +472,55 @@ class IA_HeliPaintSurvey : WorkbenchPlugin
 				text = text + string.Format("%1: %2", Quote(name), scalar.ToString());
 			}
 		}
-		return text + "}}";
+		return text + "}, \"textures\": {" + MaterialTextures(source, material) + "}}";
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the textures a material file, or a file it inherits, names, as JSON members, read
+	//! from the files' text
+	protected string MaterialTextures(notnull BaseContainer source, ResourceName material)
+	{
+		string text;
+		ref array<string> seen = {};
+		BaseContainer container = source;
+		ResourceName name = material;
+		FileHandle file;
+		string line;
+		string param;
+		int space;
+		int lines;
+		while (container)
+		{
+			file = FileIO.OpenFile(name.GetPath(), FileMode.READ);
+			if (file)
+			{
+				lines = 0;
+				while (lines < MATERIAL_MAX_LINES && file.ReadLine(line) >= 0)
+				{
+					lines = lines + 1;
+					line = line.Trim();
+					space = line.IndexOf(" ");
+					if (space <= 0 || !line.EndsWith(TEXTURE_SUFFIX + "\""))
+						continue;
+
+					// The nearest file that names a texture is the one that counts.
+					param = line.Substring(0, space);
+					if (seen.Contains(param))
+						continue;
+
+					seen.Insert(param);
+					if (!text.IsEmpty())
+						text = text + ", ";
+					text = text + string.Format("%1: %2", Quote(param), Quote(Between(line, "\"", "\"")));
+				}
+				file.Close();
+			}
+
+			container = container.GetAncestor();
+			if (container)
+				name = container.GetResourceName();
+		}
+		return text;
 	}
 
 	//------------------------------------------------------------------------------------------------

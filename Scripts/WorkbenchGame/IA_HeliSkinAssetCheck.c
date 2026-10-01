@@ -19,6 +19,8 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 	protected int m_iFailures;
 	// Containers read from a prefab are only valid while its Resource is held.
 	protected ref array<ref Resource> m_aLoaded = {};
+	// The channel materials some twin of the family being checked names.
+	protected ref array<ResourceName> m_aShown = {};
 
 	//------------------------------------------------------------------------------------------------
 	override void RunCommandline()
@@ -71,6 +73,7 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 		}
 		Check(primaries > 0, label + " has a layer that takes the livery colour");
 
+		m_aShown.Clear();
 		int airframeCount = family.m_aStockPrefabs.Count();
 		int airframe;
 		for (airframe = 0; airframe < airframeCount; airframe++)
@@ -78,6 +81,16 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 			for (local = 1; local <= IA_HeliPaintChannels.CHANNEL_COUNT; local++)
 			{
 				CheckAirframe(family, family.m_aStockPrefabs[airframe], local, world);
+			}
+		}
+
+		// Airframes of a family differ (one mesh for the ambulance, pylons on the gunship), so a
+		// surface need not be on each of them; one that no twin names would be painted and never seen.
+		foreach (IA_HeliPaintSurface shown : family.m_aSurfaces)
+		{
+			for (local = 1; local <= IA_HeliPaintChannels.CHANNEL_COUNT; local++)
+			{
+				Check(m_aShown.Contains(shown.GetMaterial(local)), label + " channel " + local.ToString() + " shows " + shown.m_sStockMaterial.GetPath());
 			}
 		}
 
@@ -116,7 +129,7 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 		vector colour;
 		foreach (IA_HeliPaintParam param : surface.m_aParams)
 		{
-			if (param.m_iKind == IA_HeliPaintParam.KIND_PRIMARY)
+			if (param.m_iKind == IA_HeliPaintParam.KIND_PRIMARY || param.m_iKind == IA_HeliPaintParam.KIND_TINT)
 				primaries = primaries + 1;
 
 			Check(source.GetVarIndex(param.m_sParam) >= 0, label + " has a parameter " + param.m_sParam);
@@ -230,10 +243,9 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 				Check(CheckPaint(part.GetPath(), partSource, channel, named) > 0, part.GetPath() + " names its channel's materials");
 		}
 
-		// A surface no mesh of the airframe names would be painted and never seen.
-		foreach (IA_HeliPaintSurface surface : family.m_aSurfaces)
+		foreach (ResourceName shown : named)
 		{
-			Check(named.Contains(surface.GetMaterial(local)), label + " shows " + surface.m_sStockMaterial.GetPath());
+			m_aShown.Insert(shown);
 		}
 
 		CheckSpawn(label, prefab, parts, world);

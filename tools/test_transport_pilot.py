@@ -5,6 +5,8 @@ Scoring and eligibility maths are checked natively in Workbench
 as other clients see them, insertions and the backend round trip still need a
 mission playtest against a deployed backend.
 """
+import contextlib
+import io
 import re
 import unittest
 
@@ -165,6 +167,68 @@ class TransportPilotTests(unittest.TestCase):
         self.assertRegex(method(art, "Create"), r"return new IA_HeliArtGeneric\(\);\s*$")
         bay = (ROOT / "Scripts" / "Game" / "UI" / "IA_HeliPaintBay.c").read_text(encoding="utf-8")
         self.assertIn("IA_HeliPaintChannels.GetFamily(channel)", method(bay, "SetContext"))
+
+    def test_a_helicopter_with_its_paint_in_a_texture_is_tinted(self):
+        # Such a material has no colour layers: the livery's colour goes over the texture's own paint colour.
+        exterior = "{00000000000000A1}Assets/Mod/Data/Mod_Exterior.emat"
+        interior = "{00000000000000A2}Assets/Mod/Data/Mod_Interior.emat"
+        pylons = "{00000000000000A3}Assets/Mod/Data/Mod_Pylons.emat"
+        glass = "{00000000000000A4}Assets/Mod/Data/Mod_Glass.emat"
+        part = {"slot": "Pylons", "slot_class": "RegisteringComponentSlotInfo", "prefab": "{00000000000000B2}Prefabs/Mod/Mod_Pylons.et", "class": "GenericEntity",
+                "id": "4444444444444444", "mesh_component": "5555555555555555", "slots": [{"slot": "Mod_Pylons", "material": pylons, "from": "mesh"}]}
+        survey = {
+            "materials": {
+                exterior: {"class": "MatPBRBasic", "params": {}, "textures": {}},
+                interior: {"class": "MatPBRMulti", "params": {"Color_1": "0.1 0.1 0.1 1"}, "textures": {}},
+                pylons: {"class": "MatPBRBasic", "params": {}, "textures": {}},
+                glass: {"class": "MatPBRBasicGlass", "params": {}, "textures": {}},
+            },
+            "airframes": [{"prefab": "{00000000000000B1}Prefabs/Mod/Mod_Heli.et", "class": "Vehicle", "id": "1111111111111111", "mesh_component": "2222222222222222",
+                           "slot_component": "3333333333333333", "parts": [part],
+                           "slots": [{"slot": "Mod_Exterior", "material": exterior, "from": "mesh"}, {"slot": "Mod_Interior", "material": interior, "from": "mesh"},
+                                     {"slot": "Mod_Glass", "material": glass, "from": "mesh"}]}],
+        }
+        registry = {"channel_count": 2, "rig_component": "IA_HeliPaintRigComponent", "rig_component_id": "D3A91F5C7E20D001",
+                    "manifest": {"path": "Scripts/Game/XX_HeliPaintManifest.c", "modded": True}, "families": []}
+
+        # The hull is guessed by name, not by class: a layered interior is not the hull.
+        said = io.StringIO()
+        with contextlib.redirect_stdout(said):
+            family = channels.adopt(registry, survey, {"family": "mod"})
+        self.assertIn("guessed the hull paint by name", said.getvalue())
+        self.assertEqual([surface["material"] for surface in family["surfaces"]], [exterior])
+        self.assertEqual(family["surfaces"][0]["paint"], {"Color": {"tint": channels.UNMEASURED_PAINT}})
+        self.assertEqual(family["parts"], [])
+
+        # Naming the surfaces takes the parts that show them, and keeps the paint already set.
+        family["surfaces"][0]["paint"]["Color"]["tint"] = [0.02, 0.018, 0.013]
+        with contextlib.redirect_stdout(io.StringIO()):
+            family = channels.adopt(registry, survey, {"family": "mod", "surfaces": "Mod_Exterior,Mod_Pylons"})
+        self.assertEqual([surface["material"] for surface in family["surfaces"]], [exterior, pylons])
+        self.assertEqual(family["surfaces"][0]["paint"]["Color"]["tint"], [0.02, 0.018, 0.013])
+        self.assertEqual([entry["prefab"] for entry in family["parts"]], [part["prefab"]])
+        with self.assertRaises(channels.RegistryError):
+            with contextlib.redirect_stdout(io.StringIO()):
+                channels.adopt(registry, survey, {"family": "mod", "surfaces": "Mod_Exterior,Mod_Glass"})
+
+        files = channels.build(registry)
+        self.assertIn('surface.AddTint("Color", 0.02, 0.018, 0.013, false, 0, 0, 0);', files[registry["manifest"]["path"]])
+        self.assertEqual(files["Assets/Mod/Paint/IA_Mod_Exterior_Paint1.emat"], 'MatPBRBasic : "%s" {\n}\n' % exterior)
+        family["surfaces"][0]["paint"]["Color"]["tint"] = [0.02, 0, 0.013]
+        with self.assertRaises(channels.RegistryError):
+            channels.build(registry)
+
+        paint = method(source("IA_HeliSkinPaint.c"), "PaintSurface")
+        self.assertIn("def.m_vPaint[0] / param.m_vPaint[0]", paint)
+        self.assertIn("Math.Max(bakedR, MIN_BAKED)", method(source("IA_HeliPaintSurface.c"), "AddTint"))
+
+        # The paint colour is the commonest colour of the texture, whatever fills its unused space.
+        pixels = [(36, 34, 29)] * 300 + [(38, 35, 30)] * 200 + [(0, 0, 0)] * 400 + [(188, 188, 188)] * 300 + [(200, 30, 30)] * 50
+        colour = channels.paint_colour(pixels)
+        for index, byte in enumerate((36.8, 34.4, 29.4)):
+            self.assertAlmostEqual(colour[index], channels.linear(byte), delta=0.0005)
+        # A texture of greys only still gives its commonest one.
+        self.assertAlmostEqual(channels.paint_colour([(40, 40, 40)] * 90 + [(0, 0, 0)] * 10)[0], channels.linear(40), delta=0.0005)
 
     def test_a_skin_is_set_in_place_and_never_changes_or_replaces_the_helicopter(self):
         # Changing a vehicle hull's mesh from script frees the instance its animation is bound to.

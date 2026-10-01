@@ -266,6 +266,7 @@ Paint: `DrawX()` / `DrawY()` / `GetDrawOpacity()`. Details: Mike's UI consumer r
 
 ## Changelog
 
+- 2026-10-01 — In `enfusion-vehicle-paint.mdc`: `SetParam("Color")` on `MatPBRBasic` tints the baked texture and takes gains near 10; a mod's mesh slots need the `.xob` head table (cap text runs, an uncapped scan hung Workbench); airframes of one modded family differ; a `modded class` manifest in a dependent addon registers a Workshop helicopter; `.edds` layout (Sikorsky H-60, `logs_2026-10-01_15-07-01` to `15-22-48`).
 - 2026-10-01 — Vehicle paint and material facts moved to `enfusion-vehicle-paint.mdc`, with new ones: `SetParam` flattens a camo-textured `MatPBRMulti` hull, a tinted `Specular` shows through dark paint, a GUID-only `Resource.Load` resolves, prefab text is readable from a pak, `GetCLIParam` empties its output when the flag is absent (`IA_HeliPaintSurvey`, `logs_2026-10-01_12-51-14` to `13-51-09`).
 - 2026-10-01 — `UV world` on a vehicle hull is a model-space top-down projection that ignores mesh UVs; run-time decals on a helicopter cover only some surfaces; a texture cannot be swapped with `SetParam`; a CLI value starting with `-` is swallowed (`IA_HeliCamoProbe`, `logs_2026-10-01_12-17-55` to `12-27-18`).
 - 2026-10-01 — A `modded class` can override a `static` with `super`; `GetRandomVariant` is the server hook for what the editor spawns; `DeleteEntityAndChildren` on a helicopter is clean in play mode (`IA_HeliSkinLiveProbe` mode 4, `logs_2026-10-01_11-36-14`).

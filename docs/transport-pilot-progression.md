@@ -151,8 +151,10 @@ paint rule). A plain colour looks right on all of them.
   materials and set nothing, so a channel airframe looks stock.
 - A **family** is one helicopter type: its stock airframes, the parts that show
   paint, its paint materials ("surfaces") and, per surface, a **recipe**: which
-  parameters take the livery's colour (`primary`, with a gain), which take a
-  fixed colour or number while a livery is on, and what each is in stock paint.
+  parameters take the livery's colour (`primary`, with a gain, for a material
+  built of colour layers; `tint` for one whose paint is in its texture), which
+  take a fixed colour or number while a livery is on, and what each is in stock
+  paint.
   Families live in `tools/heli_paint_families.json`. Two ship: `uh1h` (four
   Hueys; body and two interior materials) and `mi8mt` (four Mi-8MTs with seven
   slotted parts; one body material, whose camouflage layers all take the
@@ -215,23 +217,37 @@ compatibility addon that depends on both (last step).
 1. **Survey.** Run the Workbench plugin `IA_HeliPaintSurvey` from the command
    line with `-iaSurveyPrefab <stock prefab>[,<variant>...]` and
    `-iaSurveyOut <name>.json`. It reads the prefabs' ids, mesh slots, slotted
-   parts and what each material file sets, and writes the JSON to the Workbench
-   profile folder. It changes nothing.
+   parts, what each material file sets and which textures it names, and writes
+   the JSON to the Workbench profile folder. It changes nothing.
 2. **Adopt.** `python tools/author_heli_paint_channels.py --adopt <survey.json>
    --family <key> --name "DISPLAY NAME" --stock-paint "Factory Camo" --art
-   <key>`. It adds the family to the registry with a draft recipe: the layered
-   (`MatPBRMulti`) hull materials as surfaces, the first layer of the first one
-   taking the livery colour. `--surfaces` and `--parts` name them by hand.
-3. **Find the layers.** `IA_HeliSkinLiveProbe -iaSkinMode 5 -iaSkinPrefab
-   <stock prefab> -iaSkinMaterial <emat[,emat]>` paints each colour layer of a
-   material in a loud colour on its own airframe and takes a screenshot, so it
-   is plain which `Color_n` is the hull, which is trim and which is not paint.
+   <key>`. It adds the family to the registry with a draft recipe. Without
+   `--surfaces` it guesses the hull paint from the material names (`Exterior`,
+   `Body`, `Hull`...) and prints its guess: check it. `--surfaces Stem,Stem`
+   names the paint materials by hand, a slotted part's too (pylons, doors), and
+   takes every part that shows one; `--parts` limits the parts. A paint
+   material is one of two kinds:
+   - **Layered** (`MatPBRMulti` with `Color_n`): the draft has the first layer
+     of the first surface taking the livery colour. Steps 3 and 4 finish it.
+   - **Tinted** (`MatPBRBasic`): the paint is in the texture, and the material
+     multiplies it by `Color`. The recipe is `{"Color": {"tint": [r, g, b]}}`,
+     the texture's own paint colour (linear); a livery sets `Color` to its
+     colour over that. With `--textures <the mod's unpacked folder>` the tool
+     measures it from the texture (the commonest colour, leaving out the grey
+     and black that fill unused space; needs Pillow and lz4). Without it the
+     draft holds a placeholder to replace by hand. Skip to step 5.
+3. **Find the layers** (layered only). `IA_HeliSkinLiveProbe -iaSkinMode 5
+   -iaSkinPrefab <stock prefab> -iaSkinMaterial <emat[,emat]>` paints each
+   colour layer of a material in a loud colour on its own airframe and takes a
+   screenshot, so it is plain which `Color_n` is the hull, which is trim and
+   which is not paint.
 4. **Write the recipe** in the registry, per surface under `paint`:
    `{"primary": 1}` for a layer that takes the livery colour (the number is a
    gain), `{"color": [r, g, b]}` for a fixed colour while a livery is on, and
    `{"value": n}` for a number. Set `Specular` / `SpecularIBL` to a neutral
    value if the stock material tints them (the Mi-8's khaki sheen shows through
    dark paint otherwise). Set `stock_swatch` to the stock colour in sRGB bytes.
+   A refresh (`--adopt` on a family the registry has) keeps the recipe.
 5. **Generate.** `python tools/author_heli_paint_channels.py`, then open
    Workbench once so it imports the files, and run `IA_HeliSkinAssetCheck`
    until it prints `PASS`.
@@ -248,13 +264,37 @@ A compatibility addon keeps its own registry and passes `--registry <file>
 `{"path": "Scripts/Game/XX_HeliPaintManifest.c", "modded": true}`, which writes
 a `modded class IA_HeliPaintManifest` that adds its families after the built-in
 ones. Server and clients must load the same addons in the same order, as for
-any mod, so the channel numbers agree.
+any mod, so the channel numbers agree. The addon holds only the registry, the
+generated twins (which inherit the mod's prefabs and materials and copy
+nothing) and the manifest script.
+
+This was run on the Sikorsky H-60 mod (`uh60`: four airframes on two meshes,
+four tinted hull materials and a pylon part), in a scratch addon depending on
+I&A and the mod: asset check `PASS`, all five liveries in play mode with the
+engines running, and the paint bay.
+
+What a tint cannot do, since it multiplies the texture:
+
+- Markings, wear and panel shading painted into the texture stay, tinted with
+  it. Lettering in the stock paint's darker shade stays readable; a white
+  marking takes the tint's hue.
+- A texture with a camouflage pattern keeps the pattern. Only a layered
+  material can be painted flat.
+- One multiplier serves a whole material, so parts of one texture painted in
+  different colours stay different.
+- A wrong paint colour shows as a hull material off-hue from its neighbours
+  (the H-60's engine cowl came out lavender while its measured colour was
+  off). Look at the livery sheet and correct the `tint` in the registry.
 
 What can go wrong with a modded helicopter, and what the tools say:
 
-- Its hull is not `MatPBRMulti`, or its paint is baked into the texture and no
-  `Color_n` moves it: the layer probe shows no layer changing the hull. A flat
-  recolour is then not possible without the mod's author.
+- Its paint material is neither layered nor tinted (another class): `--adopt`
+  refuses it by name. It cannot be recoloured without the mod's author.
+- The guess names the wrong materials (the H-60's interior is layered, its hull
+  is not): name them with `--surfaces`.
+- Airframes of one family differ (the H-60 ambulance has its own mesh and hull
+  materials; only the gunship has pylons): name every variant's materials. The
+  asset check asks that each surface shows on some airframe, not on all.
 - A prefab already assigns a material to a slot: `--adopt` prints a warning and
   the twin's entry replaces it.
 - A part's ids are missing from the survey: `--adopt` prints a warning and that
@@ -385,9 +425,11 @@ with a pilot seated and the engine running, only the painted airframe changing,
 channels handed out and given back per family, and the paint bay's drawing for
 both families and the generic silhouette. Not yet seen:
 
-- **A modded helicopter.** The survey, adopt, layer probe, generator and asset
-  check have only run on the vanilla Huey and Mi-8. A mod's prefab may inherit
-  differently, name its slots differently or use another material class.
+- **A modded helicopter in a mission.** The whole path ran on the Sikorsky H-60
+  mod in Workbench, from a scratch addon that is not in this repository. Not
+  yet seen: a compatibility addon published and loaded by a server, a pad or
+  the editor spawning its twin in a mission, and its seat opening the bay. A
+  second mod may still use a material class the tools do not know.
 - **Multiplayer.** The repaint on other clients, on a player who joins
   afterwards, on a dedicated server, and after the helicopter streams out and
   back in. Check with **Cycle nearest heli skin** from the pilot's seat, with a

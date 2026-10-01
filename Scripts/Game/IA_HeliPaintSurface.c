@@ -5,6 +5,9 @@
 //------------------------------------------------------------------------------------------------
 class IA_HeliPaintSurface
 {
+	// A baked paint colour is divided by; a black texture cannot be tinted to a colour anyway.
+	protected static const float MIN_BAKED = 0.002;
+
 	ResourceName m_sStockMaterial;
 	// The copy each channel of the family uses, at index local channel - 1.
 	ref array<ResourceName> m_aChannelMaterials = {};
@@ -16,6 +19,17 @@ class IA_HeliPaintSurface
 	{
 		IA_HeliPaintParam entry = AddParam(param, IA_HeliPaintParam.KIND_PRIMARY, stockSet);
 		entry.m_fGain = gain;
+		entry.m_vStock = Vector(stockR, stockG, stockB);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! A colour the material multiplies its texture by, on a surface whose paint is painted into the
+	//! texture. It is set to the livery's colour over the baked paint colour, so the texture's own
+	//! paint comes out as the livery; markings and wear in the texture stay and are tinted with it.
+	void AddTint(string param, float bakedR, float bakedG, float bakedB, bool stockSet, float stockR, float stockG, float stockB)
+	{
+		IA_HeliPaintParam entry = AddParam(param, IA_HeliPaintParam.KIND_TINT, stockSet);
+		entry.m_vPaint = Vector(Math.Max(bakedR, MIN_BAKED), Math.Max(bakedG, MIN_BAKED), Math.Max(bakedB, MIN_BAKED));
 		entry.m_vStock = Vector(stockR, stockG, stockB);
 	}
 
