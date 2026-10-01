@@ -240,10 +240,14 @@ compatibility addon that depends on both (last step).
    -iaSkinPrefab <stock prefab> -iaSkinMaterial <emat[,emat]>` paints each
    colour layer of a material in a loud colour on its own airframe and takes a
    screenshot, so it is plain which `Color_n` is the hull, which is trim and
-   which is not paint.
+   which is not paint. Add `-iaSkinTilt 65` to tip the roofs toward the camera:
+   a layer can cover only the top of the hull (the Huey's roof walkway is
+   `Color_4`), and the side views do not show it.
 4. **Write the recipe** in the registry, per surface under `paint`:
    `{"primary": 1}` for a layer that takes the livery colour (the number is a
-   gain), `{"color": [r, g, b]}` for a fixed colour while a livery is on, and
+   gain: each layer has its own texture, and a dark one needs a high gain to
+   look like the hull, 14 on the Huey's walkway),
+   `{"color": [r, g, b]}` for a fixed colour while a livery is on, and
    `{"value": n}` for a number. Set `Specular` / `SpecularIBL` to a neutral
    value if the stock material tints them (the Mi-8's khaki sheen shows through
    dark paint otherwise). Set `stock_swatch` to the stock colour in sRGB bytes.
@@ -253,7 +257,8 @@ compatibility addon that depends on both (last step).
    until it prints `PASS`.
 6. **Look.** `IA_HeliSkinLiveProbe -iaSkinMode 6 -iaSkinFamily <key>` stands
    one airframe per livery in a row and takes a screenshot (`106` with the
-   engine running; `-iaSkinAirframe <index>` picks a variant).
+   engine running; `-iaSkinAirframe <index>` picks a variant). Run it once more
+   with `-iaSkinTilt 65` and look at the roofs.
    `IA_HeliPaintMenuProbe -iaMenuFamily <key>` shows its paint bay.
 7. **Silhouette (optional).** `art` picks the paint bay's side view: `huey`,
    `hip`, anything else the generic helicopter. A new one is one `IA_HeliArt`

@@ -19,6 +19,8 @@
 //!                  paint and of each livery, see ProbeLiveries. Add 100 to run an engine.
 //! Add 100 to run the engine first, 200 to seat a pilot first (300 for both).
 //!   -iaSkinDistance <metres>  how far in front of the camera the helicopters stand
+//!   -iaSkinTilt <degrees>     modes 5 and 6: tips each helicopter's roof toward the camera and
+//!                             holds it still, to see the top of the hull
 //------------------------------------------------------------------------------------------------
 [WorkbenchPluginAttribute(name: "IA helicopter skin live probe", wbModules: {"ResourceManager"})]
 class IA_HeliSkinLiveProbe : WorkbenchPlugin
@@ -33,11 +35,14 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 	// Rotor discs must not overlap once an engine runs.
 	protected static const float SPACING_M = 15;
 	protected static const float DISTANCE_M = 26;
+	// A tipped helicopter is lifted so its low side clears the ground.
+	protected static const float TILT_LIFT_M = 3;
 
 	protected IEntity m_Pilot;
 	// Helicopters stand side-on to the camera.
 	protected vector m_vSide;
 	protected vector m_vAway;
+	protected float m_fTilt;
 
 	//------------------------------------------------------------------------------------------------
 	override void RunCommandline()
@@ -107,6 +112,11 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 		m_vSide = right;
 		m_vAway = forward;
 		origin[1] = Math.Max(world.GetSurfaceY(origin[0], origin[2]), 0) + 0.3;
+		string tiltArg;
+		if (System.GetCLIParam("iaSkinTilt", tiltArg) && !tiltArg.IsEmpty())
+			m_fTilt = tiltArg.ToFloat();
+		if (m_fTilt != 0)
+			origin[1] = origin[1] + TILT_LIFT_M;
 
 		int technique = mode % 100;
 		int setup = mode / 100;
@@ -518,13 +528,34 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 		vector forward = m_vSide;
 		ref EntitySpawnParams params = new EntitySpawnParams();
 		params.TransformMode = ETransformMode.WORLD;
-		params.Transform[0] = right * cosine - forward * sine;
-		params.Transform[1] = vector.Up;
-		params.Transform[2] = right * sine + forward * cosine;
+		params.Transform[0] = Tipped(right * cosine - forward * sine);
+		params.Transform[1] = Tipped(vector.Up);
+		params.Transform[2] = Tipped(right * sine + forward * cosine);
 		params.Transform[3] = origin;
 		IEntity entity = GetGame().SpawnEntityPrefab(Resource.Load(prefab), world, params);
 		Mark(string.Format("spawned %1 from %2 yaw %3", entity, prefab, yaw));
+		if (entity && m_fTilt != 0)
+		{
+			// Without this it falls back onto its skids.
+			Physics physics = entity.GetPhysics();
+			if (physics)
+				physics.ChangeSimulationState(SimulationState.NONE);
+		}
 		return entity;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! A direction turned by the tilt about the camera's side axis: up leans toward the camera.
+	protected vector Tipped(vector direction)
+	{
+		if (m_fTilt == 0)
+			return direction;
+
+		float sine = Math.Sin(m_fTilt * Math.DEG2RAD);
+		float cosine = Math.Cos(m_fTilt * Math.DEG2RAD);
+		float along = vector.Dot(direction, m_vSide);
+		float away = vector.Dot(direction, m_vAway);
+		return m_vSide * along + (vector.Up * cosine - m_vAway * sine) * direction[1] + (m_vAway * cosine + vector.Up * sine) * away;
 	}
 
 	//------------------------------------------------------------------------------------------------
