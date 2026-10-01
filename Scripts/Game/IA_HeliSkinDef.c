@@ -1,7 +1,8 @@
 //------------------------------------------------------------------------------------------------
-//! One unlockable helicopter skin. Paint is authored into prefab variants, one
-//! per stock airframe: remapping materials on a live vehicle crashes the engine,
-//! so a skinned helicopter is a different prefab, never a repainted entity.
+//! One unlockable helicopter skin. A skin is a set of colours: for each surface
+//! of the airframe it names a material that holds them. That material is never
+//! put on a mesh; IA_HeliSkinPaint copies its colours onto a paint channel, so
+//! a skin changes on a live helicopter without touching the entity.
 //------------------------------------------------------------------------------------------------
 class IA_HeliSkinDef
 {
@@ -10,45 +11,25 @@ class IA_HeliSkinDef
 	string m_sDisplayName;
 	int m_iRequiredPoints;		// global transport rating
 
-	// Stock airframes and, at the same index, the variant wearing this skin.
-	ref array<ResourceName> m_aStockPrefabs = {};
-	ref array<ResourceName> m_aSkinPrefabs = {};
+	// By IA_HeliPaintChannels surface; an empty entry keeps that surface stock.
+	ref array<ResourceName> m_aPaints = {};
 
 	//------------------------------------------------------------------------------------------------
-	//! \return this skin's variant of a stock airframe, empty when it has none
-	ResourceName FindVariant(ResourceName stockPrefab)
+	void IA_HeliSkinDef()
 	{
-		int index = IndexOf(m_aStockPrefabs, stockPrefab);
-		if (index < 0)
-			return ResourceName.Empty;
-		return m_aSkinPrefabs[index];
-	}
-
-	//------------------------------------------------------------------------------------------------
-	//! \return the stock airframe behind one of this skin's variants, empty when it is not one
-	ResourceName FindStock(ResourceName skinPrefab)
-	{
-		int index = IndexOf(m_aSkinPrefabs, skinPrefab);
-		if (index < 0)
-			return ResourceName.Empty;
-		return m_aStockPrefabs[index];
-	}
-
-	//------------------------------------------------------------------------------------------------
-	//! Compares paths, so a prefab name with or without its GUID matches.
-	protected int IndexOf(notnull array<ResourceName> prefabs, ResourceName prefab)
-	{
-		if (prefab.IsEmpty())
-			return -1;
-
-		string path = prefab.GetPath();
-		int count = prefabs.Count();
-		int i;
-		for (i = 0; i < count; i++)
+		int surface;
+		for (surface = 0; surface < IA_HeliPaintChannels.SURFACE_COUNT; surface++)
 		{
-			if (prefabs[i].GetPath() == path)
-				return i;
+			m_aPaints.Insert(ResourceName.Empty);
 		}
-		return -1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the material holding this skin's colours for a surface, empty when it keeps stock
+	ResourceName GetPaint(int surface)
+	{
+		if (surface < 0 || surface >= m_aPaints.Count())
+			return ResourceName.Empty;
+		return m_aPaints[surface];
 	}
 }

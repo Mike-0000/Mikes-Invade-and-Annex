@@ -60,34 +60,42 @@ class IA_TransportPilotTest : WorkbenchPlugin
 	{
 		string huey = "Prefabs/Vehicles/Helicopters/UH1H/UH1H.et";
 		string hip = "Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et";
+		int none = IA_HeliPaintChannels.CHANNEL_NONE;
+		int last = IA_HeliPaintChannels.CHANNEL_COUNT;
 		IA_HeliSkinDef tan = IA_HeliSkinCatalog.FindDefByKey("huey_tan");
 		Check(tan != null, "the tan Huey skin is catalogued");
 		if (!tan)
 			return;
 
 		int required = tan.m_iRequiredPoints;
-		Check(IA_HeliSkinCatalog.ResolveForPilot(IA_TransportPilotRecord.RATING_UNKNOWN, huey) == null, "an unknown rating unlocks nothing");
-		Check(IA_HeliSkinCatalog.ResolveForPilot(required - 1, huey) == null, "a rating below the threshold unlocks nothing");
-		Check(IA_HeliSkinCatalog.ResolveForPilot(required, huey) == tan, "the threshold rating unlocks the tan Huey");
-		Check(IA_HeliSkinCatalog.ResolveForPilot(required, hip) == null, "a Huey skin is not offered on another airframe");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(IA_TransportPilotRecord.RATING_UNKNOWN) == null, "an unknown rating unlocks nothing");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(required - 1) == null, "a rating below the threshold unlocks nothing");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(required) == tan, "the threshold rating unlocks the tan Huey");
 		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required - 10, required + 20) == tan, "crossing the threshold reports the unlock");
 		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required, required + 30) == null, "an already unlocked skin is not reported again");
 		Check(IA_HeliSkinCatalog.FindNextLocked(0) == tan, "the next locked skin is the progress target");
 
-		// Paint is a prefab variant per stock airframe; names match with or without their GUID.
-		ResourceName variant = tan.FindVariant(huey);
-		Check(variant.Contains("IA_UH1H_Tan.et"), "the stock Huey has a tan variant");
-		Check(tan.FindVariant("Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed.et").Contains("IA_UH1H_armed_Tan.et"), "each stock airframe has its own variant");
-		Check(tan.FindStock(variant).Contains("/UH1H.et"), "a variant maps back to its stock airframe");
-		Check(IA_HeliSkinCatalog.FindDefBySkinPrefab(variant) == tan, "a variant is recognised as wearing its skin");
-		Check(IA_HeliSkinCatalog.FindDefBySkinPrefab(huey) == null, "a stock airframe wears no skin");
-		Check(IA_HeliSkinCatalog.FindStockPrefab(variant).Contains("/UH1H.et"), "the stock airframe is found from a variant");
-		Check(IA_HeliSkinCatalog.FindStockPrefab(hip).IsEmpty(), "an airframe without skins has no stock entry");
-		Check(IA_HeliSkinCatalog.ResolveForPilot(required, variant) == null, "a skin is only resolved from the stock airframe");
+		// A skin is colours for a paint channel; names match with or without their GUID.
+		Check(tan.GetPaint(IA_HeliPaintChannels.SURFACE_BODY).Contains("IA_UH_1H_Body01_Tan.emat"), "the tan skin holds body colours");
+		Check(tan.GetPaint(IA_HeliPaintChannels.SURFACE_COUNT).IsEmpty(), "a surface the airframe does not have holds no colours");
+		ResourceName first = IA_HeliPaintChannels.FindChannelPrefab(huey, 1);
+		Check(first.Contains("Paint/IA_UH1H_Paint1.et"), "the stock Huey has a twin on the first paint channel");
+		Check(IA_HeliPaintChannels.FindChannelPrefab("Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed.et", last).Contains("IA_UH1H_armed_Paint"), "each stock airframe has its own twin on every channel");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(huey, none).IsEmpty(), "a pad without a channel keeps the stock airframe");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(huey, last + 1).IsEmpty(), "there is no channel past the last");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(hip, 1).IsEmpty(), "an airframe without paint channels spawns as it is");
+		Check(IA_HeliPaintChannels.FindChannel(first) == 1, "a twin is recognised as its channel");
+		Check(IA_HeliPaintChannels.FindChannel(first.GetPath()) == 1, "a twin is recognised without its GUID");
+		Check(IA_HeliPaintChannels.FindChannel(IA_HeliPaintChannels.FindChannelPrefab(huey, last)) == last, "the last channel maps back to itself");
+		Check(IA_HeliPaintChannels.FindChannel(huey) == none, "a stock airframe has no paint channel");
+		Check(IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, 2) != IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, 1), "each channel has its own body material");
+		Check(IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, none).IsEmpty(), "no channel has no material");
+		Check(IA_HeliSkinPaint.Apply(none, tan.m_iId) == 0, "nothing is painted without a channel");
+		Check(IA_HeliSkinPaint.Apply(1, 9999) == 0, "an unknown skin paints nothing");
 
 		// The backend's threshold replaces the built-in default for every server.
 		IA_HeliSkinCatalog.SetRequiredPoints("huey_tan", required + 500);
-		Check(IA_HeliSkinCatalog.ResolveForPilot(required, huey) == null, "a raised central threshold locks the skin again");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(required) == null, "a raised central threshold locks the skin again");
 		IA_HeliSkinCatalog.SetRequiredPoints("huey_tan", 0);
 		IA_HeliSkinCatalog.SetRequiredPoints("unknown_skin", 1);
 		Check(tan.m_iRequiredPoints == required + 500, "invalid thresholds and unknown keys are ignored");

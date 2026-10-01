@@ -88,7 +88,7 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Admin solo test: swap the nearest parked, empty helicopter for its next skin.
+	//! Admin solo test: repaint the nearest helicopter with its next skin, where it stands.
 	void IA_AskPreviewHeliSkin()
 	{
 		if (Replication.IsServer())
@@ -308,7 +308,7 @@ modded class SCR_PlayerController
 			return;
 		}
 
-		string message = IA_HeliSkinPreview.SwapNearest(GetControlledEntity());
+		string message = IA_HeliSkinPreview.CycleNearest(GetControlledEntity());
 		if (GetPlayerId() == SCR_PlayerController.GetLocalPlayerId())
 		{
 			RpcDo_IA_HeliSkinPreviewResult(message);

@@ -114,57 +114,78 @@ Players with no row are left out of `ratings`; the game treats them as 0.
 
 ## Skins
 
-A skin is a set of **prefab variants**, one per stock airframe. Paint cannot be
-changed on a live helicopter: `SetObject` with a `$remap` on a vehicle crashes
-the engine in its next vehicle animation update. So a skinned helicopter is a
-different prefab, and putting a skin on means replacing the airframe.
+A skin is put on a helicopter **where it stands**: crew aboard, engine running,
+as often as wanted. The helicopter is never deleted, respawned or given a new
+mesh. A skin menu inside the helicopter can be built on the same call,
+`IA_HeliSkinManagerComponent.SetVehicleSkin(vehicle, skinId)`.
 
-`IA_HeliSkinCatalog` pairs each stock prefab with its variant. The tan Huey
-has four: `IA_UH1H_Tan`, `IA_UH1H_armed_Tan` and the two rocket gunships
-(`Prefabs/Vehicles/Helicopters/UH1H/`). Each inherits the exact stock prefab
-and only assigns three tan materials on the hull mesh (body and two interior
-slots) and swaps the two seat parts for tan ones, so flight, weapons, catalogue
-labels and pilot-role checks are those of the stock airframe. Gun mounts keep
-their stock colour and the shark-nose gunships have no tan twin. Each tan
-material inherits the vanilla one and changes only its layer colours.
+### How it works
+
+- Changing a vehicle hull's mesh or materials from script (`SetObject`,
+  `SetVObjectFromPrefab`) crashes the engine a frame later, so that is never
+  done. Instead the colours of the **material itself** are changed with
+  `Material.SetParam`, which every mesh using that material shows at once.
+- A material is shared by every entity that names it, so recolouring the
+  vanilla Huey material would recolour every Huey. A **paint channel** is a
+  prefab twin of a stock airframe whose hull and seats name their own copies of
+  the three Huey materials (body and two interior). The copies inherit the
+  vanilla materials unchanged, so a channel airframe looks stock.
+- There are four channels (`IA_HeliPaintChannels`), each with twins of the four
+  stock Hueys (`Prefabs/Vehicles/Helicopters/UH1H/Paint/`). Each helicopter pad
+  claims a free channel and spawns its Huey as that channel's twin, so one
+  channel is one helicopter. A world with more than four helicopter pads logs
+  one warning and the extra pads spawn stock, unpaintable Hueys.
+- A skin (`IA_HeliSkinCatalog`) is up to three "paint" materials that are never
+  put on a mesh. `IA_HeliSkinPaint.Apply` copies their layer colours, roughness,
+  metalness and dirt values onto the channel's materials; stock paint is the
+  same copy from the vanilla materials. Textures are not changed.
+- `IA_HeliSkinManagerComponent` (on `GameMode_IA.et`) replicates which skin
+  each channel shows. Every machine that renders paints its own materials when
+  the value arrives, and on a timer for a player who joins later. A new
+  airframe on a pad starts in stock paint.
+
+Gun mounts and rotors keep their stock colour. A Huey placed by a Game Master,
+the shark-nose gunships and other helicopters have no paint channel and cannot
+be repainted.
 
 ### How a pilot gets it
 
 `IA_HeliSkinPadService` runs once a second on the server. For every helicopter
-pad whose helicopter is still on the pad, shut down and empty, it takes the
-nearest living friendly player on foot within 10 m. If that player's rating
-unlocks a better skin than the airframe wears, `IA_HeliSkinSwap` deletes the
-helicopter and spawns the variant in the same place about 0.3 s later; the pad
-adopts the replacement. An unknown rating is requested and unlocks nothing.
+pad whose helicopter is still on the pad, it takes the nearest living friendly
+player on foot within 10 m. If that player's rating unlocks a better skin than
+the airframe wears, the helicopter is recoloured where it stands. An unknown
+rating is requested and unlocks nothing.
 
-- The swap gives a fresh airframe (full fuel, no damage, empty inventory).
-- It is one way. A skinned airframe stays skinned for its life, whoever flies
-  it next; the pad spawns stock again after it is destroyed.
-- A helicopter that has left its pad, or was spawned by a Game Master, is never
-  swapped by the service.
+- Nothing else about the helicopter changes: fuel, damage and inventory stay.
+- A skin is never traded down. The airframe keeps its skin for its life,
+  whoever flies it next; its replacement spawns in stock paint.
 
 ### Adding a skin
 
-1. Add the `.emat` files under `Assets/`, inheriting the vanilla material.
-2. Add a prefab for each stock airframe, inheriting it and assigning the
-   materials under its `MeshObject`. Parts slotted into the hull (seats) need
-   their own variant, referenced from the hull's `SlotManagerComponent`.
-3. Add one `AddDef` line in `IA_HeliSkinCatalog` with a new id and key, and an
-   `AddVariant` line per airframe.
-4. Run the Workbench plugin `IA_HeliSkinAssetCheck`. It registers new prefabs
-   and materials (writing their `.meta`), prints the `{GUID}path` to reference,
-   and checks that each variant inherits its stock airframe, paints only slots
-   its meshes have, adds no slots and spawns with its painted parts. Paste the
-   names in and run it again until it prints `PASS`. Commit the `.meta` files.
-5. Add one `transport_skin_thresholds` row.
+1. Add one `.emat` per surface to recolour under `Assets/`, inheriting the
+   vanilla material of that surface and setting only colour and surface values
+   (`Color_1`..`Color_4`, `DirtColor`, `AO_*`, `Roughness_*`, `Metalness_*`,
+   `DirtOpacity`). Anything else it sets is ignored.
+2. Add one `AddDef` line in `IA_HeliSkinCatalog` with a new id and key, and an
+   `AddPaint` line per surface.
+3. Run the Workbench plugin `IA_HeliSkinAssetCheck`. It registers new materials
+   (writing their `.meta`), prints the `{GUID}path` to reference, and checks
+   every channel and skin. Paste the names in and run it again until it prints
+   `PASS`. Commit the `.meta` files.
+4. Add one `transport_skin_thresholds` row.
+
+No prefab is needed for a skin. To change the number of channels, the airframes
+or the surfaces, edit `tools/author_heli_paint_channels.py` and
+`IA_HeliPaintChannels` together, run the tool, open Workbench once so it
+imports the files, and run `IA_HeliSkinAssetCheck`.
 
 ### Looking at a skin alone
 
-Admin menu, **HQ** tab, **Swap nearest heli skin**. The server
-(`IA_HeliSkinPreview`) replaces the nearest helicopter within 75 m that has a
-skin, if it is parked and empty, with its next skin; press again to step
-through the skins and back to stock. Everyone sees it. No rating is needed or
-earned, and it also works on a helicopter placed by a Game Master.
+Admin menu, **HQ** tab, **Cycle nearest heli skin**. The server
+(`IA_HeliSkinPreview`) repaints the nearest helipad Huey within 75 m with its
+next skin; press again to step through the skins and back to stock. It works
+from the pilot's seat with the engine running. Everyone sees it. No rating is
+needed or earned.
 
 ## Pilot HUD
 
@@ -227,9 +248,12 @@ skips the server side: crediting, batching per pilot, and the RPC.
 - The pilot card: layout, fonts, timing and the unlock sound can be checked
   alone with the preview above. The multi-tick merge with real passengers
   still needs a flight; only its data and rules run in Workbench.
-- The skin swap on a live server: the pad service handing a pilot the tan
-  airframe, and the swap as seen by other clients. Check alone with **Swap
-  nearest heli skin**: hull, interior and seats turn tan, nothing crashes, and
-  the helicopter starts and flies.
+- Skins in multiplayer. In Workbench play mode a pad Huey was repainted with a
+  pilot seated and the engine running, 20 times at 150 ms, with no crash, and
+  only that Huey changed colour. Not yet seen: the repaint on other clients, on
+  a player who joins afterwards, on a dedicated server, and after the
+  helicopter streams out and back in. Check with **Cycle nearest heli skin**
+  from the pilot's seat, with a second pad's Huey in view staying green.
 - The tan in a published build. The materials are registered and load in
-  Workbench, but only a packed build proves they ship.
+  Workbench, but only a packed build proves they ship and that their colour
+  values can still be read there.

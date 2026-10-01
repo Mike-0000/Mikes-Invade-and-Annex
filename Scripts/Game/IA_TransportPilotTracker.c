@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------------------------
 //! Server-side tracker that credits helicopter pilots for combat insertions.
-//! Unlocked skins are handed out at the pad by IA_HeliSkinPadService, which
-//! this tracker ticks.
+//! Unlocked skins are put on at the pad by IA_HeliSkinPadService, which this
+//! tracker ticks; the helicopter is recoloured where it stands.
 //!
 //! An insertion is one living player who rode as a passenger in a player-piloted
 //! helicopter, left it while it was still intact, and reached the ground alive

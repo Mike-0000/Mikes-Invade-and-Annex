@@ -29,11 +29,11 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 	
 	protected IEntity m_RespawnerOwnerEntity; 		// Stores the entity this component is attached to
 	protected IEntity m_RespawnerSpawnedVehicle; 	// Stores the vehicle spawned by this respawner
-	// True while IA_HeliSkinSwap is replacing the vehicle; the pad must not spawn a second one.
-	protected bool m_bSwapPending;
 
 	// Server: every helicopter pad, for IA_HeliSkinPadService.
 	protected static ref array<IA_VehicleRespawner> s_aHeliPads = {};
+	// Server: paint channel this pad's helicopters spawn on, so each can wear its own skin.
+	protected int m_iPaintChannel = IA_HeliPaintChannels.CHANNEL_NONE;
 
 	//------------------------------------------------------------------------------------------------
 	static array<IA_VehicleRespawner> GetHeliPads()
@@ -51,31 +51,11 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 	//! \return the vehicle this pad spawned while it is still parked on the pad, null otherwise
 	IEntity GetParkedVehicle()
 	{
-		if (m_bSwapPending || !m_RespawnerOwnerEntity || !m_RespawnerSpawnedVehicle)
+		if (!m_RespawnerOwnerEntity || !m_RespawnerSpawnedVehicle)
 			return null;
 		if (vector.Distance(m_RespawnerSpawnedVehicle.GetOrigin(), m_RespawnerOwnerEntity.GetOrigin()) >= MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN)
 			return null;
 		return m_RespawnerSpawnedVehicle;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	bool OwnsVehicle(IEntity vehicle)
-	{
-		return vehicle && vehicle == m_RespawnerSpawnedVehicle;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	void OnSwapStarted()
-	{
-		m_bSwapPending = true;
-		m_RespawnerSpawnedVehicle = null;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	void OnSwapFinished(IEntity vehicle)
-	{
-		m_bSwapPending = false;
-		m_RespawnerSpawnedVehicle = vehicle;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -88,7 +68,12 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			return;
 
 		if (IsHeliPad())
+		{
+			m_iPaintChannel = FreePaintChannel();
 			s_aHeliPads.Insert(this);
+			if (m_iPaintChannel == IA_HeliPaintChannels.CHANNEL_NONE)
+				Print(string.Format("[IA][HeliSkin] More helipads than the %1 paint channels; this pad's helicopters keep stock paint.", IA_HeliPaintChannels.CHANNEL_COUNT), LogLevel.WARNING);
+		}
 
 		if (m_fRespawnCheckInterval <= 0)
 			m_fRespawnCheckInterval = DEFAULT_RESPAWN_INTERVAL_S;
@@ -103,6 +88,26 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! \return a paint channel no other pad uses, CHANNEL_NONE when all are taken
+	protected static int FreePaintChannel()
+	{
+		bool taken;
+		int channel;
+		for (channel = 1; channel <= IA_HeliPaintChannels.CHANNEL_COUNT; channel++)
+		{
+			taken = false;
+			foreach (IA_VehicleRespawner pad : s_aHeliPads)
+			{
+				if (pad && pad.m_iPaintChannel == channel)
+					taken = true;
+			}
+			if (!taken)
+				return channel;
+		}
+		return IA_HeliPaintChannels.CHANNEL_NONE;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void CheckVehicleStatus()
 	{
 		if (!m_RespawnerOwnerEntity) // Owner might have been deleted, stop checks
@@ -112,9 +117,6 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 				GetGame().GetCallqueue().Remove(CheckVehicleStatus);
 			return;
 		}
-
-		if (m_bSwapPending)
-			return;
 
 		bool needsRespawn = false;
 		if (!m_RespawnerSpawnedVehicle)
@@ -250,9 +252,6 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 		if (RplSession.Mode() == RplMode.Client || !GetGame().InPlayMode())
 			return;
 
-		if (m_bSwapPending)
-			return;
-
 		// If an alive vehicle (spawned by this spawner) is already present and close, do nothing.
 		if (m_RespawnerSpawnedVehicle && IsVehicleAlive(m_RespawnerSpawnedVehicle) && 
 			vector.Distance(m_RespawnerSpawnedVehicle.GetOrigin(), m_RespawnerOwnerEntity.GetOrigin()) < MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN)
@@ -357,6 +356,11 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			}
 		}
 		
+		// A Huey spawns as its twin on this pad's paint channel; anything else has none and spawns as it is.
+		ResourceName paintable = IA_HeliPaintChannels.FindChannelPrefab(vehiclePrefabToSpawn, m_iPaintChannel);
+		if (!paintable.IsEmpty())
+			vehiclePrefabToSpawn = paintable;
+
 		Resource resource = Resource.Load(vehiclePrefabToSpawn);
 		if (!resource || !resource.IsValid())
 		{
@@ -375,6 +379,11 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 		{
 			//Print(string.Format("IA_VehicleRespawner %1: Successfully spawned %2. New entity: %3", m_RespawnerOwnerEntity, vehiclePrefabToSpawn, newVehicle), LogLevel.DEBUG);
 			m_RespawnerSpawnedVehicle = newVehicle; // Update the reference to the newly spawned vehicle
+
+			// The channel may still show the skin of the airframe this one replaces.
+			IA_HeliSkinManagerComponent skins = IA_HeliSkinManagerComponent.GetInstance();
+			if (skins)
+				skins.SetVehicleSkin(newVehicle, IA_HeliSkinCatalog.SKIN_NONE);
 		}
 		else
 		{

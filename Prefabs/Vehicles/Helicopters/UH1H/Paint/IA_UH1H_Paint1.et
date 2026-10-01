@@ -1,0 +1,31 @@
+Vehicle : "{70BAEEFC2D3FEE64}Prefabs/Vehicles/Helicopters/UH1H/UH1H.et" {
+ ID "5DB688595BAB2FD7"
+ components {
+  MeshObject "{51DAA09FEFBFC0E7}" {
+   Materials {
+    MaterialAssignClass "{FBA130CE3BB48988}" {
+     SourceMaterial "UH_1H_Body01_6224CA051369DE45"
+     AssignedMaterial "{D3A91F5C7E20A001}Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Body01_Paint1.emat"
+    }
+    MaterialAssignClass "{7E47A5B3AD3591C2}" {
+     SourceMaterial "UH_1H_Interior01_04455994F64CAB1E"
+     AssignedMaterial "{D3A91F5C7E20A101}Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Interior01_Paint1.emat"
+    }
+    MaterialAssignClass "{BC73B1BA7CA4183D}" {
+     SourceMaterial "UH_1H_Interior02_5AAD70D749C12511"
+     AssignedMaterial "{D3A91F5C7E20A201}Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Interior02_Paint1.emat"
+    }
+   }
+  }
+  SlotManagerComponent "{55BCE45E438E4CFF}" {
+   Slots {
+    RegisteringComponentSlotInfo Seat_Gunners {
+     Prefab "{D3A91F5C7E20C001}Prefabs/Vehicles/Helicopters/UH1H/Paint/IA_VehPart_UH1H_seats_gunners_Paint1.et"
+    }
+    RegisteringComponentSlotInfo Seat_Cargo {
+     Prefab "{D3A91F5C7E20C101}Prefabs/Vehicles/Helicopters/UH1H/Paint/IA_VehPart_UH1H_seats_cargo_Paint1.et"
+    }
+   }
+  }
+ }
+}

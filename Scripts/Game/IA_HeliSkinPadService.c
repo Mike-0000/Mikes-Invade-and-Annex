@@ -1,8 +1,7 @@
 //------------------------------------------------------------------------------------------------
-//! Server: gives a pilot their unlocked skin before they board. A helicopter
-//! still parked and empty on its pad is replaced with the skinned prefab when
-//! the nearest player walking up to it has earned one. Paint cannot change on a
-//! live vehicle, so nothing happens once a helicopter has left its pad.
+//! Server: gives a pilot their unlocked skin before they board. When the
+//! nearest player walking up to a helicopter parked on its pad has earned a
+//! skin, IA_HeliSkinManagerComponent recolours the helicopter where it stands.
 //------------------------------------------------------------------------------------------------
 class IA_HeliSkinPadService
 {
@@ -15,34 +14,27 @@ class IA_HeliSkinPadService
 		if (!Replication.IsServer() || !pm)
 			return;
 
+		IA_HeliSkinManagerComponent skins = IA_HeliSkinManagerComponent.GetInstance();
 		array<IA_VehicleRespawner> pads = IA_VehicleRespawner.GetHeliPads();
-		if (!pads)
+		if (!skins || !pads)
 			return;
 
-		// A swap takes the vehicle off its pad, so iterate a copy.
-		ref array<IA_VehicleRespawner> snapshot = {};
-		snapshot.Copy(pads);
-		foreach (IA_VehicleRespawner pad : snapshot)
+		foreach (IA_VehicleRespawner pad : pads)
 		{
 			if (pad)
-				TickPad(pm, players, now, pad);
+				TickPad(pm, players, now, pad, skins);
 		}
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected static void TickPad(PlayerManager pm, notnull array<int> players, int now, notnull IA_VehicleRespawner pad)
+	protected static void TickPad(PlayerManager pm, notnull array<int> players, int now, notnull IA_VehicleRespawner pad, notnull IA_HeliSkinManagerComponent skins)
 	{
 		IEntity vehicle = pad.GetParkedVehicle();
 		if (!vehicle)
 			return;
 
-		EntityPrefabData prefabData = vehicle.GetPrefabData();
-		if (!prefabData)
-			return;
-
-		ResourceName prefab = prefabData.GetPrefabName();
-		ResourceName stock = IA_HeliSkinCatalog.FindStockPrefab(prefab);
-		if (stock.IsEmpty())
+		// Only an airframe on a paint channel can be recoloured.
+		if (IA_HeliSkinManagerComponent.GetVehicleChannel(vehicle) == IA_HeliPaintChannels.CHANNEL_NONE)
 			return;
 
 		int pilotId = NearestPlayerOnFoot(pm, players, vehicle);
@@ -62,21 +54,21 @@ class IA_HeliSkinPadService
 			return;
 		}
 
-		IA_HeliSkinDef best = IA_HeliSkinCatalog.ResolveForPilot(rating, stock);
+		IA_HeliSkinDef best = IA_HeliSkinCatalog.FindBestUnlocked(rating);
 		if (!best)
 			return;
 
 		// Never trade a skin down: a better pilot's airframe stays as it is.
-		IA_HeliSkinDef worn = IA_HeliSkinCatalog.FindDefBySkinPrefab(prefab);
+		IA_HeliSkinDef worn = IA_HeliSkinCatalog.FindDef(skins.GetVehicleSkin(vehicle));
 		if (worn && worn.m_iRequiredPoints >= best.m_iRequiredPoints)
 			return;
 
-		if (!IA_HeliSkinSwap.Begin(vehicle, best.FindVariant(stock), pad))
+		if (!skins.SetVehicleSkin(vehicle, best.m_iId))
 			return;
 
 		if (IA_Log.IsDebugEnabled())
 		{
-			Print(string.Format("[IA][HeliSkin] Pad helicopter swapped to %1 for player %2.", best.m_sKey, pilotId), LogLevel.NORMAL);
+			Print(string.Format("[IA][HeliSkin] Pad helicopter repainted to %1 for player %2.", best.m_sKey, pilotId), LogLevel.NORMAL);
 		}
 	}
 

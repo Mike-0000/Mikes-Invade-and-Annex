@@ -1,12 +1,14 @@
 """Source integration guards for transport-pilot progression.
 
 Scoring and eligibility maths are checked natively in Workbench
-(IA_TransportPilotTest). Skins, insertions and the backend round trip still
-need a mission playtest against a deployed backend.
+(IA_TransportPilotTest), paint channel assets by IA_HeliSkinAssetCheck. Skins
+as other clients see them, insertions and the backend round trip still need a
+mission playtest against a deployed backend.
 """
 import re
 import unittest
 
+import author_heli_paint_channels as channels
 from test_dynamic_base_flow import ROOT, method, source
 
 MIGRATION = ROOT / "backend" / "supabase" / "migrations" / "20260930000000_transport_rating.sql"
@@ -30,7 +32,7 @@ class TransportPilotTests(unittest.TestCase):
         self.assertLess(rating.index("return RATING_UNKNOWN"), rating.index("m_iPendingPoints"))
         pad = method(source("IA_HeliSkinPadService.c"), "TickPad")
         self.assertRegex(pad, r"if \(rating < 0\)\s*\{[\s\S]*?RequestRating[\s\S]*?return;")
-        self.assertLess(pad.index("if (rating < 0)"), pad.index("IA_HeliSkinSwap.Begin("))
+        self.assertLess(pad.index("if (rating < 0)"), pad.index("skins.SetVehicleSkin("))
 
     def test_failed_batch_is_resent_unchanged(self):
         store = source("IA_TransportPilotStore.c")
@@ -76,55 +78,81 @@ class TransportPilotTests(unittest.TestCase):
         self.assertIn('Name "%s"' % name, (ROOT / (path + ".meta")).read_text(encoding="utf-8"))
         return ROOT / path
 
-    def test_catalogued_skins_have_a_central_threshold_and_registered_prefabs(self):
+    def test_catalogued_skins_have_a_central_threshold_and_registered_paints(self):
         catalog = source("IA_HeliSkinCatalog.c")
         sql = MIGRATION.read_text(encoding="utf-8")
-        defs = re.findall(r'AddDef\(\w+, "(\w+)", "[^"]+", (\d+)\)', catalog)
+        defs = re.findall(r'(\w+) = AddDef\(\w+, "(\w+)", "[^"]+", (\d+)\)', catalog)
         self.assertTrue(defs)
-        for key, required in defs:
+        surfaces = ("SURFACE_BODY", "SURFACE_INTERIOR_1", "SURFACE_INTERIOR_2")
+        for variable, key, required in defs:
             self.assertIn("('%s', %s)" % (key, required), sql)
+            paints = re.findall(r'AddPaint\(%s, IA_HeliPaintChannels\.(\w+), "([^"]+)"\)' % variable, catalog)
+            self.assertTrue(paints, key + " colours at least one surface")
+            for surface, paint in paints:
+                stock_guid, stock_file = channels.SURFACES[surfaces.index(surface)]
+                # A paint inherits the stock material of its surface, so what it leaves out reads as stock.
+                first = self.assert_registered(paint).read_text(encoding="utf-8").splitlines()[0]
+                self.assertIn('"{%s}%sData/%s.emat"' % (stock_guid, channels.MATERIAL_DIR, stock_file), first)
 
-        variants = re.findall(r'AddVariant\(\w+, "([^"]+)", "([^"]+)"\)', catalog)
-        self.assertGreater(len(variants), len(defs), "the tan Huey covers the armed airframes too")
-        for stock, skin in variants:
-            self.assertRegex(stock, r"^\{[0-9A-F]{16}\}Prefabs/Vehicles/")
-            self.assertNotIn("/IA_", stock)
-            prefab = self.assert_registered(skin).read_text(encoding="utf-8")
-            # A variant inherits the airframe it replaces, so it flies and arms the same.
-            self.assertIn(': "%s"' % stock, prefab.splitlines()[0])
-            self.assertIn("AssignedMaterial", prefab)
-            own = re.findall(r'"(\{[0-9A-F]{16}\}[^"]*/IA_[^"]+)"', prefab)
-            parts = [name for name in own if name.endswith(".et")]
-            self.assertTrue(parts, "the seats are separate parts and need their own paint")
-            for name in own:
-                path = self.assert_registered(name)
-                if name in parts:
-                    self.assertIn("AssignedMaterial", path.read_text(encoding="utf-8"))
+    def test_paint_channel_files_match_their_generator_and_the_script_table(self):
+        files = channels.build()
+        self.assertEqual(channels.stale(files), [])
 
-    def test_a_skin_is_a_prefab_swap_never_a_live_repaint(self):
-        # SetObject material remaps on a live vehicle crash its animation update.
-        for path in sorted((ROOT / "Scripts" / "Game").rglob("IA_HeliSkin*.c")):
-            self.assertNotIn("SetObject(", path.read_text(encoding="utf-8"), path.name)
-        self.assertFalse((ROOT / "Scripts" / "Game" / "IA_HeliSkinManagerComponent.c").exists())
-        self.assertNotIn("IA_HeliSkinManagerComponent", (ROOT / "Prefabs" / "GameMode_IA.et").read_text(encoding="utf-8"))
+        table = source("IA_HeliPaintChannels.c")
+        self.assertEqual(int(constant(table, "CHANNEL_COUNT")), channels.CHANNEL_COUNT)
+        self.assertEqual(int(constant(table, "SURFACE_COUNT")), len(channels.SURFACES))
+        self.assertIn('GUID_PREFIX = "%s"' % channels.GUID_PREFIX, table)
+        self.assertEqual(re.findall(r'AddAirframe\("\{(\w+)\}", "(\w+)"\)', table), [row[:2] for row in channels.AIRFRAMES])
+        self.assertEqual(re.findall(r'AddSurface\("\{(\w+)\}", "(\w+)"\)', table), list(channels.SURFACES))
 
-        swap = source("IA_HeliSkinSwap.c")
-        begin = method(swap, "Begin")
-        self.assertLess(begin.index("IsParkedAndEmpty(vehicle)"), begin.index("DeleteEntityAndChildren(vehicle)"))
-        self.assertLess(begin.index("pad.OnSwapStarted()"), begin.index("DeleteEntityAndChildren(vehicle)"))
-        self.assertIn("pad.OnSwapFinished(spawned)", method(swap, "Finish"))
-        # The pad must not spawn a second helicopter while its own is being replaced.
+        # A mesh naming another channel's material would be recoloured with that channel's helicopter.
+        for path, text in files.items():
+            if path.endswith(".et"):
+                channel = re.search(r"_Paint(\d)\.et$", path).group(1)
+                assigned = re.findall(r'AssignedMaterial "\{\w+\}[^"]*_Paint(\d)\.emat"', text)
+                self.assertTrue(assigned, path)
+                self.assertEqual(set(assigned), {channel}, path)
+
+    def test_a_skin_is_set_in_place_and_never_changes_or_replaces_the_helicopter(self):
+        # Changing a vehicle hull's mesh from script frees the instance its animation is bound to.
+        scripts = sorted((ROOT / "Scripts" / "Game").rglob("IA_HeliSkin*.c")) + sorted((ROOT / "Scripts" / "Game").rglob("IA_HeliPaint*.c"))
+        self.assertTrue(scripts)
+        for path in scripts:
+            self.assertNotRegex(path.read_text(encoding="utf-8"), r"SetObject\(|SetVObjectFromPrefab\(|DeleteEntityAndChildren\(|SpawnEntityPrefab\(", path.name)
+        self.assertFalse((ROOT / "Scripts" / "Game" / "IA_HeliSkinSwap.c").exists())
+
+        paint = source("IA_HeliSkinPaint.c")
+        self.assertIn("Material.GetOrLoadMaterial(to, 0)", method(paint, "CopyParams"))
+        self.assertIn("IA_HeliPaintChannels.GetMaterial(surface, channel)", method(paint, "Apply"))
+
+        # The server says which skin a channel shows; every machine that renders paints it.
+        manager = source("IA_HeliSkinManagerComponent.c")
+        self.assertRegex(manager, r'\[RplProp\(onRplName: "OnSkinsReplicated"\)\]\s*protected ref array<int> m_aChannelSkins')
+        setter = method(manager, "SetVehicleSkin")
+        self.assertLess(setter.index("if (!Replication.IsServer())"), setter.index("m_aChannelSkins[channel - 1] = skinId"))
+        self.assertIn("Replication.BumpMe()", setter)
+        self.assertIn("PaintAll();", method(manager, "OnSkinsReplicated"))
+        self.assertIn("IA_HeliSkinPaint.Apply(i + 1, wanted)", method(manager, "PaintAll"))
+        self.assertIn("IA_HeliSkinManagerComponent", (ROOT / "Prefabs" / "GameMode_IA.et").read_text(encoding="utf-8"))
+
+        # A pad owns one channel and spawns its Huey as that channel's twin, in stock paint.
         respawner = source("IA_VehicleRespawner.c")
-        for name in ("CheckVehicleStatus", "PerformSpawn"):
-            self.assertRegex(method(respawner, name), r"if \(m_bSwapPending\)\s*return;")
+        self.assertIn("m_iPaintChannel = FreePaintChannel();", method(respawner, "OnPostInit"))
+        spawn = method(respawner, "PerformSpawn")
+        self.assertLess(spawn.index("IA_HeliPaintChannels.FindChannelPrefab(vehiclePrefabToSpawn, m_iPaintChannel)"), spawn.index("Resource.Load(vehiclePrefabToSpawn)"))
+        self.assertIn("skins.SetVehicleSkin(newVehicle, IA_HeliSkinCatalog.SKIN_NONE)", spawn)
+        self.assertNotIn("m_bSwapPending", respawner)
 
     def test_a_skin_can_be_previewed_solo_without_a_rating(self):
         preview = source("IA_HeliSkinPreview.c")
-        self.assertIn("IA_HeliSkinSwap.Begin(", method(preview, "SwapNearest"))
+        cycle = method(preview, "CycleNearest")
+        self.assertIn("skins.SetVehicleSkin(vehicle, skinId)", cycle)
+        # A skin menu inside the helicopter will change it with the crew aboard, so the preview must not ask for it empty.
+        self.assertNotRegex(preview, r"IsParkedAndEmpty|GetOccupant|IsOccupied|EngineOn")
         self.assertNotIn("IA_TransportPilotStore", preview)
-        # The swap is visible to everyone, so only an admin may ask for it.
+        # The repaint is visible to everyone, so only an admin may ask for it.
         ask = method(source("IA_PlayerController.c"), "IA_PreviewHeliSkinIfAdmin")
-        self.assertLess(ask.index("if (!IA_IsAdminCaller())"), ask.index("IA_HeliSkinPreview.SwapNearest("))
+        self.assertLess(ask.index("if (!IA_IsAdminCaller())"), ask.index("IA_HeliSkinPreview.CycleNearest("))
         menu = (ROOT / "Scripts" / "Game" / "UI" / "Menus" / "IA_AdminConfigMenu.c").read_text(encoding="utf-8")
         self.assertIn("pc.IA_AskPreviewHeliSkin()", method(menu, "OnSkinPreview"))
 
