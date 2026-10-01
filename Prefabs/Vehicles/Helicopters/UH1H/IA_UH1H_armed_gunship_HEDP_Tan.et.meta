@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{1892B2259FA7E22A}Prefabs/Vehicles/Helicopters/UH1H/IA_UH1H_armed_gunship_HEDP_Tan.et"
+ Configurations {
+  EntityTemplateResourceClass PC {
+  }
+  EntityTemplateResourceClass XBOX_ONE : PC {
+  }
+  EntityTemplateResourceClass XBOX_SERIES : PC {
+  }
+  EntityTemplateResourceClass PS4 : PC {
+  }
+  EntityTemplateResourceClass PS5 : PC {
+  }
+  EntityTemplateResourceClass HEADLESS : PC {
+  }
+ }
+}

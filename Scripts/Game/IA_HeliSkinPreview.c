@@ -1,30 +1,23 @@
 //------------------------------------------------------------------------------------------------
-//! Solo test path for helicopter skins: paints the nearest airframe on this
-//! machine only, so a skin can be looked at without earning its rating.
-//! Client only; nothing is replicated and no rating is touched.
+//! Solo test path for helicopter skins: the server swaps the nearest parked,
+//! empty helicopter for its next skin variant, so a skin can be looked at
+//! without earning its rating. Admin only; no rating is read or changed.
 //------------------------------------------------------------------------------------------------
 class IA_HeliSkinPreview
 {
 	protected static const float SEARCH_RADIUS_M = 75;
-
-	// Next catalogue entry to try, so repeated presses step through every skin.
-	protected static int s_iCycle;
 
 	protected vector m_vOrigin;
 	protected IEntity m_Nearest;
 	protected float m_fNearestSq;
 
 	//------------------------------------------------------------------------------------------------
-	//! Paint the nearest helicopter that has a skin with the next one in the catalogue.
+	//! Swap the helicopter nearest to the pawn: stock, then each skin in turn, then stock again.
 	//! \return what happened, for the admin to read
-	static string PaintNearest()
+	static string SwapNearest(IEntity pawn)
 	{
-		IA_HeliSkinManagerComponent skins = IA_HeliSkinManagerComponent.GetInstance();
-		PlayerController pc = GetGame().GetPlayerController();
-		if (!skins || !pc)
-			return "Helicopter skins are not running in this mission.";
-
-		IEntity pawn = pc.GetControlledEntity();
+		if (!Replication.IsServer())
+			return "Skin previews run on the server.";
 		if (!pawn)
 			return "Spawn in before previewing a skin.";
 
@@ -34,17 +27,27 @@ class IA_HeliSkinPreview
 
 		ref IA_HeliSkinPreview finder = new IA_HeliSkinPreview();
 		finder.m_vOrigin = mat[3];
-		GetGame().GetWorld().QueryEntitiesBySphere(mat[3], SEARCH_RADIUS_M, finder.OnEntity, null, EQueryEntitiesFlags.DYNAMIC | EQueryEntitiesFlags.WITH_OBJECT);
-		if (!finder.m_Nearest)
+		pawn.GetWorld().QueryEntitiesBySphere(mat[3], SEARCH_RADIUS_M, finder.OnEntity, null, EQueryEntitiesFlags.DYNAMIC | EQueryEntitiesFlags.WITH_OBJECT);
+		IEntity vehicle = finder.m_Nearest;
+		if (!vehicle)
 			return string.Format("No helicopter with a skin within %1 m.", SEARCH_RADIUS_M);
 
-		IA_HeliSkinDef def = NextFitting(finder.m_Nearest);
-		if (!def)
-			return "No skin fits that helicopter.";
-		if (!skins.PaintLocal(finder.m_Nearest, def.m_iId))
-			return string.Format("%1 matched no material on that helicopter.", def.m_sDisplayName);
+		if (!IA_HeliSkinSwap.IsParkedAndEmpty(vehicle))
+			return "That helicopter is in use. A skin only goes on while it is parked, empty and shut down.";
 
-		return string.Format("%1 painted on the nearest helicopter. Only you can see it.", def.m_sDisplayName);
+		ResourceName prefab = vehicle.GetPrefabData().GetPrefabName();
+		ResourceName stock = IA_HeliSkinCatalog.FindStockPrefab(prefab);
+		IA_HeliSkinDef next = NextSkin(stock, IA_HeliSkinCatalog.FindDefBySkinPrefab(prefab));
+		ResourceName target = stock;
+		if (next)
+			target = next.FindVariant(stock);
+
+		if (!IA_HeliSkinSwap.Begin(vehicle, target, FindPad(vehicle)))
+			return "The helicopter could not be swapped; see the server log.";
+
+		if (next)
+			return string.Format("%1 swapped in. Press again for the next skin.", next.m_sDisplayName);
+		return "Stock paint restored.";
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -66,41 +69,45 @@ class IA_HeliSkinPreview
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! \return true for a helicopter that is a catalogued stock airframe or one of its skins
 	protected static bool HasSkin(IEntity vehicle)
 	{
 		EntityPrefabData prefab = vehicle.GetPrefabData();
 		if (!prefab || !vehicle.FindComponent(VehicleHelicopterSimulation))
 			return false;
 
-		string prefabName = prefab.GetPrefabName();
-		foreach (IA_HeliSkinDef def : IA_HeliSkinCatalog.GetDefs())
-		{
-			if (IA_HeliSkinCatalog.FitsPrefab(def, prefabName))
-				return true;
-		}
-		return false;
+		return !IA_HeliSkinCatalog.FindStockPrefab(prefab.GetPrefabName()).IsEmpty();
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected static IA_HeliSkinDef NextFitting(IEntity vehicle)
+	//! \return the skin after the one worn, null when the next step is stock paint
+	protected static IA_HeliSkinDef NextSkin(ResourceName stock, IA_HeliSkinDef worn)
 	{
-		EntityPrefabData prefab = vehicle.GetPrefabData();
-		if (!prefab)
+		bool passedWorn = worn == null;
+		foreach (IA_HeliSkinDef def : IA_HeliSkinCatalog.GetDefs())
+		{
+			if (!IA_HeliSkinCatalog.FitsPrefab(def, stock))
+				continue;
+			if (passedWorn)
+				return def;
+			if (def == worn)
+				passedWorn = true;
+		}
+		return null;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the pad that spawned this helicopter, so it adopts the replacement; null for any other
+	protected static IA_VehicleRespawner FindPad(IEntity vehicle)
+	{
+		array<IA_VehicleRespawner> pads = IA_VehicleRespawner.GetHeliPads();
+		if (!pads)
 			return null;
 
-		string prefabName = prefab.GetPrefabName();
-		array<ref IA_HeliSkinDef> defs = IA_HeliSkinCatalog.GetDefs();
-		int count = defs.Count();
-		IA_HeliSkinDef def;
-		int i;
-		for (i = 0; i < count; i++)
+		foreach (IA_VehicleRespawner pad : pads)
 		{
-			def = defs[(s_iCycle + i) % count];
-			if (!IA_HeliSkinCatalog.FitsPrefab(def, prefabName))
-				continue;
-
-			s_iCycle = (s_iCycle + i + 1) % count;
-			return def;
+			if (pad && pad.OwnsVehicle(vehicle))
+				return pad;
 		}
 		return null;
 	}

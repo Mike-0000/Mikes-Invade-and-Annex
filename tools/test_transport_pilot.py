@@ -28,9 +28,9 @@ class TransportPilotTests(unittest.TestCase):
     def test_unknown_global_rating_never_unlocks(self):
         rating = method(source("IA_TransportPilotRecord.c"), "GetRating")
         self.assertLess(rating.index("return RATING_UNKNOWN"), rating.index("m_iPendingPoints"))
-        apply = method(source("IA_TransportPilotTracker.c"), "ApplyPilotSkin")
-        self.assertRegex(apply, r"if \(rating < 0\)\s*\{[\s\S]*?RequestRating[\s\S]*?return;")
-        self.assertLess(apply.index("if (rating < 0)"), apply.index("SetVehicleSkin"))
+        pad = method(source("IA_HeliSkinPadService.c"), "TickPad")
+        self.assertRegex(pad, r"if \(rating < 0\)\s*\{[\s\S]*?RequestRating[\s\S]*?return;")
+        self.assertLess(pad.index("if (rating < 0)"), pad.index("IA_HeliSkinSwap.Begin("))
 
     def test_failed_batch_is_resent_unchanged(self):
         store = source("IA_TransportPilotStore.c")
@@ -69,43 +69,68 @@ class TransportPilotTests(unittest.TestCase):
             self.assertRegex(entry, r"\b%s;" % key)
             self.assertIn("'%s'," % key, sql)
 
-    def test_catalogued_skins_have_a_central_threshold_and_material(self):
+    def assert_registered(self, name):
+        """A file without a GUID is unregistered: it resolves to a null GUID and
+        is left out of a published build. IA_HeliSkinAssetCheck registers it."""
+        guid, path = re.fullmatch(r"(\{[0-9A-F]{16}\})(.+)", name).groups()
+        self.assertIn('Name "%s"' % name, (ROOT / (path + ".meta")).read_text(encoding="utf-8"))
+        return ROOT / path
+
+    def test_catalogued_skins_have_a_central_threshold_and_registered_prefabs(self):
         catalog = source("IA_HeliSkinCatalog.c")
         sql = MIGRATION.read_text(encoding="utf-8")
-        defs = re.findall(r'AddDef\(\w+, "(\w+)", "[^"]+", "[^"]+", "[^"]+", "([^"]+)", (\d+)\)', catalog)
+        defs = re.findall(r'AddDef\(\w+, "(\w+)", "[^"]+", (\d+)\)', catalog)
         self.assertTrue(defs)
-        for key, material, required in defs:
+        for key, required in defs:
             self.assertIn("('%s', %s)" % (key, required), sql)
 
-        # A material without a GUID is unregistered: it resolves to a null GUID
-        # and is left out of a published build. IA_HeliSkinAssetCheck registers it.
-        materials = [material for _, material, _ in defs]
-        materials += re.findall(r'AddSlot\(\w+, "[^"]+", "([^"]+)"\)', catalog)
-        self.assertGreater(len(materials), len(defs), "the tan Huey repaints its interior too")
-        for material in materials:
-            guid, path = re.fullmatch(r"(\{[0-9A-F]{16}\})(.+\.emat)", material).groups()
-            if (ROOT / path).is_file():
-                self.assertIn('Name "%s"' % material, (ROOT / (path + ".meta")).read_text(encoding="utf-8"))
-            else:
-                # Only the game's own materials may be referenced without a file here.
-                self.assertTrue(path.startswith("Assets/Vehicles/"), material)
-                self.assertNotIn("/IA_", path)
+        variants = re.findall(r'AddVariant\(\w+, "([^"]+)", "([^"]+)"\)', catalog)
+        self.assertGreater(len(variants), len(defs), "the tan Huey covers the armed airframes too")
+        for stock, skin in variants:
+            self.assertRegex(stock, r"^\{[0-9A-F]{16}\}Prefabs/Vehicles/")
+            self.assertNotIn("/IA_", stock)
+            prefab = self.assert_registered(skin).read_text(encoding="utf-8")
+            # A variant inherits the airframe it replaces, so it flies and arms the same.
+            self.assertIn(': "%s"' % stock, prefab.splitlines()[0])
+            self.assertIn("AssignedMaterial", prefab)
+            own = re.findall(r'"(\{[0-9A-F]{16}\}[^"]*/IA_[^"]+)"', prefab)
+            parts = [name for name in own if name.endswith(".et")]
+            self.assertTrue(parts, "the seats are separate parts and need their own paint")
+            for name in own:
+                path = self.assert_registered(name)
+                if name in parts:
+                    self.assertIn("AssignedMaterial", path.read_text(encoding="utf-8"))
 
-    def test_a_skin_can_repaint_several_slots_and_be_previewed_solo(self):
-        paint = method(source("IA_HeliSkinManagerComponent.c"), "PaintEntity")
-        self.assertIn("def.FindMaterial(materials[i])", paint)
-        # The preview paints locally; it must not assign the skin for everyone.
-        local = method(source("IA_HeliSkinManagerComponent.c"), "PaintLocal")
-        self.assertNotRegex(local, r"m_aSkinVehicles|m_aSkinIds|BumpMe")
+    def test_a_skin_is_a_prefab_swap_never_a_live_repaint(self):
+        # SetObject material remaps on a live vehicle crash its animation update.
+        for path in sorted((ROOT / "Scripts" / "Game").rglob("IA_HeliSkin*.c")):
+            self.assertNotIn("SetObject(", path.read_text(encoding="utf-8"), path.name)
+        self.assertFalse((ROOT / "Scripts" / "Game" / "IA_HeliSkinManagerComponent.c").exists())
+        self.assertNotIn("IA_HeliSkinManagerComponent", (ROOT / "Prefabs" / "GameMode_IA.et").read_text(encoding="utf-8"))
+
+        swap = source("IA_HeliSkinSwap.c")
+        begin = method(swap, "Begin")
+        self.assertLess(begin.index("IsParkedAndEmpty(vehicle)"), begin.index("DeleteEntityAndChildren(vehicle)"))
+        self.assertLess(begin.index("pad.OnSwapStarted()"), begin.index("DeleteEntityAndChildren(vehicle)"))
+        self.assertIn("pad.OnSwapFinished(spawned)", method(swap, "Finish"))
+        # The pad must not spawn a second helicopter while its own is being replaced.
+        respawner = source("IA_VehicleRespawner.c")
+        for name in ("CheckVehicleStatus", "PerformSpawn"):
+            self.assertRegex(method(respawner, name), r"if \(m_bSwapPending\)\s*return;")
+
+    def test_a_skin_can_be_previewed_solo_without_a_rating(self):
         preview = source("IA_HeliSkinPreview.c")
-        self.assertIn("skins.PaintLocal(", method(preview, "PaintNearest"))
-        self.assertNotRegex(preview, r"SetVehicleSkin|IA_TransportPilotStore|Rpc\(")
+        self.assertIn("IA_HeliSkinSwap.Begin(", method(preview, "SwapNearest"))
+        self.assertNotIn("IA_TransportPilotStore", preview)
+        # The swap is visible to everyone, so only an admin may ask for it.
+        ask = method(source("IA_PlayerController.c"), "IA_PreviewHeliSkinIfAdmin")
+        self.assertLess(ask.index("if (!IA_IsAdminCaller())"), ask.index("IA_HeliSkinPreview.SwapNearest("))
         menu = (ROOT / "Scripts" / "Game" / "UI" / "Menus" / "IA_AdminConfigMenu.c").read_text(encoding="utf-8")
-        self.assertIn("IA_HeliSkinPreview.PaintNearest()", method(menu, "OnSkinPreview"))
+        self.assertIn("pc.IA_AskPreviewHeliSkin()", method(menu, "OnSkinPreview"))
 
     def test_feature_is_wired_into_the_mission(self):
         self.assertIn("IA_TransportPilotTracker.EnsureStarted();", source("IA_MissionInitializer.c"))
-        self.assertIn("IA_HeliSkinManagerComponent", (ROOT / "Prefabs" / "GameMode_IA.et").read_text(encoding="utf-8"))
+        self.assertIn("IA_HeliSkinPadService.Tick(pm, players, now)", method(source("IA_TransportPilotTracker.c"), "Tick"))
         self.assertIn('messageType == "PilotProgress"', source("IA_ChimeraCharacter.c"))
 
     def test_a_landing_is_one_card_not_one_toast_per_passenger(self):

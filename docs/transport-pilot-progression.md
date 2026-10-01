@@ -102,8 +102,8 @@ Players with no row are left out of `ratings`; the game treats them as 0.
 
 `IA_TransportPilotStore` is a RAM cache of the global totals.
 
-- A player's rating is fetched the first time they pilot a helicopter or carry
-  a passenger. Until the answer arrives the rating is **unknown**, and unknown
+- A player's rating is fetched the first time they pilot a helicopter, carry
+  a passenger or walk up to a parked helicopter that has a skin. Until the answer arrives the rating is **unknown**, and unknown
   never unlocks anything: with the backend down, nobody gains a skin.
 - Earned points are queued and sent every 60 s. Until the backend acknowledges
   them they count on top of the fetched total, so a pilot who crosses the
@@ -114,42 +114,57 @@ Players with no row are left out of `ratings`; the game treats them as 0.
 
 ## Skins
 
-`IA_HeliSkinCatalog` lists skins; `IA_HeliSkinManagerComponent` (on
-`GameMode_IA.et`) replicates which vehicle wears which skin and each client
-repaints the matching material slots with `$remap`. The prefab is untouched, so
-seats, catalog labels and pilot-role checks are unaffected.
+A skin is a set of **prefab variants**, one per stock airframe. Paint cannot be
+changed on a live helicopter: `SetObject` with a `$remap` on a vehicle crashes
+the engine in its next vehicle animation update. So a skinned helicopter is a
+different prefab, and putting a skin on means replacing the airframe.
 
-When a pilot whose rating meets the threshold takes the pilot seat, the
-airframe is painted. It stays painted for the life of that vehicle, including
-after a different pilot takes over.
+`IA_HeliSkinCatalog` pairs each stock prefab with its variant. The tan Huey
+has four: `IA_UH1H_Tan`, `IA_UH1H_armed_Tan` and the two rocket gunships
+(`Prefabs/Vehicles/Helicopters/UH1H/`). Each inherits the exact stock prefab
+and only assigns three tan materials on the hull mesh (body and two interior
+slots) and swaps the two seat parts for tan ones, so flight, weapons, catalogue
+labels and pilot-role checks are those of the stock airframe. Gun mounts keep
+their stock colour and the shark-nose gunships have no tan twin. Each tan
+material inherits the vanilla one and changes only its layer colours.
 
-A skin lists one or more material slots. The tan Huey repaints the body and
-the two interior slots, which also covers the seats. Each tan material inherits
-the vanilla one and changes only its layer colours, so it keeps the vanilla
-textures and decals. This is the same technique as the game's own shark-nose
-and civilian Hueys, which assign a different material to the same body slot in
-the prefab; here it is done at runtime so no prefab variant is needed.
+### How a pilot gets it
 
-To add a skin:
+`IA_HeliSkinPadService` runs once a second on the server. For every helicopter
+pad whose helicopter is still on the pad, shut down and empty, it takes the
+nearest living friendly player on foot within 10 m. If that player's rating
+unlocks a better skin than the airframe wears, `IA_HeliSkinSwap` deletes the
+helicopter and spawns the variant in the same place about 0.3 s later; the pad
+adopts the replacement. An unknown rating is requested and unlocks nothing.
+
+- The swap gives a fresh airframe (full fuel, no damage, empty inventory).
+- It is one way. A skinned airframe stays skinned for its life, whoever flies
+  it next; the pad spawns stock again after it is destroyed.
+- A helicopter that has left its pad, or was spawned by a Game Master, is never
+  swapped by the service.
+
+### Adding a skin
 
 1. Add the `.emat` files under `Assets/`, inheriting the vanilla material.
-2. Add one `AddDef` line in `IA_HeliSkinCatalog` with a new id and key, plus an
-   `AddSlot` line for each further slot.
-3. Run the Workbench plugin `IA_HeliSkinAssetCheck`. It registers new materials
-   (writing their `.emat.meta`), prints the `{GUID}path` the catalogue must
-   use, and checks that every slot exists on the airframe. Paste the names in
-   and run it again until it prints `PASS`. Commit the `.meta` files.
-4. Add one `transport_skin_thresholds` row.
-
-A vanilla material (for example the shark-nose body) can be referenced directly
-by its `{GUID}path`; steps 1 and the registration are then not needed.
+2. Add a prefab for each stock airframe, inheriting it and assigning the
+   materials under its `MeshObject`. Parts slotted into the hull (seats) need
+   their own variant, referenced from the hull's `SlotManagerComponent`.
+3. Add one `AddDef` line in `IA_HeliSkinCatalog` with a new id and key, and an
+   `AddVariant` line per airframe.
+4. Run the Workbench plugin `IA_HeliSkinAssetCheck`. It registers new prefabs
+   and materials (writing their `.meta`), prints the `{GUID}path` to reference,
+   and checks that each variant inherits its stock airframe, paints only slots
+   its meshes have, adds no slots and spawns with its painted parts. Paste the
+   names in and run it again until it prints `PASS`. Commit the `.meta` files.
+5. Add one `transport_skin_thresholds` row.
 
 ### Looking at a skin alone
 
-Admin menu, **HQ** tab, **Paint nearest heli**. It paints the nearest
-helicopter within 75 m that has a skin, on your screen only
-(`IA_HeliSkinPreview`), and steps to the next skin on each press. No rating is
-needed or earned and other players see stock paint.
+Admin menu, **HQ** tab, **Swap nearest heli skin**. The server
+(`IA_HeliSkinPreview`) replaces the nearest helicopter within 75 m that has a
+skin, if it is parked and empty, with its next skin; press again to step
+through the skins and back to stock. Everyone sees it. No rating is needed or
+earned, and it also works on a helicopter placed by a Game Master.
 
 ## Pilot HUD
 
@@ -212,8 +227,9 @@ skips the server side: crediting, batching per pilot, and the RPC.
 - The pilot card: layout, fonts, timing and the unlock sound can be checked
   alone with the preview above. The multi-tick merge with real passengers
   still needs a flight; only its data and rules run in Workbench.
-- `SetObject` with `$remap` on a live helicopter, its slotted doors and its
-  seats. Check with **Paint nearest heli**: body, doors, interior and seats
-  turn tan, and the paint survives getting in and flying.
+- The skin swap on a live server: the pad service handing a pilot the tan
+  airframe, and the swap as seen by other clients. Check alone with **Swap
+  nearest heli skin**: hull, interior and seats turn tan, nothing crashes, and
+  the helicopter starts and flies.
 - The tan in a published build. The materials are registered and load in
   Workbench, but only a packed build proves they ship.

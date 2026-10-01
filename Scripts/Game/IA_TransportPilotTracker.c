@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------------------------
-//! Server-side tracker that credits helicopter pilots for combat insertions and
-//! puts an unlocked skin on the airframe they fly.
+//! Server-side tracker that credits helicopter pilots for combat insertions.
+//! Unlocked skins are handed out at the pad by IA_HeliSkinPadService, which
+//! this tracker ticks.
 //!
 //! An insertion is one living player who rode as a passenger in a player-piloted
 //! helicopter, left it while it was still intact, and reached the ground alive
@@ -66,6 +67,8 @@ class IA_TransportPilotTracker
 		{
 			TickPlayer(pm, playerId, now);
 		}
+		// Before the fetches go out, so a rating it asks for is requested this tick.
+		IA_HeliSkinPadService.Tick(pm, players, now);
 		IA_TransportPilotStore.GetInstance().SendQueuedRequests();
 		FlushDropoffs(pm, now);
 		FlushStatus(pm, players, now);
@@ -153,7 +156,6 @@ class IA_TransportPilotTracker
 		if (pilotId == playerId)
 		{
 			m_mRides.Remove(playerId);
-			ApplyPilotSkin(pm, playerId, vehicle);
 			NotePilotSeat(playerId, now);
 			return;
 		}
@@ -414,31 +416,6 @@ class IA_TransportPilotTracker
 
 		if (IA_TransportScoring.IsNewPilotSeat(now, lastSeen))
 			m_mStatusOwed.Set(guid, pilotId);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected void ApplyPilotSkin(PlayerManager pm, int pilotId, IEntity vehicle)
-	{
-		string guid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(pilotId);
-		if (guid.IsEmpty())
-			return;
-
-		IA_TransportPilotStore store = IA_TransportPilotStore.GetInstance();
-		int rating = store.GetRating(guid);
-		if (rating < 0)
-		{
-			store.RequestRating(guid, pm.GetPlayerName(pilotId), System.GetTickCount());
-			return;
-		}
-
-		IA_HeliSkinManagerComponent skins = IA_HeliSkinManagerComponent.GetInstance();
-		EntityPrefabData prefab = vehicle.GetPrefabData();
-		if (!skins || !prefab)
-			return;
-
-		IA_HeliSkinDef def = IA_HeliSkinCatalog.ResolveForPilot(rating, prefab.GetPrefabName());
-		if (def)
-			skins.SetVehicleSkin(vehicle, def.m_iId);
 	}
 
 	//------------------------------------------------------------------------------------------------

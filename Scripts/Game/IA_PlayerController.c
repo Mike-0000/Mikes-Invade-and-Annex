@@ -88,6 +88,19 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Admin solo test: swap the nearest parked, empty helicopter for its next skin.
+	void IA_AskPreviewHeliSkin()
+	{
+		if (Replication.IsServer())
+		{
+			IA_PreviewHeliSkinIfAdmin();
+			return;
+		}
+
+		Rpc(RpcAsk_IA_PreviewHeliSkin);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void IA_AskForceQRF(int type)
 	{
 		if (Replication.IsServer())
@@ -144,6 +157,20 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_PromoteSelf()
 	{
 		IA_PromoteSelfIfAdmin();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_PreviewHeliSkin()
+	{
+		IA_PreviewHeliSkinIfAdmin();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_HeliSkinPreviewResult(string message)
+	{
+		SCR_HintManagerComponent.ShowCustomHint(message, "Skin preview", 6);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -270,6 +297,25 @@ modded class SCR_PlayerController
 		}
 
 		session.PromotePlayer(GetPlayerId());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_PreviewHeliSkinIfAdmin()
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Heli skin preview rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		string message = IA_HeliSkinPreview.SwapNearest(GetControlledEntity());
+		if (GetPlayerId() == SCR_PlayerController.GetLocalPlayerId())
+		{
+			RpcDo_IA_HeliSkinPreviewResult(message);
+			return;
+		}
+
+		Rpc(RpcDo_IA_HeliSkinPreviewResult, message);
 	}
 
 	//------------------------------------------------------------------------------------------------

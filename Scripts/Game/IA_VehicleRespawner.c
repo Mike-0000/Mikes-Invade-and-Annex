@@ -29,15 +29,66 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 	
 	protected IEntity m_RespawnerOwnerEntity; 		// Stores the entity this component is attached to
 	protected IEntity m_RespawnerSpawnedVehicle; 	// Stores the vehicle spawned by this respawner
+	// True while IA_HeliSkinSwap is replacing the vehicle; the pad must not spawn a second one.
+	protected bool m_bSwapPending;
+
+	// Server: every helicopter pad, for IA_HeliSkinPadService.
+	protected static ref array<IA_VehicleRespawner> s_aHeliPads = {};
+
+	//------------------------------------------------------------------------------------------------
+	static array<IA_VehicleRespawner> GetHeliPads()
+	{
+		return s_aHeliPads;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	bool IsHeliPad()
+	{
+		return m_eVehicleSpawnType == IA_VehicleSpawnType.GENERIC_HELI || m_eVehicleSpawnType == IA_VehicleSpawnType.ATTACK_HELI || m_eVehicleSpawnType == IA_VehicleSpawnType.TRANSPORT_HELI;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the vehicle this pad spawned while it is still parked on the pad, null otherwise
+	IEntity GetParkedVehicle()
+	{
+		if (m_bSwapPending || !m_RespawnerOwnerEntity || !m_RespawnerSpawnedVehicle)
+			return null;
+		if (vector.Distance(m_RespawnerSpawnedVehicle.GetOrigin(), m_RespawnerOwnerEntity.GetOrigin()) >= MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN)
+			return null;
+		return m_RespawnerSpawnedVehicle;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	bool OwnsVehicle(IEntity vehicle)
+	{
+		return vehicle && vehicle == m_RespawnerSpawnedVehicle;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void OnSwapStarted()
+	{
+		m_bSwapPending = true;
+		m_RespawnerSpawnedVehicle = null;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void OnSwapFinished(IEntity vehicle)
+	{
+		m_bSwapPending = false;
+		m_RespawnerSpawnedVehicle = vehicle;
+	}
 
 	//------------------------------------------------------------------------------------------------
 	override void OnPostInit(IEntity owner)
 	{
-		super.OnPostInit(owner); 
+		super.OnPostInit(owner);
 		m_RespawnerOwnerEntity = owner; // Store our owner
 
 		if (RplSession.Mode() == RplMode.Client || !GetGame().InPlayMode())
 			return;
+
+		if (IsHeliPad())
+			s_aHeliPads.Insert(this);
 
 		if (m_fRespawnCheckInterval <= 0)
 			m_fRespawnCheckInterval = DEFAULT_RESPAWN_INTERVAL_S;
@@ -61,6 +112,9 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 				GetGame().GetCallqueue().Remove(CheckVehicleStatus);
 			return;
 		}
+
+		if (m_bSwapPending)
+			return;
 
 		bool needsRespawn = false;
 		if (!m_RespawnerSpawnedVehicle)
@@ -195,7 +249,10 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			
 		if (RplSession.Mode() == RplMode.Client || !GetGame().InPlayMode())
 			return;
-		
+
+		if (m_bSwapPending)
+			return;
+
 		// If an alive vehicle (spawned by this spawner) is already present and close, do nothing.
 		if (m_RespawnerSpawnedVehicle && IsVehicleAlive(m_RespawnerSpawnedVehicle) && 
 			vector.Distance(m_RespawnerSpawnedVehicle.GetOrigin(), m_RespawnerOwnerEntity.GetOrigin()) < MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN)
@@ -336,6 +393,8 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 	void ~IA_VehicleRespawner()
 	{
 		//Print(string.Format("IA_VehicleRespawner %1: Destructor called.", m_RespawnerOwnerEntity), LogLevel.DEBUG);
+		if (s_aHeliPads)
+			s_aHeliPads.RemoveItem(this);
 		if (GetGame() && GetGame().GetCallqueue()) // Check if game and callqueue exist (e.g. during editor shutdown)
 		{
 			GetGame().GetCallqueue().Remove(CheckVehicleStatus);

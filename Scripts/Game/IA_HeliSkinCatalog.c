@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------------------------
 //! Unlockable helicopter skins, gated by the player's global transport rating.
-//! Add a skin with one AddDef line, plus an AddSlot line for each further
-//! material slot it repaints. The thresholds here are defaults; the stats
-//! backend can override them for every server at once.
+//! Add a skin with one AddDef line, plus an AddVariant line for each stock
+//! airframe it has a painted prefab for. The thresholds here are defaults; the
+//! stats backend can override them for every server at once.
 //------------------------------------------------------------------------------------------------
 class IA_HeliSkinCatalog
 {
@@ -18,33 +18,31 @@ class IA_HeliSkinCatalog
 			return;
 
 		s_aDefs = new array<ref IA_HeliSkinDef>();
-		// A slot name is the vanilla material plus its GUID suffix; the prefix
-		// matches it on every UH-1H variant, including the shark-nose prefabs.
-		// The interior slots are also on the seat parts, so the seats follow.
-		IA_HeliSkinDef tan = AddDef(SKIN_HUEY_TAN, "huey_tan", "Desert Tan Huey", "/UH1H/", "UH_1H_Body01", "{E3D8521BB1595CE0}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Body01_Tan.emat", 50000);
-		AddSlot(tan, "UH_1H_Interior01", "{6F6BE8E1E361B2BE}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Interior01_Tan.emat");
-		AddSlot(tan, "UH_1H_Interior02", "{2F9BC9C4557D30F9}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Interior02_Tan.emat");
+		// The shark-nose gunships have no tan twin; they keep their own livery.
+		IA_HeliSkinDef tan = AddDef(SKIN_HUEY_TAN, "huey_tan", "Desert Tan Huey", 50000);
+		AddVariant(tan, "{70BAEEFC2D3FEE64}Prefabs/Vehicles/Helicopters/UH1H/UH1H.et", "{E8F5E7E2B4B0A17E}Prefabs/Vehicles/Helicopters/UH1H/IA_UH1H_Tan.et");
+		AddVariant(tan, "{DDDD9B51F1234DF3}Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed.et", "{C45342DCB1889E0E}Prefabs/Vehicles/Helicopters/UH1H/IA_UH1H_armed_Tan.et");
+		AddVariant(tan, "{21E9A875C0A3C409}Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed_gunship_HE.et", "{9D7D4C53209E655F}Prefabs/Vehicles/Helicopters/UH1H/IA_UH1H_armed_gunship_HE_Tan.et");
+		AddVariant(tan, "{CB4D4CF7E887B2D0}Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed_gunship_HEDP.et", "{1892B2259FA7E22A}Prefabs/Vehicles/Helicopters/UH1H/IA_UH1H_armed_gunship_HEDP_Tan.et");
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected static IA_HeliSkinDef AddDef(int id, string key, string displayName, string prefabToken, string slotPrefix, ResourceName material, int requiredPoints)
+	protected static IA_HeliSkinDef AddDef(int id, string key, string displayName, int requiredPoints)
 	{
 		ref IA_HeliSkinDef def = new IA_HeliSkinDef();
 		def.m_iId = id;
 		def.m_sKey = key;
 		def.m_sDisplayName = displayName;
-		def.m_sPrefabToken = prefabToken;
 		def.m_iRequiredPoints = requiredPoints;
 		s_aDefs.Insert(def);
-		AddSlot(def, slotPrefix, material);
 		return def;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected static void AddSlot(notnull IA_HeliSkinDef def, string slotPrefix, ResourceName material)
+	protected static void AddVariant(notnull IA_HeliSkinDef def, ResourceName stockPrefab, ResourceName skinPrefab)
 	{
-		def.m_aSlotPrefixes.Insert(slotPrefix);
-		def.m_aMaterials.Insert(material);
+		def.m_aStockPrefabs.Insert(stockPrefab);
+		def.m_aSkinPrefabs.Insert(skinPrefab);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -87,11 +85,42 @@ class IA_HeliSkinCatalog
 	}
 
 	//------------------------------------------------------------------------------------------------
-	static bool FitsPrefab(IA_HeliSkinDef def, string prefabName)
+	//! \return true when the skin has a variant of this stock airframe
+	static bool FitsPrefab(IA_HeliSkinDef def, ResourceName stockPrefab)
 	{
-		if (!def || prefabName.IsEmpty())
+		if (!def)
 			return false;
-		return prefabName.Contains(def.m_sPrefabToken);
+		return !def.FindVariant(stockPrefab).IsEmpty();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Skin a prefab wears; null for stock airframes and anything uncatalogued.
+	static IA_HeliSkinDef FindDefBySkinPrefab(ResourceName prefab)
+	{
+		EnsureDefs();
+		foreach (IA_HeliSkinDef def : s_aDefs)
+		{
+			if (!def.FindStock(prefab).IsEmpty())
+				return def;
+		}
+		return null;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Stock airframe behind a prefab: itself when it is stock and has a skin, empty when it is neither.
+	static ResourceName FindStockPrefab(ResourceName prefab)
+	{
+		EnsureDefs();
+		ResourceName stock;
+		foreach (IA_HeliSkinDef def : s_aDefs)
+		{
+			stock = def.FindStock(prefab);
+			if (!stock.IsEmpty())
+				return stock;
+			if (FitsPrefab(def, prefab))
+				return prefab;
+		}
+		return ResourceName.Empty;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -104,14 +133,14 @@ class IA_HeliSkinCatalog
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Best skin this rating has unlocked for this airframe; null keeps stock paint.
-	static IA_HeliSkinDef ResolveForPilot(int points, string prefabName)
+	//! Best skin this rating has unlocked for this stock airframe; null keeps stock paint.
+	static IA_HeliSkinDef ResolveForPilot(int points, ResourceName stockPrefab)
 	{
 		EnsureDefs();
 		IA_HeliSkinDef best = null;
 		foreach (IA_HeliSkinDef def : s_aDefs)
 		{
-			if (!IsUnlocked(def, points) || !FitsPrefab(def, prefabName))
+			if (!IsUnlocked(def, points) || !FitsPrefab(def, stockPrefab))
 				continue;
 			if (!best || def.m_iRequiredPoints > best.m_iRequiredPoints)
 				best = def;
