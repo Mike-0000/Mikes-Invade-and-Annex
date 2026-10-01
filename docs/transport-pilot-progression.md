@@ -268,10 +268,12 @@ any mod, so the channel numbers agree. The addon holds only the registry, the
 generated twins (which inherit the mod's prefabs and materials and copy
 nothing) and the manifest script.
 
-This was run on the Sikorsky H-60 mod (`uh60`: four airframes on two meshes,
-four tinted hull materials and a pylon part), in a scratch addon depending on
-I&A and the mod: asset check `PASS`, all five liveries in play mode with the
-engines running, and the paint bay.
+The first one is `F:\Mikes-Invade-and-Annex-H60-Paint-Exp`, for the Sikorsky
+H-60 mod (`uh60`: four airframes on two meshes, four tinted hull materials and
+a pylon part): asset check `PASS`, all five liveries in play mode with the
+engines running, and the paint bay. This addon holds nothing about a modded
+helicopter and does not depend on a compatibility addon; its registry lists
+the vanilla Huey and Mi-8 only.
 
 What a tint cannot do, since it multiplies the texture:
 
@@ -426,8 +428,8 @@ channels handed out and given back per family, and the paint bay's drawing for
 both families and the generic silhouette. Not yet seen:
 
 - **A modded helicopter in a mission.** The whole path ran on the Sikorsky H-60
-  mod in Workbench, from a scratch addon that is not in this repository. Not
-  yet seen: a compatibility addon published and loaded by a server, a pad or
+  mod in Workbench, from its compatibility addon. Not yet seen: a
+  compatibility addon published and loaded by a server, a pad or
   the editor spawning its twin in a mission, and its seat opening the bay. A
   second mod may still use a material class the tools do not know.
 - **Multiplayer.** The repaint on other clients, on a player who joins
