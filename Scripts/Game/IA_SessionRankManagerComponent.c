@@ -310,6 +310,15 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Session XP for flying troops into the AO; one XP per transport rating point.
+	void AwardTransport(string playerId, string playerName, int points)
+	{
+		if (points < 1)
+			return;
+		AwardXp(playerId, playerName, points, 0, 0, 0, 0, 0);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected void AwardXp(string playerId, string playerName, int xp, int kills, int deaths, int hvt, int guard, int obj)
 	{
 		if (!Replication.IsServer())

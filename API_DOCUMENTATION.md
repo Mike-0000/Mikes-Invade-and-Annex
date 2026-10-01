@@ -49,6 +49,33 @@ Fetches global and server-specific leaderboard data.
 
 ---
 
+### `POST /submitTransport`
+Adds transport-pilot rating to players' **global** totals. Sent about once a minute while there is something to send. `batchId` makes a resend harmless.
+- **Request Body:**
+  ```json
+  {
+    "serverGuid": "String (UUID)",
+    "batchId": "String",
+    "entries": [ { "playerId": "String", "playerName": "String", "points": 40, "insertions": 2 } ]
+  }
+  ```
+
+### `POST /getTransportRatings`
+Fetches global transport ratings and the central skin thresholds.
+- **Request Body:**
+  ```json
+  { "serverGuid": "String (UUID)", "playerIds": ["String"] }
+  ```
+- **Response Body:**
+  ```json
+  {
+    "ratings": [ { "playerId": "String", "rating": 2540, "insertions": 131 } ],
+    "skins": [ { "key": "huey_tan", "required": 2500 } ]
+  }
+  ```
+
+Rules, schema and the function contract: `docs/transport-pilot-progression.md`.
+
 ## 2. Internal Game API Classes
 Internal script classes that facilitate game logic, AI control, and inter-system communication.
 

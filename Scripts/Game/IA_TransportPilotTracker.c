@@ -1,0 +1,308 @@
+//------------------------------------------------------------------------------------------------
+//! Server-side tracker that credits helicopter pilots for combat insertions and
+//! puts an unlocked skin on the airframe they fly.
+//!
+//! An insertion is one living player who rode as a passenger in a player-piloted
+//! helicopter, left it while it was still intact, and reached the ground alive
+//! near an objective of the active AO. Rules live in IA_TransportScoring.
+//------------------------------------------------------------------------------------------------
+class IA_TransportPilotTracker
+{
+	protected static const int TICK_MS = 1000;
+
+	protected static ref IA_TransportPilotTracker s_Instance;
+
+	protected ref map<int, ref IA_TransportRide> m_mRides;
+	// Tick of each passenger's last credited insertion, keyed by identity so a reconnect cannot reset it.
+	protected ref map<string, int> m_mLastCreditMs;
+
+	//------------------------------------------------------------------------------------------------
+	static void EnsureStarted()
+	{
+		if (!Replication.IsServer() || s_Instance)
+			return;
+
+		s_Instance = new IA_TransportPilotTracker();
+		GetGame().GetCallqueue().CallLater(s_Instance.Tick, TICK_MS, true);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void IA_TransportPilotTracker()
+	{
+		m_mRides = new map<int, ref IA_TransportRide>();
+		m_mLastCreditMs = new map<string, int>();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void Tick()
+	{
+		PlayerManager pm = GetGame().GetPlayerManager();
+		if (!pm)
+			return;
+
+		int now = System.GetTickCount();
+		ref array<int> players = {};
+		pm.GetPlayers(players);
+
+		foreach (int playerId : players)
+		{
+			TickPlayer(pm, playerId, now);
+		}
+		IA_TransportPilotStore.GetInstance().SendQueuedRequests();
+
+		// Riders who disconnected never reach the per-player pass above.
+		ref array<int> stale = {};
+		foreach (int riderId, IA_TransportRide ride : m_mRides)
+		{
+			if (!players.Contains(riderId))
+				stale.Insert(riderId);
+		}
+		foreach (int staleId : stale)
+		{
+			m_mRides.Remove(staleId);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void TickPlayer(PlayerManager pm, int playerId, int now)
+	{
+		IEntity pawn = pm.GetPlayerControlledEntity(playerId);
+		if (!IA_BasePlayerSampler.IsLivingConsciousPawn(pawn) || !IA_BasePlayerSampler.IsFriendlyPlayerPawn(pawn))
+		{
+			m_mRides.Remove(playerId);
+			return;
+		}
+
+		// Seats live on slotted parts, so resolve the root vehicle rather than the compartment owner.
+		IEntity vehicle = CompartmentAccessComponent.GetVehicleIn(pawn);
+		if (vehicle && IsHelicopter(vehicle))
+		{
+			TickAboard(pm, playerId, pawn, vehicle);
+			return;
+		}
+
+		IA_TransportRide ride = m_mRides.Get(playerId);
+		if (!ride)
+			return;
+
+		// Boarding anything else ends the ride: a truck from the LZ is not the pilot's delivery.
+		if (vehicle)
+		{
+			m_mRides.Remove(playerId);
+			return;
+		}
+
+		if (!ride.m_bExited)
+		{
+			// Survivors of a shot-down helicopter were not inserted.
+			if (!IsIntact(ride.m_Vehicle))
+			{
+				m_mRides.Remove(playerId);
+				return;
+			}
+			ride.m_bExited = true;
+			ride.m_iExitMs = now;
+		}
+
+		if (now - ride.m_iExitMs > IA_TransportScoring.SETTLE_TIMEOUT_MS)
+		{
+			m_mRides.Remove(playerId);
+			return;
+		}
+
+		// Still dropping from a hover or under a canopy; judge where they land.
+		if (!IA_BasePlayerSampler.IsStandingForZone(pawn))
+			return;
+
+		CreditRide(playerId, pawn, ride, now);
+		m_mRides.Remove(playerId);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void TickAboard(PlayerManager pm, int playerId, IEntity pawn, IEntity vehicle)
+	{
+		int pilotId = 0;
+		Vehicle veh = Vehicle.Cast(vehicle);
+		if (veh)
+		{
+			IEntity pilot = veh.GetPilot();
+			if (pilot)
+				pilotId = pm.GetPlayerIdFromControlledEntity(pilot);
+		}
+
+		if (pilotId == playerId)
+		{
+			m_mRides.Remove(playerId);
+			ApplyPilotSkin(pm, playerId, vehicle);
+			return;
+		}
+
+		IA_TransportRide ride = m_mRides.Get(playerId);
+		if (!ride || ride.m_bExited || ride.m_Vehicle != vehicle)
+		{
+			ref IA_TransportRide started = new IA_TransportRide();
+			started.m_Vehicle = vehicle;
+			IA_AreaMarker.TryGetPawnWorldPos(vehicle, started.m_vBoardPos);
+			m_mRides.Set(playerId, started);
+			ride = started;
+		}
+
+		if (pilotId > 0 && pilotId != ride.m_iPilotPlayerId)
+		{
+			ride.m_iPilotPlayerId = pilotId;
+			ride.m_sPilotGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(pilotId);
+			ride.m_sPilotName = pm.GetPlayerName(pilotId);
+			// Fetch early so the pilot's total is known by the time passengers step out.
+			IA_TransportPilotStore.GetInstance().RequestRating(ride.m_sPilotGuid, ride.m_sPilotName, System.GetTickCount());
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void CreditRide(int passengerId, IEntity pawn, IA_TransportRide ride, int now)
+	{
+		if (ride.m_sPilotGuid.IsEmpty())
+			return;
+
+		vector pos;
+		if (!IA_AreaMarker.TryGetPawnWorldPos(pawn, pos))
+			return;
+
+		string passengerGuid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(passengerId);
+		if (passengerGuid.IsEmpty() || passengerGuid == ride.m_sPilotGuid)
+			return;
+
+		int lastCredit = -1;
+		if (m_mLastCreditMs.Contains(passengerGuid))
+			lastCredit = m_mLastCreditMs.Get(passengerGuid);
+
+		float travel = vector.DistanceXZ(ride.m_vBoardPos, pos);
+		if (!IA_TransportScoring.IsCreditableRide(travel, now, lastCredit))
+			return;
+
+		float edge = NearestObjectiveEdge(pos);
+		if (edge < 0)
+			return;
+
+		int points = IA_TransportScoring.InsertionPoints(edge);
+		if (points <= 0)
+			return;
+
+		m_mLastCreditMs.Set(passengerGuid, now);
+		Award(ride, points, edge);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void Award(IA_TransportRide ride, int points, float edge)
+	{
+		IA_TransportPilotStore store = IA_TransportPilotStore.GetInstance();
+		int before = store.GetRating(ride.m_sPilotGuid);
+		IA_TransportPilotRecord record = store.AddInsertion(ride.m_sPilotGuid, ride.m_sPilotName, points);
+		if (!record)
+			return;
+
+		IA_StatsManager.GetInstance().QueueTransportInsertion(ride.m_sPilotGuid, ride.m_sPilotName, points);
+
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][TransportPilot] Insertion credited: +%1 at %2 m from the objective.", points, Math.Round(edge)), LogLevel.NORMAL);
+		}
+
+		// Until the global total arrives the points are banked but no total can be shown.
+		int rating = record.GetRating();
+		string message = string.Format("Combat insertion +%1 transport rating", points);
+		if (rating >= 0)
+		{
+			message = string.Format("Combat insertion +%1 transport rating (%2 total)", points, rating);
+			IA_HeliSkinDef unlocked = IA_HeliSkinCatalog.FindNewlyUnlocked(before, rating);
+			IA_HeliSkinDef next = IA_HeliSkinCatalog.FindNextLocked(rating);
+			if (unlocked && before >= 0)
+			{
+				IA_Log.Info(string.Format("[IA][TransportPilot] Skin %1 unlocked at rating %2.", unlocked.m_sKey, rating));
+				message = string.Format("Skin unlocked: %1. It is applied when you take the pilot seat.", unlocked.m_sDisplayName);
+			}
+			else if (next)
+			{
+				message = message + string.Format(" - %1 at %2", next.m_sDisplayName, next.m_iRequiredPoints);
+			}
+		}
+		NotifyPilot(ride.m_iPilotPlayerId, ride.m_sPilotGuid, message);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void NotifyPilot(int pilotId, string pilotGuid, string message)
+	{
+		PlayerManager pm = GetGame().GetPlayerManager();
+		// Player ids are reused after a disconnect, so confirm it is still the same pilot.
+		if (!pm || SCR_PlayerIdentityUtils.GetPlayerIdentityId(pilotId) != pilotGuid)
+			return;
+
+		SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pm.GetPlayerControlledEntity(pilotId));
+		if (character)
+			character.SetUIOne("PilotProgress", message, pilotId);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ApplyPilotSkin(PlayerManager pm, int pilotId, IEntity vehicle)
+	{
+		string guid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(pilotId);
+		if (guid.IsEmpty())
+			return;
+
+		IA_TransportPilotStore store = IA_TransportPilotStore.GetInstance();
+		int rating = store.GetRating(guid);
+		if (rating < 0)
+		{
+			store.RequestRating(guid, pm.GetPlayerName(pilotId), System.GetTickCount());
+			return;
+		}
+
+		IA_HeliSkinManagerComponent skins = IA_HeliSkinManagerComponent.GetInstance();
+		EntityPrefabData prefab = vehicle.GetPrefabData();
+		if (!skins || !prefab)
+			return;
+
+		IA_HeliSkinDef def = IA_HeliSkinCatalog.ResolveForPilot(rating, prefab.GetPrefabName());
+		if (def)
+			skins.SetVehicleSkin(vehicle, def.m_iId);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return metres to the nearest objective circle of the active AO, negative when there is none
+	protected float NearestObjectiveEdge(vector pos)
+	{
+		array<IA_AreaMarker> markers = IA_AreaMarker.GetAllMarkers();
+		if (!markers)
+			return -1;
+
+		int activeGroup = IA_VehicleManager.GetActiveGroup();
+		float best = -1;
+		foreach (IA_AreaMarker marker : markers)
+		{
+			if (!marker || marker.m_areaGroup != activeGroup)
+				continue;
+
+			float edge = IA_TransportScoring.EdgeDistance(pos, marker.GetOrigin(), marker.GetRadius());
+			if (best < 0 || edge < best)
+				best = edge;
+		}
+		return best;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool IsHelicopter(IEntity vehicle)
+	{
+		return vehicle.FindComponent(VehicleHelicopterSimulation) != null;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool IsIntact(IEntity vehicle)
+	{
+		if (!vehicle)
+			return false;
+
+		DamageManagerComponent damage = DamageManagerComponent.Cast(vehicle.FindComponent(DamageManagerComponent));
+		if (damage && damage.IsDestroyed())
+			return false;
+		return true;
+	}
+}

@@ -127,6 +127,8 @@ class IA_ApiHandler
 	protected ref RestCallback m_registerCallback;
 	protected ref RestCallback m_submitStatsCallback;
 	protected ref RestCallback m_fetchAllLeaderboardsCallback;
+	protected ref RestCallback m_submitTransportCallback;
+	protected ref RestCallback m_fetchTransportRatingsCallback;
 
     private static ref IA_ApiHandler s_Instance;
     private ref IA_ApiConfig m_Config;
@@ -284,6 +286,81 @@ class IA_ApiHandler
             Print("IA API: Server is fetching all leaderboards.", LogLevel.NORMAL);
         }
     }
+
+	//------------------------------------------------------------------------------------------------
+	//! Add transport rating to players' global totals. The batch id lets the
+	//! backend drop a resend whose first attempt did land.
+	//! \param entriesJson JSON array of {playerId, playerName, points, insertions}
+	//! \return false when nothing was sent
+	bool SubmitTransport(string batchId, string entriesJson)
+	{
+		// Unregistered servers are normal in Workbench; stay quiet and let the caller retry.
+		if (!m_Config || m_Config.m_sServerGuid == "")
+			return false;
+
+		string body = "{";
+		body = body + "\"serverGuid\": \"" + IA_JsonEscape(m_Config.m_sServerGuid) + "\",";
+		body = body + "\"batchId\": \"" + IA_JsonEscape(batchId) + "\",";
+		body = body + "\"entries\": " + entriesJson;
+		body = body + "}";
+
+		RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
+		ctx.SetHeaders("Content-Type,application/json");
+		m_submitTransportCallback = new RestCallback();
+		m_submitTransportCallback.SetOnSuccess(OnSubmitTransportSuccess);
+		m_submitTransportCallback.SetOnError(OnSubmitTransportError);
+		ctx.POST(m_submitTransportCallback, "/submitTransport", body);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void OnSubmitTransportSuccess(RestCallback cb)
+	{
+		IA_TransportPilotStore.GetInstance().OnSubmitResult(true);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void OnSubmitTransportError(RestCallback cb)
+	{
+		Print("[IA][API] Transport rating submission failed with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
+		IA_TransportPilotStore.GetInstance().OnSubmitResult(false);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Fetch global transport ratings and the central skin thresholds.
+	//! \param playerIdsJson JSON array of player identity ids
+	//! \return false when nothing was sent
+	bool FetchTransportRatings(string playerIdsJson)
+	{
+		if (!m_Config || m_Config.m_sServerGuid == "")
+			return false;
+
+		string body = "{";
+		body = body + "\"serverGuid\": \"" + IA_JsonEscape(m_Config.m_sServerGuid) + "\",";
+		body = body + "\"playerIds\": " + playerIdsJson;
+		body = body + "}";
+
+		RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
+		ctx.SetHeaders("Content-Type,application/json");
+		m_fetchTransportRatingsCallback = new RestCallback();
+		m_fetchTransportRatingsCallback.SetOnSuccess(OnFetchTransportRatingsSuccess);
+		m_fetchTransportRatingsCallback.SetOnError(OnFetchTransportRatingsError);
+		ctx.POST(m_fetchTransportRatingsCallback, "/getTransportRatings", body);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void OnFetchTransportRatingsSuccess(RestCallback cb)
+	{
+		IA_TransportPilotStore.GetInstance().OnRatingsReceived(cb.GetData());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	void OnFetchTransportRatingsError(RestCallback cb)
+	{
+		Print("[IA][API] Transport ratings request failed with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
+		IA_TransportPilotStore.GetInstance().OnRatingsFailed();
+	}
 
     private void _RegisterServer()
     {

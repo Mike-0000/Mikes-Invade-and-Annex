@@ -1346,6 +1346,7 @@ class IA_MissionInitializer : GenericEntity
 		LoadConfig();
 		ApplyAdminOverrides();
 		IA_RadioRelayGrid.EnsureSpawned();
+		IA_TransportPilotTracker.EnsureStarted();
 
         // Set this instance as the reference for IA_AreaMarker
         IA_AreaMarker.SetMissionInitializer(this);

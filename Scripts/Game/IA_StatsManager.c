@@ -120,6 +120,17 @@ class IA_StatsManager
         m_aEventQue.Clear();
     }
 
+    //! Session XP for a credited combat insertion. The global transport rating
+    //! travels through IA_TransportPilotStore, not the kill/capture batch.
+    void QueueTransportInsertion(string pilotId, string pilotName, int points)
+    {
+        if (!Replication.IsServer() || pilotId.IsEmpty() || points <= 0)
+            return;
+        IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+        if (session)
+            session.AwardTransport(pilotId, pilotName, points);
+    }
+
     protected void AwardSessionKill(string playerId, string playerName)
     {
         if (!Replication.IsServer())
