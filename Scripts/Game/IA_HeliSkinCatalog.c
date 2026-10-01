@@ -19,7 +19,7 @@ class IA_HeliSkinCatalog
 		s_aDefs = new array<ref IA_HeliSkinDef>();
 		// Slot name is the vanilla body material plus its GUID suffix; the prefix
 		// matches it on every UH-1H variant, including the shark-nose prefabs.
-		AddDef(SKIN_HUEY_TAN, "huey_tan", "Desert Tan Huey", "/UH1H/", "UH_1H_Body01", "Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Body01_Tan.emat", 2500);
+		AddDef(SKIN_HUEY_TAN, "huey_tan", "Desert Tan Huey", "/UH1H/", "UH_1H_Body01", "Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Body01_Tan.emat", 50000);
 	}
 
 	//------------------------------------------------------------------------------------------------

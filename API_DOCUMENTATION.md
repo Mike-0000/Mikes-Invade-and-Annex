@@ -71,8 +71,8 @@ Fetches global transport ratings and the central skin thresholds.
 - **Response Body:**
   ```json
   {
-    "ratings": [ { "playerId": "String", "rating": 2540, "insertions": 131 } ],
-    "skins": [ { "key": "huey_tan", "required": 2500 } ]
+    "ratings": [ { "playerId": "String", "rating": 50310, "insertions": 2140 } ],
+    "skins": [ { "key": "huey_tan", "required": 50000 } ]
   }
   ```
 

@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS public.transport_skin_thresholds (
 );
 
 INSERT INTO public.transport_skin_thresholds (skin_key, required_rating)
-VALUES ('huey_tan', 2500)
+VALUES ('huey_tan', 50000)
 ON CONFLICT (skin_key) DO NOTHING;
 
 ALTER TABLE public.player_transport_ratings  ENABLE ROW LEVEL SECURITY;

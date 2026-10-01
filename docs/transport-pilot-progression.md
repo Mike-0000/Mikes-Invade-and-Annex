@@ -34,6 +34,10 @@ Points per insertion are `round(10 x weight)`:
 
 Each point is also one session XP for the pilot.
 
+The tan Huey needs 50000 rating. That is meant to take dozens of hours: a full
+cabin of 12 dropped inside the objective pays 360, so the fastest possible path
+is 139 such trips, and ordinary part-full flights take several times longer.
+
 ## Global storage
 
 ```
@@ -87,8 +91,8 @@ Call `get_transport_ratings(p_player_ids)` and return its JSON unchanged:
 
 ```json
 {
-  "ratings": [ { "playerId": "bohemia id", "rating": 2540, "insertions": 131 } ],
-  "skins":   [ { "key": "huey_tan", "required": 2500 } ]
+  "ratings": [ { "playerId": "bohemia id", "rating": 50310, "insertions": 2140 } ],
+  "skins":   [ { "key": "huey_tan", "required": 50000 } ]
 }
 ```
 
