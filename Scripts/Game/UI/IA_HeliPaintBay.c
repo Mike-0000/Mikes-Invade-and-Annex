@@ -1,10 +1,13 @@
 //------------------------------------------------------------------------------------------------
 //! The paint bay: the panel a helicopter pilot opens from the seat to change
 //! the skin of the airframe they are flying. It is the pilot card grown large:
-//! the same amber tab, bevelled body and side-view Huey. The Huey on the left
-//! wears whichever livery is under the cursor, painted nose to tail, and for a
-//! locked livery only as far as the pilot's rating has earned. The tiles along
-//! the bottom are the liveries.
+//! the same amber tab, bevelled body and side-view helicopter. The helicopter
+//! on the left wears whichever livery is under the cursor, painted nose to tail,
+//! and for a locked livery only as far as the pilot's rating has earned. The
+//! tiles along the bottom are the liveries.
+//!
+//! Which helicopter is drawn, what it is called and what its factory paint is
+//! come from the paint family of the airframe's channel (IA_HeliPaintFamily).
 //!
 //! The bay only draws and reports clicks. IA_HeliPaintMenu feeds it the state
 //! and talks to the server.
@@ -47,8 +50,8 @@ class IA_HeliPaintBay : MUI_Surface
 	static const int NO_SKIN = -1;
 
 	protected static const string TEXT_TAB = "PAINT BAY";
-	protected static const string TEXT_AIRFRAME = "UH-1H IROQUOIS";
-	protected static const string TEXT_STOCK_NAME = "Factory Olive";
+	protected static const string TEXT_AIRFRAME = "HELICOPTER";
+	protected static const string TEXT_STOCK_NAME = "FACTORY PAINT";
 	protected static const string TEXT_LIVERIES = "LIVERIES";
 	protected static const string TEXT_OPEN_SLOT = "OPEN SLOT";
 	protected static const string TEXT_RATING = "TRANSPORT RATING";
@@ -68,9 +71,12 @@ class IA_HeliPaintBay : MUI_Surface
 	protected ref Color m_White;
 	protected ref Color m_Black;
 	protected ref Color m_Glass;
-	protected ref Color m_Olive;
+	protected ref Color m_Stock;
 
-	protected ref IA_HueyArt m_Art;
+	protected ref IA_HeliArt m_Art;
+	protected IA_HeliPaintFamily m_Family;
+	protected bool m_bFamilySet;
+	protected string m_sAirframe = TEXT_AIRFRAME;
 	protected ref MUI_Row m_Row;
 	protected ref array<ref IA_HeliPaintTile> m_aTiles = {};
 	protected ref array<ref Color> m_aSkinColors = {};
@@ -87,7 +93,7 @@ class IA_HeliPaintBay : MUI_Surface
 	protected bool m_bAdmin;
 	protected int m_iPending = NO_SKIN;
 
-	// The Huey on the left.
+	// The helicopter on the left.
 	protected int m_iShown = NO_SKIN;
 	protected int m_iShownTile;
 	protected Color m_ColPaint;
@@ -158,13 +164,13 @@ class IA_HeliPaintBay : MUI_Surface
 		m_White = Color.FromSRGBA(238, 242, 240, 255);
 		m_Black = Color.FromSRGBA(0, 0, 0, 255);
 		m_Glass = Color.FromSRGBA(9, 14, 13, 240);
-		m_Olive = Color.FromSRGBA(78, 88, 60, 255);
-		m_ColPaint = m_Olive;
-		m_ColBase = m_Olive;
+		m_Stock = Color.FromSRGBA(78, 88, 60, 255);
+		m_ColPaint = m_Stock;
+		m_ColBase = m_Stock;
 		m_ChipColor = m_Muted;
 		m_FooterColor = m_Muted;
 
-		m_Art = new IA_HueyArt();
+		m_Art = IA_HeliArt.Create(IA_HeliArt.ART_HUEY);
 		m_OnPick = new ScriptInvoker();
 	}
 
@@ -214,7 +220,7 @@ class IA_HeliPaintBay : MUI_Surface
 		m_Row.SetAlign(0, 1);
 		AddChild(m_Row);
 
-		AddTile(runtime, IA_HeliSkinCatalog.SKIN_NONE, TEXT_STOCK_NAME, m_Olive);
+		AddTile(runtime, IA_HeliSkinCatalog.SKIN_NONE, TEXT_STOCK_NAME, m_Stock);
 
 		array<ref IA_HeliSkinDef> defs = IA_HeliSkinCatalog.GetDefs();
 		foreach (IA_HeliSkinDef def : defs)
@@ -222,11 +228,8 @@ class IA_HeliPaintBay : MUI_Surface
 			if (m_aTiles.Count() >= TILE_MAX)
 				break;
 
-			string name = def.m_sDisplayName;
-			if (name.EndsWith(" Huey"))
-				name = name.Substring(0, name.Length() - 5);
 			ref Color colour = Color.FromSRGBA(def.m_iSwatchR, def.m_iSwatchG, def.m_iSwatchB, 255);
-			AddTile(runtime, def.m_iId, name, colour);
+			AddTile(runtime, def.m_iId, def.m_sDisplayName, colour);
 		}
 
 		int count = m_aTiles.Count();
@@ -260,24 +263,73 @@ class IA_HeliPaintBay : MUI_Surface
 
 	//------------------------------------------------------------------------------------------------
 	//! \param paintable false when this helicopter has no paint channel
-	//! \param channel the pad's paint channel, shown as the bay number
+	//! \param channel the airframe's paint channel; its family is the helicopter drawn and its number in the family is shown
 	//! \param rating the pilot's global transport rating, negative while it is not known
 	void SetContext(bool paintable, int channel, int wornSkin, int rating, bool admin)
 	{
 		if (m_bContextSet && paintable == m_bPaintable && channel == m_iChannel && wornSkin == m_iWorn && rating == m_iRating && admin == m_bAdmin)
 			return;
 
-		bool repainted = m_iShown != NO_SKIN && wornSkin != m_iWorn && paintable;
+		// Another airframe wearing another skin is not a repaint.
+		bool repainted = m_iShown != NO_SKIN && wornSkin != m_iWorn && paintable && channel == m_iChannel;
 		m_bContextSet = true;
 		m_bPaintable = paintable;
 		m_iChannel = channel;
 		m_iWorn = wornSkin;
 		m_iRating = rating;
 		m_bAdmin = admin;
+		SetFamily(IA_HeliPaintChannels.GetFamily(channel));
 		RefreshTiles();
 
 		if (repainted)
 			Celebrate();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Draw another helicopter type: its silhouette, its name and its factory paint on the stock tile.
+	//! \param family null for a helicopter without paint channels, which keeps the generic names
+	protected void SetFamily(IA_HeliPaintFamily family)
+	{
+		if (m_bFamilySet && family == m_Family)
+			return;
+
+		m_bFamilySet = true;
+		m_Family = family;
+
+		// No key is the generic helicopter.
+		string art;
+		string stockName = TEXT_STOCK_NAME;
+		m_sAirframe = TEXT_AIRFRAME;
+		if (family)
+		{
+			art = family.m_sArt;
+			m_sAirframe = family.m_sDisplayName;
+			m_sAirframe.ToUpper();
+			stockName = family.m_sStockPaint;
+			stockName.ToUpper();
+			m_Stock = Color.FromSRGBA(family.m_iStockR, family.m_iStockG, family.m_iStockB, 255);
+		}
+
+		m_Art = IA_HeliArt.Create(art);
+		foreach (IA_HeliPaintTile tile : m_aTiles)
+		{
+			tile.SetAirframe(art, m_Stock);
+		}
+
+		// The first tile is the factory paint.
+		if (!m_aTiles.IsEmpty())
+		{
+			m_aSkinColors[0] = m_Stock;
+			m_aSkinNames[0] = stockName;
+			m_aTiles[0].SetPaint(stockName, m_Stock);
+		}
+
+		// Nothing of the last helicopter stays on the board.
+		m_iShown = NO_SKIN;
+		m_ColPaint = m_Stock;
+		m_ColBase = m_Stock;
+		m_fFront = 1;
+		m_bTextDirty = true;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -449,7 +501,7 @@ class IA_HeliPaintBay : MUI_Surface
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Put a livery on the big Huey; it is painted over whatever the Huey shows now.
+	//! Put a livery on the big helicopter; it is painted over whatever it shows now.
 	protected void ShowSkin(int skinId)
 	{
 		int count = m_aTiles.Count();
@@ -657,8 +709,8 @@ class IA_HeliPaintBay : MUI_Surface
 		}
 
 		m_sPad = "";
-		if (m_iChannel > 0)
-			m_sPad = "PAD " + TwoDigits(m_iChannel);
+		if (IA_HeliPaintChannels.IsChannel(m_iChannel))
+			m_sPad = "PAD " + TwoDigits(IA_HeliPaintChannels.GetLocalChannel(m_iChannel));
 		m_fPadW = IA_TrackedText.Measure(m_Runtime, m_sPad, FONT_CAP, TRACK_CAP);
 		m_fTabW = IA_TrackedText.Measure(m_Runtime, TEXT_TAB, FONT_TAB, TRACK_TAB) + TAB_PAD_X * 2;
 	}
@@ -792,7 +844,7 @@ class IA_HeliPaintBay : MUI_Surface
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! The drawing board: the Huey in the livery being looked at.
+	//! The drawing board: the helicopter in the livery being looked at.
 	protected void DrawHero(MUI_RenderSurface surface, float x, float y, float op)
 	{
 		float time = GetTime();
@@ -849,8 +901,8 @@ class IA_HeliPaintBay : MUI_Surface
 		}
 
 		// Helicopter.
-		float hx = x + (HERO_W - IA_HueyArt.W * HERO_K) * 0.5;
-		float hy = y + (HERO_H - IA_HueyArt.H * HERO_K) * 0.5 + 6;
+		float hx = x + (HERO_W - IA_HeliArt.W * HERO_K) * 0.5;
+		float hy = y + (HERO_H - IA_HeliArt.H * HERO_K) * 0.5 + 6;
 		bool partial = m_fFrontTarget < 0.999;
 
 		m_Art.DrawShadow(surface, hx, hy, HERO_K, MUI_ColorUtil.Fade(m_Black, op * 0.42));
@@ -875,7 +927,7 @@ class IA_HeliPaintBay : MUI_Surface
 		}
 
 		// Captions.
-		IA_TrackedText.Draw(surface, m_Runtime, x + 10, y + 7, 12, TEXT_AIRFRAME, FONT_CAP, TRACK_CAP, MUI_ColorUtil.Fade(m_Muted, op * 0.9));
+		IA_TrackedText.Draw(surface, m_Runtime, x + 10, y + 7, 12, m_sAirframe, FONT_CAP, TRACK_CAP, MUI_ColorUtil.Fade(m_Muted, op * 0.9));
 		if (!m_sPad.IsEmpty())
 			IA_TrackedText.Draw(surface, m_Runtime, x + HERO_W - 10 - m_fPadW, y + 7, 12, m_sPad, FONT_CAP, TRACK_CAP, MUI_ColorUtil.Fade(m_Muted, op * 0.9));
 
@@ -1013,7 +1065,7 @@ class IA_HeliPaintBay : MUI_Surface
 		m_aSparkVY.Clear();
 		m_aSparkLife.Clear();
 
-		float spanW = IA_HueyArt.W * HERO_K;
+		float spanW = IA_HeliArt.W * HERO_K;
 		float baseX = PAD + (HERO_W - spanW) * 0.5;
 		float baseY = TAB_H + HERO_TOP + HERO_H * 0.5;
 		int i;

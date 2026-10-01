@@ -54,8 +54,10 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 	{
 		super.OnPostInit(owner);
 
+		// Every paint family's channels, in the order the families are registered on every machine.
+		int total = IA_HeliPaintChannels.GetChannelTotal();
 		int channel;
-		for (channel = 1; channel <= IA_HeliPaintChannels.CHANNEL_COUNT; channel++)
+		for (channel = 1; channel <= total; channel++)
 		{
 			m_aChannelSkins.Insert(IA_HeliSkinCatalog.SKIN_NONE);
 			m_aShown.Insert(IA_HeliSkinCatalog.SKIN_NONE);
@@ -112,7 +114,7 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 			return false;
 
 		int channel = GetVehicleChannel(vehicle);
-		if (channel == IA_HeliPaintChannels.CHANNEL_NONE)
+		if (channel == IA_HeliPaintChannels.CHANNEL_NONE || channel > m_aChannelSkins.Count())
 			return false;
 		if (skinId != IA_HeliSkinCatalog.SKIN_NONE && !IA_HeliSkinCatalog.FindDef(skinId))
 			return false;

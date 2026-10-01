@@ -1,9 +1,10 @@
 //------------------------------------------------------------------------------------------------
 //! Sits on every paint channel airframe (tools/author_heli_paint_channels.py
 //! writes it into the hull prefabs) and tells the server which live helicopter
-//! holds each channel. Whatever spawns a stock Huey asks ResolveSpawnPrefab
-//! first and gets its twin on a channel nobody holds, so a helicopter from a
-//! pad or from the editor can be repainted alone.
+//! holds each channel. Whatever spawns a stock airframe of a paint family asks
+//! ResolveSpawnPrefab first and gets its twin on a channel of that family
+//! nobody holds, so a helicopter from a pad or from the editor can be
+//! repainted alone.
 //------------------------------------------------------------------------------------------------
 [ComponentEditorProps(category: "Invade & Annex/Components", description: "Marks a helicopter spawned on a paint channel.")]
 class IA_HeliPaintRigComponentClass : ScriptComponentClass
@@ -14,46 +15,58 @@ class IA_HeliPaintRigComponent : ScriptComponent
 {
 	// Server: the helicopter on each paint channel, at index channel - 1.
 	protected static ref array<IEntity> s_aHolders = {};
-	protected static bool s_bWarnedFull;
+	// Keys of the families whose channels were all held at the last spawn.
+	protected static ref array<string> s_aWarnedFull = {};
 
 	protected int m_iChannel = IA_HeliPaintChannels.CHANNEL_NONE;
 
 	//------------------------------------------------------------------------------------------------
 	//! Server. \return the stock airframe's twin on a free paint channel; the prefab itself when it
-	//! is not a stock airframe or every channel is held
+	//! is not a stock airframe of a paint family or every channel of its family is held
 	static ResourceName ResolveSpawnPrefab(ResourceName prefab)
 	{
 		if (!Replication.IsServer() || !GetGame().InPlayMode())
 			return prefab;
-		if (!IA_HeliPaintChannels.IsStockAirframe(prefab))
+
+		IA_HeliPaintFamily family = IA_HeliPaintChannels.FindStockFamily(prefab);
+		if (!family)
 			return prefab;
 
-		int channel = FindFreeChannel();
+		int channel = FindFreeChannel(family);
 		if (channel == IA_HeliPaintChannels.CHANNEL_NONE)
 		{
-			if (!s_bWarnedFull)
+			if (!s_aWarnedFull.Contains(family.m_sKey))
 			{
-				s_bWarnedFull = true;
-				Print(string.Format("[IA][HeliSkin] All %1 paint channels are held; further Hueys spawn in stock paint and cannot be repainted.", IA_HeliPaintChannels.CHANNEL_COUNT), LogLevel.WARNING);
+				s_aWarnedFull.Insert(family.m_sKey);
+				Print(string.Format("[IA][HeliSkin] All %1 paint channels of %2 are held; further ones spawn in stock paint and cannot be repainted.", IA_HeliPaintChannels.CHANNEL_COUNT, family.m_sDisplayName), LogLevel.WARNING);
 			}
 			return prefab;
 		}
 
-		s_bWarnedFull = false;
-		return IA_HeliPaintChannels.FindChannelPrefab(prefab, channel);
+		s_aWarnedFull.RemoveItem(family.m_sKey);
+
+		ResourceName twin = IA_HeliPaintChannels.FindChannelPrefab(prefab, channel);
+		if (twin.IsEmpty())
+			return prefab;
+		return twin;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Server. \return a channel no live helicopter holds, CHANNEL_NONE when all are held
-	static int FindFreeChannel()
+	//! Server. \return a channel of the family no live helicopter holds, CHANNEL_NONE when all are held
+	static int FindFreeChannel(IA_HeliPaintFamily family)
 	{
+		if (!family)
+			return IA_HeliPaintChannels.CHANNEL_NONE;
+
 		// A wreck still shows its channel's paint, so an empty channel goes first.
 		int wrecked = IA_HeliPaintChannels.CHANNEL_NONE;
 		IEntity holder;
 		DamageManagerComponent damage;
 		int channel;
-		for (channel = 1; channel <= IA_HeliPaintChannels.CHANNEL_COUNT; channel++)
+		int local;
+		for (local = 1; local <= IA_HeliPaintChannels.CHANNEL_COUNT; local++)
 		{
+			channel = IA_HeliPaintChannels.ToChannel(family, local);
 			holder = GetHolder(channel);
 			if (!holder)
 				return channel;
@@ -96,13 +109,14 @@ class IA_HeliPaintRigComponent : ScriptComponent
 		if (m_iChannel == IA_HeliPaintChannels.CHANNEL_NONE)
 			return;
 
-		while (s_aHolders.Count() < IA_HeliPaintChannels.CHANNEL_COUNT)
+		int total = IA_HeliPaintChannels.GetChannelTotal();
+		while (s_aHolders.Count() < total)
 		{
 			s_aHolders.Insert(null);
 		}
 		s_aHolders[m_iChannel - 1] = owner;
 
-		// The channel may still show the skin of the airframe that held it before.
+		// The channel may still show the livery of the airframe that held it before.
 		IA_HeliSkinManagerComponent skins = IA_HeliSkinManagerComponent.GetInstance();
 		if (skins)
 			skins.ResetChannel(m_iChannel);

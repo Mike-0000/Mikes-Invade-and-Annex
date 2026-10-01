@@ -12,8 +12,10 @@
 //!           HOT LZ or the distance out, then the progress block.
 //!   Status  tab TRANSPORT RATING: progress block alone, shown on taking a seat.
 //!   Unlock  tab SKIN UNLOCKED: gold tone, skin name, sweep, sparks, one sound.
-//! Progress block: a Huey that is painted nose to tail in the skin's sand as the
-//! rating nears its threshold, with the total, the threshold and the percent.
+//! Progress block: a helicopter that is painted nose to tail in the colour of
+//! the livery being worked towards as the rating nears its threshold, with the
+//! total, the threshold and the percent. The card is sent the livery's name and
+//! not the airframe, so the helicopter is always the Huey.
 //------------------------------------------------------------------------------------------------
 enum IA_PilotHudAnim
 {
@@ -155,6 +157,9 @@ class IA_PilotHud : MUI_Surface
 	protected ref Color m_HudGreen;
 	protected ref Color m_HudTone;
 	protected ref Color m_HudPaint;
+	// The livery's own colour, and that colour on its way to gold.
+	protected ref Color m_HudCoat;
+	protected ref Color m_HudHull;
 
 	protected ref array<float> m_aBodyPoly;
 	protected ref array<float> m_aClipA;
@@ -197,6 +202,8 @@ class IA_PilotHud : MUI_Surface
 		m_HudGreen = Color.FromSRGBA(94, 251, 131, 255);
 		m_HudTone = Color.FromSRGBA(255, 184, 72, 255);
 		m_HudPaint = Color.FromSRGBA(226, 192, 132, 255);
+		m_HudCoat = Color.FromSRGBA(226, 192, 132, 255);
+		m_HudHull = Color.FromSRGBA(226, 192, 132, 255);
 
 		m_mCharW = new map<int, float>();
 		m_aBodyPoly = new array<float>();
@@ -555,6 +562,7 @@ class IA_PilotHud : MUI_Surface
 		float t = MUI_Ease.CubicOut(m_fUnlockT);
 		MUI_ColorUtil.Mix(m_HudAmber, m_HudGold, t, m_HudTone);
 		MUI_ColorUtil.Mix(m_HudSand, m_HudGold, t, m_HudPaint);
+		MUI_ColorUtil.Mix(m_HudCoat, m_HudGold, t * 0.5, m_HudHull);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -656,6 +664,15 @@ class IA_PilotHud : MUI_Surface
 		m_sSkin = m_Data.m_sSkinName;
 		if (m_Data.HasUnlock())
 			m_sSkin = m_Data.m_sUnlockedName;
+
+		// The hull takes the colour of that livery; sand when the name is not one of ours.
+		IA_HeliSkinDef livery = IA_HeliSkinCatalog.FindDefByName(m_sSkin);
+		if (livery)
+			m_HudCoat = Color.FromSRGBA(livery.m_iSwatchR, livery.m_iSwatchG, livery.m_iSwatchB, 255);
+		else
+			m_HudCoat = Color.FromSRGBA(226, 192, 132, 255);
+		MixTone();
+
 		if (m_sSkin.IsEmpty())
 			m_sSkin = "TRANSPORT PILOT";
 		m_sSkin.ToUpper();
@@ -923,7 +940,7 @@ class IA_PilotHud : MUI_Surface
 
 		if (full)
 		{
-			Color whole = MUI_ColorUtil.Fade(m_HudPaint, op);
+			Color whole = MUI_ColorUtil.Fade(m_HudHull, op);
 			FillPiece(surface, FUSELAGE, x, y, whole);
 			FillPiece(surface, COWL, x, y, whole);
 			FillPiece(surface, BOOM, x, y, whole);
@@ -943,7 +960,7 @@ class IA_PilotHud : MUI_Surface
 			{
 				// Painted side of a slanted front, parallel to the pips.
 				float limit = front + SKEW * SIL_H * 0.5;
-				Color painted = MUI_ColorUtil.Fade(m_HudPaint, op);
+				Color painted = MUI_ColorUtil.Fade(m_HudHull, op);
 				FillPainted(surface, FUSELAGE, limit, x, y, painted);
 				FillPainted(surface, COWL, limit, x, y, painted);
 				FillPainted(surface, BOOM, limit, x, y, painted);

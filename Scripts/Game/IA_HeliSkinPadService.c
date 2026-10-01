@@ -1,11 +1,44 @@
 //------------------------------------------------------------------------------------------------
-//! Server: gives a pilot their unlocked skin before they board. When the
-//! nearest player walking up to a helicopter parked on its pad has earned a
-//! skin, IA_HeliSkinManagerComponent recolours the helicopter where it stands.
+//! Server: gives a pilot their livery before they board. When the nearest
+//! player walking up to a helicopter parked on its pad has earned one,
+//! IA_HeliSkinManagerComponent recolours the helicopter where it stands. It is
+//! the livery they last chose in the paint bay this session, stock included,
+//! and the highest one they have unlocked when they have not chosen yet.
 //------------------------------------------------------------------------------------------------
 class IA_HeliSkinPadService
 {
 	protected static const float APPROACH_RADIUS_M = 10;
+
+	// Identity id -> the livery that pilot last put on from the paint bay; lasts the session.
+	protected static ref map<string, int> s_mChoices = new map<string, int>();
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: the pilot put this livery on from the paint bay, stock paint included.
+	static void RememberChoice(int playerId, int skinId)
+	{
+		if (!Replication.IsServer())
+			return;
+
+		string guid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerId);
+		if (guid.IsEmpty())
+			return;
+		s_mChoices.Set(guid, skinId);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \param choice the livery the pilot last chose, negative when they have not chosen
+	//! \return the livery a pad airframe takes for this pilot, null to leave it as it is
+	static IA_HeliSkinDef PickLivery(int rating, int choice)
+	{
+		if (choice == IA_HeliSkinCatalog.SKIN_NONE)
+			return null;
+
+		// A choice made as an admin, or before a threshold was raised, may not be unlocked.
+		IA_HeliSkinDef chosen = IA_HeliSkinCatalog.FindDef(choice);
+		if (chosen && IA_HeliSkinCatalog.IsUnlocked(chosen, rating))
+			return chosen;
+		return IA_HeliSkinCatalog.FindBestUnlocked(rating);
+	}
 
 	//------------------------------------------------------------------------------------------------
 	//! Called once per tracker tick with the connected players.
@@ -37,7 +70,7 @@ class IA_HeliSkinPadService
 		if (IA_HeliSkinManagerComponent.GetVehicleChannel(vehicle) == IA_HeliPaintChannels.CHANNEL_NONE)
 			return;
 
-		// A pilot who chose a skin in the paint bay keeps it, stock included.
+		// A livery put on from the seat stays until the airframe is replaced, stock included.
 		if (skins.IsPilotChoice(vehicle))
 			return;
 
@@ -58,11 +91,15 @@ class IA_HeliSkinPadService
 			return;
 		}
 
-		IA_HeliSkinDef best = IA_HeliSkinCatalog.FindBestUnlocked(rating);
+		int choice = -1;
+		if (!s_mChoices.Find(guid, choice))
+			choice = -1;
+
+		IA_HeliSkinDef best = PickLivery(rating, choice);
 		if (!best)
 			return;
 
-		// Never trade a skin down: a better pilot's airframe stays as it is.
+		// Never trade a livery down: a better pilot's airframe stays as it is.
 		IA_HeliSkinDef worn = IA_HeliSkinCatalog.FindDef(skins.GetVehicleSkin(vehicle));
 		if (worn && worn.m_iRequiredPoints >= best.m_iRequiredPoints)
 			return;

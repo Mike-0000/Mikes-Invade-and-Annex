@@ -1,0 +1,34 @@
+Vehicle : "{DBEC63C9DEE4358C}Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_armed_gunship_HEDP.et" {
+ ID "5A7CEB06421662F8"
+ components {
+  IA_HeliPaintRigComponent "{D3A91F5C7E20D001}" {
+  }
+  MeshObject "{51DAA09FEFBFC0E7}" {
+   Materials {
+    MaterialAssignClass "{45A31753291E7AB9}" {
+     SourceMaterial "Exterier_35715EB3956D22B9"
+     AssignedMaterial "{0B89DCA6B46DCBE9}Assets/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8_Body_Paint8.emat"
+    }
+   }
+  }
+  SlotManagerComponent "{55BCE45E438E4CFF}" {
+   Slots {
+    RegisteringComponentSlotInfo RotorMain {
+     Prefab "{EAB571FA90095960}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_VehPart_Mi8_rotor_main_Paint8.et"
+    }
+    RegisteringComponentSlotInfo RotorTail {
+     Prefab "{B78E63209CA4AF92}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_VehPart_Mi8_rotor_tail_Paint8.et"
+    }
+    RegisteringComponentSlotInfo Window_Glass_Cockpit_09 {
+     Prefab "{C0ECF546EF7B6907}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8MT_PKMT_mount_front_Paint8.et"
+    }
+    SCR_WeaponRackSlotInfo Hardpoints {
+     Prefab "{BCED0A9127359812}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8MT_Hardpoints_HEDP_Paint8.et"
+    }
+    RegisteringComponentSlotInfo CockpitArmor {
+     Prefab "{AD565EC323F75913}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8MT_armor_Paint8.et"
+    }
+   }
+  }
+ }
+}

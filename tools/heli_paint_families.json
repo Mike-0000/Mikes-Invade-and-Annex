@@ -1,0 +1,406 @@
+{
+ "channel_count": 12,
+ "rig_component": "IA_HeliPaintRigComponent",
+ "rig_component_id": "D3A91F5C7E20D001",
+ "manifest": {"path": "Scripts/Game/IA_HeliPaintManifest.c"},
+ "families": [
+  {
+   "key": "uh1h",
+   "name": "UH-1H IROQUOIS",
+   "stock_paint": "Factory Olive",
+   "stock_swatch": [78, 88, 60],
+   "art": "huey",
+   "legacy_guid_prefix": "D3A91F5C7E20",
+   "material_dir": "Assets/Vehicles/Helicopters/UH1H/Paint/",
+   "prefab_dir": "Prefabs/Vehicles/Helicopters/UH1H/Paint/",
+   "surfaces": [
+    {
+     "material": "{6224CA051369DE45}Assets/Vehicles/Helicopters/UH1H/Data/UH_1H_Body01.emat",
+     "class": "MatPBRMulti",
+     "paint": {
+      "Color_1": {"primary": 1},
+      "Color_2": {"color": [0.004, 0.004, 0.004]},
+      "Color_3": {"color": [0.117, 0.112, 0.109]},
+      "Color_4": {"color": [0.004, 0.004, 0.004]}
+     },
+     "stock": {
+      "SpecularMul": 0.701,
+      "MudColor": [0.016, 0.012, 0.008],
+      "MudRoughness": 3,
+      "MudDetNormal": 0.35,
+      "DirtOpacity": 0.061,
+      "DirtLayerSharpness": 0.845,
+      "DirtColor": [0.25, 0.222, 0.165],
+      "DirtRoughness": 1,
+      "MaskRedScale": 0.605,
+      "Color_4": [0.591, 0.591, 0.591],
+      "Roughness_4": 1.4,
+      "Color_3": [0.965, 0.926, 0.897],
+      "Roughness_3": 1.25,
+      "Metalness_3": 0.5,
+      "Color_2": [0.065, 0.061, 0.038],
+      "MaskSharpness_2": 1,
+      "MaskUVScale_2": 1.5,
+      "DetNormal_2": 0.15,
+      "Roughness_2": 0.9,
+      "Metalness_2": 0,
+      "Color_1": [0.042, 0.037, 0.026],
+      "DetNormal_1": 0.18,
+      "Roughness_1": 1.099,
+      "Metalness_1": 0
+     }
+    },
+    {
+     "material": "{04455994F64CAB1E}Assets/Vehicles/Helicopters/UH1H/Data/UH_1H_Interior01.emat",
+     "class": "MatPBRMulti",
+     "paint": {
+      "Color_1": {"color": [0.184, 0.184, 0.184]},
+      "Color_2": {"color": [0.209, 0, 0]},
+      "Color_3": {"color": [0.004, 0.004, 0.004]}
+     },
+     "stock": {
+      "MudColor": [0.086, 0.102, 0.11],
+      "DirtOpacity": 0.09,
+      "DirtLayerSharpness": 1.258,
+      "DirtColor": [0.028, 0.028, 0.027],
+      "DirtRoughness": 1.5,
+      "MaskOffset_4": 0.512,
+      "Color_3": [0.024, 0.024, 0.024],
+      "DetNormal_3": 0.449,
+      "Roughness_3": 1.961,
+      "Metalness_3": 0,
+      "Color_2": [0.235, 0.235, 0.235],
+      "Color_1": [0.366, 0.366, 0.366],
+      "DetNormal_1": 0.15,
+      "Roughness_1": 0.75
+     }
+    },
+    {
+     "material": "{5AAD70D749C12511}Assets/Vehicles/Helicopters/UH1H/Data/UH_1H_Interior02.emat",
+     "class": "MatPBRMulti",
+     "paint": {
+      "Color_1": {"color": [0.004, 0.004, 0.004]},
+      "Color_2": {"primary": 1},
+      "Color_3": {"primary": 1},
+      "DirtColor": {"primary": 1},
+      "DirtOpacity": {"value": 1.5},
+      "AO_3": {"value": 0.357}
+     },
+     "stock": {
+      "MudColor": [0.086, 0.102, 0.11],
+      "MudRoughness": 3,
+      "DirtOpacity": 1.87,
+      "DirtLayerSharpness": 0.24,
+      "DirtColor": [0.043, 0.035, 0.02],
+      "DirtRoughness": 1,
+      "OverlayBlackPower": 0.66,
+      "Color_4": [0.455, 0.455, 0.455],
+      "DetNormal_4": 0.5,
+      "AO_4": 1.3,
+      "Color_3": [0.694, 0.694, 0.694],
+      "Roughness_3": 1.3,
+      "Color_2": [0.31, 0.278, 0.204],
+      "Color_1": [0.051, 0.051, 0.051],
+      "DetNormal_1": 2
+     }
+    }
+   ],
+   "parts": [
+    {
+     "prefab": "{67030528FA4FA725}Prefabs/Vehicles/Helicopters/UH1H/VehParts/Seats/VehPart_UH1H_seats_gunners.et",
+     "class": "GenericEntity",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "4B42E716914465B9",
+     "slots": [
+      {"slot": "UH_1H_Interior02_5AAD70D749C12511", "surface": 2},
+      {"slot": "UH_1H_Interior01_04455994F64CAB1E", "surface": 1}
+     ]
+    },
+    {
+     "prefab": "{205599C7074F1E02}Prefabs/Vehicles/Helicopters/UH1H/VehParts/Seats/VehPart_UH1H_seats_cargo.et",
+     "class": "GenericEntity",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "4B42E716914465B9",
+     "slots": [
+      {"slot": "UH_1H_Interior02_5AAD70D749C12511", "surface": 2},
+      {"slot": "UH_1H_Interior01_04455994F64CAB1E", "surface": 1}
+     ]
+    },
+    {
+     "prefab": "{0A5C688A2A1E7548}Prefabs/Vehicles/Helicopters/UH1H/VehParts/Seats/VehPart_UH1H_seats_gunners_dummy.et",
+     "class": "GenericEntity",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "4B42E716914465B9",
+     "slots": [
+      {"slot": "UH_1H_Interior02_5AAD70D749C12511", "surface": 2},
+      {"slot": "UH_1H_Interior01_04455994F64CAB1E", "surface": 1}
+     ]
+    },
+    {
+     "prefab": "{5C4D9B53495B219A}Prefabs/Vehicles/Helicopters/UH1H/VehParts/Seats/VehPart_UH1H_seats_cargo_openDoor.et",
+     "class": "GenericEntity",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "4B42E716914465B9",
+     "slots": [
+      {"slot": "UH_1H_Interior02_5AAD70D749C12511", "surface": 2},
+      {"slot": "UH_1H_Interior01_04455994F64CAB1E", "surface": 1}
+     ]
+    }
+   ],
+   "airframes": [
+    {
+     "prefab": "{70BAEEFC2D3FEE64}Prefabs/Vehicles/Helicopters/UH1H/UH1H.et",
+     "class": "Vehicle",
+     "id": "5DB688595BAB2FD7",
+     "mesh_component": "51DAA09FEFBFC0E7",
+     "slot_component": "55BCE45E438E4CFF",
+     "slots": [
+      {"slot": "UH_1H_Body01_6224CA051369DE45", "surface": 0},
+      {"slot": "UH_1H_Interior02_5AAD70D749C12511", "surface": 2},
+      {"slot": "UH_1H_Interior01_04455994F64CAB1E", "surface": 1}
+     ],
+     "parts": [
+      {"slot": "Seat_Gunners", "slot_class": "RegisteringComponentSlotInfo", "part": 0},
+      {"slot": "Seat_Cargo", "slot_class": "RegisteringComponentSlotInfo", "part": 1}
+     ]
+    },
+    {
+     "prefab": "{DDDD9B51F1234DF3}Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed.et",
+     "class": "Vehicle",
+     "id": "5DB688595BAB2FD7",
+     "mesh_component": "51DAA09FEFBFC0E7",
+     "slot_component": "55BCE45E438E4CFF",
+     "slots": [
+      {"slot": "UH_1H_Body01_6224CA051369DE45", "surface": 0},
+      {"slot": "UH_1H_Interior02_5AAD70D749C12511", "surface": 2},
+      {"slot": "UH_1H_Interior01_04455994F64CAB1E", "surface": 1}
+     ],
+     "parts": [
+      {"slot": "Seat_Gunners", "slot_class": "RegisteringComponentSlotInfo", "part": 2},
+      {"slot": "Seat_Cargo", "slot_class": "RegisteringComponentSlotInfo", "part": 3}
+     ]
+    },
+    {
+     "prefab": "{21E9A875C0A3C409}Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed_gunship_HE.et",
+     "class": "Vehicle",
+     "id": "5DB688595BAB2FD7",
+     "mesh_component": "51DAA09FEFBFC0E7",
+     "slot_component": "55BCE45E438E4CFF",
+     "slots": [
+      {"slot": "UH_1H_Body01_6224CA051369DE45", "surface": 0},
+      {"slot": "UH_1H_Interior02_5AAD70D749C12511", "surface": 2},
+      {"slot": "UH_1H_Interior01_04455994F64CAB1E", "surface": 1}
+     ],
+     "parts": [
+      {"slot": "Seat_Gunners", "slot_class": "RegisteringComponentSlotInfo", "part": 2},
+      {"slot": "Seat_Cargo", "slot_class": "RegisteringComponentSlotInfo", "part": 3}
+     ]
+    },
+    {
+     "prefab": "{CB4D4CF7E887B2D0}Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed_gunship_HEDP.et",
+     "class": "Vehicle",
+     "id": "5DB688595BAB2FD7",
+     "mesh_component": "51DAA09FEFBFC0E7",
+     "slot_component": "55BCE45E438E4CFF",
+     "slots": [
+      {"slot": "UH_1H_Body01_6224CA051369DE45", "surface": 0},
+      {"slot": "UH_1H_Interior02_5AAD70D749C12511", "surface": 2},
+      {"slot": "UH_1H_Interior01_04455994F64CAB1E", "surface": 1}
+     ],
+     "parts": [
+      {"slot": "Seat_Gunners", "slot_class": "RegisteringComponentSlotInfo", "part": 2},
+      {"slot": "Seat_Cargo", "slot_class": "RegisteringComponentSlotInfo", "part": 3}
+     ]
+    }
+   ]
+  },
+  {
+   "key": "mi8mt",
+   "name": "MI-8MT HIP",
+   "stock_paint": "Factory Camo",
+   "stock_swatch": [112, 110, 82],
+   "art": "hip",
+   "material_dir": "Assets/Vehicles/Helicopters/Mi8MT/Paint/",
+   "prefab_dir": "Prefabs/Vehicles/Helicopters/Mi8MT/Paint/",
+   "surfaces": [
+    {
+     "material": "{35715EB3956D22B9}Assets/Vehicles/Helicopters/Mi8/Data/Mi8_Body.emat",
+     "class": "MatPBRMulti",
+     "paint": {
+      "Color_1": {"primary": 1},
+      "Color_2": {"primary": 1},
+      "Color_3": {"primary": 1},
+      "Specular": {"color": [0.39, 0.39, 0.39]},
+      "SpecularIBL": {"color": [0.74, 0.74, 0.74]}
+     },
+     "stock": {
+      "Color": [1.0, 1.0, 1.0],
+      "SpecularIBL": [0.823, 0.756, 0.59],
+      "Specular": [0.418, 0.402, 0.326],
+      "SpecularMul": 0.798,
+      "MudOpacity": 0.88,
+      "MudColor": [0.045, 0.045, 0.034],
+      "MudMetalness": 0.3,
+      "DirtOpacity": 0.092,
+      "DirtLayerSharpness": 2.167,
+      "DirtColor": [0.191, 0.163, 0.128],
+      "DirtRoughness": 2,
+      "OverlayWhitePower": 0.9,
+      "MaskRedScale": 0.705,
+      "MaskGreenScale": 0.712,
+      "Color_4": [0.474, 0.454, 0.441],
+      "Roughness_4": 3.2,
+      "Metalness_4": 0.6,
+      "Color_3": [0.181, 0.355, 0.451],
+      "MaskSharpness_3": 6,
+      "MaskUVScale_3": 0.246,
+      "DetNormal_3": 0.4,
+      "Roughness_3": 1.5,
+      "Metalness_3": 0,
+      "Color_2": [0.089, 0.095, 0.049],
+      "MaskSharpness_2": 0.8,
+      "MaskOffset_2": 0.06,
+      "DetNormal_2": 0.4,
+      "Roughness_2": 1.5,
+      "Metalness_2": 0,
+      "Color_1": [0.223, 0.209, 0.143],
+      "DetNormal_1": 0.4,
+      "Roughness_1": 1.5,
+      "Metalness_1": 0
+     }
+    }
+   ],
+   "parts": [
+    {
+     "prefab": "{8952883E000BE636}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/Mi8MT_rear_door.et",
+     "class": "GenericEntity",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "4B42E716914465B9",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ]
+    },
+    {
+     "prefab": "{3B7D5676B67CC90F}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/Rotor/VehPart_Mi8_rotor_main.et",
+     "class": "VehiclePartRotor",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "4B42E716914465B9",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ]
+    },
+    {
+     "prefab": "{20533C9F438C0E7E}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/Rotor/VehPart_Mi8_rotor_tail.et",
+     "class": "VehiclePartRotor",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "4B42E716914465B9",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ]
+    },
+    {
+     "prefab": "{0147F3C32DF990FF}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/WeapSystems/Mi8MT_PKMT_mount_front.et",
+     "class": "Turret",
+     "id": "51ACD0965653D003",
+     "mesh_component": "51ACD09C4E0B7D16",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ]
+    },
+    {
+     "prefab": "{73622A6C27813495}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/WeapSystems/Mi8MT_Hardpoints_HE.et",
+     "class": "Turret",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "51ACD09C4E0B7D16",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ]
+    },
+    {
+     "prefab": "{45593D09EEED3546}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/Mi8MT_armor.et",
+     "class": "GenericEntity",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "4B42E716914465B9",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ]
+    },
+    {
+     "prefab": "{BE610EC0304CF5BA}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/WeapSystems/Mi8MT_Hardpoints_HEDP.et",
+     "class": "Turret",
+     "id": "4B42E71698F5739C",
+     "mesh_component": "51ACD09C4E0B7D16",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ]
+    }
+   ],
+   "airframes": [
+    {
+     "prefab": "{DF5CCB7C0FF049F4}Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et",
+     "class": "Vehicle",
+     "id": "5A7CEB06421662F8",
+     "mesh_component": "51DAA09FEFBFC0E7",
+     "slot_component": "55BCE45E438E4CFF",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ],
+     "parts": [
+      {"slot": "door_rear", "slot_class": "RegisteringComponentSlotInfo", "part": 0},
+      {"slot": "RotorMain", "slot_class": "RegisteringComponentSlotInfo", "part": 1},
+      {"slot": "RotorTail", "slot_class": "RegisteringComponentSlotInfo", "part": 2}
+     ]
+    },
+    {
+     "prefab": "{7BD282AF716ED639}Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_armed.et",
+     "class": "Vehicle",
+     "id": "5A7CEB06421662F8",
+     "mesh_component": "51DAA09FEFBFC0E7",
+     "slot_component": "55BCE45E438E4CFF",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ],
+     "parts": [
+      {"slot": "RotorMain", "slot_class": "RegisteringComponentSlotInfo", "part": 1},
+      {"slot": "RotorTail", "slot_class": "RegisteringComponentSlotInfo", "part": 2},
+      {"slot": "Window_Glass_Cockpit_09", "slot_class": "RegisteringComponentSlotInfo", "part": 3}
+     ]
+    },
+    {
+     "prefab": "{3C6B3ED0C3AC30D5}Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_armed_gunship_HE.et",
+     "class": "Vehicle",
+     "id": "5A7CEB06421662F8",
+     "mesh_component": "51DAA09FEFBFC0E7",
+     "slot_component": "55BCE45E438E4CFF",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ],
+     "parts": [
+      {"slot": "RotorMain", "slot_class": "RegisteringComponentSlotInfo", "part": 1},
+      {"slot": "RotorTail", "slot_class": "RegisteringComponentSlotInfo", "part": 2},
+      {"slot": "Window_Glass_Cockpit_09", "slot_class": "RegisteringComponentSlotInfo", "part": 3},
+      {"slot": "Hardpoints", "slot_class": "SCR_WeaponRackSlotInfo", "part": 4},
+      {"slot": "CockpitArmor", "slot_class": "RegisteringComponentSlotInfo", "part": 5}
+     ]
+    },
+    {
+     "prefab": "{DBEC63C9DEE4358C}Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_armed_gunship_HEDP.et",
+     "class": "Vehicle",
+     "id": "5A7CEB06421662F8",
+     "mesh_component": "51DAA09FEFBFC0E7",
+     "slot_component": "55BCE45E438E4CFF",
+     "slots": [
+      {"slot": "Exterier_35715EB3956D22B9", "surface": 0}
+     ],
+     "parts": [
+      {"slot": "RotorMain", "slot_class": "RegisteringComponentSlotInfo", "part": 1},
+      {"slot": "RotorTail", "slot_class": "RegisteringComponentSlotInfo", "part": 2},
+      {"slot": "Window_Glass_Cockpit_09", "slot_class": "RegisteringComponentSlotInfo", "part": 3},
+      {"slot": "Hardpoints", "slot_class": "SCR_WeaponRackSlotInfo", "part": 6},
+      {"slot": "CockpitArmor", "slot_class": "RegisteringComponentSlotInfo", "part": 5}
+     ]
+    }
+   ]
+  }
+ ]
+}

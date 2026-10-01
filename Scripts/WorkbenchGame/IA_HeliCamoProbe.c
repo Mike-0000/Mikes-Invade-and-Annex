@@ -679,7 +679,7 @@ class IA_HeliCamoProbe : WorkbenchPlugin
 			return 1;
 		Sleep(5000);
 
-		Material body = Material.GetOrLoadMaterial(IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, channel), 0);
+		Material body = Material.GetOrLoadMaterial(IA_HeliPaintChannels.GetMaterial(0, channel), 0);
 		if (!body)
 		{
 			Print("[IA][HeliCamoProbe] FAIL: the channel body material did not load", LogLevel.ERROR);
@@ -725,7 +725,7 @@ class IA_HeliCamoProbe : WorkbenchPlugin
 			return 1;
 		Sleep(5000);
 
-		Material body = Material.GetOrLoadMaterial(IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, 1), 0);
+		Material body = Material.GetOrLoadMaterial(IA_HeliPaintChannels.GetMaterial(0, 1), 0);
 		if (!body)
 			return 1;
 

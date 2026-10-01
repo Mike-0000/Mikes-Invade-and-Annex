@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------------------------
-//! One livery in the paint bay: a small Huey in the skin's colour, its name and
-//! whether the pilot may wear it. A locked skin shows how far the pilot's
+//! One livery in the paint bay: the airframe, small, in the skin's colour, its
+//! name and whether the pilot may wear it. A locked skin shows how far the pilot's
 //! rating has painted it. The bay owns the tiles and tells them their state;
 //! a click goes back to the bay, which decides what it means.
 //------------------------------------------------------------------------------------------------
@@ -33,9 +33,9 @@ class IA_HeliPaintTile : MUI_Node
 	protected ref Color m_Green;
 	protected ref Color m_Muted;
 	protected ref Color m_White;
-	protected ref Color m_Olive;
+	protected ref Color m_Stock;
 	protected ref Color m_Glass;
-	protected ref IA_HueyArt m_Art;
+	protected ref IA_HeliArt m_Art;
 	protected ref array<float> m_aBody = {};
 
 	//------------------------------------------------------------------------------------------------
@@ -54,10 +54,10 @@ class IA_HeliPaintTile : MUI_Node
 		m_Green = Color.FromSRGBA(94, 251, 131, 255);
 		m_Muted = Color.FromSRGBA(158, 168, 163, 255);
 		m_White = Color.FromSRGBA(238, 242, 240, 255);
-		m_Olive = Color.FromSRGBA(78, 88, 60, 255);
+		m_Stock = Color.FromSRGBA(78, 88, 60, 255);
 		m_Glass = Color.FromSRGBA(9, 14, 13, 235);
 		m_Skin = Color.FromSRGBA(78, 88, 60, 255);
-		m_Art = new IA_HueyArt();
+		m_Art = IA_HeliArt.Create(IA_HeliArt.ART_HUEY);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -74,6 +74,26 @@ class IA_HeliPaintTile : MUI_Node
 		if (index < 10)
 			tile.m_sIndex = "0" + tile.m_sIndex;
 		return tile;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! The helicopter this tile draws.
+	//! \param art the "art" key of its paint family
+	//! \param stock its factory paint, the undercoat of a livery that is still locked
+	void SetAirframe(string art, notnull Color stock)
+	{
+		m_Art = IA_HeliArt.Create(art);
+		m_Stock = stock;
+		InvalidatePaint();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Rename and recolour the tile; the stock tile changes with the helicopter.
+	void SetPaint(string displayName, notnull Color skin)
+	{
+		m_sLabel = displayName;
+		m_Skin = skin;
+		InvalidatePaint();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -200,7 +220,7 @@ class IA_HeliPaintTile : MUI_Node
 		IA_TrackedText.Draw(surface, m_Runtime, x + pad, y + 7, 12, m_sIndex, FONT_CAP, TRACK_CAP, MUI_ColorUtil.Fade(m_Muted, op * 0.8 * ink));
 
 		// Helicopter.
-		float k = (w - pad - 12) / IA_HueyArt.W;
+		float k = (w - pad - 12) / IA_HeliArt.W;
 		if (k > 1.0)
 			k = 1.0;
 		float hx = x + pad;
@@ -211,7 +231,7 @@ class IA_HeliPaintTile : MUI_Node
 
 		if (m_iState == STATE_LOCKED || m_iState == STATE_SYNCING)
 		{
-			m_Art.FillHull(surface, hx, hy, k, MUI_ColorUtil.Fade(m_Olive, op * 0.55));
+			m_Art.FillHull(surface, hx, hy, k, MUI_ColorUtil.Fade(m_Stock, op * 0.55));
 			m_Art.FillHull(surface, hx, hy, k, MUI_ColorUtil.Fade(m_Skin, op * (0.10 + hover * 0.10)));
 			if (m_iState == STATE_LOCKED)
 			{

@@ -1,7 +1,8 @@
 # Transport pilot progression
 
 Helicopter pilots earn a **global transport rating** for flying players into the
-AO. The rating unlocks helicopter skins. The first skin is a desert-tan Huey.
+AO. The rating unlocks helicopter liveries: plain military paint colours that
+any helicopter with paint channels can wear, vanilla or modded.
 
 The rating is one number per player across every server. It is stored in
 Supabase, not in a server profile and not in the session.
@@ -34,9 +35,18 @@ Points per insertion are `round(10 x weight)`:
 
 Each point is also one session XP for the pilot.
 
-The tan Huey needs 50000 rating. That is meant to take dozens of hours: a full
-cabin of 12 dropped inside the objective pays 360, so the fastest possible path
-is 139 such trips, and ordinary part-full flights take several times longer.
+| Livery | Key | Rating |
+| --- | --- | --- |
+| Forest Green | `heli_green` | 5000 |
+| Field Drab | `heli_drab` | 12000 |
+| Gunship Grey | `heli_grey` | 25000 |
+| Desert Tan | `huey_tan` | 50000 |
+| Night Black | `heli_black` | 100000 |
+
+Desert Tan is meant to take dozens of hours: a full cabin of 12 dropped inside
+the objective pays 360, so the fastest possible path is 139 such trips, and
+ordinary part-full flights take several times longer. The cheaper liveries are
+steps on the way; Night Black is for the pilot who kept going.
 
 ## Global storage
 
@@ -55,8 +65,10 @@ API source: `backend/azure-functions`.
   stored entries are the audit trail if a server has to be reversed.
 - `transport_skin_thresholds`: the central unlock setting, `skin_key` to
   `required_rating`. Changing a row changes the requirement on every server the
-  next time it fetches ratings. The value in `IA_HeliSkinCatalog` is only the
-  default used until the first fetch.
+  next time it fetches ratings. The value in `IA_HeliSkinCatalog` is the
+  default: it is used until the first fetch, and for good by a livery that has
+  no row. Only `huey_tan` has a row today; the other four run on their script
+  defaults until a row is added for them.
 - `submit_transport_batch` refuses unknown or inactive servers and caps each
   entry at 30 points per insertion, the most the scoring rules can pay.
 
@@ -112,88 +124,149 @@ Players with no row are left out of `ratings`; the game treats them as 0.
 - Points still unsent when the server process stops are lost (at most about one
   minute of flying). Nothing is written to disk.
 
-## Skins
+## Liveries
 
-A skin is put on a helicopter **where it stands**: crew aboard, engine running,
-as often as wanted. The helicopter is never deleted, respawned or given a new
-mesh. A skin menu inside the helicopter can be built on the same call,
+A livery is put on a helicopter **where it stands**: crew aboard, engine
+running, as often as wanted. The helicopter is never deleted, respawned or
+given a new mesh. Everything goes through
 `IA_HeliSkinManagerComponent.SetVehicleSkin(vehicle, skinId)`.
+
+A livery is **one plain colour** (`IA_HeliSkinCatalog`). It is not a file: the
+same five liveries go on every helicopter family, and a new one is one line.
+Patterns are not offered. A camouflage texture is laid out for one helicopter's
+UVs, and neither a projected pattern nor run-time decals gave a result that
+looked right on more than one airframe (`IA_HeliCamoProbe`; see the vehicle
+paint rule). A plain colour looks right on all of them.
 
 ### How it works
 
-- Changing a vehicle hull's mesh or materials from script (`SetObject`,
+- Changing a vehicle hull's mesh from script (`SetObject`,
   `SetVObjectFromPrefab`) crashes the engine a frame later, so that is never
   done. Instead the colours of the **material itself** are changed with
   `Material.SetParam`, which every mesh using that material shows at once.
-- A material is shared by every entity that names it, so recolouring the
-  vanilla Huey material would recolour every Huey. A **paint channel** is a
-  prefab twin of a stock airframe whose hull and seats name their own copies of
-  the three Huey materials (body and two interior). The copies inherit the
-  vanilla materials unchanged, so a channel airframe looks stock.
-- There are twelve channels (`IA_HeliPaintChannels`), each with twins of the
-  four stock Hueys (`Prefabs/Vehicles/Helicopters/UH1H/Paint/`). A channel
-  belongs to one live helicopter. Each twin carries `IA_HeliPaintRigComponent`,
-  which tells the server its channel is held and gives it back when the
-  helicopter is deleted.
-- Whatever spawns a stock Huey asks `IA_HeliPaintRigComponent.ResolveSpawnPrefab`
-  first and spawns the twin on a free channel instead: a helicopter pad
-  (`IA_VehicleRespawner`) and the editor, for Game Master and build mode
-  (`IA_HeliPaintEditorSpawn`, on the editor's variant pick). An empty channel is
-  taken before one whose helicopter is a wreck. With all twelve held the server
-  logs one warning and the Huey spawns stock and cannot be repainted.
-- A skin (`IA_HeliSkinCatalog`) is up to three "paint" materials that are never
-  put on a mesh. `IA_HeliSkinPaint.Apply` copies their layer colours, roughness,
-  metalness and dirt values onto the channel's materials; stock paint is the
-  same copy from the vanilla materials. Textures are not changed.
-- `IA_HeliSkinManagerComponent` (on `GameMode_IA.et`) replicates which skin
+- A material is shared by every entity that names it, so recolouring a stock
+  hull material would recolour every helicopter of that type. A **paint
+  channel** is a prefab twin of a stock airframe whose hull and slotted parts
+  name their own copies of the paint materials. The copies inherit the stock
+  materials and set nothing, so a channel airframe looks stock.
+- A **family** is one helicopter type: its stock airframes, the parts that show
+  paint, its paint materials ("surfaces") and, per surface, a **recipe**: which
+  parameters take the livery's colour (`primary`, with a gain), which take a
+  fixed colour or number while a livery is on, and what each is in stock paint.
+  Families live in `tools/heli_paint_families.json`. Two ship: `uh1h` (four
+  Hueys; body and two interior materials) and `mi8mt` (four Mi-8MTs with seven
+  slotted parts; one body material, whose camouflage layers all take the
+  livery colour).
+- `tools/author_heli_paint_channels.py` writes, from that registry, twelve
+  channels per family (`.../Paint/` under `Assets/` and `Prefabs/`) and the
+  script manifest `IA_HeliPaintManifest`, which registers the families with
+  `IA_HeliPaintChannels`. Channel numbers are global: family index x 12 + 1..12,
+  in the order the manifest registers them, the same on every machine.
+- Each twin carries `IA_HeliPaintRigComponent`, which tells the server its
+  channel is held and gives it back when the helicopter is deleted. Whatever
+  spawns a stock airframe of a family asks
+  `IA_HeliPaintRigComponent.ResolveSpawnPrefab` first and spawns the twin on a
+  free channel of that family instead: a helicopter pad (`IA_VehicleRespawner`)
+  and the editor, for Game Master and build mode (`IA_HeliPaintEditorSpawn`).
+  An empty channel is taken before one whose helicopter is a wreck. With all
+  twelve of a family held the server logs one warning and further ones spawn
+  stock and cannot be repainted.
+- `IA_HeliSkinPaint.Apply(channel, skinId)` sets the recipe on the channel's
+  materials. No material file is read at run time.
+- `IA_HeliSkinManagerComponent` (on `GameMode_IA.et`) replicates which livery
   each channel shows. Every machine that renders paints its own materials when
   the value arrives, and on a timer for a player who joins later. A new
   airframe starts in stock paint.
 
-Gun mounts and rotors keep their stock colour. The shark-nose gunships, other
-helicopters, and a stock Huey that was not spawned by a pad or the editor (one
-saved in the world, or spawned by other code) have no paint channel and cannot
-be repainted. A stock Huey already in the world cannot be given a channel: that
-would mean replacing it.
+Decals (stars, numbers), glass, rotors and weapons keep their stock look. A
+helicopter of no family, and a stock one that was not spawned by a pad or the
+editor (saved in the world, or spawned by other code), has no paint channel and
+cannot be repainted: giving it one would mean replacing it.
 
 ### How a pilot gets it
 
-`IA_HeliSkinPadService` runs once a second on the server. For every helicopter
-pad whose helicopter is still on the pad, it takes the nearest living friendly
-player on foot within 10 m. If that player's rating unlocks a better skin than
-the airframe wears, the helicopter is recoloured where it stands. An unknown
-rating is requested and unlocks nothing.
+From the pilot's seat, in the paint bay (below). Before that,
+`IA_HeliSkinPadService` runs once a second on the server: for a helicopter
+still on its pad, it takes the nearest living friendly player on foot within
+10 m and paints the livery they last chose in the bay this session, or the
+highest one they have unlocked when they have not chosen. An unknown rating is
+requested and unlocks nothing.
 
 - Nothing else about the helicopter changes: fuel, damage and inventory stay.
-- A skin is never traded down. The airframe keeps its skin for its life,
-  whoever flies it next; its replacement spawns in stock paint.
+- The pad service never trades a livery down, and never paints over one a pilot
+  chose from the seat. A replacement airframe spawns in stock paint.
 
-### Adding a skin
+### Adding a livery
 
-1. Add one `.emat` per surface to recolour under `Assets/`, inheriting the
-   vanilla material of that surface and setting only colour and surface values
-   (`Color_1`..`Color_4`, `DirtColor`, `AO_*`, `Roughness_*`, `Metalness_*`,
-   `DirtOpacity`). Anything else it sets is ignored.
-2. Add one `AddDef` line in `IA_HeliSkinCatalog` with a new id and key, and an
-   `AddPaint` line per surface.
-3. Run the Workbench plugin `IA_HeliSkinAssetCheck`. It registers new materials
-   (writing their `.meta`), prints the `{GUID}path` to reference, and checks
-   every channel and skin. Paste the names in and run it again until it prints
-   `PASS`. Commit the `.meta` files.
-4. Add one `transport_skin_thresholds` row.
+One `AddDef` line in `IA_HeliSkinCatalog`: a new id constant, a key, a name, a
+default threshold, the paint as a **linear** colour and a swatch in sRGB bytes
+for the UI. Keep it dark and close to grey; `tools/test_transport_pilot.py`
+rejects a bright or saturated paint. No file, prefab or material is needed, and
+every family takes it. Add a `transport_skin_thresholds` row only to override
+the default centrally. Look at it on every family with the livery sheet below.
 
-No prefab is needed for a skin. To change the number of channels, the airframes
-or the surfaces, edit `tools/author_heli_paint_channels.py` and
-`IA_HeliPaintChannels` together, run the tool, open Workbench once so it
-imports the files, and run `IA_HeliSkinAssetCheck`.
+### Adding a helicopter, vanilla or modded
 
-### Looking at a skin alone
+The helicopter's addon must be loaded, so the mod has to be a dependency of
+the addon the twins are written into. `addon.gproj` is the developer's to edit.
+For a helicopter that should stay optional, put the family in a small
+compatibility addon that depends on both (last step).
+
+1. **Survey.** Run the Workbench plugin `IA_HeliPaintSurvey` from the command
+   line with `-iaSurveyPrefab <stock prefab>[,<variant>...]` and
+   `-iaSurveyOut <name>.json`. It reads the prefabs' ids, mesh slots, slotted
+   parts and what each material file sets, and writes the JSON to the Workbench
+   profile folder. It changes nothing.
+2. **Adopt.** `python tools/author_heli_paint_channels.py --adopt <survey.json>
+   --family <key> --name "DISPLAY NAME" --stock-paint "Factory Camo" --art
+   <key>`. It adds the family to the registry with a draft recipe: the layered
+   (`MatPBRMulti`) hull materials as surfaces, the first layer of the first one
+   taking the livery colour. `--surfaces` and `--parts` name them by hand.
+3. **Find the layers.** `IA_HeliSkinLiveProbe -iaSkinMode 5 -iaSkinPrefab
+   <stock prefab> -iaSkinMaterial <emat[,emat]>` paints each colour layer of a
+   material in a loud colour on its own airframe and takes a screenshot, so it
+   is plain which `Color_n` is the hull, which is trim and which is not paint.
+4. **Write the recipe** in the registry, per surface under `paint`:
+   `{"primary": 1}` for a layer that takes the livery colour (the number is a
+   gain), `{"color": [r, g, b]}` for a fixed colour while a livery is on, and
+   `{"value": n}` for a number. Set `Specular` / `SpecularIBL` to a neutral
+   value if the stock material tints them (the Mi-8's khaki sheen shows through
+   dark paint otherwise). Set `stock_swatch` to the stock colour in sRGB bytes.
+5. **Generate.** `python tools/author_heli_paint_channels.py`, then open
+   Workbench once so it imports the files, and run `IA_HeliSkinAssetCheck`
+   until it prints `PASS`.
+6. **Look.** `IA_HeliSkinLiveProbe -iaSkinMode 6 -iaSkinFamily <key>` stands
+   one airframe per livery in a row and takes a screenshot (`106` with the
+   engine running; `-iaSkinAirframe <index>` picks a variant).
+   `IA_HeliPaintMenuProbe -iaMenuFamily <key>` shows its paint bay.
+7. **Silhouette (optional).** `art` picks the paint bay's side view: `huey`,
+   `hip`, anything else the generic helicopter. A new one is one `IA_HeliArt`
+   subclass that lists its polygons, and one line in `IA_HeliArt.Create`.
+
+A compatibility addon keeps its own registry and passes `--registry <file>
+--root <its folder>`. Its registry's `manifest` is
+`{"path": "Scripts/Game/XX_HeliPaintManifest.c", "modded": true}`, which writes
+a `modded class IA_HeliPaintManifest` that adds its families after the built-in
+ones. Server and clients must load the same addons in the same order, as for
+any mod, so the channel numbers agree.
+
+What can go wrong with a modded helicopter, and what the tools say:
+
+- Its hull is not `MatPBRMulti`, or its paint is baked into the texture and no
+  `Color_n` moves it: the layer probe shows no layer changing the hull. A flat
+  recolour is then not possible without the mod's author.
+- A prefab already assigns a material to a slot: `--adopt` prints a warning and
+  the twin's entry replaces it.
+- A part's ids are missing from the survey: `--adopt` prints a warning and that
+  part keeps stock paint.
+
+### Looking at a livery alone
 
 Admin menu, **HQ** tab, **Cycle nearest heli skin**. The server
-(`IA_HeliSkinPreview`) repaints the nearest helipad Huey within 75 m with its
-next skin; press again to step through the skins and back to stock. It works
-from the pilot's seat with the engine running. Everyone sees it. No rating is
-needed or earned.
+(`IA_HeliSkinPreview`) repaints the nearest helicopter with a paint channel
+within 75 m with its next livery; press again to step through them and back to
+stock. It works from the pilot's seat with the engine running. Everyone sees
+it. No rating is needed or earned.
 
 ## Paint bay
 
@@ -203,7 +276,8 @@ rebound under Controls, Helicopter, as *Paint bay (pilot seat)*. A hint names
 the key the first time a pilot sits in a helicopter that can be repainted.
 
 The bay sits along the bottom of the screen so the helicopter stays in view. It
-shows the airframe as a blueprint, one tile per livery, and for the livery
+shows the airframe as a blueprint in its family's silhouette, under the family's
+name, one tile per livery (stock paint first), and for the livery
 pointed at: its name, the pilot's rating against its threshold, and whether it
 is on the airframe, ready, locked, or waiting for the rating. Selecting a ready
 livery repaints the helicopter in place, on the ground or in flight. The bay
@@ -215,7 +289,7 @@ closes with Back, with the key again, or when the pilot leaves the seat.
 | READY TO PAINT | Earned; select it to repaint |
 | LOCKED | Rating below the threshold; the bar and the blueprint show how far |
 | SYNCING | The rating has not arrived from the backend yet; nothing unlocks |
-| UNAVAILABLE | This helicopter has no paint channel (not a Huey twin, or all twelve were held when it spawned) |
+| UNAVAILABLE | This helicopter has no paint channel (no paint family, not spawned by a pad or the editor, or all twelve of its family were held when it spawned) |
 | ADMIN OVERRIDE | An admin may paint a livery they have not earned |
 
 How it works:
@@ -239,12 +313,13 @@ How it works:
 
 Host a game alone (Workbench play mode or a listen server): the host is admin,
 so every livery is selectable with ADMIN OVERRIDE. Take the pilot's seat of a
-Huey from a pad, or place one from the editor, and press **I**.
+Huey or an Mi-8 from a pad, or place one from the editor, and press **I**.
 
 The Workbench plugin **IA paint bay menu probe** (`IA_HeliPaintMenuProbe`)
-opens the bay over a Huey in a small world and steps it through every state. It
-feeds the menu its state directly, so it shows the drawing and that the input
-context exists, not the key in a seat or the server's side.
+opens the bay over a helicopter in a small world and steps it through every
+state (`-iaMenuFamily <key>`; `-iaMenuArt <key>` draws it with another
+silhouette). It feeds the menu its state directly, so it shows the drawing and
+that the input context exists, not the key in a seat or the server's side.
 
 ## Pilot HUD
 
@@ -257,9 +332,10 @@ It is not a toast and never waits behind, or delays, objective toasts.
   are twelve pips on one card, not twelve messages. The card shows the points
   earned, the troop count, the insertion weight (`x3.0`), `HOT LZ` or the
   distance out, and below that the progress block.
-- **Progress block.** A Huey that is painted nose to tail in the skin's colour
-  as the rating nears the threshold, with the total, the threshold and the
-  percent to one decimal.
+- **Progress block.** A helicopter that is painted nose to tail in the colour
+  of the next livery as the rating nears its threshold, with the total, the
+  threshold and the percent to one decimal. The card is not told the airframe,
+  so the drawing is always the Huey.
 - **Taking the pilot seat** shows the progress block alone, at most once every
   120 s per pilot and never within 120 s of a landing card.
 - **Unlock.** When the points that cross the threshold are reported, the card
@@ -304,26 +380,29 @@ skips the server side: crediting, batching per pilot, and the RPC.
 
 ## Not yet proven in game
 
-- The pilot card: layout, fonts, timing and the unlock sound can be checked
-  alone with the preview above. The multi-tick merge with real passengers
-  still needs a flight; only its data and rules run in Workbench.
-- A Huey placed from the editor. In Workbench play mode the editor's variant
-  pick returned the twin on a free channel, the spawned twin held its channel
-  and a deleted one gave it back (`IA_HeliSkinLiveProbe -iaSkinMode 4`). Not
-  yet seen: a Huey placed through the Game Master or build-mode interface in a
-  mission, and the editor treating the twin as the Huey it was asked for
-  (budget, refund, its entry in the entity list).
-- Skins in multiplayer. In Workbench play mode a pad Huey was repainted with a
-  pilot seated and the engine running, 20 times at 150 ms, with no crash, and
-  only that Huey changed colour. Not yet seen: the repaint on other clients, on
-  a player who joins afterwards, on a dedicated server, and after the
-  helicopter streams out and back in. Check with **Cycle nearest heli skin**
-  from the pilot's seat, with a second pad's Huey in view staying green.
-- The paint bay in a seat. The bay's drawing, its states and its input
-  context were seen in Workbench through the probe. Not yet seen: the key
-  opening it from the pilot's seat, flight controls while it is open, the
-  gamepad hold against the helicopter's own D-pad bindings, the entry in the
-  keybinding menu, and a repaint asked by a client of a dedicated server.
-- The tan in a published build. The materials are registered and load in
-  Workbench, but only a packed build proves they ship and that their colour
-  values can still be read there.
+Seen in Workbench play mode: every livery on the Huey and the Mi-8, a repaint
+with a pilot seated and the engine running, only the painted airframe changing,
+channels handed out and given back per family, and the paint bay's drawing for
+both families and the generic silhouette. Not yet seen:
+
+- **A modded helicopter.** The survey, adopt, layer probe, generator and asset
+  check have only run on the vanilla Huey and Mi-8. A mod's prefab may inherit
+  differently, name its slots differently or use another material class.
+- **Multiplayer.** The repaint on other clients, on a player who joins
+  afterwards, on a dedicated server, and after the helicopter streams out and
+  back in. Check with **Cycle nearest heli skin** from the pilot's seat, with a
+  second helicopter of the same type in view keeping its paint.
+- **The editor in a mission.** The editor's variant pick returned the twin on
+  a free channel (`IA_HeliSkinLiveProbe -iaSkinMode 4`). Not yet seen: a
+  helicopter placed through the Game Master or build-mode interface, and the
+  editor treating the twin as the helicopter it was asked for (budget, refund,
+  its entry in the entity list).
+- **The paint bay in a seat.** Not yet seen: the key opening it from the
+  pilot's seat, flight controls while it is open, the gamepad hold against the
+  helicopter's own D-pad bindings, the entry in the keybinding menu, and a
+  repaint asked by a client of a dedicated server.
+- **A published build.** The generated prefabs and materials are registered
+  and load in Workbench; only a packed build proves they ship.
+- **The pilot card.** Layout, timing and the unlock sound can be checked alone
+  with the preview above; the hull in the next livery's colour compiles but has
+  not been looked at. The multi-tick merge with real passengers needs a flight.

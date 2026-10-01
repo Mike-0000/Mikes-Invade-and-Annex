@@ -1,0 +1,13 @@
+VehiclePartRotor : "{3B7D5676B67CC90F}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/Rotor/VehPart_Mi8_rotor_main.et" {
+ ID "4B42E71698F5739C"
+ components {
+  MeshObject "{4B42E716914465B9}" {
+   Materials {
+    MaterialAssignClass "{ED3665A8A80B713F}" {
+     SourceMaterial "Exterier_35715EB3956D22B9"
+     AssignedMaterial "{28410A3800797F51}Assets/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8_Body_Paint9.emat"
+    }
+   }
+  }
+ }
+}

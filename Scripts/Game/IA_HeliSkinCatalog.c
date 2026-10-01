@@ -1,14 +1,20 @@
 //------------------------------------------------------------------------------------------------
-//! Unlockable helicopter skins, gated by the player's global transport rating.
-//! Add a skin with one AddDef line, plus an AddPaint line for each surface it
-//! recolours: a material that inherits the vanilla one and overrides colours.
+//! Unlockable helicopter liveries, gated by the player's global transport
+//! rating. A livery is one plain paint colour; every helicopter family with
+//! paint channels takes it, so a new livery is one AddDef line and no files.
+//! Patterns are not offered: a camouflage texture cannot be laid over
+//! helicopters with different UV layouts (see docs/transport-pilot-progression.md).
 //! The thresholds here are defaults; the stats backend can override them for
 //! every server at once.
 //------------------------------------------------------------------------------------------------
 class IA_HeliSkinCatalog
 {
 	static const int SKIN_NONE = 0;
-	static const int SKIN_HUEY_TAN = 1;
+	static const int SKIN_DESERT_TAN = 1;
+	static const int SKIN_FOREST_GREEN = 2;
+	static const int SKIN_FIELD_DRAB = 3;
+	static const int SKIN_GUNSHIP_GREY = 4;
+	static const int SKIN_NIGHT_BLACK = 5;
 
 	protected static ref array<ref IA_HeliSkinDef> s_aDefs;
 
@@ -18,39 +24,31 @@ class IA_HeliSkinCatalog
 		if (s_aDefs)
 			return;
 
+		// In the order the paint bay shows them. Paint is a linear colour, the swatch sRGB bytes.
+		// A swatch is drawn on a near-black panel, so the black one is lighter than the paint.
+		// "huey_tan" is the key the backend already holds a threshold for.
 		s_aDefs = new array<ref IA_HeliSkinDef>();
-		IA_HeliSkinDef tan = AddDef(SKIN_HUEY_TAN, "huey_tan", "Desert Tan Huey", 50000);
-		AddSwatch(tan, 226, 192, 132);
-		AddPaint(tan, IA_HeliPaintChannels.SURFACE_BODY, "{E3D8521BB1595CE0}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Body01_Tan.emat");
-		AddPaint(tan, IA_HeliPaintChannels.SURFACE_INTERIOR_1, "{6F6BE8E1E361B2BE}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Interior01_Tan.emat");
-		AddPaint(tan, IA_HeliPaintChannels.SURFACE_INTERIOR_2, "{2F9BC9C4557D30F9}Assets/Vehicles/Helicopters/UH1H/IA_UH_1H_Interior02_Tan.emat");
+		AddDef(SKIN_FOREST_GREEN, "heli_green", "Forest Green", 5000, Vector(0.040, 0.064, 0.027), 70, 92, 58);
+		AddDef(SKIN_FIELD_DRAB, "heli_drab", "Field Drab", 12000, Vector(0.110, 0.078, 0.048), 128, 106, 80);
+		AddDef(SKIN_GUNSHIP_GREY, "heli_grey", "Gunship Grey", 25000, Vector(0.085, 0.092, 0.100), 112, 118, 124);
+		AddDef(SKIN_DESERT_TAN, "huey_tan", "Desert Tan", 50000, Vector(0.205, 0.168, 0.117), 226, 192, 132);
+		AddDef(SKIN_NIGHT_BLACK, "heli_black", "Night Black", 100000, Vector(0.012, 0.012, 0.013), 58, 60, 65);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected static IA_HeliSkinDef AddDef(int id, string key, string displayName, int requiredPoints)
+	protected static IA_HeliSkinDef AddDef(int id, string key, string displayName, int requiredPoints, vector paint, int swatchR, int swatchG, int swatchB)
 	{
 		ref IA_HeliSkinDef def = new IA_HeliSkinDef();
 		def.m_iId = id;
 		def.m_sKey = key;
 		def.m_sDisplayName = displayName;
 		def.m_iRequiredPoints = requiredPoints;
+		def.m_vPaint = paint;
+		def.m_iSwatchR = swatchR;
+		def.m_iSwatchG = swatchG;
+		def.m_iSwatchB = swatchB;
 		s_aDefs.Insert(def);
 		return def;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected static void AddPaint(notnull IA_HeliSkinDef def, int surface, ResourceName paint)
-	{
-		def.m_aPaints[surface] = paint;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	//! Hull colour of the skin as sRGB bytes; the paint bay draws the skin with it.
-	protected static void AddSwatch(notnull IA_HeliSkinDef def, int r, int g, int b)
-	{
-		def.m_iSwatchR = r;
-		def.m_iSwatchG = g;
-		def.m_iSwatchB = b;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -79,6 +77,19 @@ class IA_HeliSkinCatalog
 		foreach (IA_HeliSkinDef def : s_aDefs)
 		{
 			if (def.m_sKey == key)
+				return def;
+		}
+		return null;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the livery with this display name, null when there is none; the pilot card is sent names
+	static IA_HeliSkinDef FindDefByName(string displayName)
+	{
+		EnsureDefs();
+		foreach (IA_HeliSkinDef def : s_aDefs)
+		{
+			if (def.m_sDisplayName == displayName)
 				return def;
 		}
 		return null;
@@ -152,16 +163,19 @@ class IA_HeliSkinCatalog
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Skin whose threshold lies in (before, after]; null when none was crossed.
+	//! Highest skin whose threshold lies in (before, after]; null when none was crossed.
 	static IA_HeliSkinDef FindNewlyUnlocked(int before, int after)
 	{
 		EnsureDefs();
+		IA_HeliSkinDef crossed = null;
 		foreach (IA_HeliSkinDef def : s_aDefs)
 		{
-			if (before < def.m_iRequiredPoints && after >= def.m_iRequiredPoints)
-				return def;
+			if (before >= def.m_iRequiredPoints || after < def.m_iRequiredPoints)
+				continue;
+			if (!crossed || def.m_iRequiredPoints > crossed.m_iRequiredPoints)
+				crossed = def;
 		}
-		return null;
+		return crossed;
 	}
 
 	//------------------------------------------------------------------------------------------------

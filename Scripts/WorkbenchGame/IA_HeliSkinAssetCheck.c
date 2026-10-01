@@ -1,17 +1,21 @@
 #ifdef WORKBENCH
 //------------------------------------------------------------------------------------------------
-//! Run after tools/author_heli_paint_channels.py or after adding a skin.
-//! Checks every paint channel: its materials and prefabs are registered under
-//! the names IA_HeliPaintChannels builds, a channel airframe inherits its stock
+//! Run after tools/author_heli_paint_channels.py, after adding a helicopter
+//! family or after adding a livery. Checks every family of
+//! IA_HeliPaintManifest: its stock materials are registered and hold the stock
+//! values the manifest says they hold, every channel material is registered
+//! and inherits its stock material, a channel airframe inherits its stock
 //! airframe, names only its own channel's materials on slots its meshes have,
-//! overrides seats without adding slots and spawns with them. Checks every
-//! skin: its colour materials are registered and inherit the surface they
-//! colour, and every colour the stock material sets can be read both from it
-//! and through the skin, so a skin can be shown and stock paint put back.
+//! overrides parts without adding slots and spawns with them. Checks every
+//! livery paints every surface of every family and that stock paint goes back.
+//!   -iaSkinFamily <key>  check one family only
 //------------------------------------------------------------------------------------------------
 [WorkbenchPluginAttribute(name: "IA helicopter skin asset check", wbModules: {"ResourceManager"})]
 class IA_HeliSkinAssetCheck : WorkbenchPlugin
 {
+	// The manifest holds three decimals.
+	protected static const float TOLERANCE = 0.002;
+
 	protected int m_iFailures;
 	// Containers read from a prefab are only valid while its Resource is held.
 	protected ref array<ref Resource> m_aLoaded = {};
@@ -22,114 +26,185 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 		ref SharedItemRef preview = BaseWorld.CreateWorld("Preview", "IAHeliSkinAssetCheck");
 		BaseWorld world = preview.GetRef();
 
-		int channel;
-		int surface;
-		for (surface = 0; surface < IA_HeliPaintChannels.SURFACE_COUNT; surface++)
-		{
-			CheckStockMaterial(IA_HeliPaintChannels.GetStockMaterial(surface));
-			for (channel = 1; channel <= IA_HeliPaintChannels.CHANNEL_COUNT; channel++)
-			{
-				CheckInherits("channel " + channel.ToString(), IA_HeliPaintChannels.GetMaterial(surface, channel), IA_HeliPaintChannels.GetStockMaterial(surface));
-			}
-		}
+		string only;
+		System.GetCLIParam("iaSkinFamily", only);
 
-		array<ResourceName> airframes = IA_HeliPaintChannels.GetStockPrefabs();
-		Check(!airframes.IsEmpty(), "at least one airframe has paint channels");
-		foreach (ResourceName stock : airframes)
-		{
-			for (channel = 1; channel <= IA_HeliPaintChannels.CHANNEL_COUNT; channel++)
-			{
-				CheckAirframe(stock, channel, world);
-			}
-		}
-
+		array<ref IA_HeliPaintFamily> families = IA_HeliPaintChannels.GetFamilies();
+		Check(!families.IsEmpty(), "at least one helicopter family has paint channels");
 		array<ref IA_HeliSkinDef> defs = IA_HeliSkinCatalog.GetDefs();
-		Check(!defs.IsEmpty(), "the catalogue lists at least one skin");
-		int paints;
-		ResourceName paint;
-		foreach (IA_HeliSkinDef def : defs)
-		{
-			paints = 0;
-			for (surface = 0; surface < IA_HeliPaintChannels.SURFACE_COUNT; surface++)
-			{
-				paint = def.GetPaint(surface);
-				if (paint.IsEmpty())
-					continue;
+		Check(!defs.IsEmpty(), "the catalogue lists at least one livery");
 
-				paints = paints + 1;
-				// Inheriting the stock material is what makes a parameter the skin leaves out read as stock.
-				CheckInherits(def.m_sKey, paint, IA_HeliPaintChannels.GetStockMaterial(surface));
-				CheckColours(def.m_sKey, paint, IA_HeliPaintChannels.GetStockMaterial(surface));
-			}
-			Check(paints > 0, def.m_sKey + " colours at least one surface");
-			Check(IA_HeliSkinPaint.Apply(1, def.m_iId) == IA_HeliPaintChannels.SURFACE_COUNT, def.m_sKey + " paints every surface of a channel");
+		int checked;
+		foreach (IA_HeliPaintFamily family : families)
+		{
+			if (!only.IsEmpty() && family.m_sKey != only)
+				continue;
+
+			checked = checked + 1;
+			CheckFamily(family, defs, world);
 		}
-		Check(IA_HeliSkinPaint.Apply(1, IA_HeliSkinCatalog.SKIN_NONE) == IA_HeliPaintChannels.SURFACE_COUNT, "stock paint is put back on every surface");
+		Check(checked > 0, "a family was checked");
 
 		if (m_iFailures == 0)
-			Print("[IA][HeliSkinAssetCheck] PASS", LogLevel.NORMAL);
+			Print(string.Format("[IA][HeliSkinAssetCheck] PASS families=%1 liveries=%2", checked, defs.Count()), LogLevel.NORMAL);
 		Workbench.Exit(m_iFailures);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Stock paint is restored by setting the stock material's colours back, so they must be readable.
-	protected void CheckStockMaterial(ResourceName stock)
+	protected void CheckFamily(notnull IA_HeliPaintFamily family, notnull array<ref IA_HeliSkinDef> defs, BaseWorld world)
 	{
-		string label = stock.GetPath();
-		Check(Workbench.GetResourceName(label) == stock, label + " is the registered stock material");
+		string label = family.m_sKey;
+		int surfaceCount = family.m_aSurfaces.Count();
+		Check(surfaceCount > 0, label + " has a paint surface");
+		Check(!family.m_aStockPrefabs.IsEmpty(), label + " has an airframe");
+		Check(!family.m_sDisplayName.IsEmpty() && !family.m_sStockPaint.IsEmpty(), label + " is named for the paint bay");
+
+		int local;
+		int primaries;
+		foreach (IA_HeliPaintSurface surface : family.m_aSurfaces)
+		{
+			primaries = primaries + CheckStockMaterial(label, surface);
+			for (local = 1; local <= IA_HeliPaintChannels.CHANNEL_COUNT; local++)
+			{
+				CheckInherits(label + " channel " + local.ToString(), surface.GetMaterial(local), surface.m_sStockMaterial);
+			}
+		}
+		Check(primaries > 0, label + " has a layer that takes the livery colour");
+
+		int airframeCount = family.m_aStockPrefabs.Count();
+		int airframe;
+		for (airframe = 0; airframe < airframeCount; airframe++)
+		{
+			for (local = 1; local <= IA_HeliPaintChannels.CHANNEL_COUNT; local++)
+			{
+				CheckAirframe(family, family.m_aStockPrefabs[airframe], local, world);
+			}
+		}
+
+		int channel = IA_HeliPaintChannels.ToChannel(family, 1);
+		foreach (IA_HeliSkinDef def : defs)
+		{
+			Check(IA_HeliSkinPaint.Apply(channel, def.m_iId) == surfaceCount, label + ": " + def.m_sKey + " paints every surface of a channel");
+		}
+		Check(IA_HeliSkinPaint.Apply(channel, IA_HeliSkinCatalog.SKIN_NONE) == surfaceCount, label + ": stock paint is put back on every surface");
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Stock paint is put back from the manifest's values, so they must be what the stock file holds.
+	//! \return how many of the surface's parameters take the livery colour
+	protected int CheckStockMaterial(string label, notnull IA_HeliPaintSurface surface)
+	{
+		ResourceName stock = surface.m_sStockMaterial;
+		label = label + ": " + stock.GetPath();
+		Check(Workbench.GetResourceName(stock.GetPath()) == stock, label + " is the registered stock material");
 
 		ref Resource resource = Resource.Load(stock);
 		if (!resource || !resource.IsValid())
 		{
 			Check(false, label + " loads");
-			return;
+			return 0;
 		}
 
 		m_aLoaded.Insert(resource);
-		float color[4];
-		Check(IA_HeliSkinPaint.ReadColor(resource.GetResource().ToBaseContainer(), "Color_1", color), label + " gives its first colour");
-		Check(color[0] > 0 && color[0] < 1 && color[3] == 1, label + " gives its first colour as numbers");
+		BaseContainer source = resource.GetResource().ToBaseContainer();
+		Check(!surface.m_aParams.IsEmpty(), label + " has parameters to paint");
+
+		int primaries;
+		BaseContainer holder;
+		string text;
+		float number;
+		vector colour;
+		foreach (IA_HeliPaintParam param : surface.m_aParams)
+		{
+			if (param.m_iKind == IA_HeliPaintParam.KIND_PRIMARY)
+				primaries = primaries + 1;
+
+			Check(source.GetVarIndex(param.m_sParam) >= 0, label + " has a parameter " + param.m_sParam);
+			holder = FindSetter(source, param.m_sParam);
+			if (!param.m_bStockSet)
+			{
+				Check(holder == null, label + " leaves " + param.m_sParam + " unset, as the manifest says");
+				continue;
+			}
+			if (!holder)
+			{
+				Check(false, label + " sets " + param.m_sParam + ", as the manifest says");
+				continue;
+			}
+
+			if (param.m_iKind == IA_HeliPaintParam.KIND_SCALAR)
+			{
+				holder.Get(param.m_sParam, number);
+				Check(Math.AbsFloat(number - param.m_fStock) <= TOLERANCE, string.Format("%1: %2 is %3 in the file and %4 in the manifest", label, param.m_sParam, number, param.m_fStock));
+				continue;
+			}
+
+			// A colour reads only as text, "r g b a".
+			holder.Get(param.m_sParam, text);
+			if (!ParseColour(text, colour))
+			{
+				Check(false, label + ": " + param.m_sParam + " reads as a colour: " + text);
+				continue;
+			}
+			Check(vector.Distance(colour, param.m_vStock) <= TOLERANCE * 2, string.Format("%1: %2 is %3 in the file and %4 in the manifest", label, param.m_sParam, text, param.m_vStock));
+		}
+		return primaries;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! A colour the stock material sets and the skin's material cannot give would be reset to white.
-	protected void CheckColours(string label, ResourceName paint, ResourceName stock)
+	//! \return the file in the material's inheritance chain that sets a parameter, null when none does
+	protected BaseContainer FindSetter(BaseContainer source, string param)
 	{
-		ref Resource paintResource = Resource.Load(paint);
-		ref Resource stockResource = Resource.Load(stock);
-		if (!paintResource || !paintResource.IsValid() || !stockResource || !stockResource.IsValid())
-			return;
-
-		BaseContainer paintSource = paintResource.GetResource().ToBaseContainer();
-		BaseContainer stockSource = stockResource.GetResource().ToBaseContainer();
-		float color[4];
-		foreach (string colorName : IA_HeliSkinPaint.GetColorParams())
+		BaseContainer container = source;
+		while (container)
 		{
-			if (IA_HeliSkinPaint.ReadColor(stockSource, colorName, color))
-				Check(IA_HeliSkinPaint.ReadColor(paintSource, colorName, color), label + ": " + paint.GetPath() + " gives " + colorName);
+			if (container.IsVariableSetDirectly(param))
+				return container;
+			container = container.GetAncestor();
 		}
+		return null;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool ParseColour(string text, out vector colour)
+	{
+		ref array<string> parts = {};
+		text.Split(" ", parts, true);
+		if (parts.Count() < 3)
+			return false;
+
+		colour = Vector(parts[0].ToFloat(), parts[1].ToFloat(), parts[2].ToFloat());
+		return true;
 	}
 
 	//------------------------------------------------------------------------------------------------
 	protected void CheckInherits(string label, ResourceName material, ResourceName stock)
 	{
+		Check(!material.IsEmpty(), label + " has a material for " + stock.GetPath());
+		if (material.IsEmpty())
+			return;
+
 		BaseContainer source = LoadRegistered(label, material);
 		if (!source)
 			return;
 
+		// Inheriting the stock material is what makes a channel look stock until a livery is set.
 		BaseContainer ancestor = source.GetAncestor();
 		Check(ancestor && ancestor.GetResourceName().GetPath() == stock.GetPath(), label + ": " + material.GetPath() + " inherits " + stock.GetPath());
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void CheckAirframe(ResourceName stock, int channel, BaseWorld world)
+	protected void CheckAirframe(notnull IA_HeliPaintFamily family, ResourceName stock, int local, BaseWorld world)
 	{
+		int channel = IA_HeliPaintChannels.ToChannel(family, local);
 		ResourceName prefab = IA_HeliPaintChannels.FindChannelPrefab(stock, channel);
 		string label = prefab.GetPath();
-		Check(!prefab.IsEmpty(), stock.GetPath() + " has a twin on channel " + channel.ToString());
-		Check(Workbench.GetResourceName(stock.GetPath()) == stock, label + " is paired with a registered stock airframe");
+		Check(!prefab.IsEmpty(), stock.GetPath() + " has a twin on channel " + local.ToString());
+		Check(Workbench.GetResourceName(stock.GetPath()) == stock, stock.GetPath() + " is a registered stock airframe");
 		if (prefab.IsEmpty())
 			return;
+
+		Check(IA_HeliPaintChannels.FindChannel(prefab) == channel, label + " is recognised as its channel");
 
 		BaseContainer source = LoadRegistered(label, prefab);
 		if (!source)
@@ -137,23 +212,48 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 
 		BaseContainer ancestor = source.GetAncestor();
 		Check(ancestor && ancestor.GetResourceName().GetPath() == stock.GetPath(), label + " inherits " + stock.GetPath());
-		Check(CheckPaint(label, source, channel) == IA_HeliPaintChannels.SURFACE_COUNT, label + " names its channel's material on every surface");
+		Check(HasRig(source), label + " carries the paint rig component");
+
+		ref array<ResourceName> named = {};
+		Check(CheckPaint(label, source, channel, named) > 0, label + " names its channel's materials");
 
 		ref array<ResourceName> parts = {};
 		int slotCount = OwnParts(source, parts);
 		if (ancestor)
 			Check(slotCount == OwnParts(ancestor, null), label + " overrides slots without adding any");
-		Check(!parts.IsEmpty(), label + " carries its own seats");
 
 		BaseContainer partSource;
 		foreach (ResourceName part : parts)
 		{
 			partSource = LoadRegistered(label, part);
 			if (partSource)
-				Check(CheckPaint(part.GetPath(), partSource, channel) > 0, part.GetPath() + " names its channel's materials");
+				Check(CheckPaint(part.GetPath(), partSource, channel, named) > 0, part.GetPath() + " names its channel's materials");
+		}
+
+		// A surface no mesh of the airframe names would be painted and never seen.
+		foreach (IA_HeliPaintSurface surface : family.m_aSurfaces)
+		{
+			Check(named.Contains(surface.GetMaterial(local)), label + " shows " + surface.m_sStockMaterial.GetPath());
 		}
 
 		CheckSpawn(label, prefab, parts, world);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected bool HasRig(notnull BaseContainer source)
+	{
+		BaseContainerList components = source.GetObjectArray("components");
+		if (!components)
+			return false;
+
+		int componentCount = components.Count();
+		int c;
+		for (c = 0; c < componentCount; c++)
+		{
+			if (components.Get(c).GetClassName() == "IA_HeliPaintRigComponent")
+				return true;
+		}
+		return false;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -208,9 +308,10 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Checks the materials a prefab's mesh takes from this addon: all must belong to one paint channel.
+	//! Checks the paint materials a prefab's mesh names: all must belong to one paint channel.
+	//! \param[out] named the materials it names are added
 	//! \return how many it assigns
-	protected int CheckPaint(string label, notnull BaseContainer source, int channel)
+	protected int CheckPaint(string label, notnull BaseContainer source, int channel, notnull array<ResourceName> named)
 	{
 		BaseContainerList components = source.GetObjectArray("components");
 		if (!components)
@@ -248,15 +349,16 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 					continue;
 
 				painted = painted + 1;
+				named.Insert(assigned);
 				Check(MeshHasSlot(mesh, slot), label + ": slot " + slot + " exists on " + mesh.GetPath());
-				Check(IsChannelMaterial(assigned, channel), label + ": " + assigned.GetPath() + " is a material of channel " + channel.ToString());
+				Check(IsChannelMaterial(assigned, channel), label + ": " + assigned.GetPath() + " is a material of its channel");
 			}
 		}
 		return painted;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! \param[out] parts prefabs from this addon slotted into the source; may be null
+	//! \param[out] parts paint channel prefabs slotted into the source; may be null
 	//! \return number of slots on the source
 	protected int OwnParts(notnull BaseContainer source, array<ResourceName> parts)
 	{
@@ -335,19 +437,25 @@ class IA_HeliSkinAssetCheck : WorkbenchPlugin
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! What tools/author_heli_paint_channels.py writes: IA_<name>_Paint<n>.
 	protected bool IsOwnAsset(ResourceName name)
 	{
-		return name.GetPath().Contains("/IA_");
+		string path = name.GetPath();
+		return path.Contains("/IA_") && path.Contains("_Paint");
 	}
 
 	//------------------------------------------------------------------------------------------------
 	//! A mesh naming another channel's material would be recoloured with that channel's helicopter.
 	protected bool IsChannelMaterial(ResourceName name, int channel)
 	{
-		int surface;
-		for (surface = 0; surface < IA_HeliPaintChannels.SURFACE_COUNT; surface++)
+		IA_HeliPaintFamily family = IA_HeliPaintChannels.GetFamily(channel);
+		if (!family)
+			return false;
+
+		int local = IA_HeliPaintChannels.GetLocalChannel(channel);
+		foreach (IA_HeliPaintSurface surface : family.m_aSurfaces)
 		{
-			if (IA_HeliPaintChannels.GetMaterial(surface, channel) == name)
+			if (surface.GetMaterial(local) == name)
 				return true;
 		}
 		return false;

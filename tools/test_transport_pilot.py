@@ -71,39 +71,54 @@ class TransportPilotTests(unittest.TestCase):
             self.assertRegex(entry, r"\b%s;" % key)
             self.assertIn("'%s'," % key, sql)
 
-    def assert_registered(self, name):
-        """A file without a GUID is unregistered: it resolves to a null GUID and
-        is left out of a published build. IA_HeliSkinAssetCheck registers it."""
-        guid, path = re.fullmatch(r"(\{[0-9A-F]{16}\})(.+)", name).groups()
-        self.assertIn('Name "%s"' % name, (ROOT / (path + ".meta")).read_text(encoding="utf-8"))
-        return ROOT / path
-
-    def test_catalogued_skins_have_a_central_threshold_and_registered_paints(self):
+    def test_a_livery_is_one_plain_colour_with_a_threshold_and_no_files(self):
         catalog = source("IA_HeliSkinCatalog.c")
-        sql = MIGRATION.read_text(encoding="utf-8")
-        defs = re.findall(r'(\w+) = AddDef\(\w+, "(\w+)", "[^"]+", (\d+)\)', catalog)
-        self.assertTrue(defs)
-        surfaces = ("SURFACE_BODY", "SURFACE_INTERIOR_1", "SURFACE_INTERIOR_2")
-        for variable, key, required in defs:
-            self.assertIn("('%s', %s)" % (key, required), sql)
-            paints = re.findall(r'AddPaint\(%s, IA_HeliPaintChannels\.(\w+), "([^"]+)"\)' % variable, catalog)
-            self.assertTrue(paints, key + " colours at least one surface")
-            for surface, paint in paints:
-                stock_guid, stock_file = channels.SURFACES[surfaces.index(surface)]
-                # A paint inherits the stock material of its surface, so what it leaves out reads as stock.
-                first = self.assert_registered(paint).read_text(encoding="utf-8").splitlines()[0]
-                self.assertIn('"{%s}%sData/%s.emat"' % (stock_guid, channels.MATERIAL_DIR, stock_file), first)
+        defs = re.findall(r'AddDef\((\w+), "(\w+)", "([^"]+)", (\d+), Vector\(([\d., ]+)\), (\d+), (\d+), (\d+)\);', catalog)
+        self.assertGreaterEqual(len(defs), 2)
+        for column in (0, 1, 2):
+            self.assertEqual(len({row[column] for row in defs}), len(defs), "ids, keys and names are unique")
+        thresholds = [int(row[3]) for row in defs]
+        self.assertEqual(thresholds, sorted(set(thresholds)), "the bay lists liveries cheapest first, no two alike")
+        for row in defs:
+            self.assertRegex(catalog, r"static const int %s = [1-9]\d*;" % row[0])
+            paint = [float(v) for v in row[4].split(",")]
+            # A military paint, not a signal colour: dark, and close to grey.
+            self.assertLess(max(paint), 0.25, row[2])
+            self.assertLess(max(paint) - min(paint), 0.12, row[2])
+        # A livery names no material or prefab: the family says what its colour is set on.
+        self.assertNotRegex(catalog, r"\.emat|\.et\b|AddPaint")
 
-    def test_paint_channel_files_match_their_generator_and_the_script_table(self):
-        files = channels.build()
-        self.assertEqual(channels.stale(files), [])
+        # The backend row that already exists keeps its key; the others run on these defaults until a row is added.
+        sql = MIGRATION.read_text(encoding="utf-8")
+        self.assertIn("'huey_tan'", sql)
+        self.assertIn("huey_tan", [row[1] for row in defs])
+        self.assertIn("SetRequiredPoints(pair[0], pair[1].ToInt())", method(catalog, "ApplyPackedThresholds"))
+
+    def test_paint_channel_files_match_their_registry_and_the_script_manifest(self):
+        registry = channels.read_json(ROOT / channels.REGISTRY)
+        files = channels.build(registry)
+        self.assertEqual(channels.stale(files, ROOT), [])
+        self.assertEqual(channels.leftovers(registry, files, ROOT), [])
 
         table = source("IA_HeliPaintChannels.c")
-        self.assertEqual(int(constant(table, "CHANNEL_COUNT")), channels.CHANNEL_COUNT)
-        self.assertEqual(int(constant(table, "SURFACE_COUNT")), len(channels.SURFACES))
-        self.assertIn('GUID_PREFIX = "%s"' % channels.GUID_PREFIX, table)
-        self.assertEqual(re.findall(r'AddAirframe\("\{(\w+)\}", "(\w+)"\)', table), [row[:2] for row in channels.AIRFRAMES])
-        self.assertEqual(re.findall(r'AddSurface\("\{(\w+)\}", "(\w+)"\)', table), list(channels.SURFACES))
+        self.assertEqual(int(constant(table, "CHANNEL_COUNT")), registry["channel_count"])
+        self.assertIn("IA_HeliPaintManifest.Register();", method(table, "EnsureFamilies"))
+        manifest = source("IA_HeliPaintManifest.c")
+        self.assertEqual(re.findall(r'AddFamily\("(\w+)"', manifest), [family["key"] for family in registry["families"]])
+
+        for family in registry["families"]:
+            # A stock material is never named by a twin: it would recolour every helicopter of the type.
+            stock = {surface["material"] for surface in family["surfaces"]}
+            for surface in family["surfaces"]:
+                self.assertTrue(surface["paint"], family["key"] + " surface without a recipe")
+                self.assertTrue(any("primary" in spec for surface in family["surfaces"] for spec in surface["paint"].values()))
+            for airframe in range(len(family["airframes"])):
+                for channel in range(1, registry["channel_count"] + 1):
+                    text = files[channels.hull_path(family, airframe, channel)]
+                    # Every hull carries the component that tells the server its channel is in use.
+                    self.assertIn('  %s "{%s}" {' % (registry["rig_component"], registry["rig_component_id"]), text)
+                    for material in stock:
+                        self.assertNotIn('AssignedMaterial "%s"' % material, text)
 
         # A mesh naming another channel's material would be recoloured with that channel's helicopter.
         for path, text in files.items():
@@ -112,18 +127,44 @@ class TransportPilotTests(unittest.TestCase):
                 assigned = re.findall(r'AssignedMaterial "\{\w+\}[^"]*_Paint(\d+)\.emat"', text)
                 self.assertTrue(assigned, path)
                 self.assertEqual(set(assigned), {channel}, path)
+            if path.endswith(".emat"):
+                # A channel material inherits its stock material and sets nothing, so it reads as stock.
+                self.assertRegex(text, r'^\w+ : "\{\w{16}\}[^"]+\.emat" \{\n\}\n$', path)
 
-        # Channels 1 to 9 keep the GUIDs they shipped with; a two-digit channel fits the same four characters.
-        self.assertEqual(channels.guid("B", 0, 1), channels.GUID_PREFIX + "B001")
-        self.assertEqual(channels.guid("B", 0, 12), channels.GUID_PREFIX + "B012")
-        self.assertIn('if (channel < 10)\n\t\t\tguid = guid + "0";', method(table, "Guid"))
+        # The first family keeps the GUIDs it shipped with; a later one gets GUIDs from its file paths.
+        first = registry["families"][0]
+        self.assertEqual(channels.hull_guid(first, 0, 1), first["legacy_guid_prefix"] + "B001")
+        self.assertEqual(channels.hull_guid(first, 0, 12), first["legacy_guid_prefix"] + "B012")
+        guids = [text.splitlines()[1] for path, text in files.items() if path.endswith(".meta")]
+        self.assertEqual(len(guids), len(set(guids)))
 
-        # Every hull carries the component that tells the server its channel is in use.
         rig = source("IA_HeliPaintRigComponent.c")
-        self.assertIn("class %s : ScriptComponent" % channels.RIG_COMPONENT, rig)
-        for airframe in range(len(channels.AIRFRAMES)):
-            for channel in range(1, channels.CHANNEL_COUNT + 1):
-                self.assertIn('  %s "{%s}" {' % (channels.RIG_COMPONENT, channels.RIG_COMPONENT_ID), files[channels.hull_path(airframe, channel)])
+        self.assertIn("class %s : ScriptComponent" % registry["rig_component"], rig)
+
+    def test_a_modded_helicopter_is_a_registry_entry_not_new_code(self):
+        # A compatibility addon keeps its own registry and adds its families to the manifest with a modded class.
+        registry = channels.read_json(ROOT / channels.REGISTRY)
+        addon = {
+            "channel_count": registry["channel_count"],
+            "rig_component": registry["rig_component"],
+            "rig_component_id": registry["rig_component_id"],
+            "manifest": {"path": "Scripts/Game/XX_HeliPaintManifest.c", "modded": True, "source": "its registry"},
+            "families": [dict(registry["families"][-1], key="mod_heli", art="something_unknown")],
+        }
+        addon["families"][0].pop("legacy_guid_prefix", None)
+        text = channels.build(addon)[addon["manifest"]["path"]]
+        self.assertIn("modded class IA_HeliPaintManifest", text)
+        self.assertLess(text.index("super.Register();"), text.index("RegisterModHeli();"))
+
+        # Nothing in the game scripts names a helicopter type: families are looked up, liveries apply to all.
+        for name in ("IA_HeliSkinPaint.c", "IA_HeliPaintChannels.c", "IA_HeliPaintRigComponent.c", "IA_HeliSkinManagerComponent.c", "IA_HeliPaintService.c", "IA_HeliSkinPadService.c", "IA_HeliSkinCatalog.c"):
+            self.assertNotRegex(re.sub(r'"huey_tan"', "", source(name)), r"(?i)uh1h|huey|mi8|\.emat\"|\.et\"", name)
+
+        # An art key nobody knows draws the generic helicopter, so the bay works before a silhouette is drawn.
+        art = (ROOT / "Scripts" / "Game" / "UI" / "IA_HeliArt.c").read_text(encoding="utf-8")
+        self.assertRegex(method(art, "Create"), r"return new IA_HeliArtGeneric\(\);\s*$")
+        bay = (ROOT / "Scripts" / "Game" / "UI" / "IA_HeliPaintBay.c").read_text(encoding="utf-8")
+        self.assertIn("IA_HeliPaintChannels.GetFamily(channel)", method(bay, "SetContext"))
 
     def test_a_skin_is_set_in_place_and_never_changes_or_replaces_the_helicopter(self):
         # Changing a vehicle hull's mesh from script frees the instance its animation is bound to.
@@ -134,8 +175,11 @@ class TransportPilotTests(unittest.TestCase):
         self.assertFalse((ROOT / "Scripts" / "Game" / "IA_HeliSkinSwap.c").exists())
 
         paint = source("IA_HeliSkinPaint.c")
-        self.assertIn("Material.GetOrLoadMaterial(to, 0)", method(paint, "CopyParams"))
-        self.assertIn("IA_HeliPaintChannels.GetMaterial(surface, channel)", method(paint, "Apply"))
+        self.assertIn("Material.GetOrLoadMaterial(material, 0)", method(paint, "PaintSurface"))
+        self.assertIn("IA_HeliPaintChannels.GetFamily(channel)", method(paint, "Apply"))
+        self.assertIn("surface.GetMaterial(local)", method(paint, "Apply"))
+        # ResetParam is the class default, so it is only used where no stock file sets the parameter.
+        self.assertRegex(method(paint, "PaintSurface"), r"if \(!def && !param\.m_bStockSet\)\s*\{\s*target\.ResetParam\(")
 
         # The server says which skin a channel shows; every machine that renders paints it.
         manager = source("IA_HeliSkinManagerComponent.c")
@@ -150,7 +194,7 @@ class TransportPilotTests(unittest.TestCase):
         respawner = source("IA_VehicleRespawner.c")
         self.assertNotIn("m_bSwapPending", respawner)
 
-    def test_a_stock_huey_spawns_on_a_free_paint_channel_whoever_spawns_it(self):
+    def test_a_stock_helicopter_spawns_on_a_free_paint_channel_whoever_spawns_it(self):
         # A channel belongs to a live helicopter, not to a pad: the airframe says which one it holds.
         rig = source("IA_HeliPaintRigComponent.c")
         init = method(rig, "OnPostInit")
@@ -165,12 +209,15 @@ class TransportPilotTests(unittest.TestCase):
         # An empty channel goes before one whose holder is a wreck; a deleted holder is no holder.
         free = method(rig, "FindFreeChannel")
         self.assertLess(free.index("if (!holder)\n\t\t\t\treturn channel;"), free.index("damage.IsDestroyed()"))
+        # Only the channels of the helicopter's own family: another type's materials are not on its meshes.
+        self.assertIn("IA_HeliPaintChannels.ToChannel(family, local)", free)
         self.assertIn("holder.IsDeleted()", method(rig, "GetHolder"))
 
         resolve = method(rig, "ResolveSpawnPrefab")
-        self.assertLess(resolve.index("if (!Replication.IsServer() || !GetGame().InPlayMode())"), resolve.index("FindFreeChannel()"))
-        self.assertLess(resolve.index("IsStockAirframe(prefab)"), resolve.index("FindFreeChannel()"))
-        self.assertIn("return IA_HeliPaintChannels.FindChannelPrefab(prefab, channel);", resolve)
+        self.assertLess(resolve.index("if (!Replication.IsServer() || !GetGame().InPlayMode())"), resolve.index("FindFreeChannel(family)"))
+        self.assertLess(resolve.index("IA_HeliPaintChannels.FindStockFamily(prefab)"), resolve.index("FindFreeChannel(family)"))
+        self.assertIn("IA_HeliPaintChannels.FindChannelPrefab(prefab, channel)", resolve)
+        self.assertIn("family != GetFamily(channel)", method(source("IA_HeliPaintChannels.c"), "FindChannelPrefab"))
 
         # A pad and the editor (Game Master, build mode) both ask before they spawn.
         spawn = method(source("IA_VehicleRespawner.c"), "PerformSpawn")

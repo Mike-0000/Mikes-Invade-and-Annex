@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{59689C159061CF9A}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8MT_armed_gunship_HEDP_Paint12.et"
+ Configurations {
+  EntityTemplateResourceClass PC {
+  }
+  EntityTemplateResourceClass XBOX_ONE : PC {
+  }
+  EntityTemplateResourceClass XBOX_SERIES : PC {
+  }
+  EntityTemplateResourceClass PS4 : PC {
+  }
+  EntityTemplateResourceClass PS5 : PC {
+  }
+  EntityTemplateResourceClass HEADLESS : PC {
+  }
+ }
+}

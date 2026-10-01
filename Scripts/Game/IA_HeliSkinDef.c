@@ -1,8 +1,8 @@
 //------------------------------------------------------------------------------------------------
-//! One unlockable helicopter skin. A skin is a set of colours: for each surface
-//! of the airframe it names a material that holds them. That material is never
-//! put on a mesh; IA_HeliSkinPaint copies its colours onto a paint channel, so
-//! a skin changes on a live helicopter without touching the entity.
+//! One unlockable helicopter livery: a plain paint colour. It names no files;
+//! each helicopter family says which layers of its own paint materials take
+//! the colour, so one livery fits every helicopter that has paint channels.
+//! IA_HeliSkinPaint sets it on a paint channel without touching the entity.
 //------------------------------------------------------------------------------------------------
 class IA_HeliSkinDef
 {
@@ -11,30 +11,11 @@ class IA_HeliSkinDef
 	string m_sDisplayName;
 	int m_iRequiredPoints;		// global transport rating
 
-	// Hull colour as sRGB bytes, for drawing the skin in the paint bay.
+	// The paint, as the linear colour a material layer takes.
+	vector m_vPaint;
+
+	// Hull colour as sRGB bytes, for drawing the livery in the paint bay and on the pilot card.
 	int m_iSwatchR = 78;
 	int m_iSwatchG = 88;
 	int m_iSwatchB = 60;
-
-	// By IA_HeliPaintChannels surface; an empty entry keeps that surface stock.
-	ref array<ResourceName> m_aPaints = {};
-
-	//------------------------------------------------------------------------------------------------
-	void IA_HeliSkinDef()
-	{
-		int surface;
-		for (surface = 0; surface < IA_HeliPaintChannels.SURFACE_COUNT; surface++)
-		{
-			m_aPaints.Insert(ResourceName.Empty);
-		}
-	}
-
-	//------------------------------------------------------------------------------------------------
-	//! \return the material holding this skin's colours for a surface, empty when it keeps stock
-	ResourceName GetPaint(int surface)
-	{
-		if (surface < 0 || surface >= m_aPaints.Count())
-			return ResourceName.Empty;
-		return m_aPaints[surface];
-	}
 }

@@ -1,175 +1,210 @@
 //------------------------------------------------------------------------------------------------
-//! Paint channels for the UH-1H. A material is shared by every entity that
-//! names it, so recolouring the vanilla Huey material recolours every Huey. A
-//! channel is a prefab variant of a stock airframe whose hull and seats name
-//! their own copies of those materials; recolouring a channel's copies changes
-//! only the helicopter spawned from it. The copies inherit the vanilla
-//! materials, so a channel airframe looks stock until a skin is set.
-//! The files come from tools/author_heli_paint_channels.py; the names and
-//! GUIDs built here follow its pattern.
+//! Paint channels for helicopters. A material is shared by every entity that
+//! names it, so recolouring a stock hull material recolours every helicopter of
+//! that type. A channel is a prefab variant of a stock airframe whose hull and
+//! parts name their own copies of the paint materials; recolouring a channel's
+//! copies changes only the helicopter spawned from it. The copies inherit the
+//! stock materials, so a channel airframe looks stock until a livery is set.
+//! Each helicopter type is a family with CHANNEL_COUNT channels of its own. A
+//! channel number here is global: family index * CHANNEL_COUNT + 1..CHANNEL_COUNT.
+//! The families and their files come from tools/author_heli_paint_channels.py
+//! by way of IA_HeliPaintManifest.
 //------------------------------------------------------------------------------------------------
 class IA_HeliPaintChannels
 {
 	static const int CHANNEL_NONE = 0;
 	static const int CHANNEL_COUNT = 12;
 
-	static const int SURFACE_BODY = 0;
-	static const int SURFACE_INTERIOR_1 = 1;
-	static const int SURFACE_INTERIOR_2 = 2;
-	static const int SURFACE_COUNT = 3;
-
-	protected static const string GUID_PREFIX = "D3A91F5C7E20";
-	protected static const string MATERIAL_DIR = "Assets/Vehicles/Helicopters/UH1H/";
-	protected static const string PREFAB_DIR = "Prefabs/Vehicles/Helicopters/UH1H/";
-
-	protected static ref array<ResourceName> s_aStockPrefabs;
-	// Airframe index * CHANNEL_COUNT + channel - 1.
-	protected static ref array<ResourceName> s_aChannelPrefabs;
-	protected static ref array<ResourceName> s_aStockMaterials;
-	// Surface * CHANNEL_COUNT + channel - 1.
-	protected static ref array<ResourceName> s_aChannelMaterials;
+	protected static ref array<ref IA_HeliPaintFamily> s_aFamilies;
+	// Path of a channel prefab -> its channel; path of a stock airframe -> family index * STOCK_STRIDE + airframe.
+	protected static ref map<string, int> s_mChannels;
+	protected static ref map<string, int> s_mStock;
+	protected static const int STOCK_STRIDE = 1000;
 
 	//------------------------------------------------------------------------------------------------
-	protected static void EnsureTables()
+	protected static void EnsureFamilies()
 	{
-		if (s_aStockPrefabs)
+		if (s_aFamilies)
 			return;
 
-		s_aStockPrefabs = {};
-		s_aChannelPrefabs = {};
-		s_aStockMaterials = {};
-		s_aChannelMaterials = {};
+		s_aFamilies = {};
+		s_mChannels = new map<string, int>();
+		s_mStock = new map<string, int>();
+		IA_HeliPaintManifest.Register();
 
-		AddAirframe("{70BAEEFC2D3FEE64}", "UH1H");
-		AddAirframe("{DDDD9B51F1234DF3}", "UH1H_armed");
-		AddAirframe("{21E9A875C0A3C409}", "UH1H_armed_gunship_HE");
-		AddAirframe("{CB4D4CF7E887B2D0}", "UH1H_armed_gunship_HEDP");
-
-		// In SURFACE_ order.
-		AddSurface("{6224CA051369DE45}", "UH_1H_Body01");
-		AddSurface("{04455994F64CAB1E}", "UH_1H_Interior01");
-		AddSurface("{5AAD70D749C12511}", "UH_1H_Interior02");
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected static void AddAirframe(string stockGuid, string fileName)
-	{
-		int airframe = s_aStockPrefabs.Count();
-		s_aStockPrefabs.Insert(string.Format("%1%2%3.et", stockGuid, PREFAB_DIR, fileName));
-
-		int channel;
-		for (channel = 1; channel <= CHANNEL_COUNT; channel++)
+		IA_HeliPaintFamily family;
+		int familyCount = s_aFamilies.Count();
+		int airframeCount;
+		int f;
+		int airframe;
+		int local;
+		ResourceName twin;
+		for (f = 0; f < familyCount; f++)
 		{
-			s_aChannelPrefabs.Insert(string.Format("%1%2Paint/IA_%3_Paint%4.et", Guid("B", airframe, channel), PREFAB_DIR, fileName, channel));
+			family = s_aFamilies[f];
+			airframeCount = family.m_aStockPrefabs.Count();
+			for (airframe = 0; airframe < airframeCount; airframe++)
+			{
+				s_mStock.Set(family.m_aStockPrefabs[airframe].GetPath(), f * STOCK_STRIDE + airframe);
+				for (local = 1; local <= CHANNEL_COUNT; local++)
+				{
+					twin = family.GetChannelPrefab(airframe, local);
+					if (!twin.IsEmpty())
+						s_mChannels.Set(twin.GetPath(), f * CHANNEL_COUNT + local);
+				}
+			}
 		}
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected static void AddSurface(string stockGuid, string fileName)
+	//! Called by IA_HeliPaintManifest for each helicopter type.
+	//! \return the new family to fill, null when the key is already taken
+	static IA_HeliPaintFamily AddFamily(string key, string displayName, string stockPaint, string art)
 	{
-		int surface = s_aStockMaterials.Count();
-		s_aStockMaterials.Insert(string.Format("%1%2Data/%3.emat", stockGuid, MATERIAL_DIR, fileName));
+		if (!s_aFamilies)
+			return null;
 
-		int channel;
-		for (channel = 1; channel <= CHANNEL_COUNT; channel++)
+		foreach (IA_HeliPaintFamily known : s_aFamilies)
 		{
-			s_aChannelMaterials.Insert(string.Format("%1%2Paint/IA_%3_Paint%4.emat", Guid("A", surface, channel), MATERIAL_DIR, fileName, channel));
+			if (known.m_sKey == key)
+			{
+				Print("[IA][HeliSkin] Paint family registered twice: " + key, LogLevel.WARNING);
+				return null;
+			}
 		}
+
+		ref IA_HeliPaintFamily family = new IA_HeliPaintFamily();
+		family.m_iIndex = s_aFamilies.Count();
+		family.m_sKey = key;
+		family.m_sDisplayName = displayName;
+		family.m_sStockPaint = stockPaint;
+		family.m_sArt = art;
+		s_aFamilies.Insert(family);
+		return family;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected static string Guid(string kind, int index, int channel)
+	static array<ref IA_HeliPaintFamily> GetFamilies()
 	{
-		// The channel is two decimal digits.
-		string guid = "{" + GUID_PREFIX + kind;
-		guid = guid + index.ToString();
-		if (channel < 10)
-			guid = guid + "0";
-		guid = guid + channel.ToString() + "}";
-		return guid;
+		EnsureFamilies();
+		return s_aFamilies;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static IA_HeliPaintFamily FindFamily(string key)
+	{
+		EnsureFamilies();
+		foreach (IA_HeliPaintFamily family : s_aFamilies)
+		{
+			if (family.m_sKey == key)
+				return family;
+		}
+		return null;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the highest channel number
+	static int GetChannelTotal()
+	{
+		EnsureFamilies();
+		return s_aFamilies.Count() * CHANNEL_COUNT;
 	}
 
 	//------------------------------------------------------------------------------------------------
 	static bool IsChannel(int channel)
 	{
-		return channel >= 1 && channel <= CHANNEL_COUNT;
+		return channel >= 1 && channel <= GetChannelTotal();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the family a channel belongs to, null when it is not a channel
+	static IA_HeliPaintFamily GetFamily(int channel)
+	{
+		if (!IsChannel(channel))
+			return null;
+		return s_aFamilies[(channel - 1) / CHANNEL_COUNT];
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return a channel's number within its family, 1..CHANNEL_COUNT; CHANNEL_NONE when it is not a channel
+	static int GetLocalChannel(int channel)
+	{
+		if (!IsChannel(channel))
+			return CHANNEL_NONE;
+		return (channel - 1) % CHANNEL_COUNT + 1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the global number of a family's channel, CHANNEL_NONE when out of range
+	static int ToChannel(IA_HeliPaintFamily family, int localChannel)
+	{
+		if (!family || localChannel < 1 || localChannel > CHANNEL_COUNT)
+			return CHANNEL_NONE;
+		return family.m_iIndex * CHANNEL_COUNT + localChannel;
 	}
 
 	//------------------------------------------------------------------------------------------------
 	//! \return the channel a prefab belongs to, CHANNEL_NONE for stock airframes and everything else
 	static int FindChannel(ResourceName prefab)
 	{
-		EnsureTables();
-		int index = IndexOf(s_aChannelPrefabs, prefab);
-		if (index < 0)
+		EnsureFamilies();
+		if (prefab.IsEmpty())
 			return CHANNEL_NONE;
-		return index % CHANNEL_COUNT + 1;
+
+		// Paths are compared, so a prefab name with or without its GUID matches.
+		int channel;
+		if (s_mChannels.Find(prefab.GetPath(), channel))
+			return channel;
+		return CHANNEL_NONE;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the family a stock airframe has channel variants in, null for everything else
+	static IA_HeliPaintFamily FindStockFamily(ResourceName prefab)
+	{
+		EnsureFamilies();
+		if (prefab.IsEmpty())
+			return null;
+
+		int entry;
+		if (!s_mStock.Find(prefab.GetPath(), entry))
+			return null;
+		return s_aFamilies[entry / STOCK_STRIDE];
 	}
 
 	//------------------------------------------------------------------------------------------------
 	//! \return true for a stock airframe that has channel variants
 	static bool IsStockAirframe(ResourceName prefab)
 	{
-		EnsureTables();
-		return IndexOf(s_aStockPrefabs, prefab) >= 0;
+		return FindStockFamily(prefab) != null;
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! \return a stock airframe's variant on a channel, empty when it has none
+	//! \return a stock airframe's variant on a channel of its family, empty when it has none
 	static ResourceName FindChannelPrefab(ResourceName stockPrefab, int channel)
 	{
-		EnsureTables();
-		if (!IsChannel(channel))
+		EnsureFamilies();
+		if (stockPrefab.IsEmpty() || !IsChannel(channel))
 			return ResourceName.Empty;
 
-		int airframe = IndexOf(s_aStockPrefabs, stockPrefab);
-		if (airframe < 0)
+		int entry;
+		if (!s_mStock.Find(stockPrefab.GetPath(), entry))
 			return ResourceName.Empty;
-		return s_aChannelPrefabs[airframe * CHANNEL_COUNT + channel - 1];
+
+		IA_HeliPaintFamily family = s_aFamilies[entry / STOCK_STRIDE];
+		if (family != GetFamily(channel))
+			return ResourceName.Empty;
+		return family.GetChannelPrefab(entry % STOCK_STRIDE, GetLocalChannel(channel));
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! \param surface index in the family's surfaces
 	//! \return the material a channel's meshes use for a surface, empty when out of range
 	static ResourceName GetMaterial(int surface, int channel)
 	{
-		EnsureTables();
-		if (surface < 0 || surface >= SURFACE_COUNT || !IsChannel(channel))
+		IA_HeliPaintFamily family = GetFamily(channel);
+		if (!family || surface < 0 || surface >= family.m_aSurfaces.Count())
 			return ResourceName.Empty;
-		return s_aChannelMaterials[surface * CHANNEL_COUNT + channel - 1];
-	}
-
-	//------------------------------------------------------------------------------------------------
-	//! \return the vanilla material of a surface, which holds the stock colours
-	static ResourceName GetStockMaterial(int surface)
-	{
-		EnsureTables();
-		if (surface < 0 || surface >= SURFACE_COUNT)
-			return ResourceName.Empty;
-		return s_aStockMaterials[surface];
-	}
-
-	//------------------------------------------------------------------------------------------------
-	static array<ResourceName> GetStockPrefabs()
-	{
-		EnsureTables();
-		return s_aStockPrefabs;
-	}
-
-	//------------------------------------------------------------------------------------------------
-	//! Compares paths, so a prefab name with or without its GUID matches.
-	protected static int IndexOf(notnull array<ResourceName> names, ResourceName name)
-	{
-		if (name.IsEmpty())
-			return -1;
-
-		string path = name.GetPath();
-		int count = names.Count();
-		int i;
-		for (i = 0; i < count; i++)
-		{
-			if (names[i].GetPath() == path)
-				return i;
-		}
-		return -1;
+		return family.m_aSurfaces[surface].GetMaterial(GetLocalChannel(channel));
 	}
 }

@@ -44,7 +44,8 @@ class IA_PilotHudPreview
 	static IA_PilotHudPreview Create(IA_PilotHudPreviewScene scene)
 	{
 		ref IA_PilotHudPreview preview = new IA_PilotHudPreview();
-		IA_HeliSkinDef goal = IA_HeliSkinCatalog.FindNextLocked(0);
+		// The last livery, so the unlock scenes end with nothing left to work towards.
+		IA_HeliSkinDef goal = IA_HeliSkinCatalog.FindBestUnlocked(int.MAX);
 		if (!goal)
 			return preview;
 

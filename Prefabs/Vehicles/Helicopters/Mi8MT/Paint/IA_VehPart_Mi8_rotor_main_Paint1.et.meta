@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{0B1D0EB303F52F6C}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_VehPart_Mi8_rotor_main_Paint1.et"
+ Configurations {
+  EntityTemplateResourceClass PC {
+  }
+  EntityTemplateResourceClass XBOX_ONE : PC {
+  }
+  EntityTemplateResourceClass XBOX_SERIES : PC {
+  }
+  EntityTemplateResourceClass PS4 : PC {
+  }
+  EntityTemplateResourceClass PS5 : PC {
+  }
+  EntityTemplateResourceClass HEADLESS : PC {
+  }
+ }
+}

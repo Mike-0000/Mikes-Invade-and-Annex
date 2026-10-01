@@ -395,6 +395,8 @@ modded class SCR_PlayerController
 		if (apply)
 		{
 			result = IA_HeliPaintService.TrySetSkin(GetControlledEntity(), skinId, rating, admin);
+			if (result == IA_HeliPaintService.RESULT_APPLIED)
+				IA_HeliSkinPadService.RememberChoice(GetPlayerId(), skinId);
 			if (IA_Log.IsDebugEnabled())
 			{
 				Print(string.Format("[IA][HeliPaint] Player %1 asked for skin %2: result %3.", GetPlayerId(), skinId, result), LogLevel.NORMAL);

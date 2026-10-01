@@ -599,7 +599,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(lateBtn, "Late unlock", "The unlock arriving on a rating card, after points were banked while the total was unknown.");
 		m_Hints.AddHint(ownedBtn, "Unlocked seat", "The rating card of a pilot who already owns the skin.");
 		m_Hints.AddHint(allBtn, "Play all", "Plays every preview in turn; each waits for the previous card to leave.");
-		m_Hints.AddHint(skinBtn, "Cycle nearest heli skin", "Repaints the nearest helipad Huey with its next unlockable skin, for everyone, where it stands. It works from the pilot's seat with the engine running. Press again to step through the skins and back to stock. A helicopter placed by a Game Master cannot be repainted. No rating is needed or earned.");
+		m_Hints.AddHint(skinBtn, "Cycle nearest heli skin", "Repaints the nearest paintable helicopter with its next livery, for everyone, where it stands. It works from the pilot's seat with the engine running. Press again to step through the liveries and back to stock. No rating is needed or earned.");
 	}
 
 	//------------------------------------------------------------------------------------------------

@@ -1,0 +1,13 @@
+Turret : "{73622A6C27813495}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/WeapSystems/Mi8MT_Hardpoints_HE.et" {
+ ID "4B42E71698F5739C"
+ components {
+  MeshObject "{51ACD09C4E0B7D16}" {
+   Materials {
+    MaterialAssignClass "{48615DEDD33C3BF8}" {
+     SourceMaterial "Exterier_35715EB3956D22B9"
+     AssignedMaterial "{802DC23A11ED14B1}Assets/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8_Body_Paint4.emat"
+    }
+   }
+  }
+ }
+}

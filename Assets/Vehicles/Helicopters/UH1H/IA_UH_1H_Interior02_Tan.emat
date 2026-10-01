@@ -1,8 +1,0 @@
-MatPBRMulti : "{5AAD70D749C12511}Assets/Vehicles/Helicopters/UH1H/Data/UH_1H_Interior02.emat" {
- DirtOpacity 1.5
- DirtColor 0.205 0.168 0.117 1
- Color_3 0.205 0.168 0.117 1
- AO_3 0.357
- Color_2 0.205 0.168 0.117 1
- Color_1 0.004 0.004 0.004 1
-}

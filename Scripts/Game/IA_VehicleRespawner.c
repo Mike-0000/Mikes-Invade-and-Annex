@@ -329,7 +329,7 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			}
 		}
 		
-		// A Huey spawns as its twin on a free paint channel; anything else has none and spawns as it is.
+		// A helicopter of a paint family spawns as its twin on a free paint channel; anything else has none and spawns as it is.
 		vehiclePrefabToSpawn = IA_HeliPaintRigComponent.ResolveSpawnPrefab(vehiclePrefabToSpawn);
 
 		Resource resource = Resource.Load(vehiclePrefabToSpawn);

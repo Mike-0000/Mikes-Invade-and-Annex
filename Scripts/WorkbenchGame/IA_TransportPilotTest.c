@@ -58,44 +58,94 @@ class IA_TransportPilotTest : WorkbenchPlugin
 
 	protected void TestSkinEligibility()
 	{
-		string huey = "Prefabs/Vehicles/Helicopters/UH1H/UH1H.et";
-		string hip = "Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et";
-		int none = IA_HeliPaintChannels.CHANNEL_NONE;
-		int last = IA_HeliPaintChannels.CHANNEL_COUNT;
 		IA_HeliSkinDef tan = IA_HeliSkinCatalog.FindDefByKey("huey_tan");
-		Check(tan != null, "the tan Huey skin is catalogued");
+		Check(tan != null, "desert tan keeps the key the backend holds a threshold for");
 		if (!tan)
 			return;
 
+		// A livery is one paint colour; the catalogue is walked by threshold, not by its order.
+		array<ref IA_HeliSkinDef> defs = IA_HeliSkinCatalog.GetDefs();
+		IA_HeliSkinDef cheapest = IA_HeliSkinCatalog.FindNextLocked(0);
+		IA_HeliSkinDef top = IA_HeliSkinCatalog.FindBestUnlocked(int.MAX);
+		Check(defs.Count() > 1 && cheapest && top && cheapest != top, "the catalogue holds several liveries");
+		if (!cheapest || !top)
+			return;
+
+		ref array<string> keys = {};
+		ref array<int> ids = {};
+		foreach (IA_HeliSkinDef def : defs)
+		{
+			Check(def.m_iId > 0 && !ids.Contains(def.m_iId) && !keys.Contains(def.m_sKey), def.m_sKey + " has an id and a key of its own");
+			Check(def.m_iRequiredPoints > 0 && !def.m_sDisplayName.IsEmpty() && def.m_vPaint.Length() > 0, def.m_sKey + " has a threshold, a name and a paint colour");
+			Check(IA_HeliSkinCatalog.FindDef(def.m_iId) == def, def.m_sKey + " is found by its id");
+			ids.Insert(def.m_iId);
+			keys.Insert(def.m_sKey);
+		}
+
 		int required = tan.m_iRequiredPoints;
+		int lowest = cheapest.m_iRequiredPoints;
+		int highest = top.m_iRequiredPoints;
 		Check(IA_HeliSkinCatalog.FindBestUnlocked(IA_TransportPilotRecord.RATING_UNKNOWN) == null, "an unknown rating unlocks nothing");
-		Check(IA_HeliSkinCatalog.FindBestUnlocked(required - 1) == null, "a rating below the threshold unlocks nothing");
-		Check(IA_HeliSkinCatalog.FindBestUnlocked(required) == tan, "the threshold rating unlocks the tan Huey");
-		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required - 10, required + 20) == tan, "crossing the threshold reports the unlock");
-		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required, required + 30) == null, "an already unlocked skin is not reported again");
-		Check(IA_HeliSkinCatalog.FindNextLocked(0) == tan, "the next locked skin is the progress target");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(lowest - 1) == null, "a rating below the first threshold unlocks nothing");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(lowest) == cheapest, "the first threshold unlocks the first livery");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(required) == tan, "its threshold unlocks desert tan");
+		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required - 10, required + 20) == tan, "crossing a threshold reports the unlock");
+		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required, required + 30) == null, "an already unlocked livery is not reported again");
+		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(0, highest) == top, "several thresholds crossed at once report the highest");
+		Check(IA_HeliSkinCatalog.FindNextLocked(required - 1) == tan, "the next locked livery is the progress target");
+		Check(IA_HeliSkinCatalog.FindNextLocked(highest) == null, "nothing is left to work towards past the last threshold");
 
-		// A skin is colours for a paint channel; names match with or without their GUID.
-		Check(tan.GetPaint(IA_HeliPaintChannels.SURFACE_BODY).Contains("IA_UH_1H_Body01_Tan.emat"), "the tan skin holds body colours");
-		Check(tan.GetPaint(IA_HeliPaintChannels.SURFACE_COUNT).IsEmpty(), "a surface the airframe does not have holds no colours");
-		ResourceName first = IA_HeliPaintChannels.FindChannelPrefab(huey, 1);
-		Check(first.Contains("Paint/IA_UH1H_Paint1.et"), "the stock Huey has a twin on the first paint channel");
-		Check(IA_HeliPaintChannels.FindChannelPrefab("Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed.et", last).Contains("IA_UH1H_armed_Paint"), "each stock airframe has its own twin on every channel");
+		// The pad gives a pilot what they last chose, else the best they have earned.
+		Check(IA_HeliSkinPadService.PickLivery(highest, -1) == top, "a pilot who has not chosen gets their best livery");
+		Check(IA_HeliSkinPadService.PickLivery(highest, cheapest.m_iId) == cheapest, "a pilot who chose a livery gets it back");
+		Check(IA_HeliSkinPadService.PickLivery(highest, IA_HeliSkinCatalog.SKIN_NONE) == null, "a pilot who chose stock paint keeps it");
+		Check(IA_HeliSkinPadService.PickLivery(lowest, top.m_iId) == cheapest, "a choice that is not unlocked falls back to the best earned");
+		Check(IA_HeliSkinPadService.PickLivery(lowest - 1, top.m_iId) == null, "a pilot who has earned nothing gets stock paint");
+
+		// Every helicopter type is a family with paint channels of its own.
+		string huey = "Prefabs/Vehicles/Helicopters/UH1H/UH1H.et";
+		string hip = "Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et";
+		string jeep = "Prefabs/Vehicles/Wheeled/M151A2/M151A2.et";
+		int none = IA_HeliPaintChannels.CHANNEL_NONE;
+		int last = IA_HeliPaintChannels.CHANNEL_COUNT;
+		IA_HeliPaintFamily hueyFamily = IA_HeliPaintChannels.FindStockFamily(huey);
+		IA_HeliPaintFamily hipFamily = IA_HeliPaintChannels.FindStockFamily(hip);
+		Check(hueyFamily && hipFamily && hueyFamily != hipFamily, "the Huey and the Hip are paint families of their own");
+		Check(!IA_HeliPaintChannels.FindStockFamily(jeep) && !IA_HeliPaintChannels.IsStockAirframe(jeep), "a vehicle no family lists has none");
+		if (!hueyFamily || !hipFamily)
+			return;
+
+		int hueyFirst = IA_HeliPaintChannels.ToChannel(hueyFamily, 1);
+		int hueyLast = IA_HeliPaintChannels.ToChannel(hueyFamily, last);
+		int hipFirst = IA_HeliPaintChannels.ToChannel(hipFamily, 1);
+		int total = IA_HeliPaintChannels.GetChannelTotal();
+		Check(hueyFirst == 1 && hipFirst == last + 1, "families take their channel numbers in the order the manifest lists them");
+		Check(IA_HeliPaintChannels.GetFamily(hipFirst) == hipFamily && IA_HeliPaintChannels.GetLocalChannel(hipFirst) == 1, "a channel number names its family and its place in it");
+		Check(IA_HeliPaintChannels.IsChannel(total) && !IA_HeliPaintChannels.IsChannel(total + 1) && !IA_HeliPaintChannels.IsChannel(none), "there is no channel past the last family");
+		Check(IA_HeliPaintChannels.ToChannel(hueyFamily, last + 1) == none && IA_HeliPaintChannels.ToChannel(null, 1) == none, "a family has no channel past its last");
+
+		ResourceName twin = IA_HeliPaintChannels.FindChannelPrefab(huey, hueyFirst);
+		Check(twin.Contains("Paint/IA_UH1H_Paint1.et"), "the stock Huey has a twin on the first paint channel");
+		Check(IA_HeliPaintChannels.FindChannelPrefab("Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed.et", hueyLast).Contains("IA_UH1H_armed_Paint"), "each stock airframe has its own twin on every channel");
 		Check(IA_HeliPaintChannels.FindChannelPrefab(huey, none).IsEmpty(), "a pad without a channel keeps the stock airframe");
-		Check(IA_HeliPaintChannels.FindChannelPrefab(huey, last + 1).IsEmpty(), "there is no channel past the last");
-		Check(IA_HeliPaintChannels.FindChannelPrefab(hip, 1).IsEmpty(), "an airframe without paint channels spawns as it is");
-		Check(IA_HeliPaintChannels.FindChannel(first) == 1, "a twin is recognised as its channel");
-		Check(IA_HeliPaintChannels.FindChannel(first.GetPath()) == 1, "a twin is recognised without its GUID");
-		Check(IA_HeliPaintChannels.FindChannel(IA_HeliPaintChannels.FindChannelPrefab(huey, last)) == last, "the last channel maps back to itself");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(huey, hipFirst).IsEmpty(), "an airframe has no twin on a channel of another family");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(hip, hipFirst).Contains("Mi8MT/Paint/"), "the Hip has twins on its own channels");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(jeep, hueyFirst).IsEmpty(), "a vehicle without paint channels spawns as it is");
+		Check(IA_HeliPaintChannels.FindChannel(twin) == hueyFirst, "a twin is recognised as its channel");
+		Check(IA_HeliPaintChannels.FindChannel(twin.GetPath()) == hueyFirst, "a twin is recognised without its GUID");
+		Check(IA_HeliPaintChannels.FindChannel(IA_HeliPaintChannels.FindChannelPrefab(huey, hueyLast)) == hueyLast, "the last channel maps back to itself");
+		Check(IA_HeliPaintChannels.FindChannel(IA_HeliPaintChannels.FindChannelPrefab(hip, hipFirst)) == hipFirst, "a Hip twin maps back to its channel");
 		Check(IA_HeliPaintChannels.FindChannel(huey) == none, "a stock airframe has no paint channel");
-		Check(IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, 2) != IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, 1), "each channel has its own body material");
-		Check(IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, none).IsEmpty(), "no channel has no material");
+		Check(IA_HeliPaintChannels.GetMaterial(0, 2) != IA_HeliPaintChannels.GetMaterial(0, 1), "each channel has its own body material");
+		Check(IA_HeliPaintChannels.GetMaterial(0, hipFirst).Contains("Mi8"), "a Hip channel paints Hip materials");
+		Check(IA_HeliPaintChannels.GetMaterial(0, none).IsEmpty(), "no channel has no material");
+		Check(IA_HeliPaintChannels.GetMaterial(hueyFamily.m_aSurfaces.Count(), hueyFirst).IsEmpty(), "a surface the family does not have has no material");
 		Check(IA_HeliSkinPaint.Apply(none, tan.m_iId) == 0, "nothing is painted without a channel");
-		Check(IA_HeliSkinPaint.Apply(1, 9999) == 0, "an unknown skin paints nothing");
+		Check(IA_HeliSkinPaint.Apply(hueyFirst, 9999) == 0, "an unknown livery paints nothing");
 
-		// The backend's threshold replaces the built-in default for every server.
+		// The threshold from the backend replaces the built-in default for every server.
 		IA_HeliSkinCatalog.SetRequiredPoints("huey_tan", required + 500);
-		Check(IA_HeliSkinCatalog.FindBestUnlocked(required) == null, "a raised central threshold locks the skin again");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(required) != tan, "a raised central threshold locks the livery again");
 		IA_HeliSkinCatalog.SetRequiredPoints("huey_tan", 0);
 		IA_HeliSkinCatalog.SetRequiredPoints("unknown_skin", 1);
 		Check(tan.m_iRequiredPoints == required + 500, "invalid thresholds and unknown keys are ignored");
@@ -118,8 +168,8 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		sent.m_iRating = 12700;
 		sent.m_iRequired = 50000;
 		sent.m_iEdgeM = 40;
-		sent.m_sSkinName = "Desert Tan Huey";
-		Check(sent.Pack() == "0|12|360|12700|50000|40|0|-|Desert Tan Huey", "the card payload wire format is pinned");
+		sent.m_sSkinName = "Desert Tan";
+		Check(sent.Pack() == "0|12|360|12700|50000|40|0|-|Desert Tan", "the card payload wire format is pinned");
 
 		IA_PilotDropoffPayload got = IA_PilotDropoffPayload.Parse(sent.Pack());
 		Check(got != null, "a packed payload parses");
@@ -127,7 +177,7 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		{
 			Check(got.IsDrop() && got.m_iTroops == 12 && got.m_iPoints == 360, "troops and points survive the round trip");
 			Check(got.m_iRating == 12700 && got.m_iRequired == 50000 && got.m_iEdgeM == 40, "rating, threshold and distance survive the round trip");
-			Check(got.m_sSkinName == "Desert Tan Huey" && !got.HasUnlock(), "an absent unlock stays absent");
+			Check(got.m_sSkinName == "Desert Tan" && !got.HasUnlock(), "an absent unlock stays absent");
 			Check(got.WeightTenths() == 30 && got.IsHotLz(), "a full hot-LZ cabin reads x3.0");
 		}
 
@@ -145,7 +195,7 @@ class IA_TransportPilotTest : WorkbenchPlugin
 	{
 		// Two ticks of one landing, the first before the global total was known.
 		IA_PilotDropoffPayload card = IA_PilotDropoffPayload.Parse("0|4|120|-1|0|0|0|-|-");
-		IA_PilotDropoffPayload second = IA_PilotDropoffPayload.Parse("0|8|160|12700|50000|600|0|-|Desert Tan Huey");
+		IA_PilotDropoffPayload second = IA_PilotDropoffPayload.Parse("0|8|160|12700|50000|600|0|-|Desert Tan");
 		Check(card != null && second != null, "merge inputs parse");
 		if (!card || !second)
 			return;
@@ -157,7 +207,7 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		Check(card.WeightTenths() == 23 && !card.IsHotLz(), "a mixed landing is not a hot LZ");
 
 		// A rating card that arrives while the landing is on screen must not downgrade it.
-		IA_PilotDropoffPayload status = IA_PilotDropoffPayload.Parse("1|0|0|50020|0|0|50000|Desert Tan Huey|Desert Tan Huey");
+		IA_PilotDropoffPayload status = IA_PilotDropoffPayload.Parse("1|0|0|50020|0|0|50000|Desert Tan|Desert Tan");
 		Check(status != null && status.HasUnlock(), "a status can carry an unlock");
 		if (!status)
 			return;
@@ -169,7 +219,7 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		card.Merge(second);
 		Check(card.HasUnlock(), "an unlock stays announced once reported");
 
-		IA_PilotDropoffPayload seat = IA_PilotDropoffPayload.Parse("1|0|0|900|50000|0|0|-|Desert Tan Huey");
+		IA_PilotDropoffPayload seat = IA_PilotDropoffPayload.Parse("1|0|0|900|50000|0|0|-|Desert Tan");
 		if (seat)
 		{
 			seat.Merge(second);
@@ -192,11 +242,11 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		Check(IA_PilotDropoffPayload.FormatPercent(5) == "0.5%", "a small start is still visible");
 		Check(IA_PilotDropoffPayload.FormatPercent(1000) == "100%", "complete has no decimals");
 
-		IA_PilotDropoffPayload drop = IA_PilotDropoffPayload.Parse("0|12|360|12700|50000|40|0|-|Desert Tan Huey");
-		IA_PilotDropoffPayload status = IA_PilotDropoffPayload.Parse("1|0|0|12700|50000|0|0|-|Desert Tan Huey");
+		IA_PilotDropoffPayload drop = IA_PilotDropoffPayload.Parse("0|12|360|12700|50000|40|0|-|Desert Tan");
+		IA_PilotDropoffPayload status = IA_PilotDropoffPayload.Parse("1|0|0|12700|50000|0|0|-|Desert Tan");
 		if (drop && status)
 		{
-			Check(drop.ToLine() == "Combat insertion: 12 troops, +360 transport rating (12,700 / 50,000 Desert Tan Huey)", "the legacy HUD gets one line per landing");
+			Check(drop.ToLine() == "Combat insertion: 12 troops, +360 transport rating (12,700 / 50,000 Desert Tan)", "the legacy HUD gets one line per landing");
 			Check(status.ToLine().IsEmpty(), "the legacy HUD shows no rating-only line");
 		}
 	}
@@ -213,23 +263,24 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		IA_HeliSkinDef tan = IA_HeliSkinCatalog.FindDefByKey("huey_tan");
 		if (!tan)
 			return;
-		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints - 1) == null, "nothing is unlocked below the threshold");
-		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints) == tan, "the best unlocked skin is reported once earned");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints - 1) != tan, "a livery is not unlocked below its threshold");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints) == tan, "the best unlocked livery is reported once earned");
 	}
 
 	protected void TestCardPreview()
 	{
-		IA_HeliSkinDef tan = IA_HeliSkinCatalog.FindDefByKey("huey_tan");
-		if (!tan)
+		// The preview imitates a pilot working towards the last livery.
+		IA_HeliSkinDef top = IA_HeliSkinCatalog.FindBestUnlocked(int.MAX);
+		if (!top)
 			return;
-		int required = tan.m_iRequiredPoints;
+		int required = top.m_iRequiredPoints;
 
 		ref IA_PilotHudPreview seat = IA_PilotHudPreview.Create(IA_PilotHudPreviewScene.Seat);
 		Check(seat.Count() == 1 && seat.NextOpensCard(), "a preview scene opens its own card");
 		Check(seat.NextDelayMs() == IA_PilotHudPreview.LEAD_IN_MS, "the first preview card waits for the menus to close");
 
 		ref IA_PilotDropoffPayload card = FoldPreview(IA_PilotHudPreviewScene.Seat);
-		Check(card && !card.IsDrop() && card.m_iRating > 0 && card.m_iRequired == required, "the seat preview is a rating card below the threshold");
+		Check(card && !card.IsDrop() && card.m_iRating > 0 && card.m_iRequired > card.m_iRating && card.m_iRequired <= required, "the seat preview is a rating card below a threshold");
 		int start = 0;
 		if (card)
 			start = card.m_iRating;

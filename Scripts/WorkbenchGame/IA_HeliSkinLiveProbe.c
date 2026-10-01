@@ -14,7 +14,11 @@
 //!                  the engine a frame later; kept to prove this probe sees that.
 //!   -iaSkinMode 4  how a stock Huey gets a channel: the editor's variant pick returns the twin on
 //!                  a free channel, and a deleted helicopter gives its channel back.
+//!   -iaSkinMode 5  layer map: marks each colour layer of a stock material, see ProbeLayers.
+//!   -iaSkinMode 6  livery sheet: one family's airframe from three sides, a screenshot of stock
+//!                  paint and of each livery, see ProbeLiveries. Add 100 to run an engine.
 //! Add 100 to run the engine first, 200 to seat a pilot first (300 for both).
+//!   -iaSkinDistance <metres>  how far in front of the camera the helicopters stand
 //------------------------------------------------------------------------------------------------
 [WorkbenchPluginAttribute(name: "IA helicopter skin live probe", wbModules: {"ResourceManager"})]
 class IA_HeliSkinLiveProbe : WorkbenchPlugin
@@ -95,7 +99,11 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 		vector right = camera[0];
 		right[1] = 0;
 		right.Normalize();
-		vector origin = camera[3] + forward * DISTANCE_M;
+		float distance = DISTANCE_M;
+		string distanceArg;
+		if (System.GetCLIParam("iaSkinDistance", distanceArg) && !distanceArg.IsEmpty())
+			distance = distanceArg.ToFloat();
+		vector origin = camera[3] + forward * distance;
 		m_vSide = right;
 		m_vAway = forward;
 		origin[1] = Math.Max(world.GetSurfaceY(origin[0], origin[2]), 0) + 0.3;
@@ -115,8 +123,26 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 			return failures;
 		}
 
+		if (technique == 5)
+		{
+			failures = ProbeLayers(world, origin);
+			Mark(string.Format("survived failures=%1", failures));
+			editor.SwitchToEditMode();
+			Sleep(1000);
+			return failures;
+		}
+
+		if (technique == 6)
+		{
+			failures = ProbeLiveries(world, origin, engine);
+			Mark(string.Format("survived failures=%1", failures));
+			editor.SwitchToEditMode();
+			Sleep(1000);
+			return failures;
+		}
+
 		// Painted before its helicopter exists: a channel keeps its skin until the next airframe takes it.
-		int tanSkin = IA_HeliSkinCatalog.SKIN_HUEY_TAN;
+		int tanSkin = IA_HeliSkinCatalog.SKIN_DESERT_TAN;
 		if (technique == 2)
 			Mark(string.Format("channel 3 painted early, %1 surfaces", IA_HeliSkinPaint.Apply(3, tanSkin)));
 
@@ -190,9 +216,10 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 	protected int ProbeChannels(IEntity heli)
 	{
 		int failures;
-		int tanSkin = IA_HeliSkinCatalog.SKIN_HUEY_TAN;
+		int tanSkin = IA_HeliSkinCatalog.SKIN_DESERT_TAN;
 		int none = IA_HeliSkinCatalog.SKIN_NONE;
 		ResourceName prefab = heli.GetPrefabData().GetPrefabName();
+		IA_HeliPaintFamily family = IA_HeliPaintChannels.GetFamily(1);
 		if (IA_HeliSkinManagerComponent.GetVehicleChannel(heli) != 1)
 		{
 			Print("[IA][HeliSkinLiveProbe] FAIL: the spawned helicopter is not on paint channel 1: " + prefab, LogLevel.ERROR);
@@ -202,7 +229,7 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 		VObject mesh = heli.GetVObject();
 		int painted = IA_HeliSkinPaint.Apply(1, tanSkin);
 		Mark(string.Format("channel 1 tan, %1 surfaces", painted));
-		if (painted != IA_HeliPaintChannels.SURFACE_COUNT)
+		if (!family || painted != family.m_aSurfaces.Count())
 		{
 			Print("[IA][HeliSkinLiveProbe] FAIL: not every surface was painted", LogLevel.ERROR);
 			failures = failures + 1;
@@ -243,6 +270,8 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 	protected int ProbeSpawnRoute(BaseWorld world, vector origin)
 	{
 		int failures;
+		IA_HeliPaintFamily huey = IA_HeliPaintChannels.FindStockFamily(STOCK);
+		failures = failures + Expect(huey != null, "the stock Huey belongs to a paint family");
 		ResourceName picked = SCR_EditableEntityComponentClass.GetRandomVariant(STOCK);
 		failures = failures + Expect(IA_HeliPaintChannels.FindChannel(picked) == 1, "the editor's pick for a stock Huey is its channel 1 twin: " + picked);
 
@@ -256,18 +285,180 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 		IEntity second = Spawn(world, origin + m_vSide * SPACING_M, picked);
 		Sleep(2000);
 		failures = failures + Expect(second && IA_HeliPaintRigComponent.GetHolder(2) == second, "the second twin holds channel 2");
-		failures = failures + Expect(IA_HeliPaintRigComponent.FindFreeChannel() == 3, "channel 3 is the next free one");
+		failures = failures + Expect(IA_HeliPaintRigComponent.FindFreeChannel(huey) == 3, "channel 3 is the next free one");
 
-		ResourceName other = "Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et";
-		failures = failures + Expect(IA_HeliPaintRigComponent.ResolveSpawnPrefab(other) == other, "another helicopter is left as it is");
+		// Every family has channels of its own; a Huey on the pad takes none from a Hip.
+		ResourceName hip = "Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et";
+		IA_HeliPaintFamily hipFamily = IA_HeliPaintChannels.FindStockFamily(hip);
+		failures = failures + Expect(hipFamily && hipFamily != huey, "the stock Hip belongs to a family of its own");
+		picked = IA_HeliPaintRigComponent.ResolveSpawnPrefab(hip);
+		failures = failures + Expect(IA_HeliPaintChannels.FindChannel(picked) == IA_HeliPaintChannels.ToChannel(hipFamily, 1), "a stock Hip gets the first channel of its family: " + picked);
+		failures = failures + Expect(IA_HeliPaintChannels.GetFamily(IA_HeliPaintChannels.FindChannel(picked)) == hipFamily, "that channel belongs to the Hip family");
+
+		ResourceName other = "Prefabs/Vehicles/Wheeled/M151A2/M151A2.et";
+		failures = failures + Expect(IA_HeliPaintRigComponent.ResolveSpawnPrefab(other) == other, "a vehicle with no paint family is left as it is");
 
 		if (first)
 			SCR_EntityHelper.DeleteEntityAndChildren(first);
 		Sleep(2000);
 		failures = failures + Expect(!IA_HeliPaintRigComponent.GetHolder(1), "a deleted helicopter gives its channel back");
-		failures = failures + Expect(IA_HeliPaintRigComponent.FindFreeChannel() == 1, "channel 1 is free again");
+		failures = failures + Expect(IA_HeliPaintRigComponent.FindFreeChannel(huey) == 1, "channel 1 is free again");
 		failures = failures + Expect(second && !second.IsDeleted() && IA_HeliPaintRigComponent.GetHolder(2) == second, "the other helicopter keeps its channel");
 		return failures;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Shows which part of an airframe each colour layer of a stock material paints: layer 1 goes red,
+	//! 2 green, 3 blue and 4 yellow. Only this process's copy of the material changes; nothing is saved.
+	//!   -iaSkinPrefab <prefab>           the airframe
+	//!   -iaSkinMaterial <emat[,emat]>    the stock materials to mark
+	//!   -iaSkinSpacing <metres>          gap between the three views (side, nose, tail)
+	protected int ProbeLayers(BaseWorld world, vector origin)
+	{
+		string prefab;
+		string materialArg;
+		string spacingArg;
+		System.GetCLIParam("iaSkinPrefab", prefab);
+		System.GetCLIParam("iaSkinMaterial", materialArg);
+		float spacing = SPACING_M;
+		if (System.GetCLIParam("iaSkinSpacing", spacingArg) && !spacingArg.IsEmpty())
+			spacing = spacingArg.ToFloat();
+		if (prefab.IsEmpty() || materialArg.IsEmpty())
+		{
+			Print("[IA][HeliSkinLiveProbe] FAIL: -iaSkinPrefab and -iaSkinMaterial are needed", LogLevel.ERROR);
+			return 1;
+		}
+
+		int failures;
+		IEntity side = SpawnTurned(world, origin, prefab, 0);
+		IEntity nose = SpawnTurned(world, origin - m_vSide * spacing, prefab, 60);
+		IEntity tail = SpawnTurned(world, origin + m_vSide * spacing, prefab, -120);
+		failures = failures + Expect(side && nose && tail, "the airframe spawned three times");
+		Sleep(5000);
+		Shot("layers_stock");
+
+		float red[4] = {1, 0, 0, 1};
+		float green[4] = {0, 1, 0, 1};
+		float blue[4] = {0, 0, 1, 1};
+		float yellow[4] = {1, 1, 0, 1};
+		ref array<string> names = {};
+		materialArg.Split(",", names, true);
+		ref array<ref Material> held = {};
+		Material material;
+		foreach (string name : names)
+		{
+			material = Material.GetOrLoadMaterial(name, 0);
+			if (Expect(material != null, "material loads: " + name) != 0)
+			{
+				failures = failures + 1;
+				continue;
+			}
+			held.Insert(material);
+			material.SetParam("Color_1", red);
+			material.SetParam("Color_2", green);
+			material.SetParam("Color_3", blue);
+			material.SetParam("Color_4", yellow);
+		}
+		Sleep(3000);
+		Shot("layers");
+		return failures;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Every livery on one family's airframe, seen from the side, the nose and the tail. One screenshot
+	//! of stock paint (livery_<family>_stock) and one per livery (livery_<family>_<key>).
+	//!   -iaSkinFamily <key>      the family, uh1h when left out
+	//!   -iaSkinAirframe <index>  which of its stock airframes, the first when left out
+	//!   -iaSkinSpacing <metres>  gap between the three views
+	protected int ProbeLiveries(BaseWorld world, vector origin, bool engine)
+	{
+		string key = "uh1h";
+		string keyArg;
+		string indexArg;
+		string spacingArg;
+		if (System.GetCLIParam("iaSkinFamily", keyArg) && !keyArg.IsEmpty())
+			key = keyArg;
+		int airframe;
+		if (System.GetCLIParam("iaSkinAirframe", indexArg) && !indexArg.IsEmpty())
+			airframe = indexArg.ToInt();
+		float spacing = SPACING_M;
+		if (System.GetCLIParam("iaSkinSpacing", spacingArg) && !spacingArg.IsEmpty())
+			spacing = spacingArg.ToFloat();
+
+		IA_HeliPaintFamily family = IA_HeliPaintChannels.FindFamily(key);
+		if (!family || airframe < 0 || airframe >= family.m_aStockPrefabs.Count())
+		{
+			Print("[IA][HeliSkinLiveProbe] FAIL: no such family or airframe: " + key, LogLevel.ERROR);
+			return 1;
+		}
+
+		int failures;
+		ResourceName stock = family.m_aStockPrefabs[airframe];
+		int first = IA_HeliPaintChannels.ToChannel(family, 1);
+		IEntity side = SpawnTurned(world, origin, IA_HeliPaintChannels.FindChannelPrefab(stock, first), 0);
+		IEntity nose = SpawnTurned(world, origin - m_vSide * spacing, IA_HeliPaintChannels.FindChannelPrefab(stock, first + 1), 60);
+		IEntity tail = SpawnTurned(world, origin + m_vSide * spacing, IA_HeliPaintChannels.FindChannelPrefab(stock, first + 2), -120);
+		failures = failures + Expect(side && nose && tail, "the airframe spawned on three channels");
+		if (!side)
+			return failures;
+		failures = failures + Expect(IA_HeliSkinManagerComponent.GetVehicleChannel(side) == first, "the first one is on the family's first channel");
+		Sleep(5000);
+
+		if (engine)
+		{
+			BaseVehicleControllerComponent controller = BaseVehicleControllerComponent.Cast(side.FindComponent(BaseVehicleControllerComponent));
+			if (controller)
+				controller.ForceStartEngine();
+			Sleep(8000);
+			if (controller)
+				Mark(string.Format("Engine on: %1", controller.IsEngineOn()));
+		}
+
+		VObject mesh = side.GetVObject();
+		Shot("livery_" + key + "_stock");
+
+		int surfaceCount = family.m_aSurfaces.Count();
+		int painted;
+		int channel;
+		foreach (IA_HeliSkinDef def : IA_HeliSkinCatalog.GetDefs())
+		{
+			for (channel = first; channel < first + 3; channel++)
+			{
+				painted = IA_HeliSkinPaint.Apply(channel, def.m_iId);
+			}
+			failures = failures + Expect(painted == surfaceCount, def.m_sKey + " paints every surface");
+			Sleep(2500);
+			Shot("livery_" + key + "_" + def.m_sKey);
+		}
+
+		for (channel = first; channel < first + 3; channel++)
+		{
+			IA_HeliSkinPaint.Apply(channel, IA_HeliSkinCatalog.SKIN_NONE);
+		}
+		Sleep(2500);
+		Shot("livery_" + key + "_restored");
+
+		failures = failures + Expect(!side.IsDeleted() && side.GetVObject() == mesh, "the hull kept its mesh");
+		return failures;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \param yaw degrees turned from side-on, about the vertical
+	protected IEntity SpawnTurned(BaseWorld world, vector origin, ResourceName prefab, float yaw)
+	{
+		float sine = Math.Sin(yaw * Math.DEG2RAD);
+		float cosine = Math.Cos(yaw * Math.DEG2RAD);
+		vector right = -m_vAway;
+		vector forward = m_vSide;
+		ref EntitySpawnParams params = new EntitySpawnParams();
+		params.TransformMode = ETransformMode.WORLD;
+		params.Transform[0] = right * cosine - forward * sine;
+		params.Transform[1] = vector.Up;
+		params.Transform[2] = right * sine + forward * cosine;
+		params.Transform[3] = origin;
+		IEntity entity = GetGame().SpawnEntityPrefab(Resource.Load(prefab), world, params);
+		Mark(string.Format("spawned %1 from %2 yaw %3", entity, prefab, yaw));
+		return entity;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -366,11 +557,11 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 		{
 			material = ResourceName.Empty;
 			if (materials[i].StartsWith("UH_1H_Body01"))
-				material = IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_BODY, 4);
+				material = IA_HeliPaintChannels.GetMaterial(0, 4);
 			else if (materials[i].StartsWith("UH_1H_Interior01"))
-				material = IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_INTERIOR_1, 4);
+				material = IA_HeliPaintChannels.GetMaterial(1, 4);
 			else if (materials[i].StartsWith("UH_1H_Interior02"))
-				material = IA_HeliPaintChannels.GetMaterial(IA_HeliPaintChannels.SURFACE_INTERIOR_2, 4);
+				material = IA_HeliPaintChannels.GetMaterial(2, 4);
 			if (material.IsEmpty())
 				continue;
 			remap = remap + string.Format("$remap '%1' '%2';", materials[i], material);

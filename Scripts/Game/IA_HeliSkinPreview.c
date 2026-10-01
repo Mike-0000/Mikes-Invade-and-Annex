@@ -36,7 +36,7 @@ class IA_HeliSkinPreview
 		pawn.GetWorld().QueryEntitiesBySphere(mat[3], SEARCH_RADIUS_M, finder.OnEntity, null, EQueryEntitiesFlags.DYNAMIC | EQueryEntitiesFlags.WITH_OBJECT);
 		IEntity vehicle = finder.m_Nearest;
 		if (!vehicle)
-			return string.Format("No helipad Huey within %1 m. Only a Huey spawned by a helipad takes skins.", SEARCH_RADIUS_M);
+			return string.Format("No helicopter with a paint channel within %1 m.", SEARCH_RADIUS_M);
 
 		IA_HeliSkinDef next = NextSkin(IA_HeliSkinCatalog.FindDef(skins.GetVehicleSkin(vehicle)));
 		int skinId = IA_HeliSkinCatalog.SKIN_NONE;

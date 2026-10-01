@@ -1,8 +1,11 @@
 #ifdef WORKBENCH
 //------------------------------------------------------------------------------------------------
 //! Play-mode probe for the pilot's paint bay. Opens a small world, starts game
-//! mode, stands a Huey on paint channel 1 in front of the camera, opens the
-//! paint bay over it and walks it through its states. Each state is announced
+//! mode, stands a helicopter on the first paint channel of its family in front
+//! of the camera, opens the paint bay over it and walks it through its states.
+//! -iaMenuFamily <key> picks the family (default uh1h); -iaMenuArt <key> draws
+//! it with another silhouette, an unknown key being the generic one a modded
+//! helicopter gets. Each state is announced
 //! in $profile:IA_HeliPaintMenuProbe.log as "shot <name>" and held for a moment,
 //! so a script watching the log can capture the window (the engine's own
 //! screenshot leaves the UI out).
@@ -16,13 +19,13 @@
 class IA_HeliPaintMenuProbe : WorkbenchPlugin
 {
 	protected static const string WORLD = "worlds/Showcase/PBR_Vehicles.ent";
-	protected static const ResourceName STOCK = "{70BAEEFC2D3FEE64}Prefabs/Vehicles/Helicopters/UH1H/UH1H.et";
+	protected static const string FAMILY = "uh1h";
 	protected static const int GAME_MODE_TIMEOUT_MS = 240000;
 	protected static const float DISTANCE_M = 24;
-	protected static const int CHANNEL = 1;
 
 	protected vector m_vSide;
 	protected vector m_vAway;
+	protected int m_iChannel;
 	protected int m_iFailures;
 
 	//------------------------------------------------------------------------------------------------
@@ -85,7 +88,23 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 		m_vAway = forward;
 		origin[1] = Math.Max(world.GetSurfaceY(origin[0], origin[2]), 0) + 0.3;
 
-		IEntity heli = Spawn(world, origin, IA_HeliPaintChannels.FindChannelPrefab(STOCK, CHANNEL));
+		// GetCLIParam empties its output when the argument is absent.
+		string key;
+		if (!System.GetCLIParam("iaMenuFamily", key) || key.IsEmpty())
+			key = FAMILY;
+		IA_HeliPaintFamily family = IA_HeliPaintChannels.FindFamily(key);
+		if (!family || family.m_aStockPrefabs.IsEmpty())
+		{
+			Fail("no paint family " + key);
+			return;
+		}
+		string art;
+		if (System.GetCLIParam("iaMenuArt", art) && !art.IsEmpty())
+			family.m_sArt = art;
+		m_iChannel = IA_HeliPaintChannels.ToChannel(family, 1);
+		Mark(string.Format("family %1 art %2 channel %3", family.m_sKey, family.m_sArt, m_iChannel));
+
+		IEntity heli = Spawn(world, origin, IA_HeliPaintChannels.FindChannelPrefab(family.m_aStockPrefabs[0], m_iChannel));
 		if (!heli)
 		{
 			Fail("the helicopter did not spawn");
@@ -96,7 +115,7 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 		ProbeInput();
 		ProbeMenu();
 
-		IA_HeliSkinPaint.Apply(CHANNEL, IA_HeliSkinCatalog.SKIN_NONE);
+		IA_HeliSkinPaint.Apply(m_iChannel, IA_HeliSkinCatalog.SKIN_NONE);
 		IA_HeliPaintMenu.ProbeEnd();
 		Sleep(1000);
 		Mark(string.Format("done failures=%1", m_iFailures));
@@ -126,7 +145,7 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 	//------------------------------------------------------------------------------------------------
 	protected void ProbeMenu()
 	{
-		int tanSkin = IA_HeliSkinCatalog.SKIN_HUEY_TAN;
+		int tanSkin = IA_HeliSkinCatalog.SKIN_DESERT_TAN;
 		int none = IA_HeliSkinCatalog.SKIN_NONE;
 		IA_HeliSkinDef def = IA_HeliSkinCatalog.FindDef(tanSkin);
 		if (!def)
@@ -138,7 +157,7 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 		int partial = required * 0.62;
 
 		// Stock paint, a rating most of the way to the tan skin.
-		IA_HeliPaintMenu.ProbeSet(true, CHANNEL, none, partial, false);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, partial, false);
 		GetGame().GetMenuManager().OpenMenu(ChimeraMenuPreset.IA_HeliPaintMenu);
 		Sleep(2500);
 		if (!IA_HeliPaintMenu.IsBayOpen())
@@ -159,12 +178,12 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 		Shot("refused");
 
 		// Rating unknown.
-		IA_HeliPaintMenu.ProbeSet(true, CHANNEL, none, IA_TransportPilotRecord.RATING_UNKNOWN, false);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, IA_TransportPilotRecord.RATING_UNKNOWN, false);
 		Sleep(1800);
 		Shot("syncing");
 
 		// Earned.
-		IA_HeliPaintMenu.ProbeSet(true, CHANNEL, none, required + 1840, false);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, required + 1840, false);
 		Sleep(3600);
 		Shot("ready");
 
@@ -174,8 +193,8 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 		Shot("painting");
 
 		// What the server's answer does: the channel is painted and the worn skin arrives.
-		IA_HeliSkinPaint.Apply(CHANNEL, tanSkin);
-		IA_HeliPaintMenu.ProbeSet(true, CHANNEL, tanSkin, required + 1840, false);
+		IA_HeliSkinPaint.Apply(m_iChannel, tanSkin);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, tanSkin, required + 1840, false);
 		Sleep(280);
 		Shot("applied");
 		Sleep(2500);
@@ -183,8 +202,8 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 
 		// An admin who has not earned it.
 		IA_HeliPaintMenu.ProbeFocus(none);
-		IA_HeliPaintMenu.ProbeSet(true, CHANNEL, none, partial, true);
-		IA_HeliSkinPaint.Apply(CHANNEL, none);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, partial, true);
+		IA_HeliSkinPaint.Apply(m_iChannel, none);
 		Sleep(600);
 		IA_HeliPaintMenu.ProbeFocus(tanSkin);
 		Sleep(4200);
