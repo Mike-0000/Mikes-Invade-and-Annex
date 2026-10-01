@@ -76,7 +76,32 @@ class TransportPilotTests(unittest.TestCase):
         self.assertTrue(defs)
         for key, material, required in defs:
             self.assertIn("('%s', %s)" % (key, required), sql)
-            self.assertTrue((ROOT / material).is_file(), material)
+
+        # A material without a GUID is unregistered: it resolves to a null GUID
+        # and is left out of a published build. IA_HeliSkinAssetCheck registers it.
+        materials = [material for _, material, _ in defs]
+        materials += re.findall(r'AddSlot\(\w+, "[^"]+", "([^"]+)"\)', catalog)
+        self.assertGreater(len(materials), len(defs), "the tan Huey repaints its interior too")
+        for material in materials:
+            guid, path = re.fullmatch(r"(\{[0-9A-F]{16}\})(.+\.emat)", material).groups()
+            if (ROOT / path).is_file():
+                self.assertIn('Name "%s"' % material, (ROOT / (path + ".meta")).read_text(encoding="utf-8"))
+            else:
+                # Only the game's own materials may be referenced without a file here.
+                self.assertTrue(path.startswith("Assets/Vehicles/"), material)
+                self.assertNotIn("/IA_", path)
+
+    def test_a_skin_can_repaint_several_slots_and_be_previewed_solo(self):
+        paint = method(source("IA_HeliSkinManagerComponent.c"), "PaintEntity")
+        self.assertIn("def.FindMaterial(materials[i])", paint)
+        # The preview paints locally; it must not assign the skin for everyone.
+        local = method(source("IA_HeliSkinManagerComponent.c"), "PaintLocal")
+        self.assertNotRegex(local, r"m_aSkinVehicles|m_aSkinIds|BumpMe")
+        preview = source("IA_HeliSkinPreview.c")
+        self.assertIn("skins.PaintLocal(", method(preview, "PaintNearest"))
+        self.assertNotRegex(preview, r"SetVehicleSkin|IA_TransportPilotStore|Rpc\(")
+        menu = (ROOT / "Scripts" / "Game" / "UI" / "Menus" / "IA_AdminConfigMenu.c").read_text(encoding="utf-8")
+        self.assertIn("IA_HeliSkinPreview.PaintNearest()", method(menu, "OnSkinPreview"))
 
     def test_feature_is_wired_into_the_mission(self):
         self.assertIn("IA_TransportPilotTracker.EnsureStarted();", source("IA_MissionInitializer.c"))

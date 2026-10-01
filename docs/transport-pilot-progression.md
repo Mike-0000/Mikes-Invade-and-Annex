@@ -123,8 +123,33 @@ When a pilot whose rating meets the threshold takes the pilot seat, the
 airframe is painted. It stays painted for the life of that vehicle, including
 after a different pilot takes over.
 
-To add a skin: add an `.emat`, one `AddDef` line in `IA_HeliSkinCatalog` with a
-new id and key, and one `transport_skin_thresholds` row.
+A skin lists one or more material slots. The tan Huey repaints the body and
+the two interior slots, which also covers the seats. Each tan material inherits
+the vanilla one and changes only its layer colours, so it keeps the vanilla
+textures and decals. This is the same technique as the game's own shark-nose
+and civilian Hueys, which assign a different material to the same body slot in
+the prefab; here it is done at runtime so no prefab variant is needed.
+
+To add a skin:
+
+1. Add the `.emat` files under `Assets/`, inheriting the vanilla material.
+2. Add one `AddDef` line in `IA_HeliSkinCatalog` with a new id and key, plus an
+   `AddSlot` line for each further slot.
+3. Run the Workbench plugin `IA_HeliSkinAssetCheck`. It registers new materials
+   (writing their `.emat.meta`), prints the `{GUID}path` the catalogue must
+   use, and checks that every slot exists on the airframe. Paste the names in
+   and run it again until it prints `PASS`. Commit the `.meta` files.
+4. Add one `transport_skin_thresholds` row.
+
+A vanilla material (for example the shark-nose body) can be referenced directly
+by its `{GUID}path`; steps 1 and the registration are then not needed.
+
+### Looking at a skin alone
+
+Admin menu, **HQ** tab, **Paint nearest heli**. It paints the nearest
+helicopter within 75 m that has a skin, on your screen only
+(`IA_HeliSkinPreview`), and steps to the next skin on each press. No rating is
+needed or earned and other players see stock paint.
 
 ## Pilot HUD
 
@@ -187,7 +212,8 @@ skips the server side: crediting, batching per pilot, and the RPC.
 - The pilot card: layout, fonts, timing and the unlock sound can be checked
   alone with the preview above. The multi-tick merge with real passengers
   still needs a flight; only its data and rules run in Workbench.
-- `SetObject` with `$remap` on a live helicopter and its slotted doors.
-- Referencing `IA_UH_1H_Body01_Tan.emat` by path; Workbench has to register the
-  file first.
-- The tan colour values.
+- `SetObject` with `$remap` on a live helicopter, its slotted doors and its
+  seats. Check with **Paint nearest heli**: body, doors, interior and seats
+  turn tan, and the paint survives getting in and flying.
+- The tan in a published build. The materials are registered and load in
+  Workbench, but only a packed build proves they ship.

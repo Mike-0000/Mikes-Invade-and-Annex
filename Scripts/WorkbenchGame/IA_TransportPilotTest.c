@@ -74,6 +74,11 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required, required + 30) == null, "an already unlocked skin is not reported again");
 		Check(IA_HeliSkinCatalog.FindNextLocked(0) == tan, "the next locked skin is the progress target");
 
+		// Slot names carry the vanilla material's GUID suffix, so they are matched by prefix.
+		Check(tan.FindMaterial("UH_1H_Body01_6224CA051369DE45").Contains("IA_UH_1H_Body01_Tan"), "the body slot gets the tan body material");
+		Check(tan.FindMaterial("UH_1H_Interior02_5AAD70D749C12511").Contains("IA_UH_1H_Interior02_Tan"), "a skin can repaint more than one slot");
+		Check(tan.FindMaterial("UH_1H_Glass_40760F2E59863081").IsEmpty(), "a slot the skin does not list keeps its material");
+
 		// The backend's threshold replaces the built-in default for every server.
 		IA_HeliSkinCatalog.SetRequiredPoints("huey_tan", required + 500);
 		Check(IA_HeliSkinCatalog.ResolveForPilot(required, huey) == null, "a raised central threshold locks the skin again");

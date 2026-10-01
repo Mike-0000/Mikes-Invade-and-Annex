@@ -1,4 +1,6 @@
 MatPBRMulti : "{6224CA051369DE45}Assets/Vehicles/Helicopters/UH1H/Data/UH_1H_Body01.emat" {
- Color_2 0.34 0.25 0.13 1
- Color_1 0.28 0.2 0.1 1
+ Color_4 0.004 0.004 0.004 1
+ Color_3 0.117 0.112 0.109 1
+ Color_2 0.004 0.004 0.004 1
+ Color_1 0.205 0.168 0.117 1
 }

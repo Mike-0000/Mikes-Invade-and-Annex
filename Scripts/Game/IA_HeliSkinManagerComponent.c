@@ -165,7 +165,23 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Doors and other slotted parts share the body material, so walk the hierarchy.
+	//! Paint one vehicle on this machine only, to look at a skin without earning it.
+	//! Nothing is replicated; a skin the server assigns later paints over it.
+	bool PaintLocal(IEntity vehicle, int skinId)
+	{
+		if (RplSession.Mode() == RplMode.Dedicated || !vehicle || !m_mPainted)
+			return false;
+
+		IA_HeliSkinDef def = IA_HeliSkinCatalog.FindDef(skinId);
+		if (!def || PaintTree(vehicle, def, 0) == 0)
+			return false;
+
+		m_mPainted.Set(vehicle.GetID(), skinId);
+		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Doors, seats and other slotted parts share the hull's materials, so walk the hierarchy.
 	//! \return number of entities repainted
 	protected int PaintTree(IEntity ent, IA_HeliSkinDef def, int depth)
 	{
@@ -198,12 +214,14 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 		string materials[256];
 		int numMats = mesh.GetMaterials(materials);
 		string remap = "";
+		ResourceName material;
 		int i;
 		for (i = 0; i < numMats; i++)
 		{
-			if (!materials[i].StartsWith(def.m_sSlotPrefix))
+			material = def.FindMaterial(materials[i]);
+			if (material.IsEmpty())
 				continue;
-			remap = remap + string.Format("$remap '%1' '%2';", materials[i], def.m_sMaterial);
+			remap = remap + string.Format("$remap '%1' '%2';", materials[i], material);
 		}
 
 		if (remap.IsEmpty())

@@ -565,6 +565,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		ref MUI_Button allBtn = runtime.CreateButton("Play all", "pilotPrevAll");
 		allBtn.MakeAccent();
 		allBtn.GetOnClicked().Insert(OnPilotPreviewAll);
+		ref MUI_Button skinBtn = runtime.CreateButton("Paint nearest heli", "pilotPrevSkin");
+		skinBtn.GetOnClicked().Insert(OnSkinPreview);
 
 		ref MUI_Row previewRow1 = runtime.CreateRow("pilotPrevRow1");
 		previewRow1.SetGap(12);
@@ -582,6 +584,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		previewRow3.SetGap(12);
 		previewRow3.AddChild(ownedBtn);
 		previewRow3.AddChild(allBtn);
+		previewRow3.AddChild(skinBtn);
 
 		m_PageHq.AddChild(previewLbl);
 		m_PageHq.AddChild(previewRow1);
@@ -596,6 +599,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(lateBtn, "Late unlock", "The unlock arriving on a rating card, after points were banked while the total was unknown.");
 		m_Hints.AddHint(ownedBtn, "Unlocked seat", "The rating card of a pilot who already owns the skin.");
 		m_Hints.AddHint(allBtn, "Play all", "Plays every preview in turn; each waits for the previous card to leave.");
+		m_Hints.AddHint(skinBtn, "Paint nearest heli", "Paints the nearest helicopter with an unlockable skin, on your screen only. Press again for the next skin. No rating is needed or earned.");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1705,6 +1709,17 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		IA_PilotHudPreview.PlayLocal(scene);
 
 		// The card is drawn on the HUD, which the pause menu hides while it is open.
+		MenuManager menus = GetGame().GetMenuManager();
+		menus.CloseMenuByPreset(ChimeraMenuPreset.PauseMenu);
+		menus.CloseMenu(this);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Solo test path for helicopter skins; the result is reported as a hint once the menus are gone.
+	protected void OnSkinPreview()
+	{
+		SCR_HintManagerComponent.ShowCustomHint(IA_HeliSkinPreview.PaintNearest(), "Skin preview", 6);
+
 		MenuManager menus = GetGame().GetMenuManager();
 		menus.CloseMenuByPreset(ChimeraMenuPreset.PauseMenu);
 		menus.CloseMenu(this);
