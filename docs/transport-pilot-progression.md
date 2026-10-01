@@ -37,11 +37,12 @@ Each point is also one session XP for the pilot.
 ## Global storage
 
 ```
-game server --POST /submitTransport------> invadestats (Azure) --> submit_transport_batch
-game server --POST /getTransportRatings--> invadestats (Azure) --> get_transport_ratings
+game server --POST /submitTransport------> invade-annex-api (Azure) --> submit_transport_batch
+game server --POST /getTransportRatings--> invade-annex-api (Azure) --> get_transport_ratings
 ```
 
 Schema and RPCs: `backend/supabase/migrations/20260930000000_transport_rating.sql`.
+API source: `backend/azure-functions`.
 
 - `player_transport_ratings`: one row per `player_bohemia_id` with `rating` and
   `insertions`. No server column; every registered server adds to the same row.
@@ -57,7 +58,8 @@ Schema and RPCs: `backend/supabase/migrations/20260930000000_transport_rating.sq
 
 ### Azure function contract
 
-Both routes are thin pass-throughs to the RPCs, called with the service role.
+Both routes are thin pass-throughs to the RPCs, called as the `ia_game_api`
+database role. An unknown or inactive server gets 403.
 
 `POST /submitTransport`
 

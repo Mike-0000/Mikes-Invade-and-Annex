@@ -4,9 +4,10 @@
 -- player_bohemia_id, added to by every registered server. Skin thresholds live
 -- here too, so eligibility is one central setting rather than a per-server one.
 --
--- The invadestats Azure Function calls the two RPCs with the service role:
+-- The game API (backend/azure-functions) calls the two RPCs:
 --   POST /submitTransport     -> submit_transport_batch
 --   POST /getTransportRatings -> get_transport_ratings
+-- Its role is granted EXECUTE in 20260930010000_game_api.sql.
 
 BEGIN;
 

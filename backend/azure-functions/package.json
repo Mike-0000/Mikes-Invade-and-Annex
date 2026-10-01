@@ -1,0 +1,14 @@
+{
+  "name": "invade-annex-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Game API for Mike's Invade & Annex: stats, leaderboards and transport ratings.",
+  "main": "src/functions/*.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.5.0",
+    "pg": "^8.13.0"
+  }
+}

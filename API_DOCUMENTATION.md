@@ -5,7 +5,9 @@ This document describes the Game API endpoints and internal script APIs used in 
 ## 1. Backend REST API
 These endpoints connect to the remote statistics server. The API handler is implemented in `IA_ApiHandler.c`.
 
-**Base URL:** `https://invadestats-awatbsduh4hngrb6.eastus-01.azurewebsites.net/api`
+**Base URL:** `https://invade-annex-api.azurewebsites.net/api`
+
+Source, hosting and deploy steps: `backend/azure-functions/README.md`. Builds released before October 2026 call the original `invadestats-awatbsduh4hngrb6.eastus-01.azurewebsites.net` app, which writes to the same database and has no source.
 
 ### `POST /registerServer`
 Registers the game server with the backend to receive a unique `serverGuid`.

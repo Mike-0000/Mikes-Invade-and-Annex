@@ -1,6 +1,6 @@
 //------------------------------------------------------------------------------------------------
 //! Server-side cache of global transport ratings. The stats backend (Supabase
-//! behind the invadestats API) owns the totals, so progress follows a player to
+//! behind the game API) owns the totals, so progress follows a player to
 //! every server; nothing is written to this server's profile.
 //!
 //! Points earned here are queued, sent in idempotent batches, and counted on top

@@ -122,8 +122,8 @@ class IA_ApiRegisterServerResponse
 
 class IA_ApiHandler
 {
-	string m_sApiBaseUrl = "https://invadestats-awatbsduh4hngrb6.eastus-01.azurewebsites.net/api";
-	//string m_sApiBaseUrl = "https://iadev-gdcxh2dkhsceacfg.eastus-01.azurewebsites.net/api";
+	// Source and deploy steps: backend/azure-functions.
+	string m_sApiBaseUrl = "https://invade-annex-api.azurewebsites.net/api";
 	protected ref RestCallback m_registerCallback;
 	protected ref RestCallback m_submitStatsCallback;
 	protected ref RestCallback m_fetchAllLeaderboardsCallback;
