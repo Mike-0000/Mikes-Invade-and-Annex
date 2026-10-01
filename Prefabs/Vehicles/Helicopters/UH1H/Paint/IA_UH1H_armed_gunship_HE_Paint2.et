@@ -1,6 +1,8 @@
 Vehicle : "{21E9A875C0A3C409}Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed_gunship_HE.et" {
  ID "5DB688595BAB2FD7"
  components {
+  IA_HeliPaintRigComponent "{D3A91F5C7E20D001}" {
+  }
   MeshObject "{51DAA09FEFBFC0E7}" {
    Materials {
     MaterialAssignClass "{6A2724F5D3531D56}" {

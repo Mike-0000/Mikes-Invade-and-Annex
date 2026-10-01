@@ -108,10 +108,22 @@ class TransportPilotTests(unittest.TestCase):
         # A mesh naming another channel's material would be recoloured with that channel's helicopter.
         for path, text in files.items():
             if path.endswith(".et"):
-                channel = re.search(r"_Paint(\d)\.et$", path).group(1)
-                assigned = re.findall(r'AssignedMaterial "\{\w+\}[^"]*_Paint(\d)\.emat"', text)
+                channel = re.search(r"_Paint(\d+)\.et$", path).group(1)
+                assigned = re.findall(r'AssignedMaterial "\{\w+\}[^"]*_Paint(\d+)\.emat"', text)
                 self.assertTrue(assigned, path)
                 self.assertEqual(set(assigned), {channel}, path)
+
+        # Channels 1 to 9 keep the GUIDs they shipped with; a two-digit channel fits the same four characters.
+        self.assertEqual(channels.guid("B", 0, 1), channels.GUID_PREFIX + "B001")
+        self.assertEqual(channels.guid("B", 0, 12), channels.GUID_PREFIX + "B012")
+        self.assertIn('if (channel < 10)\n\t\t\tguid = guid + "0";', method(table, "Guid"))
+
+        # Every hull carries the component that tells the server its channel is in use.
+        rig = source("IA_HeliPaintRigComponent.c")
+        self.assertIn("class %s : ScriptComponent" % channels.RIG_COMPONENT, rig)
+        for airframe in range(len(channels.AIRFRAMES)):
+            for channel in range(1, channels.CHANNEL_COUNT + 1):
+                self.assertIn('  %s "{%s}" {' % (channels.RIG_COMPONENT, channels.RIG_COMPONENT_ID), files[channels.hull_path(airframe, channel)])
 
     def test_a_skin_is_set_in_place_and_never_changes_or_replaces_the_helicopter(self):
         # Changing a vehicle hull's mesh from script frees the instance its animation is bound to.
@@ -135,13 +147,38 @@ class TransportPilotTests(unittest.TestCase):
         self.assertIn("IA_HeliSkinPaint.Apply(i + 1, wanted)", method(manager, "PaintAll"))
         self.assertIn("IA_HeliSkinManagerComponent", (ROOT / "Prefabs" / "GameMode_IA.et").read_text(encoding="utf-8"))
 
-        # A pad owns one channel and spawns its Huey as that channel's twin, in stock paint.
         respawner = source("IA_VehicleRespawner.c")
-        self.assertIn("m_iPaintChannel = FreePaintChannel();", method(respawner, "OnPostInit"))
-        spawn = method(respawner, "PerformSpawn")
-        self.assertLess(spawn.index("IA_HeliPaintChannels.FindChannelPrefab(vehiclePrefabToSpawn, m_iPaintChannel)"), spawn.index("Resource.Load(vehiclePrefabToSpawn)"))
-        self.assertIn("skins.SetVehicleSkin(newVehicle, IA_HeliSkinCatalog.SKIN_NONE)", spawn)
         self.assertNotIn("m_bSwapPending", respawner)
+
+    def test_a_stock_huey_spawns_on_a_free_paint_channel_whoever_spawns_it(self):
+        # A channel belongs to a live helicopter, not to a pad: the airframe says which one it holds.
+        rig = source("IA_HeliPaintRigComponent.c")
+        init = method(rig, "OnPostInit")
+        self.assertLess(init.index("if (!Replication.IsServer() || !GetGame().InPlayMode())"), init.index("s_aHolders[m_iChannel - 1] = owner"))
+        # The channel may still show the last airframe's skin and its pilot's choice.
+        self.assertLess(init.index("s_aHolders[m_iChannel - 1] = owner"), init.index("skins.ResetChannel(m_iChannel)"))
+        self.assertIn("s_aHolders[m_iChannel - 1] == owner", method(rig, "OnDelete"))
+        reset = method(source("IA_HeliSkinManagerComponent.c"), "ResetChannel")
+        self.assertLess(reset.index("if (!Replication.IsServer())"), reset.index("m_aPilotChoice[channel - 1] = false"))
+        self.assertIn("m_aChannelSkins[channel - 1] = IA_HeliSkinCatalog.SKIN_NONE", reset)
+
+        # An empty channel goes before one whose holder is a wreck; a deleted holder is no holder.
+        free = method(rig, "FindFreeChannel")
+        self.assertLess(free.index("if (!holder)\n\t\t\t\treturn channel;"), free.index("damage.IsDestroyed()"))
+        self.assertIn("holder.IsDeleted()", method(rig, "GetHolder"))
+
+        resolve = method(rig, "ResolveSpawnPrefab")
+        self.assertLess(resolve.index("if (!Replication.IsServer() || !GetGame().InPlayMode())"), resolve.index("FindFreeChannel()"))
+        self.assertLess(resolve.index("IsStockAirframe(prefab)"), resolve.index("FindFreeChannel()"))
+        self.assertIn("return IA_HeliPaintChannels.FindChannelPrefab(prefab, channel);", resolve)
+
+        # A pad and the editor (Game Master, build mode) both ask before they spawn.
+        spawn = method(source("IA_VehicleRespawner.c"), "PerformSpawn")
+        self.assertLess(spawn.index("IA_HeliPaintRigComponent.ResolveSpawnPrefab(vehiclePrefabToSpawn)"), spawn.index("Resource.Load(vehiclePrefabToSpawn)"))
+        self.assertNotIn("m_iPaintChannel", source("IA_VehicleRespawner.c"))
+        editor = source("Editor/IA_HeliPaintEditorSpawn.c")
+        self.assertIn("modded class SCR_EditableEntityComponentClass", editor)
+        self.assertIn("IA_HeliPaintRigComponent.ResolveSpawnPrefab(super.GetRandomVariant(prefab))", method(editor, "GetRandomVariant"))
 
     def test_a_skin_can_be_previewed_solo_without_a_rating(self):
         preview = source("IA_HeliSkinPreview.c")

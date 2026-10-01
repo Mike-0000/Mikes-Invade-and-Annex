@@ -130,11 +130,17 @@ mesh. A skin menu inside the helicopter can be built on the same call,
   prefab twin of a stock airframe whose hull and seats name their own copies of
   the three Huey materials (body and two interior). The copies inherit the
   vanilla materials unchanged, so a channel airframe looks stock.
-- There are four channels (`IA_HeliPaintChannels`), each with twins of the four
-  stock Hueys (`Prefabs/Vehicles/Helicopters/UH1H/Paint/`). Each helicopter pad
-  claims a free channel and spawns its Huey as that channel's twin, so one
-  channel is one helicopter. A world with more than four helicopter pads logs
-  one warning and the extra pads spawn stock, unpaintable Hueys.
+- There are twelve channels (`IA_HeliPaintChannels`), each with twins of the
+  four stock Hueys (`Prefabs/Vehicles/Helicopters/UH1H/Paint/`). A channel
+  belongs to one live helicopter. Each twin carries `IA_HeliPaintRigComponent`,
+  which tells the server its channel is held and gives it back when the
+  helicopter is deleted.
+- Whatever spawns a stock Huey asks `IA_HeliPaintRigComponent.ResolveSpawnPrefab`
+  first and spawns the twin on a free channel instead: a helicopter pad
+  (`IA_VehicleRespawner`) and the editor, for Game Master and build mode
+  (`IA_HeliPaintEditorSpawn`, on the editor's variant pick). An empty channel is
+  taken before one whose helicopter is a wreck. With all twelve held the server
+  logs one warning and the Huey spawns stock and cannot be repainted.
 - A skin (`IA_HeliSkinCatalog`) is up to three "paint" materials that are never
   put on a mesh. `IA_HeliSkinPaint.Apply` copies their layer colours, roughness,
   metalness and dirt values onto the channel's materials; stock paint is the
@@ -142,11 +148,13 @@ mesh. A skin menu inside the helicopter can be built on the same call,
 - `IA_HeliSkinManagerComponent` (on `GameMode_IA.et`) replicates which skin
   each channel shows. Every machine that renders paints its own materials when
   the value arrives, and on a timer for a player who joins later. A new
-  airframe on a pad starts in stock paint.
+  airframe starts in stock paint.
 
-Gun mounts and rotors keep their stock colour. A Huey placed by a Game Master,
-the shark-nose gunships and other helicopters have no paint channel and cannot
-be repainted.
+Gun mounts and rotors keep their stock colour. The shark-nose gunships, other
+helicopters, and a stock Huey that was not spawned by a pad or the editor (one
+saved in the world, or spawned by other code) have no paint channel and cannot
+be repainted. A stock Huey already in the world cannot be given a channel: that
+would mean replacing it.
 
 ### How a pilot gets it
 
@@ -207,7 +215,7 @@ closes with Back, with the key again, or when the pilot leaves the seat.
 | READY TO PAINT | Earned; select it to repaint |
 | LOCKED | Rating below the threshold; the bar and the blueprint show how far |
 | SYNCING | The rating has not arrived from the backend yet; nothing unlocks |
-| UNAVAILABLE | This helicopter has no paint channel (not spawned by a pad) |
+| UNAVAILABLE | This helicopter has no paint channel (not a Huey twin, or all twelve were held when it spawned) |
 | ADMIN OVERRIDE | An admin may paint a livery they have not earned |
 
 How it works:
@@ -231,7 +239,7 @@ How it works:
 
 Host a game alone (Workbench play mode or a listen server): the host is admin,
 so every livery is selectable with ADMIN OVERRIDE. Take the pilot's seat of a
-pad Huey and press **I**.
+Huey from a pad, or place one from the editor, and press **I**.
 
 The Workbench plugin **IA paint bay menu probe** (`IA_HeliPaintMenuProbe`)
 opens the bay over a Huey in a small world and steps it through every state. It
@@ -299,6 +307,12 @@ skips the server side: crediting, batching per pilot, and the RPC.
 - The pilot card: layout, fonts, timing and the unlock sound can be checked
   alone with the preview above. The multi-tick merge with real passengers
   still needs a flight; only its data and rules run in Workbench.
+- A Huey placed from the editor. In Workbench play mode the editor's variant
+  pick returned the twin on a free channel, the spawned twin held its channel
+  and a deleted one gave it back (`IA_HeliSkinLiveProbe -iaSkinMode 4`). Not
+  yet seen: a Huey placed through the Game Master or build-mode interface in a
+  mission, and the editor treating the twin as the Huey it was asked for
+  (budget, refund, its entry in the entity list).
 - Skins in multiplayer. In Workbench play mode a pad Huey was repainted with a
   pilot seated and the engine running, 20 times at 150 ms, with no crash, and
   only that Huey changed colour. Not yet seen: the repaint on other clients, on

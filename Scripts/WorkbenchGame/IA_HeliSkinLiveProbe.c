@@ -12,6 +12,8 @@
 //!   -iaSkinMode 2  as 1, but channel 3 is painted before its Huey exists
 //!   -iaSkinMode 3  the route that must not be used: SetObject $remap on the hull. It crashes
 //!                  the engine a frame later; kept to prove this probe sees that.
+//!   -iaSkinMode 4  how a stock Huey gets a channel: the editor's variant pick returns the twin on
+//!                  a free channel, and a deleted helicopter gives its channel back.
 //! Add 100 to run the engine first, 200 to seat a pilot first (300 for both).
 //------------------------------------------------------------------------------------------------
 [WorkbenchPluginAttribute(name: "IA helicopter skin live probe", wbModules: {"ResourceManager"})]
@@ -104,7 +106,16 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 		bool crewed = setup >= 2;
 		int failures;
 
-		// Painted before its helicopter exists: a pad's channel keeps its skin between airframes.
+		if (technique == 4)
+		{
+			failures = ProbeSpawnRoute(world, origin);
+			Mark(string.Format("survived failures=%1", failures));
+			editor.SwitchToEditMode();
+			Sleep(1000);
+			return failures;
+		}
+
+		// Painted before its helicopter exists: a channel keeps its skin until the next airframe takes it.
 		int tanSkin = IA_HeliSkinCatalog.SKIN_HUEY_TAN;
 		if (technique == 2)
 			Mark(string.Format("channel 3 painted early, %1 surfaces", IA_HeliSkinPaint.Apply(3, tanSkin)));
@@ -224,6 +235,52 @@ class IA_HeliSkinLiveProbe : WorkbenchPlugin
 			failures = failures + 1;
 		}
 		return failures;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! How a stock Huey gets a channel: the editor's variant pick hands out the twin on a channel no
+	//! live helicopter holds, and a deleted helicopter gives its channel back.
+	protected int ProbeSpawnRoute(BaseWorld world, vector origin)
+	{
+		int failures;
+		ResourceName picked = SCR_EditableEntityComponentClass.GetRandomVariant(STOCK);
+		failures = failures + Expect(IA_HeliPaintChannels.FindChannel(picked) == 1, "the editor's pick for a stock Huey is its channel 1 twin: " + picked);
+
+		IEntity first = Spawn(world, origin - m_vSide * SPACING_M, picked);
+		Sleep(2000);
+		failures = failures + Expect(first && IA_HeliPaintRigComponent.GetHolder(1) == first, "the spawned twin holds channel 1");
+		failures = failures + Expect(IA_HeliSkinManagerComponent.GetVehicleChannel(first) == 1, "the spawned twin can be repainted");
+
+		picked = SCR_EditableEntityComponentClass.GetRandomVariant(STOCK);
+		failures = failures + Expect(IA_HeliPaintChannels.FindChannel(picked) == 2, "the next pick is the channel 2 twin: " + picked);
+		IEntity second = Spawn(world, origin + m_vSide * SPACING_M, picked);
+		Sleep(2000);
+		failures = failures + Expect(second && IA_HeliPaintRigComponent.GetHolder(2) == second, "the second twin holds channel 2");
+		failures = failures + Expect(IA_HeliPaintRigComponent.FindFreeChannel() == 3, "channel 3 is the next free one");
+
+		ResourceName other = "Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et";
+		failures = failures + Expect(IA_HeliPaintRigComponent.ResolveSpawnPrefab(other) == other, "another helicopter is left as it is");
+
+		if (first)
+			SCR_EntityHelper.DeleteEntityAndChildren(first);
+		Sleep(2000);
+		failures = failures + Expect(!IA_HeliPaintRigComponent.GetHolder(1), "a deleted helicopter gives its channel back");
+		failures = failures + Expect(IA_HeliPaintRigComponent.FindFreeChannel() == 1, "channel 1 is free again");
+		failures = failures + Expect(second && !second.IsDeleted() && IA_HeliPaintRigComponent.GetHolder(2) == second, "the other helicopter keeps its channel");
+		return failures;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected int Expect(bool condition, string what)
+	{
+		if (condition)
+		{
+			Mark("ok: " + what);
+			return 0;
+		}
+		Mark("FAIL: " + what);
+		Print("[IA][HeliSkinLiveProbe] FAIL: " + what, LogLevel.ERROR);
+		return 1;
 	}
 
 	//------------------------------------------------------------------------------------------------

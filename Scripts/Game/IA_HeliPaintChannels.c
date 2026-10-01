@@ -11,7 +11,7 @@
 class IA_HeliPaintChannels
 {
 	static const int CHANNEL_NONE = 0;
-	static const int CHANNEL_COUNT = 4;
+	static const int CHANNEL_COUNT = 12;
 
 	static const int SURFACE_BODY = 0;
 	static const int SURFACE_INTERIOR_1 = 1;
@@ -80,8 +80,11 @@ class IA_HeliPaintChannels
 	//------------------------------------------------------------------------------------------------
 	protected static string Guid(string kind, int index, int channel)
 	{
+		// The channel is two decimal digits.
 		string guid = "{" + GUID_PREFIX + kind;
-		guid = guid + index.ToString() + "0";
+		guid = guid + index.ToString();
+		if (channel < 10)
+			guid = guid + "0";
 		guid = guid + channel.ToString() + "}";
 		return guid;
 	}
@@ -101,6 +104,14 @@ class IA_HeliPaintChannels
 		if (index < 0)
 			return CHANNEL_NONE;
 		return index % CHANNEL_COUNT + 1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return true for a stock airframe that has channel variants
+	static bool IsStockAirframe(ResourceName prefab)
+	{
+		EnsureTables();
+		return IndexOf(s_aStockPrefabs, prefab) >= 0;
 	}
 
 	//------------------------------------------------------------------------------------------------

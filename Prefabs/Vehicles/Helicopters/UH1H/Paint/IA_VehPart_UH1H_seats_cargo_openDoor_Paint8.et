@@ -1,0 +1,17 @@
+GenericEntity : "{5C4D9B53495B219A}Prefabs/Vehicles/Helicopters/UH1H/VehParts/Seats/VehPart_UH1H_seats_cargo_openDoor.et" {
+ ID "4B42E71698F5739C"
+ components {
+  MeshObject "{4B42E716914465B9}" {
+   Materials {
+    MaterialAssignClass "{B86F066322691D80}" {
+     SourceMaterial "UH_1H_Interior01_04455994F64CAB1E"
+     AssignedMaterial "{D3A91F5C7E20A108}Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Interior01_Paint8.emat"
+    }
+    MaterialAssignClass "{A1798B0E6C61F45B}" {
+     SourceMaterial "UH_1H_Interior02_5AAD70D749C12511"
+     AssignedMaterial "{D3A91F5C7E20A208}Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Interior02_Paint8.emat"
+    }
+   }
+  }
+ }
+}

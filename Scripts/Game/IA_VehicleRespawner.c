@@ -32,8 +32,6 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 
 	// Server: every helicopter pad, for IA_HeliSkinPadService.
 	protected static ref array<IA_VehicleRespawner> s_aHeliPads = {};
-	// Server: paint channel this pad's helicopters spawn on, so each can wear its own skin.
-	protected int m_iPaintChannel = IA_HeliPaintChannels.CHANNEL_NONE;
 
 	//------------------------------------------------------------------------------------------------
 	static array<IA_VehicleRespawner> GetHeliPads()
@@ -68,12 +66,7 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			return;
 
 		if (IsHeliPad())
-		{
-			m_iPaintChannel = FreePaintChannel();
 			s_aHeliPads.Insert(this);
-			if (m_iPaintChannel == IA_HeliPaintChannels.CHANNEL_NONE)
-				Print(string.Format("[IA][HeliSkin] More helipads than the %1 paint channels; this pad's helicopters keep stock paint.", IA_HeliPaintChannels.CHANNEL_COUNT), LogLevel.WARNING);
-		}
 
 		if (m_fRespawnCheckInterval <= 0)
 			m_fRespawnCheckInterval = DEFAULT_RESPAWN_INTERVAL_S;
@@ -85,26 +78,6 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 	
 		// Schedule periodic check for respawning
 		GetGame().GetCallqueue().CallLater(CheckVehicleStatus, m_fRespawnCheckInterval * 1000, true);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	//! \return a paint channel no other pad uses, CHANNEL_NONE when all are taken
-	protected static int FreePaintChannel()
-	{
-		bool taken;
-		int channel;
-		for (channel = 1; channel <= IA_HeliPaintChannels.CHANNEL_COUNT; channel++)
-		{
-			taken = false;
-			foreach (IA_VehicleRespawner pad : s_aHeliPads)
-			{
-				if (pad && pad.m_iPaintChannel == channel)
-					taken = true;
-			}
-			if (!taken)
-				return channel;
-		}
-		return IA_HeliPaintChannels.CHANNEL_NONE;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -356,10 +329,8 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			}
 		}
 		
-		// A Huey spawns as its twin on this pad's paint channel; anything else has none and spawns as it is.
-		ResourceName paintable = IA_HeliPaintChannels.FindChannelPrefab(vehiclePrefabToSpawn, m_iPaintChannel);
-		if (!paintable.IsEmpty())
-			vehiclePrefabToSpawn = paintable;
+		// A Huey spawns as its twin on a free paint channel; anything else has none and spawns as it is.
+		vehiclePrefabToSpawn = IA_HeliPaintRigComponent.ResolveSpawnPrefab(vehiclePrefabToSpawn);
 
 		Resource resource = Resource.Load(vehiclePrefabToSpawn);
 		if (!resource || !resource.IsValid())
@@ -379,11 +350,6 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 		{
 			//Print(string.Format("IA_VehicleRespawner %1: Successfully spawned %2. New entity: %3", m_RespawnerOwnerEntity, vehiclePrefabToSpawn, newVehicle), LogLevel.DEBUG);
 			m_RespawnerSpawnedVehicle = newVehicle; // Update the reference to the newly spawned vehicle
-
-			// The channel may still show the skin of the airframe this one replaces.
-			IA_HeliSkinManagerComponent skins = IA_HeliSkinManagerComponent.GetInstance();
-			if (skins)
-				skins.SetVehicleSkin(newVehicle, IA_HeliSkinCatalog.SKIN_NONE);
 		}
 		else
 		{

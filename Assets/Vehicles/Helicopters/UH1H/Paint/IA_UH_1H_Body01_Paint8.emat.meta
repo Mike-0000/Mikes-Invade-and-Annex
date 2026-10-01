@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{D3A91F5C7E20A008}Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Body01_Paint8.emat"
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass XBOX_SERIES : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass PS5 : PC {
+  }
+  EMATResourceClass HEADLESS : PC {
+  }
+ }
+}

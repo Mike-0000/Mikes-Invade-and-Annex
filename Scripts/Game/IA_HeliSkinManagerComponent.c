@@ -41,7 +41,7 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 		if (!prefab)
 			return IA_HeliPaintChannels.CHANNEL_NONE;
 
-		// A wreck stays where it fell while the pad hands its channel to the next airframe.
+		// A wreck stays where it fell while its channel may go to the next airframe.
 		DamageManagerComponent damage = DamageManagerComponent.Cast(vehicle.FindComponent(DamageManagerComponent));
 		if (damage && damage.IsDestroyed())
 			return IA_HeliPaintChannels.CHANNEL_NONE;
@@ -117,7 +117,6 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 		if (skinId != IA_HeliSkinCatalog.SKIN_NONE && !IA_HeliSkinCatalog.FindDef(skinId))
 			return false;
 
-		// A new airframe on the pad is set to stock without the flag, which clears it.
 		m_aPilotChoice[channel - 1] = pilotChoice;
 		if (m_aChannelSkins[channel - 1] == skinId)
 			return true;
@@ -133,6 +132,24 @@ class IA_HeliSkinManagerComponent : SCR_BaseGameModeComponent
 		// A hosting or solo machine paints its own copy now.
 		PaintAll();
 		return true;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: a new airframe took this channel, so it starts in stock paint with no pilot's choice.
+	void ResetChannel(int channel)
+	{
+		if (!Replication.IsServer())
+			return;
+		if (channel < 1 || channel > m_aChannelSkins.Count() || channel > m_aPilotChoice.Count())
+			return;
+
+		m_aPilotChoice[channel - 1] = false;
+		if (m_aChannelSkins[channel - 1] == IA_HeliSkinCatalog.SKIN_NONE)
+			return;
+
+		m_aChannelSkins[channel - 1] = IA_HeliSkinCatalog.SKIN_NONE;
+		Replication.BumpMe();
+		PaintAll();
 	}
 
 	//------------------------------------------------------------------------------------------------

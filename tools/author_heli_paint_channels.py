@@ -5,7 +5,8 @@ UH-1H material recolours every Huey. A paint channel is a prefab variant of a
 stock airframe whose hull and seats name their own copies of those materials;
 the game recolours a channel's copies and only that helicopter changes. The
 copies inherit the vanilla materials unchanged, so a channel airframe looks
-stock until IA_HeliSkinPaint sets a skin's colours on it.
+stock until IA_HeliSkinPaint sets a skin's colours on it. Each hull also carries
+IA_HeliPaintRigComponent, which tells the server which channels are in use.
 
 Names and GUIDs follow one pattern that IA_HeliPaintChannels rebuilds in
 script. Run this after changing CHANNEL_COUNT, an airframe or a surface, open
@@ -20,8 +21,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-CHANNEL_COUNT = 4
+CHANNEL_COUNT = 12
 GUID_PREFIX = "D3A91F5C7E20"
+# Component that tells the server which live helicopter holds a channel, and its id in the hull prefabs.
+RIG_COMPONENT = "IA_HeliPaintRigComponent"
+RIG_COMPONENT_ID = "D3A91F5C7E20D001"
 MATERIAL_DIR = "Assets/Vehicles/Helicopters/UH1H/"
 PREFAB_DIR = "Prefabs/Vehicles/Helicopters/UH1H/"
 SEAT_DIR = PREFAB_DIR + "VehParts/Seats/"
@@ -55,7 +59,7 @@ PLATFORMS = ("XBOX_ONE", "XBOX_SERIES", "PS4", "PS5", "HEADLESS")
 
 
 def guid(kind, index, channel):
-    return "%s%s%d0%d" % (GUID_PREFIX, kind, index, channel)
+    return "%s%s%d%02d" % (GUID_PREFIX, kind, index, channel)
 
 
 def material_path(surface, channel):
@@ -108,7 +112,8 @@ def seat_text(seat, channel):
 def hull_text(airframe, channel):
     stock_guid, name, gunners, cargo = AIRFRAMES[airframe]
     lines = ['Vehicle : "{%s}%s%s.et" {' % (stock_guid, PREFAB_DIR, name)]
-    lines += [' ID "5DB688595BAB2FD7"', " components {", '  MeshObject "{51DAA09FEFBFC0E7}" {', "   Materials {"]
+    lines += [' ID "5DB688595BAB2FD7"', " components {", '  %s "{%s}" {' % (RIG_COMPONENT, RIG_COMPONENT_ID), "  }"]
+    lines += ['  MeshObject "{51DAA09FEFBFC0E7}" {', "   Materials {"]
     lines += assignments(hull_path(airframe, channel), range(len(SURFACES)), channel, "    ")
     lines += ["   }", "  }", '  SlotManagerComponent "{55BCE45E438E4CFF}" {', "   Slots {"]
     for slot, seat in (("Seat_Gunners", gunners), ("Seat_Cargo", cargo)):
