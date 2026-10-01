@@ -18,6 +18,30 @@ class IA_TransportScoring
 	static const int PASSENGER_COOLDOWN_MS = 120000;
 	//! How long a dismounted passenger may take to reach the ground alive.
 	static const int SETTLE_TIMEOUT_MS = 120000;
+	//! How long a credited dropoff waits for a pilot who has no HUD to show it on.
+	static const int DROPOFF_EXPIRE_MS = 60000;
+	//! Time out of the pilot seat after which sitting down again is a new seat.
+	static const int PILOT_SEAT_GAP_MS = 5000;
+	//! Least time between a card and the next unprompted rating card for one pilot.
+	static const int STATUS_COOLDOWN_MS = 120000;
+
+	//------------------------------------------------------------------------------------------------
+	//! \param lastSeenMs tick the player was last seen in a pilot seat, negative when never
+	static bool IsNewPilotSeat(int nowMs, int lastSeenMs)
+	{
+		if (lastSeenMs < 0)
+			return true;
+		return nowMs - lastSeenMs > PILOT_SEAT_GAP_MS;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \param lastCardMs tick of the pilot's previous card, negative when none
+	static bool IsStatusDue(int nowMs, int lastCardMs)
+	{
+		if (lastCardMs < 0)
+			return true;
+		return nowMs - lastCardMs >= STATUS_COOLDOWN_MS;
+	}
 
 	//------------------------------------------------------------------------------------------------
 	//! \param edgeDistance metres from the dropoff to the nearest active objective circle, 0 inside it

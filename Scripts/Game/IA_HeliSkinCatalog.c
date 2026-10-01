@@ -109,6 +109,22 @@ class IA_HeliSkinCatalog
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Highest skin this total has unlocked on any airframe; null when none is.
+	static IA_HeliSkinDef FindBestUnlocked(int points)
+	{
+		EnsureDefs();
+		IA_HeliSkinDef best = null;
+		foreach (IA_HeliSkinDef def : s_aDefs)
+		{
+			if (!IsUnlocked(def, points))
+				continue;
+			if (!best || def.m_iRequiredPoints > best.m_iRequiredPoints)
+				best = def;
+		}
+		return best;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	//! Skin whose threshold lies in (before, after]; null when none was crossed.
 	static IA_HeliSkinDef FindNewlyUnlocked(int before, int after)
 	{

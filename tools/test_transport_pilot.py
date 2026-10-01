@@ -83,6 +83,51 @@ class TransportPilotTests(unittest.TestCase):
         self.assertIn("IA_HeliSkinManagerComponent", (ROOT / "Prefabs" / "GameMode_IA.et").read_text(encoding="utf-8"))
         self.assertIn('messageType == "PilotProgress"', source("IA_ChimeraCharacter.c"))
 
+    def test_a_landing_is_one_card_not_one_toast_per_passenger(self):
+        tracker = source("IA_TransportPilotTracker.c")
+        # Crediting a passenger only accumulates; nothing is sent per passenger.
+        award = method(tracker, "Award")
+        self.assertNotIn("SetUIOne", award)
+        self.assertIn("dropoff.Add(points, edge)", award)
+        self.assertEqual(tracker.count('SetUIOne("PilotProgress"'), 2)
+        for name in ("FlushDropoffs", "FlushStatus"):
+            self.assertIn('SetUIOne("PilotProgress", payload.Pack(), pilotId)', method(tracker, name))
+        tick = method(tracker, "Tick")
+        self.assertLess(tick.index("TickPlayer("), tick.index("FlushDropoffs(pm, now)"))
+        self.assertLess(tick.index("FlushDropoffs(pm, now)"), tick.index("FlushStatus(pm, players, now)"))
+
+        # The client keeps pilot progress out of the toast queue and merges into an open card.
+        character = source("IA_ChimeraCharacter.c")
+        branch = character[character.index('messageType == "PilotProgress"'):]
+        branch = branch[:branch.index("}")]
+        self.assertIn("ShowPilotProgress(taskTitle)", branch)
+        self.assertNotIn("QueueNotification", branch)
+
+        display = source("IA_NotificationDisplay.c")
+        build = method(display, "BuildToastUI")
+        self.assertIn("IA_PilotHud.Create(m_Runtime)", build)
+        self.assertIn("overlay.AddChild(m_PilotHud)", build)
+        show = method(display, "ShowPilotProgress")
+        self.assertLess(show.index("m_PilotHud.Present(data)"), show.index("m_PendingPilotLine"))
+        self.assertNotIn("QueueNotification", show)
+
+        hud = (ROOT / "Scripts" / "Game" / "UI" / "IA_PilotHud.c").read_text(encoding="utf-8")
+        present = method(hud, "Present")
+        self.assertLess(present.index("MergeUpdate(data)"), present.index("BeginIntro()"))
+        self.assertIn("m_Data.Merge(data)", method(hud, "MergeUpdate"))
+
+    def test_unlock_is_announced_once_with_the_points_that_crossed_it(self):
+        tracker = source("IA_TransportPilotTracker.c")
+        fill = method(tracker, "FillProgress")
+        self.assertIn("FindNewlyUnlocked(rating - earned, rating)", fill)
+        # Points banked while the total was unknown still count towards the crossing.
+        self.assertIn("dropoff.m_iPoints + TakeUnreported(guid)", method(tracker, "FlushDropoffs"))
+        status = method(tracker, "FlushStatus")
+        self.assertRegex(status, r"FillProgress\(payload, rating, earned\);\s*m_mUnreported\.Remove\(guid\);")
+        hud = (ROOT / "Scripts" / "Game" / "UI" / "IA_PilotHud.c").read_text(encoding="utf-8")
+        self.assertEqual(hud.count("SCR_UISoundEntity.SoundEvent("), 1)
+        self.assertIn("SCR_UISoundEntity.SoundEvent(", method(hud, "TickUnlock"))
+
 
 if __name__ == "__main__":
     unittest.main()

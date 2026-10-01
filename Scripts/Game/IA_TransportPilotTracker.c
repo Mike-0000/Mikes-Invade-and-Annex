@@ -5,6 +5,11 @@
 //! An insertion is one living player who rode as a passenger in a player-piloted
 //! helicopter, left it while it was still intact, and reached the ground alive
 //! near an objective of the active AO. Rules live in IA_TransportScoring.
+//!
+//! The pilot is told through one card (IA_PilotHud), not one message per
+//! passenger: credits are batched per pilot and reported at most once a tick as
+//! an IA_PilotDropoffPayload, which the card merges while it is open. Taking a
+//! pilot seat shows the same card with the rating alone.
 //------------------------------------------------------------------------------------------------
 class IA_TransportPilotTracker
 {
@@ -15,6 +20,14 @@ class IA_TransportPilotTracker
 	protected ref map<int, ref IA_TransportRide> m_mRides;
 	// Tick of each passenger's last credited insertion, keyed by identity so a reconnect cannot reset it.
 	protected ref map<string, int> m_mLastCreditMs;
+	// Credits not yet shown to their pilot, keyed by pilot identity.
+	protected ref map<string, ref IA_TransportDropoff> m_mDropoffs;
+	// Points a pilot earned whose total they have not seen: the rating was unknown or they had no HUD.
+	protected ref map<string, int> m_mUnreported;
+	// Pilots owed a rating card, identity to player id.
+	protected ref map<string, int> m_mStatusOwed;
+	protected ref map<string, int> m_mPilotSeenMs;
+	protected ref map<string, int> m_mLastCardMs;
 
 	//------------------------------------------------------------------------------------------------
 	static void EnsureStarted()
@@ -31,6 +44,11 @@ class IA_TransportPilotTracker
 	{
 		m_mRides = new map<int, ref IA_TransportRide>();
 		m_mLastCreditMs = new map<string, int>();
+		m_mDropoffs = new map<string, ref IA_TransportDropoff>();
+		m_mUnreported = new map<string, int>();
+		m_mStatusOwed = new map<string, int>();
+		m_mPilotSeenMs = new map<string, int>();
+		m_mLastCardMs = new map<string, int>();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -49,6 +67,8 @@ class IA_TransportPilotTracker
 			TickPlayer(pm, playerId, now);
 		}
 		IA_TransportPilotStore.GetInstance().SendQueuedRequests();
+		FlushDropoffs(pm, now);
+		FlushStatus(pm, players, now);
 
 		// Riders who disconnected never reach the per-player pass above.
 		ref array<int> stale = {};
@@ -77,7 +97,7 @@ class IA_TransportPilotTracker
 		IEntity vehicle = CompartmentAccessComponent.GetVehicleIn(pawn);
 		if (vehicle && IsHelicopter(vehicle))
 		{
-			TickAboard(pm, playerId, pawn, vehicle);
+			TickAboard(pm, playerId, pawn, vehicle, now);
 			return;
 		}
 
@@ -119,7 +139,7 @@ class IA_TransportPilotTracker
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void TickAboard(PlayerManager pm, int playerId, IEntity pawn, IEntity vehicle)
+	protected void TickAboard(PlayerManager pm, int playerId, IEntity pawn, IEntity vehicle, int now)
 	{
 		int pilotId = 0;
 		Vehicle veh = Vehicle.Cast(vehicle);
@@ -134,6 +154,7 @@ class IA_TransportPilotTracker
 		{
 			m_mRides.Remove(playerId);
 			ApplyPilotSkin(pm, playerId, vehicle);
+			NotePilotSeat(playerId, now);
 			return;
 		}
 
@@ -188,14 +209,13 @@ class IA_TransportPilotTracker
 			return;
 
 		m_mLastCreditMs.Set(passengerGuid, now);
-		Award(ride, points, edge);
+		Award(ride, points, edge, now);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void Award(IA_TransportRide ride, int points, float edge)
+	protected void Award(IA_TransportRide ride, int points, float edge, int now)
 	{
 		IA_TransportPilotStore store = IA_TransportPilotStore.GetInstance();
-		int before = store.GetRating(ride.m_sPilotGuid);
 		IA_TransportPilotRecord record = store.AddInsertion(ride.m_sPilotGuid, ride.m_sPilotName, points);
 		if (!record)
 			return;
@@ -207,38 +227,213 @@ class IA_TransportPilotTracker
 			Print(string.Format("[IA][TransportPilot] Insertion credited: +%1 at %2 m from the objective.", points, Math.Round(edge)), LogLevel.NORMAL);
 		}
 
-		// Until the global total arrives the points are banked but no total can be shown.
-		int rating = record.GetRating();
-		string message = string.Format("Combat insertion +%1 transport rating", points);
-		if (rating >= 0)
+		// Passengers of one landing settle over several ticks; FlushDropoffs reports them together.
+		IA_TransportDropoff dropoff = m_mDropoffs.Get(ride.m_sPilotGuid);
+		if (!dropoff)
 		{
-			message = string.Format("Combat insertion +%1 transport rating (%2 total)", points, rating);
-			IA_HeliSkinDef unlocked = IA_HeliSkinCatalog.FindNewlyUnlocked(before, rating);
-			IA_HeliSkinDef next = IA_HeliSkinCatalog.FindNextLocked(rating);
-			if (unlocked && before >= 0)
-			{
-				IA_Log.Info(string.Format("[IA][TransportPilot] Skin %1 unlocked at rating %2.", unlocked.m_sKey, rating));
-				message = string.Format("Skin unlocked: %1. It is applied when you take the pilot seat.", unlocked.m_sDisplayName);
-			}
-			else if (next)
-			{
-				message = message + string.Format(" - %1 at %2", next.m_sDisplayName, next.m_iRequiredPoints);
-			}
+			ref IA_TransportDropoff started = new IA_TransportDropoff();
+			started.m_sPilotGuid = ride.m_sPilotGuid;
+			started.m_iFirstMs = now;
+			m_mDropoffs.Set(ride.m_sPilotGuid, started);
+			dropoff = started;
 		}
-		NotifyPilot(ride.m_iPilotPlayerId, ride.m_sPilotGuid, message);
+		dropoff.m_iPilotPlayerId = ride.m_iPilotPlayerId;
+		dropoff.Add(points, edge);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void NotifyPilot(int pilotId, string pilotGuid, string message)
+	//! Report each pilot's batched credits as one card update.
+	protected void FlushDropoffs(PlayerManager pm, int now)
 	{
-		PlayerManager pm = GetGame().GetPlayerManager();
-		// Player ids are reused after a disconnect, so confirm it is still the same pilot.
-		if (!pm || SCR_PlayerIdentityUtils.GetPlayerIdentityId(pilotId) != pilotGuid)
+		if (m_mDropoffs.IsEmpty())
 			return;
 
-		SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pm.GetPlayerControlledEntity(pilotId));
-		if (character)
-			character.SetUIOne("PilotProgress", message, pilotId);
+		IA_TransportPilotStore store = IA_TransportPilotStore.GetInstance();
+		ref array<string> done = {};
+		foreach (string guid, IA_TransportDropoff dropoff : m_mDropoffs)
+		{
+			int pilotId = dropoff.m_iPilotPlayerId;
+			// Player ids are reused after a disconnect, so confirm it is still the same pilot.
+			if (SCR_PlayerIdentityUtils.GetPlayerIdentityId(pilotId) != guid)
+			{
+				done.Insert(guid);
+				continue;
+			}
+
+			SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pm.GetPlayerControlledEntity(pilotId));
+			if (!character)
+			{
+				// A dead pilot has no HUD. The points are banked either way; the total follows on a rating card.
+				if (now - dropoff.m_iFirstMs >= IA_TransportScoring.DROPOFF_EXPIRE_MS)
+				{
+					OweStatus(guid, pilotId, dropoff.m_iPoints);
+					done.Insert(guid);
+				}
+				continue;
+			}
+
+			ref IA_PilotDropoffPayload payload = new IA_PilotDropoffPayload();
+			payload.m_iKind = IA_PilotDropoffPayload.KIND_DROP;
+			payload.m_iTroops = dropoff.m_iTroops;
+			payload.m_iPoints = dropoff.m_iPoints;
+			payload.m_iEdgeM = dropoff.AverageEdge();
+
+			int rating = store.GetRating(guid);
+			if (rating < 0)
+			{
+				// Until the global total arrives the points are banked but no total can be shown.
+				OweStatus(guid, pilotId, dropoff.m_iPoints);
+			}
+			else
+			{
+				FillProgress(payload, rating, dropoff.m_iPoints + TakeUnreported(guid));
+				m_mStatusOwed.Remove(guid);
+			}
+
+			character.SetUIOne("PilotProgress", payload.Pack(), pilotId);
+			m_mLastCardMs.Set(guid, now);
+			done.Insert(guid);
+		}
+
+		foreach (string doneGuid : done)
+		{
+			m_mDropoffs.Remove(doneGuid);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Send the rating card to pilots who took a seat, or whose total arrived after their card.
+	protected void FlushStatus(PlayerManager pm, notnull array<int> players, int now)
+	{
+		if (m_mStatusOwed.IsEmpty())
+			return;
+
+		IA_TransportPilotStore store = IA_TransportPilotStore.GetInstance();
+		ref array<string> done = {};
+		foreach (string guid, int pilotId : m_mStatusOwed)
+		{
+			if (!players.Contains(pilotId) || SCR_PlayerIdentityUtils.GetPlayerIdentityId(pilotId) != guid)
+			{
+				m_mUnreported.Remove(guid);
+				done.Insert(guid);
+				continue;
+			}
+
+			// A dropoff about to be reported carries the total itself.
+			if (m_mDropoffs.Contains(guid))
+				continue;
+
+			int rating = store.GetRating(guid);
+			if (rating < 0)
+			{
+				store.RequestRating(guid, pm.GetPlayerName(pilotId), now);
+				continue;
+			}
+
+			int earned = 0;
+			if (m_mUnreported.Contains(guid))
+				earned = m_mUnreported.Get(guid);
+			int lastCard = -1;
+			if (m_mLastCardMs.Contains(guid))
+				lastCard = m_mLastCardMs.Get(guid);
+
+			// Unreported points always get their total; a seat change alone waits out the cooldown.
+			if (earned <= 0 && !IA_TransportScoring.IsStatusDue(now, lastCard))
+			{
+				done.Insert(guid);
+				continue;
+			}
+
+			SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pm.GetPlayerControlledEntity(pilotId));
+			if (!character)
+			{
+				if (earned <= 0)
+					done.Insert(guid);
+				continue;
+			}
+
+			ref IA_PilotDropoffPayload payload = new IA_PilotDropoffPayload();
+			payload.m_iKind = IA_PilotDropoffPayload.KIND_STATUS;
+			FillProgress(payload, rating, earned);
+			m_mUnreported.Remove(guid);
+
+			character.SetUIOne("PilotProgress", payload.Pack(), pilotId);
+			m_mLastCardMs.Set(guid, now);
+			done.Insert(guid);
+		}
+
+		foreach (string doneGuid : done)
+		{
+			m_mStatusOwed.Remove(doneGuid);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \param earned points credited since the pilot last saw a total; crossing a threshold with them announces the unlock
+	protected void FillProgress(notnull IA_PilotDropoffPayload payload, int rating, int earned)
+	{
+		payload.m_iRating = rating;
+		if (earned > 0)
+		{
+			IA_HeliSkinDef unlocked = IA_HeliSkinCatalog.FindNewlyUnlocked(rating - earned, rating);
+			if (unlocked)
+			{
+				IA_Log.Info(string.Format("[IA][TransportPilot] Skin %1 unlocked at rating %2.", unlocked.m_sKey, rating));
+				payload.m_sUnlockedName = unlocked.m_sDisplayName;
+				payload.m_iUnlockedRequired = unlocked.m_iRequiredPoints;
+			}
+		}
+
+		IA_HeliSkinDef next = IA_HeliSkinCatalog.FindNextLocked(rating);
+		if (next)
+		{
+			payload.m_iRequired = next.m_iRequiredPoints;
+			payload.m_sSkinName = next.m_sDisplayName;
+			return;
+		}
+
+		IA_HeliSkinDef best = IA_HeliSkinCatalog.FindBestUnlocked(rating);
+		if (best)
+			payload.m_sSkinName = best.m_sDisplayName;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OweStatus(string guid, int pilotId, int points)
+	{
+		int total = points;
+		if (m_mUnreported.Contains(guid))
+			total = total + m_mUnreported.Get(guid);
+		if (total > 0)
+			m_mUnreported.Set(guid, total);
+		m_mStatusOwed.Set(guid, pilotId);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected int TakeUnreported(string guid)
+	{
+		if (!m_mUnreported.Contains(guid))
+			return 0;
+
+		int points = m_mUnreported.Get(guid);
+		m_mUnreported.Remove(guid);
+		return points;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! A pilot who has just sat down is owed a look at their rating.
+	protected void NotePilotSeat(int pilotId, int now)
+	{
+		string guid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(pilotId);
+		if (guid.IsEmpty())
+			return;
+
+		int lastSeen = -1;
+		if (m_mPilotSeenMs.Contains(guid))
+			lastSeen = m_mPilotSeenMs.Get(guid);
+		m_mPilotSeenMs.Set(guid, now);
+
+		if (IA_TransportScoring.IsNewPilotSeat(now, lastSeen))
+			m_mStatusOwed.Set(guid, pilotId);
 	}
 
 	//------------------------------------------------------------------------------------------------

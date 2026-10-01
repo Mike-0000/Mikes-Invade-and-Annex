@@ -126,8 +126,42 @@ after a different pilot takes over.
 To add a skin: add an `.emat`, one `AddDef` line in `IA_HeliSkinCatalog` with a
 new id and key, and one `transport_skin_thresholds` row.
 
+## Pilot HUD
+
+The pilot sees one card (`IA_PilotHud`), docked top-right under the rank chip.
+It is not a toast and never waits behind, or delays, objective toasts.
+
+- **Landing.** Passengers of one landing reach the ground over several seconds.
+  The server batches their credits per pilot and reports at most once a second;
+  the card merges every update that arrives while it is open. Twelve passengers
+  are twelve pips on one card, not twelve messages. The card shows the points
+  earned, the troop count, the insertion weight (`x3.0`), `HOT LZ` or the
+  distance out, and below that the progress block.
+- **Progress block.** A Huey that is painted nose to tail in the skin's colour
+  as the rating nears the threshold, with the total, the threshold and the
+  percent to one decimal.
+- **Taking the pilot seat** shows the progress block alone, at most once every
+  120 s per pilot and never within 120 s of a landing card.
+- **Unlock.** When the points that cross the threshold are reported, the card
+  counts up to it, turns gold, names the skin and plays one sound. It is
+  announced once.
+- **Total unknown.** If the backend total has not arrived, the card shows the
+  points as banked. The total follows when it arrives: merged into the card if
+  it is still open, otherwise as a progress card.
+- A dead pilot has no HUD. The batch waits up to 60 s for a respawn, then the
+  total is shown on the next progress card.
+
+Wire format: the `PilotProgress` message text is a packed
+`IA_PilotDropoffPayload`,
+`kind|troops|points|rating|required|edge|unlockedRequired|unlockedName|skinName`
+(`kind` 0 = landing, 1 = rating only; `rating` -1 = unknown; `-` = no name).
+Servers and clients must run the same build. On the legacy text HUD (Mike's UI
+failed to mount) updates inside 5 s are merged into one line.
+
 ## Not yet proven in game
 
+- The pilot card: layout, fonts, timing, the unlock sound, and the multi-tick
+  merge with real passengers. Only its data and rules run in Workbench.
 - `SetObject` with `$remap` on a live helicopter and its slotted doors.
 - Referencing `IA_UH_1H_Body01_Tan.emat` by path; Workbench has to register the
   file first.

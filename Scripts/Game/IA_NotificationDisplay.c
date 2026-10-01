@@ -2,7 +2,8 @@
 //! HUD sector toasts plus persistent capture / defend readouts. Mike's UI path uses
 //! IA_NotificationToast and IA_ObjectiveHudStrip (capture tiles + defend bar in a
 //! bottom-left row). Capture and defend progress never occupy the toast queue.
-//! Legacy layout remains if HUD mount fails.
+//! Transport pilot progress is one IA_PilotHud card under the rank chip, also
+//! outside the toast queue. Legacy layout remains if HUD mount fails.
 //------------------------------------------------------------------------------------------------
 class IA_NotificationInfo
 {
@@ -26,6 +27,8 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 {
 	protected static const bool USE_MIKES_UI = true;
 	protected static const int QUEUE_GAP_MS = 380;
+	// Legacy HUD only: pilot updates arriving inside this window become one line.
+	protected static const int PILOT_LINE_DELAY_MS = 5000;
 
 	protected RichTextWidget m_wInfoText;
 	protected RichTextWidget m_RedText;
@@ -37,6 +40,8 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected ref IA_NotificationToast m_Toast;
 	protected ref IA_RankHudPanel m_RankHud;
 	protected ref IA_ObjectiveHudStrip m_ObjectiveHud;
+	protected ref IA_PilotHud m_PilotHud;
+	protected ref IA_PilotDropoffPayload m_PendingPilotLine;
 
 	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
 	protected bool m_bIsDisplaying = false;
@@ -127,6 +132,11 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		}
 		if (m_ObjectiveHud)
 			m_ObjectiveHud.Abort();
+		if (m_PilotHud)
+			m_PilotHud.Abort();
+		m_PilotHud = null;
+		m_PendingPilotLine = null;
+		GetGame().GetCallqueue().Remove(this.FlushPilotLine);
 		IA_LocalOptions.Get().GetOnChanged().Remove(this.ApplyLocalOptions);
 		if (m_RankHud)
 		{
@@ -155,10 +165,13 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 
 		m_ObjectiveHud = IA_ObjectiveHudStrip.Create(m_Runtime);
 		m_RankHud = IA_RankHudPanel.Create(m_Runtime);
+		m_PilotHud = IA_PilotHud.Create(m_Runtime);
+		m_PilotHud.SetAlign(1, 0);
 
 		overlay.AddChild(m_Toast);
 		overlay.AddChild(m_ObjectiveHud);
 		overlay.AddChild(m_RankHud.GetRoot());
+		overlay.AddChild(m_PilotHud);
 		m_Runtime.SetRoot(overlay);
 		m_RankHud.GetOnPromoted().Insert(this.OnLocalPromoted);
 		m_RankHud.Bind();
@@ -390,6 +403,43 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Transport pilot update (packed IA_PilotDropoffPayload). Updates that arrive
+	//! while the card is open are merged into it rather than queued behind it.
+	void ShowPilotProgress(string payload)
+	{
+		ref IA_PilotDropoffPayload data = IA_PilotDropoffPayload.Parse(payload);
+		if (!data)
+			return;
+
+		if (m_Runtime && m_PilotHud)
+		{
+			m_PilotHud.Present(data);
+			m_bIsEnabled = true;
+			return;
+		}
+
+		if (m_PendingPilotLine)
+		{
+			m_PendingPilotLine.Merge(data);
+			return;
+		}
+		m_PendingPilotLine = data;
+		GetGame().GetCallqueue().CallLater(this.FlushPilotLine, PILOT_LINE_DELAY_MS);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void FlushPilotLine()
+	{
+		if (!m_PendingPilotLine)
+			return;
+
+		string line = m_PendingPilotLine.ToLine();
+		m_PendingPilotLine = null;
+		if (!line.IsEmpty())
+			QueueNotification(line, "green", 6000);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected void OnLocalPromoted(int rankId)
 	{
 		if (IA_LocalOptions.Get().HidePromotionNotifications())
@@ -413,5 +463,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		m_bSuppressFinish = false;
 		GetGame().GetCallqueue().Remove(this.ProcessNotificationQueue);
 		GetGame().GetCallqueue().Remove(this.HideCurrentAndProcessNext);
+		m_PendingPilotLine = null;
+		GetGame().GetCallqueue().Remove(this.FlushPilotLine);
 	}
 }

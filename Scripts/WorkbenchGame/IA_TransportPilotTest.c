@@ -11,6 +11,10 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		TestGlobalRating();
 		TestSkinEligibility();
 		TestBackoff();
+		TestCardPayload();
+		TestCardMerge();
+		TestCardText();
+		TestCardTiming();
 
 		if (m_iFailures == 0)
 			Print("[IA][TransportPilotTest] PASS", LogLevel.NORMAL);
@@ -83,6 +87,114 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		Check(IA_TransportScoring.BackoffMs(1, 60000, 1800000) == 60000, "the first failure waits the base interval");
 		Check(IA_TransportScoring.BackoffMs(3, 60000, 1800000) == 240000, "each further failure doubles the wait");
 		Check(IA_TransportScoring.BackoffMs(40, 60000, 1800000) == 1800000, "the wait is capped without overflowing");
+	}
+
+	protected void TestCardPayload()
+	{
+		ref IA_PilotDropoffPayload sent = new IA_PilotDropoffPayload();
+		sent.m_iKind = IA_PilotDropoffPayload.KIND_DROP;
+		sent.m_iTroops = 12;
+		sent.m_iPoints = 360;
+		sent.m_iRating = 12700;
+		sent.m_iRequired = 50000;
+		sent.m_iEdgeM = 40;
+		sent.m_sSkinName = "Desert Tan Huey";
+		Check(sent.Pack() == "0|12|360|12700|50000|40|0|-|Desert Tan Huey", "the card payload wire format is pinned");
+
+		IA_PilotDropoffPayload got = IA_PilotDropoffPayload.Parse(sent.Pack());
+		Check(got != null, "a packed payload parses");
+		if (got)
+		{
+			Check(got.IsDrop() && got.m_iTroops == 12 && got.m_iPoints == 360, "troops and points survive the round trip");
+			Check(got.m_iRating == 12700 && got.m_iRequired == 50000 && got.m_iEdgeM == 40, "rating, threshold and distance survive the round trip");
+			Check(got.m_sSkinName == "Desert Tan Huey" && !got.HasUnlock(), "an absent unlock stays absent");
+			Check(got.WeightTenths() == 30 && got.IsHotLz(), "a full hot-LZ cabin reads x3.0");
+		}
+
+		sent.m_iRating = IA_TransportPilotRecord.RATING_UNKNOWN;
+		got = IA_PilotDropoffPayload.Parse(sent.Pack());
+		Check(got && got.m_iRating < 0, "an unknown rating stays unknown");
+
+		Check(IA_PilotDropoffPayload.Parse("Combat insertion: +30 transport rating") == null, "plain text is not a payload");
+		Check(IA_PilotDropoffPayload.Parse("0|0|0|100|50000|0|0|-|-") == null, "a drop with no passengers is rejected");
+		Check(IA_PilotDropoffPayload.Parse("7|1|30|100|50000|0|0|-|-") == null, "an unknown kind is rejected");
+		Check(IA_PilotDropoffPayload.Parse("1|0|0|100|50000|0|0|-|-") != null, "a status needs no passengers");
+	}
+
+	protected void TestCardMerge()
+	{
+		// Two ticks of one landing, the first before the global total was known.
+		IA_PilotDropoffPayload card = IA_PilotDropoffPayload.Parse("0|4|120|-1|0|0|0|-|-");
+		IA_PilotDropoffPayload second = IA_PilotDropoffPayload.Parse("0|8|160|12700|50000|600|0|-|Desert Tan Huey");
+		Check(card != null && second != null, "merge inputs parse");
+		if (!card || !second)
+			return;
+
+		card.Merge(second);
+		Check(card.m_iTroops == 12 && card.m_iPoints == 280, "passengers and points add up on one card");
+		Check(card.m_iEdgeM == 400, "the distance is averaged per passenger");
+		Check(card.m_iRating == 12700 && card.m_iRequired == 50000, "the newer total wins");
+		Check(card.WeightTenths() == 23 && !card.IsHotLz(), "a mixed landing is not a hot LZ");
+
+		// A rating card that arrives while the landing is on screen must not downgrade it.
+		IA_PilotDropoffPayload status = IA_PilotDropoffPayload.Parse("1|0|0|50020|0|0|50000|Desert Tan Huey|Desert Tan Huey");
+		Check(status != null && status.HasUnlock(), "a status can carry an unlock");
+		if (!status)
+			return;
+
+		card.Merge(status);
+		Check(card.IsDrop() && card.m_iTroops == 12, "a status merged into a landing keeps the landing");
+		Check(card.HasUnlock() && card.m_iUnlockedRequired == 50000 && card.m_iRating == 50020, "the unlock and the new total are taken");
+
+		card.Merge(second);
+		Check(card.HasUnlock(), "an unlock stays announced once reported");
+
+		IA_PilotDropoffPayload seat = IA_PilotDropoffPayload.Parse("1|0|0|900|50000|0|0|-|Desert Tan Huey");
+		if (seat)
+		{
+			seat.Merge(second);
+			Check(seat.IsDrop(), "a landing merged into a rating card upgrades it");
+		}
+	}
+
+	protected void TestCardText()
+	{
+		Check(IA_PilotDropoffPayload.FormatNumber(0) == "0", "zero has no separator");
+		Check(IA_PilotDropoffPayload.FormatNumber(999) == "999", "three digits have no separator");
+		Check(IA_PilotDropoffPayload.FormatNumber(12700) == "12,700", "thousands are separated");
+		Check(IA_PilotDropoffPayload.FormatNumber(1234567) == "1,234,567", "millions are separated twice");
+
+		Check(IA_PilotDropoffPayload.PercentTenths(12700, 50000) == 254, "progress is in tenths of a percent");
+		Check(IA_PilotDropoffPayload.PercentTenths(49999, 50000) == 999, "progress never rounds up to complete");
+		Check(IA_PilotDropoffPayload.PercentTenths(50000, 50000) == 1000, "the threshold is complete");
+		Check(IA_PilotDropoffPayload.PercentTenths(100, 0) == 0, "no threshold is no progress");
+		Check(IA_PilotDropoffPayload.FormatPercent(254) == "25.4%", "tenths are shown");
+		Check(IA_PilotDropoffPayload.FormatPercent(5) == "0.5%", "a small start is still visible");
+		Check(IA_PilotDropoffPayload.FormatPercent(1000) == "100%", "complete has no decimals");
+
+		IA_PilotDropoffPayload drop = IA_PilotDropoffPayload.Parse("0|12|360|12700|50000|40|0|-|Desert Tan Huey");
+		IA_PilotDropoffPayload status = IA_PilotDropoffPayload.Parse("1|0|0|12700|50000|0|0|-|Desert Tan Huey");
+		if (drop && status)
+		{
+			Check(drop.ToLine() == "Combat insertion: 12 troops, +360 transport rating (12,700 / 50,000 Desert Tan Huey)", "the legacy HUD gets one line per landing");
+			Check(status.ToLine().IsEmpty(), "the legacy HUD shows no rating-only line");
+		}
+	}
+
+	protected void TestCardTiming()
+	{
+		Check(IA_TransportScoring.IsNewPilotSeat(10000, -1), "a first pilot seat is new");
+		Check(!IA_TransportScoring.IsNewPilotSeat(10000, 9000), "staying in the seat is not a new seat");
+		Check(IA_TransportScoring.IsNewPilotSeat(20000, 9000), "sitting down again after a break is a new seat");
+		Check(IA_TransportScoring.IsStatusDue(10000, -1), "the first rating card is due");
+		Check(!IA_TransportScoring.IsStatusDue(100000, 40000), "a rating card is not repeated inside the cooldown");
+		Check(IA_TransportScoring.IsStatusDue(160000, 40000), "a rating card is due again after the cooldown");
+
+		IA_HeliSkinDef tan = IA_HeliSkinCatalog.FindDefByKey("huey_tan");
+		if (!tan)
+			return;
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints - 1) == null, "nothing is unlocked below the threshold");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints) == tan, "the best unlocked skin is reported once earned");
 	}
 
 	protected void Check(bool condition, string description)
