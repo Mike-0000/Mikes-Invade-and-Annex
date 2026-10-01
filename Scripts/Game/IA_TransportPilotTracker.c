@@ -372,29 +372,9 @@ class IA_TransportPilotTracker
 	//! \param earned points credited since the pilot last saw a total; crossing a threshold with them announces the unlock
 	protected void FillProgress(notnull IA_PilotDropoffPayload payload, int rating, int earned)
 	{
-		payload.m_iRating = rating;
-		if (earned > 0)
-		{
-			IA_HeliSkinDef unlocked = IA_HeliSkinCatalog.FindNewlyUnlocked(rating - earned, rating);
-			if (unlocked)
-			{
-				IA_Log.Info(string.Format("[IA][TransportPilot] Skin %1 unlocked at rating %2.", unlocked.m_sKey, rating));
-				payload.m_sUnlockedName = unlocked.m_sDisplayName;
-				payload.m_iUnlockedRequired = unlocked.m_iRequiredPoints;
-			}
-		}
-
-		IA_HeliSkinDef next = IA_HeliSkinCatalog.FindNextLocked(rating);
-		if (next)
-		{
-			payload.m_iRequired = next.m_iRequiredPoints;
-			payload.m_sSkinName = next.m_sDisplayName;
-			return;
-		}
-
-		IA_HeliSkinDef best = IA_HeliSkinCatalog.FindBestUnlocked(rating);
-		if (best)
-			payload.m_sSkinName = best.m_sDisplayName;
+		IA_HeliSkinDef unlocked = payload.SetProgress(rating, earned);
+		if (unlocked)
+			IA_Log.Info(string.Format("[IA][TransportPilot] Skin %1 unlocked at rating %2.", unlocked.m_sKey, rating));
 	}
 
 	//------------------------------------------------------------------------------------------------

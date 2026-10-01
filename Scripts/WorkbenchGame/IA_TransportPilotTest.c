@@ -15,6 +15,7 @@ class IA_TransportPilotTest : WorkbenchPlugin
 		TestCardMerge();
 		TestCardText();
 		TestCardTiming();
+		TestCardPreview();
 
 		if (m_iFailures == 0)
 			Print("[IA][TransportPilotTest] PASS", LogLevel.NORMAL);
@@ -195,6 +196,78 @@ class IA_TransportPilotTest : WorkbenchPlugin
 			return;
 		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints - 1) == null, "nothing is unlocked below the threshold");
 		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints) == tan, "the best unlocked skin is reported once earned");
+	}
+
+	protected void TestCardPreview()
+	{
+		IA_HeliSkinDef tan = IA_HeliSkinCatalog.FindDefByKey("huey_tan");
+		if (!tan)
+			return;
+		int required = tan.m_iRequiredPoints;
+
+		ref IA_PilotHudPreview seat = IA_PilotHudPreview.Create(IA_PilotHudPreviewScene.Seat);
+		Check(seat.Count() == 1 && seat.NextOpensCard(), "a preview scene opens its own card");
+		Check(seat.NextDelayMs() == IA_PilotHudPreview.LEAD_IN_MS, "the first preview card waits for the menus to close");
+
+		ref IA_PilotDropoffPayload card = FoldPreview(IA_PilotHudPreviewScene.Seat);
+		Check(card && !card.IsDrop() && card.m_iRating > 0 && card.m_iRequired == required, "the seat preview is a rating card below the threshold");
+		int start = 0;
+		if (card)
+			start = card.m_iRating;
+
+		card = FoldPreview(IA_PilotHudPreviewScene.Landing);
+		Check(card && card.m_iTroops == 12 && card.m_iPoints == 360 && card.IsHotLz(), "the landing preview is a full hot-LZ cabin on one card");
+		Check(card && card.m_iRating == start + 360 && !card.HasUnlock(), "the landing preview adds its points to the total");
+
+		card = FoldPreview(IA_PilotHudPreviewScene.FarLanding);
+		Check(card && card.m_iTroops == 5 && card.m_iPoints == 99 && !card.IsHotLz(), "the far landing preview is paid by the real scoring rules");
+
+		ref IA_PilotHudPreview syncing = IA_PilotHudPreview.Create(IA_PilotHudPreviewScene.Syncing);
+		IA_PilotDropoffPayload banked = IA_PilotDropoffPayload.Parse(syncing.TakeNext());
+		Check(banked && banked.IsDrop() && banked.m_iRating < 0, "the syncing preview lands before the total is known");
+		Check(syncing.NextDelayMs() == IA_PilotHudPreview.SYNC_MS && !syncing.NextOpensCard(), "the total follows into the same card");
+		card = FoldPreview(IA_PilotHudPreviewScene.Syncing);
+		Check(card && card.IsDrop() && card.m_iRating == start + card.m_iPoints, "the syncing preview ends with the total");
+
+		card = FoldPreview(IA_PilotHudPreviewScene.Unlock);
+		Check(card && card.HasUnlock() && card.m_iUnlockedRequired == required, "the unlock preview crosses the threshold");
+		Check(card && card.m_iTroops == 10 && card.m_iRating == required + 100 && card.m_iRequired == 0, "passengers after the unlock stay on the unlock card");
+
+		card = FoldPreview(IA_PilotHudPreviewScene.UnlockedSeat);
+		Check(card && !card.IsDrop() && !card.HasUnlock() && card.m_iRequired == 0 && !card.m_sSkinName.IsEmpty(), "the unlocked seat preview names the owned skin without announcing it again");
+
+		card = FoldPreview(IA_PilotHudPreviewScene.LateUnlock);
+		Check(card && !card.IsDrop() && card.HasUnlock(), "the late unlock preview arrives on a rating card");
+
+		ref IA_PilotHudPreview all = IA_PilotHudPreview.Create(IA_PilotHudPreviewScene.All);
+		int updates = all.Count();
+		int cards = 0;
+		while (!all.IsDone())
+		{
+			if (all.NextOpensCard())
+				cards = cards + 1;
+			if (!IA_PilotDropoffPayload.Parse(all.TakeNext()))
+				cards = -100;
+		}
+		Check(updates == 14 && cards == 7, "play all runs every scene as its own card");
+	}
+
+	protected IA_PilotDropoffPayload FoldPreview(IA_PilotHudPreviewScene scene)
+	{
+		ref IA_PilotHudPreview preview = IA_PilotHudPreview.Create(scene);
+		ref IA_PilotDropoffPayload card;
+		ref IA_PilotDropoffPayload update;
+		while (!preview.IsDone())
+		{
+			update = IA_PilotDropoffPayload.Parse(preview.TakeNext());
+			if (!update)
+				return null;
+			if (card)
+				card.Merge(update);
+			else
+				card = update;
+		}
+		return card;
 	}
 
 	protected void Check(bool condition, string description)

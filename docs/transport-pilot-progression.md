@@ -158,10 +158,35 @@ Wire format: the `PilotProgress` message text is a packed
 Servers and clients must run the same build. On the legacy text HUD (Mike's UI
 failed to mount) updates inside 5 s are merged into one line.
 
+### Testing the card alone
+
+Admin menu, **HQ** tab, **Pilot card preview**. Each button closes the menus
+and replays, on your own HUD only, the updates a server would send
+(`IA_PilotHudPreview`). No passengers, no helicopter and no backend are needed,
+and no rating is earned. It works in Workbench play mode and on a server where
+you are admin.
+
+| Button | Shows |
+| --- | --- |
+| Pilot seat | Rating card on taking the pilot seat |
+| Full landing | 12 passengers in the objective, arriving over four updates on one card |
+| Far landing | 5 passengers set down short: lower weight, distance label |
+| Total syncing | Landing with the total unknown; the total arrives 3.5 s later |
+| Skin unlock | The landing that crosses the threshold, with passengers still stepping out |
+| Late unlock | The unlock arriving on a rating card |
+| Unlocked seat | Rating card of a pilot who owns the skin |
+| Play all | Every scene in turn, each after the previous card has left |
+
+The cards are filled by `IA_PilotDropoffPayload.SetProgress` and
+`IA_TransportScoring`, the same code the server uses, and enter through
+`IA_NotificationDisplay.ShowPilotProgress` like a real update. The preview
+skips the server side: crediting, batching per pilot, and the RPC.
+
 ## Not yet proven in game
 
-- The pilot card: layout, fonts, timing, the unlock sound, and the multi-tick
-  merge with real passengers. Only its data and rules run in Workbench.
+- The pilot card: layout, fonts, timing and the unlock sound can be checked
+  alone with the preview above. The multi-tick merge with real passengers
+  still needs a flight; only its data and rules run in Workbench.
 - `SetObject` with `$remap` on a live helicopter and its slotted doors.
 - Referencing `IA_UH_1H_Body01_Tan.emat` by path; Workbench has to register the
   file first.

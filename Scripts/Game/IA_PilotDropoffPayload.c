@@ -68,6 +68,38 @@ class IA_PilotDropoffPayload
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Set the total and what it means against the skin catalog.
+	//! \param earned points credited since the pilot last saw a total; crossing a threshold with them announces the unlock
+	//! \return the skin those points unlocked, null when none
+	IA_HeliSkinDef SetProgress(int rating, int earned)
+	{
+		m_iRating = rating;
+		IA_HeliSkinDef unlocked = null;
+		if (earned > 0)
+		{
+			unlocked = IA_HeliSkinCatalog.FindNewlyUnlocked(rating - earned, rating);
+			if (unlocked)
+			{
+				m_sUnlockedName = unlocked.m_sDisplayName;
+				m_iUnlockedRequired = unlocked.m_iRequiredPoints;
+			}
+		}
+
+		IA_HeliSkinDef next = IA_HeliSkinCatalog.FindNextLocked(rating);
+		if (next)
+		{
+			m_iRequired = next.m_iRequiredPoints;
+			m_sSkinName = next.m_sDisplayName;
+			return unlocked;
+		}
+
+		IA_HeliSkinDef best = IA_HeliSkinCatalog.FindBestUnlocked(rating);
+		if (best)
+			m_sSkinName = best.m_sDisplayName;
+		return unlocked;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	bool IsDrop()
 	{
 		return m_iKind == KIND_DROP;

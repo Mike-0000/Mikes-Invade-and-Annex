@@ -370,6 +370,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(m_RolesToggle, "Require pilot roles", "Turn this on to prevent players without a pilot role from flying restricted aircraft.");
 		m_Hints.AddHint(m_HaloMaxField, "HALO player limit", "HALO jumps are available only while the connected player count is below this number. Set it to 0 to disable HALO jumps.");
 
+		BuildPilotPreviewSection(runtime);
 		BuildFactionPage(runtime);
 
 		ref MUI_Label qrfLbl = runtime.CreateLabel("Spawn QRF through the normal mission path", "qrfLbl");
@@ -537,6 +538,64 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	{
 		if (m_Hints)
 			m_Hints.Toggle();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Solo test path for the transport pilot card: replays scripted updates on this client's HUD.
+	protected void BuildPilotPreviewSection(notnull MUI_Runtime runtime)
+	{
+		ref MUI_Label previewLbl = runtime.CreateLabel("Pilot card preview  •  Plays on your HUD only. No passengers needed, no points awarded.", "pilotPreviewLbl");
+		previewLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
+		previewLbl.SetMuted(true);
+
+		ref MUI_Button seatBtn = runtime.CreateButton("Pilot seat", "pilotPrevSeat");
+		seatBtn.GetOnClicked().Insert(OnPilotPreviewSeat);
+		ref MUI_Button landingBtn = runtime.CreateButton("Full landing", "pilotPrevLanding");
+		landingBtn.GetOnClicked().Insert(OnPilotPreviewLanding);
+		ref MUI_Button farBtn = runtime.CreateButton("Far landing", "pilotPrevFar");
+		farBtn.GetOnClicked().Insert(OnPilotPreviewFarLanding);
+		ref MUI_Button syncBtn = runtime.CreateButton("Total syncing", "pilotPrevSync");
+		syncBtn.GetOnClicked().Insert(OnPilotPreviewSyncing);
+		ref MUI_Button unlockBtn = runtime.CreateButton("Skin unlock", "pilotPrevUnlock");
+		unlockBtn.GetOnClicked().Insert(OnPilotPreviewUnlock);
+		ref MUI_Button lateBtn = runtime.CreateButton("Late unlock", "pilotPrevLate");
+		lateBtn.GetOnClicked().Insert(OnPilotPreviewLateUnlock);
+		ref MUI_Button ownedBtn = runtime.CreateButton("Unlocked seat", "pilotPrevOwned");
+		ownedBtn.GetOnClicked().Insert(OnPilotPreviewUnlockedSeat);
+		ref MUI_Button allBtn = runtime.CreateButton("Play all", "pilotPrevAll");
+		allBtn.MakeAccent();
+		allBtn.GetOnClicked().Insert(OnPilotPreviewAll);
+
+		ref MUI_Row previewRow1 = runtime.CreateRow("pilotPrevRow1");
+		previewRow1.SetGap(12);
+		previewRow1.AddChild(seatBtn);
+		previewRow1.AddChild(landingBtn);
+		previewRow1.AddChild(farBtn);
+
+		ref MUI_Row previewRow2 = runtime.CreateRow("pilotPrevRow2");
+		previewRow2.SetGap(12);
+		previewRow2.AddChild(syncBtn);
+		previewRow2.AddChild(unlockBtn);
+		previewRow2.AddChild(lateBtn);
+
+		ref MUI_Row previewRow3 = runtime.CreateRow("pilotPrevRow3");
+		previewRow3.SetGap(12);
+		previewRow3.AddChild(ownedBtn);
+		previewRow3.AddChild(allBtn);
+
+		m_PageHq.AddChild(previewLbl);
+		m_PageHq.AddChild(previewRow1);
+		m_PageHq.AddChild(previewRow2);
+		m_PageHq.AddChild(previewRow3);
+		m_Hints.AddHint(previewLbl, "Pilot card preview", "Closes the menus and plays the transport pilot card on your own HUD. Nothing is sent to the server and no rating is earned.");
+		m_Hints.AddHint(seatBtn, "Pilot seat", "The rating card a pilot sees on taking the pilot seat.");
+		m_Hints.AddHint(landingBtn, "Full landing", "Twelve passengers set down inside the objective, stepping out over four seconds onto one card.");
+		m_Hints.AddHint(farBtn, "Far landing", "Five passengers set down short of the objective, for the lower weight and the distance label.");
+		m_Hints.AddHint(syncBtn, "Total syncing", "A landing reported before the global total is known; the total arrives while the card is open.");
+		m_Hints.AddHint(unlockBtn, "Skin unlock", "The landing that crosses the skin threshold, with passengers still stepping out afterwards.");
+		m_Hints.AddHint(lateBtn, "Late unlock", "The unlock arriving on a rating card, after points were banked while the total was unknown.");
+		m_Hints.AddHint(ownedBtn, "Unlocked seat", "The rating card of a pilot who already owns the skin.");
+		m_Hints.AddHint(allBtn, "Play all", "Plays every preview in turn; each waits for the previous card to leave.");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1590,6 +1649,65 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
 		if (pc)
 			pc.IA_AskForceQRF(type);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnPilotPreviewSeat()
+	{
+		PlayPilotPreview(IA_PilotHudPreviewScene.Seat);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnPilotPreviewLanding()
+	{
+		PlayPilotPreview(IA_PilotHudPreviewScene.Landing);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnPilotPreviewFarLanding()
+	{
+		PlayPilotPreview(IA_PilotHudPreviewScene.FarLanding);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnPilotPreviewSyncing()
+	{
+		PlayPilotPreview(IA_PilotHudPreviewScene.Syncing);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnPilotPreviewUnlock()
+	{
+		PlayPilotPreview(IA_PilotHudPreviewScene.Unlock);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnPilotPreviewLateUnlock()
+	{
+		PlayPilotPreview(IA_PilotHudPreviewScene.LateUnlock);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnPilotPreviewUnlockedSeat()
+	{
+		PlayPilotPreview(IA_PilotHudPreviewScene.UnlockedSeat);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void OnPilotPreviewAll()
+	{
+		PlayPilotPreview(IA_PilotHudPreviewScene.All);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void PlayPilotPreview(IA_PilotHudPreviewScene scene)
+	{
+		IA_PilotHudPreview.PlayLocal(scene);
+
+		// The card is drawn on the HUD, which the pause menu hides while it is open.
+		MenuManager menus = GetGame().GetMenuManager();
+		menus.CloseMenuByPreset(ChimeraMenuPreset.PauseMenu);
+		menus.CloseMenu(this);
 	}
 
 	//------------------------------------------------------------------------------------------------

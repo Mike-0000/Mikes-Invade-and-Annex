@@ -29,6 +29,8 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected static const int QUEUE_GAP_MS = 380;
 	// Legacy HUD only: pilot updates arriving inside this window become one line.
 	protected static const int PILOT_LINE_DELAY_MS = 5000;
+	// A preview scene re-checks this often for the previous card to leave.
+	protected static const int PILOT_PREVIEW_POLL_MS = 400;
 
 	protected RichTextWidget m_wInfoText;
 	protected RichTextWidget m_RedText;
@@ -42,6 +44,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	protected ref IA_ObjectiveHudStrip m_ObjectiveHud;
 	protected ref IA_PilotHud m_PilotHud;
 	protected ref IA_PilotDropoffPayload m_PendingPilotLine;
+	protected ref IA_PilotHudPreview m_PilotPreview;
 
 	protected ref array<ref IA_NotificationInfo> m_notificationQueue = new array<ref IA_NotificationInfo>();
 	protected bool m_bIsDisplaying = false;
@@ -132,8 +135,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		}
 		if (m_ObjectiveHud)
 			m_ObjectiveHud.Abort();
-		if (m_PilotHud)
-			m_PilotHud.Abort();
+		StopPilotPreview();
 		m_PilotHud = null;
 		m_PendingPilotLine = null;
 		GetGame().GetCallqueue().Remove(this.FlushPilotLine);
@@ -437,6 +439,50 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		m_PendingPilotLine = null;
 		if (!line.IsEmpty())
 			QueueNotification(line, "green", 6000);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Solo test path: replay scripted pilot updates on this HUD. Replaces a preview
+	//! already running. Nothing is awarded and nothing reaches the server.
+	void PlayPilotPreview(notnull IA_PilotHudPreview preview)
+	{
+		StopPilotPreview();
+		if (preview.IsDone())
+			return;
+
+		m_PilotPreview = preview;
+		GetGame().GetCallqueue().CallLater(this.StepPilotPreview, preview.NextDelayMs());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void StepPilotPreview()
+	{
+		if (!m_PilotPreview)
+			return;
+
+		// A new scene waits for the previous card to leave, so it is not merged into it.
+		if (m_PilotPreview.NextOpensCard() && m_PilotHud && !m_PilotHud.IsIdle())
+		{
+			GetGame().GetCallqueue().CallLater(this.StepPilotPreview, PILOT_PREVIEW_POLL_MS);
+			return;
+		}
+
+		ShowPilotProgress(m_PilotPreview.TakeNext());
+		if (m_PilotPreview.IsDone())
+		{
+			m_PilotPreview = null;
+			return;
+		}
+		GetGame().GetCallqueue().CallLater(this.StepPilotPreview, m_PilotPreview.NextDelayMs());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void StopPilotPreview()
+	{
+		m_PilotPreview = null;
+		GetGame().GetCallqueue().Remove(this.StepPilotPreview);
+		if (m_PilotHud)
+			m_PilotHud.Abort();
 	}
 
 	//------------------------------------------------------------------------------------------------

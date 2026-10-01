@@ -118,7 +118,8 @@ class TransportPilotTests(unittest.TestCase):
 
     def test_unlock_is_announced_once_with_the_points_that_crossed_it(self):
         tracker = source("IA_TransportPilotTracker.c")
-        fill = method(tracker, "FillProgress")
+        self.assertIn("payload.SetProgress(rating, earned)", method(tracker, "FillProgress"))
+        fill = method(source("IA_PilotDropoffPayload.c"), "SetProgress")
         self.assertIn("FindNewlyUnlocked(rating - earned, rating)", fill)
         # Points banked while the total was unknown still count towards the crossing.
         self.assertIn("dropoff.m_iPoints + TakeUnreported(guid)", method(tracker, "FlushDropoffs"))
@@ -127,6 +128,32 @@ class TransportPilotTests(unittest.TestCase):
         hud = (ROOT / "Scripts" / "Game" / "UI" / "IA_PilotHud.c").read_text(encoding="utf-8")
         self.assertEqual(hud.count("SCR_UISoundEntity.SoundEvent("), 1)
         self.assertIn("SCR_UISoundEntity.SoundEvent(", method(hud, "TickUnlock"))
+
+    def test_card_can_be_previewed_solo_without_awarding_points(self):
+        preview = (ROOT / "Scripts" / "Game" / "UI" / "IA_PilotHudPreview.c").read_text(encoding="utf-8")
+        # Client only: nothing is credited, stored or sent.
+        self.assertNotRegex(preview, r"AddInsertion|IA_TransportPilotStore|IA_StatsManager|SetUIOne|Rpc\(")
+        # Cards are built by the rules the server uses, so the preview cannot drift from a real flight.
+        self.assertIn("IA_TransportScoring.InsertionPoints(edgeM)", method(preview, "AddDrop"))
+        self.assertIn("payload.SetProgress(", method(preview, "AddDrop"))
+        self.assertIn("payload.SetProgress(", method(preview, "AddStatus"))
+        self.assertIn("display.PlayPilotPreview(preview)", method(preview, "PlayLocal"))
+
+        # The preview enters through the same call as a real server update.
+        display = source("IA_NotificationDisplay.c")
+        step = method(display, "StepPilotPreview")
+        self.assertIn("ShowPilotProgress(m_PilotPreview.TakeNext())", step)
+        self.assertLess(step.index("!m_PilotHud.IsIdle()"), step.index("ShowPilotProgress("))
+        self.assertIn("StopPilotPreview();", method(display, "CloseMikesUI"))
+
+        menu = (ROOT / "Scripts" / "Game" / "UI" / "Menus" / "IA_AdminConfigMenu.c").read_text(encoding="utf-8")
+        play = method(menu, "PlayPilotPreview")
+        self.assertIn("IA_PilotHudPreview.PlayLocal(scene)", play)
+        # The pause menu hides the HUD the card is drawn on.
+        self.assertIn("CloseMenuByPreset(ChimeraMenuPreset.PauseMenu)", play)
+        scenes = re.findall(r"PlayPilotPreview\(IA_PilotHudPreviewScene\.(\w+)\)", menu)
+        declared = re.search(r"enum IA_PilotHudPreviewScene\s*\{([^}]*)\}", preview).group(1)
+        self.assertEqual(sorted(scenes), sorted(name.strip() for name in declared.split(",")))
 
 
 if __name__ == "__main__":
