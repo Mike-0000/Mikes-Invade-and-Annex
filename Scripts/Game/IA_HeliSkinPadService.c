@@ -33,7 +33,7 @@ class IA_HeliSkinPadService
 		if (choice == IA_HeliSkinCatalog.SKIN_NONE)
 			return null;
 
-		// A choice made as an admin, or before a threshold was raised, may not be unlocked.
+		// A choice made before a threshold was raised may not be unlocked any more.
 		IA_HeliSkinDef chosen = IA_HeliSkinCatalog.FindDef(choice);
 		if (chosen && IA_HeliSkinCatalog.IsUnlocked(chosen, rating))
 			return chosen;

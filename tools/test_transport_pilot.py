@@ -291,18 +291,27 @@ class TransportPilotTests(unittest.TestCase):
         self.assertIn("modded class SCR_EditableEntityComponentClass", editor)
         self.assertIn("IA_HeliPaintRigComponent.ResolveSpawnPrefab(super.GetRandomVariant(prefab))", method(editor, "GetRandomVariant"))
 
-    def test_a_skin_can_be_previewed_solo_without_a_rating(self):
-        preview = source("IA_HeliSkinPreview.c")
-        cycle = method(preview, "CycleNearest")
-        self.assertIn("skins.SetVehicleSkin(vehicle, skinId)", cycle)
-        # A skin menu inside the helicopter will change it with the crew aboard, so the preview must not ask for it empty.
-        self.assertNotRegex(preview, r"IsParkedAndEmpty|GetOccupant|IsOccupied|EngineOn")
-        self.assertNotIn("IA_TransportPilotStore", preview)
-        # The repaint is visible to everyone, so only an admin may ask for it.
-        ask = method(source("IA_PlayerController.c"), "IA_PreviewHeliSkinIfAdmin")
-        self.assertLess(ask.index("if (!IA_IsAdminCaller())"), ask.index("IA_HeliSkinPreview.CycleNearest("))
-        menu = (ROOT / "Scripts" / "Game" / "UI" / "Menus" / "IA_AdminConfigMenu.c").read_text(encoding="utf-8")
-        self.assertIn("pc.IA_AskPreviewHeliSkin()", method(menu, "OnSkinPreview"))
+    def test_the_rating_is_the_only_way_to_a_skin(self):
+        game = ROOT / "Scripts" / "Game"
+        # No admin repaint: the script, its request and its button are gone.
+        self.assertFalse((game / "IA_HeliSkinPreview.c").exists())
+        controller = source("IA_PlayerController.c")
+        self.assertNotRegex(controller, r"PreviewHeliSkin|HeliSkinPreview")
+        menu = (game / "UI" / "Menus" / "IA_AdminConfigMenu.c").read_text(encoding="utf-8")
+        self.assertNotRegex(menu, r"OnSkinPreview|heli skin")
+
+        # The paint bay takes no admin flag anywhere between the server's check and the tile.
+        attempt = method(source("IA_HeliPaintService.c"), "TrySetSkin")
+        self.assertNotRegex(attempt, r"(?i)admin")
+        self.assertNotRegex(method(controller, "IA_AnswerHeliPaint"), r"IsAdmin|\badmin\b")
+        self.assertRegex(controller, r"protected void RpcDo_IA_HeliPaintReply\(int result, int rating, int skinId, string thresholds\)")
+        ui = game / "UI"
+        for path in (ui / "Menus" / "IA_HeliPaintMenu.c", ui / "IA_HeliPaintBay.c", ui / "IA_HeliPaintTile.c"):
+            self.assertNotRegex(path.read_text(encoding="utf-8"), r"(?i)admin", path.name)
+
+        # Every script that sets a skin: the paint bay behind its unlock, and the pad with the best unlocked.
+        setters = sorted(path.name for path in game.rglob("*.c") if "SetVehicleSkin(" in path.read_text(encoding="utf-8"))
+        self.assertEqual(setters, ["IA_HeliPaintService.c", "IA_HeliSkinManagerComponent.c", "IA_HeliSkinPadService.c"])
 
     def test_the_paint_bay_asks_and_the_server_decides(self):
         # The client names a skin; the seat, the channel and the unlock are checked on the server, in that order.
@@ -324,9 +333,9 @@ class TransportPilotTests(unittest.TestCase):
 
         controller = source("IA_PlayerController.c")
         answer = method(controller, "IA_AnswerHeliPaint")
-        # The rating and the admin flag are read on the server; the request carries neither.
+        # The rating is read on the server; the request does not carry it.
         self.assertIn("IA_HeliPaintService.ReadRating(GetPlayerId())", answer)
-        self.assertIn("IA_HeliPaintService.TrySetSkin(GetControlledEntity(), skinId, rating, admin)", answer)
+        self.assertIn("IA_HeliPaintService.TrySetSkin(GetControlledEntity(), skinId, rating)", answer)
         self.assertLess(answer.index("IA_HELI_PAINT_MIN_GAP_MS"), answer.index("IA_HeliPaintService.ReadRating("))
         self.assertRegex(controller, r"RplRcver\.Server\)\]\s*protected void RpcAsk_IA_SetHeliSkin\(int skinId\)")
         self.assertRegex(controller, r"RplRcver\.Owner\)\]\s*protected void RpcDo_IA_HeliPaintReply\(")
