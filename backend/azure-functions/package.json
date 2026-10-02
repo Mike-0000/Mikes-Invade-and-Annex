@@ -5,7 +5,9 @@
   "description": "Game API for Mike's Invade & Annex: stats, leaderboards and transport ratings.",
   "main": "src/functions/*.js",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "dev": "node dev/server.js",
+    "measure": "node dev/measure.js"
   },
   "dependencies": {
     "@azure/functions": "^4.5.0",

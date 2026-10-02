@@ -1,0 +1,8 @@
+# Left out of a deployment made with the Functions tools. The zip described in
+# README.md holds host.json, package.json, src/ and node_modules/ only.
+dev/
+test/
+README.md
+.gitignore
+local.settings.json
+*.zip

@@ -1,8 +1,10 @@
 const { app } = require('@azure/functions');
 const db = require('../db');
 const { createHandlers } = require('../handlers');
+const { readConfig } = require('../config');
+const { ROUTES } = require('../routes');
 
-const handlers = createHandlers(db);
+const handlers = createHandlers(db, readConfig(process.env));
 
 // The game sends no credentials, so every route is anonymous. Writes are
 // accepted only for a registered, active server GUID, checked in the database.
@@ -22,9 +24,5 @@ function route(name, method, handler) {
   });
 }
 
-route('registerServer', 'POST', handlers.registerServer);
-route('submitStats', 'POST', handlers.submitStats);
-route('getAllLeaderboards', 'GET', handlers.getAllLeaderboards);
-route('leaderboard', 'GET', handlers.getLeaderboard);
-route('submitTransport', 'POST', handlers.submitTransport);
-route('getTransportRatings', 'POST', handlers.getTransportRatings);
+for (const entry of ROUTES)
+  route(entry.name, entry.method, handlers[entry.handler]);
