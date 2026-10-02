@@ -852,6 +852,7 @@ modded class SCR_PlayerController
 	//------------------------------------------------------------------------------------------------
 	//! Server: send this player one page. The rows go out in chunks short enough for an RPC
 	//! string, so a page's size on the wire never depends on how long the names are.
+	//! \param total rows on the board; on IA_BoardProtocol.STATUS_LIMITED the seconds to wait
 	//! \param rows packed IA_BoardRow lines, the first being row number offset
 	//! \param mine the player's own packed line, empty when they are not on the board
 	void IA_SendLeaderboardPage(int viewId, int status, int total, int offset, notnull array<string> rows, string mine)
@@ -866,26 +867,14 @@ modded class SCR_PlayerController
 		if (status != IA_BoardProtocol.STATUS_OK)
 			return;
 
-		string chunk;
-		int chunkRows;
-		int chunkOffset = offset;
-		int count = rows.Count();
-		for (int i = 0; i < count; i++)
+		ref array<string> chunks = {};
+		ref array<int> firsts = {};
+		IA_BoardProtocol.SplitRows(rows, offset, chunks, firsts);
+		int last = chunks.Count() - 1;
+		for (int i = 0; i <= last; i++)
 		{
-			string line = rows[i];
-			if (chunkRows > 0 && chunk.Length() + line.Length() >= IA_BoardProtocol.CHUNK_CHARS)
-			{
-				IA_SendLeaderboardRows(local, viewId, chunkOffset, false, chunk);
-				chunk = "";
-				chunkRows = 0;
-				chunkOffset = offset + i;
-			}
-			if (chunkRows > 0)
-				chunk = chunk + "\n";
-			chunk = chunk + line;
-			chunkRows = chunkRows + 1;
+			IA_SendLeaderboardRows(local, viewId, firsts[i], i == last, chunks[i]);
 		}
-		IA_SendLeaderboardRows(local, viewId, chunkOffset, true, chunk);
 	}
 
 	//------------------------------------------------------------------------------------------------

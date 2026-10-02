@@ -27,6 +27,9 @@ class IA_BoardProtocol
 	static const int STATUS_FAILED = 1;		// the stats service did not answer
 	static const int STATUS_OFFLINE = 2;	// this server has no stats service to ask
 	static const int STATUS_BUSY = 3;		// asked too fast, or too many requests are waiting
+	//! The server has made all the requests to the stats service it may for now and holds no
+	//! rows for the page. The answer's total is the seconds until it is worth asking again.
+	static const int STATUS_LIMITED = 4;
 
 	static const int PAGE_ROWS = 25;
 	static const int MAX_OFFSET = 1000000;
@@ -91,5 +94,39 @@ class IA_BoardProtocol
 		if (index < 0)
 			return 0;
 		return index - index % PAGE_ROWS;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Join a page's packed rows into strings short enough for one RPC each.
+	//! \param offset index on the board of the first row
+	//! \param[out] chunks rows joined by line breaks; always at least one, empty for a page of no rows
+	//! \param[out] firsts index on the board of each chunk's first row
+	static void SplitRows(notnull array<string> rows, int offset, notnull array<string> chunks, notnull array<int> firsts)
+	{
+		chunks.Clear();
+		firsts.Clear();
+
+		string chunk;
+		int chunkRows;
+		int first = offset;
+		int count = rows.Count();
+		for (int i = 0; i < count; i++)
+		{
+			string line = rows[i];
+			if (chunkRows > 0 && chunk.Length() + line.Length() >= CHUNK_CHARS)
+			{
+				chunks.Insert(chunk);
+				firsts.Insert(first);
+				chunk = "";
+				chunkRows = 0;
+				first = offset + i;
+			}
+			if (chunkRows > 0)
+				chunk = chunk + "\n";
+			chunk = chunk + line;
+			chunkRows = chunkRows + 1;
+		}
+		chunks.Insert(chunk);
+		firsts.Insert(first);
 	}
 }

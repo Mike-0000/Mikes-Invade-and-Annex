@@ -20,12 +20,17 @@ class IA_StatisticsMenu : MUI_MenuBase
 	protected static const float RETRY_FAILED_S = 6.0;
 	protected static const float RETRY_OFFLINE_S = 15.0;
 	protected static const float REFRESH_SESSION_S = 5.0;
-	protected static const float REFRESH_STORED_S = 60.0;
+	// A stored board is asked for again just after the server's copy has aged out, never before:
+	// asking sooner only gets the same rows back.
+	protected static const float REFRESH_MARGIN_S = 2.0;
+	protected static const float WAIT_MARGIN_S = 0.5;
+	protected static const int WAIT_MAX_S = 900;
 
 	protected static const int LINK_ASKING = 0;
 	protected static const int LINK_LIVE = 1;
 	protected static const int LINK_LOST = 2;
 	protected static const int LINK_OFFLINE = 3;
+	protected static const int LINK_LIMITED = 4;
 
 	protected static const string FOOT_LEADERBOARD = "Session board is local to this restart. Server name override: ./profile/MikesInvadeAndAnnex/server_name.txt";
 	protected static const string FOOT_OPTIONS = "Stored in ./profile/MikesInvadeAndAnnex/local_options.json  •  This machine only";
@@ -60,6 +65,9 @@ class IA_StatisticsMenu : MUI_MenuBase
 	protected float m_fSinceAsk = 1;
 	protected float m_fHold;
 	protected float m_fRefresh;
+	// The server has said how long to wait before asking again; the seconds left are on screen.
+	protected bool m_bWaiting;
+	protected int m_iWaitShown;
 
 #ifdef WORKBENCH
 	// A Workbench probe fills the boards in a world with no game mode and no stats service.
@@ -67,6 +75,11 @@ class IA_StatisticsMenu : MUI_MenuBase
 	protected static int s_iProbeTotal;
 	protected static int s_iProbeMine;
 	protected static int s_iProbeStatus;
+	// When set, the stored boards are asked of this service instead, as player PROBE_MENU_PLAYER.
+	protected static ref IA_BoardService s_ProbeService;
+	protected static int s_iProbeAsks;
+	protected static int s_iProbeRefreshes;
+	protected static int s_iProbeTimeouts;
 #endif
 
 	//------------------------------------------------------------------------------------------------
@@ -372,6 +385,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 		m_Model.Reset();
 		m_iAskedPage = -1;
 		m_fHold = 0;
+		m_bWaiting = false;
 		m_fRefresh = RefreshPeriod();
 		m_Board.SetNotice("", EmptyText(m_iBoard));
 		m_Frame.SetNote("");
@@ -379,11 +393,14 @@ class IA_StatisticsMenu : MUI_MenuBase
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! How long rows are shown before they are asked for again. The session board is read from
+	//! the server's memory; a stored board is kept by the server for its lifetime, so an open
+	//! menu asks once per lifetime and every other viewer shares that answer.
 	protected float RefreshPeriod()
 	{
 		if (m_iBoard == IA_BoardProtocol.BOARD_SESSION)
 			return REFRESH_SESSION_S;
-		return REFRESH_STORED_S;
+		return IA_ApiTunables.BoardLifeS(m_iBoard) + REFRESH_MARGIN_S;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -426,6 +443,11 @@ class IA_StatisticsMenu : MUI_MenuBase
 	protected void ShowLink(int state)
 	{
 		IA_UplinkStyle look = IA_UplinkStyle.Get();
+		if (state == LINK_LIMITED)
+		{
+			m_Frame.SetStatus("BUSY", look.m_Tone, false);
+			return;
+		}
 		if (state == LINK_ASKING)
 		{
 			m_Frame.SetStatus("RECEIVING", look.m_Tone, true);
@@ -478,6 +500,9 @@ class IA_StatisticsMenu : MUI_MenuBase
 			m_iAskedPage = -1;
 			m_fHold = RETRY_FAILED_S;
 			ShowLink(LINK_LOST);
+#ifdef WORKBENCH
+			s_iProbeTimeouts = s_iProbeTimeouts + 1;
+#endif
 			return;
 		}
 
@@ -486,19 +511,79 @@ class IA_StatisticsMenu : MUI_MenuBase
 		{
 			m_fRefresh = RefreshPeriod();
 			m_Model.MarkAllStale();
+#ifdef WORKBENCH
+			s_iProbeRefreshes = s_iProbeRefreshes + 1;
+#endif
 		}
 
 		if (m_fHold > 0)
 		{
 			m_fHold = m_fHold - dt;
+			if (m_bWaiting)
+			{
+				if (m_fHold > 0)
+					ShowWait();
+				else
+					EndWait();
+			}
 			return;
 		}
 		if (m_fSinceAsk < ASK_GAP_S)
 			return;
 
-		int page = m_Model.FirstWanted(m_Board.GetFirstVisible(), m_Board.GetLastVisible());
+		// Only the session board is read ahead: a page of a stored board may cost the server a request.
+		bool around = m_iBoard == IA_BoardProtocol.BOARD_SESSION;
+		int page = m_Model.FirstWanted(m_Board.GetFirstVisible(), m_Board.GetLastVisible(), around);
 		if (page >= 0)
 			Ask(page);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! The server may not ask the stats service for now: say so, with the seconds left.
+	protected void ShowWait()
+	{
+		int seconds = Math.Ceil(m_fHold);
+		if (seconds < 1)
+			seconds = 1;
+		if (seconds == m_iWaitShown)
+			return;
+		m_iWaitShown = seconds;
+
+		// Rows already on screen stay; the wait goes under the status chip instead of over the table.
+		if (m_Model.HasRows())
+		{
+			m_Frame.SetNote(string.Format("RETRY IN %1 S", seconds));
+			return;
+		}
+		m_Board.SetNotice("BOARD BUSY", string.Format("This server has made all the board requests it may for now. Trying again in %1 s.", seconds));
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void EndWait()
+	{
+		m_bWaiting = false;
+		m_Board.SetNotice("", EmptyText(m_iBoard));
+		if (m_Model.HasRows())
+			ShowTotal();
+		else
+			m_Frame.SetNote("");
+
+		// The player may have scrolled back to rows that are held while the wait ran.
+		if (m_Model.FirstWanted(m_Board.GetFirstVisible(), m_Board.GetLastVisible(), false) >= 0)
+			ShowLink(LINK_ASKING);
+		else
+			ShowLink(LINK_LIVE);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! How many rows the board has, under the status chip.
+	protected void ShowTotal()
+	{
+		string total = IA_PilotDropoffPayload.FormatNumber(m_Model.GetTotal());
+		if (m_iBoard == IA_BoardProtocol.BOARD_SERVERS)
+			m_Frame.SetNote(total + " SERVERS");
+		else
+			m_Frame.SetNote(total + " PLAYERS");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -510,6 +595,12 @@ class IA_StatisticsMenu : MUI_MenuBase
 		m_fSinceAsk = 0;
 
 #ifdef WORKBENCH
+		s_iProbeAsks = s_iProbeAsks + 1;
+		if (s_ProbeService && m_iBoard != IA_BoardProtocol.BOARD_SESSION)
+		{
+			s_ProbeService.Request(IA_BoardService.PROBE_MENU_PLAYER, m_iViewId, m_iBoard, m_Board.GetSort(), m_Board.IsDescending(), page * IA_BoardProtocol.PAGE_ROWS);
+			return;
+		}
 		if (s_bProbe)
 		{
 			ProbeAnswer(page);
@@ -545,6 +636,17 @@ class IA_StatisticsMenu : MUI_MenuBase
 		// A refusal has no rows; the page is asked for again after a wait.
 		m_Model.Fail(m_iAskedPage);
 		m_iAskedPage = -1;
+		if (status == IA_BoardProtocol.STATUS_LIMITED)
+		{
+			// The total of this answer is the wait the server asks for. Asking sooner gains nothing,
+			// so the page is left alone for at least that long.
+			m_fHold = Math.ClampInt(total, 1, WAIT_MAX_S) + WAIT_MARGIN_S;
+			m_bWaiting = true;
+			m_iWaitShown = -1;
+			ShowLink(LINK_LIMITED);
+			ShowWait();
+			return;
+		}
 		if (status == IA_BoardProtocol.STATUS_BUSY)
 		{
 			m_fHold = RETRY_BUSY_S;
@@ -574,12 +676,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 		m_iAskedPage = -1;
 		m_Board.SetNotice("", EmptyText(m_iBoard));
 		ShowLink(LINK_LIVE);
-
-		string total = IA_PilotDropoffPayload.FormatNumber(m_Model.GetTotal());
-		if (m_iBoard == IA_BoardProtocol.BOARD_SERVERS)
-			m_Frame.SetNote(total + " SERVERS");
-		else
-			m_Frame.SetNote(total + " PLAYERS");
+		ShowTotal();
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -604,6 +701,58 @@ class IA_StatisticsMenu : MUI_MenuBase
 	static void ProbeEnd()
 	{
 		s_bProbe = false;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Probe: ask the stored boards of this service from now on, null to stop. The session board
+	//! keeps the stand-in ProbeBegin set up.
+	static void ProbeService(IA_BoardService service)
+	{
+		s_ProbeService = service;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Probe: pages this menu, or any before it, has asked a server for.
+	static int ProbeAsks()
+	{
+		return s_iProbeAsks;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Probe: true while the menu sits out a wait the server asked for.
+	static bool ProbeWaiting()
+	{
+		return s_Instance && s_Instance.m_bWaiting;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Probe: seconds the menu will still leave the page alone.
+	static float ProbeHold()
+	{
+		if (!s_Instance)
+			return 0;
+		return s_Instance.m_fHold;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Probe: seconds until the rows shown are asked for again, and the board they belong to.
+	static string ProbeRefresh()
+	{
+		if (!s_Instance)
+			return "no menu";
+		return string.Format("board %1, view %2, refresh in %3 s, refreshes %4, timeouts %5, first row %6", s_Instance.m_iBoard, s_Instance.m_iViewId, s_Instance.m_fRefresh, s_iProbeRefreshes, s_iProbeTimeouts, s_Instance.m_Board.GetFirstVisible());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Probe: the place on the player's own line, 0 when the board has given none.
+	static int ProbeMineRank()
+	{
+		if (!s_Instance || !s_Instance.m_Model)
+			return 0;
+		IA_BoardRow mine = s_Instance.m_Model.GetMine();
+		if (!mine)
+			return 0;
+		return mine.m_iRank;
 	}
 
 	//------------------------------------------------------------------------------------------------

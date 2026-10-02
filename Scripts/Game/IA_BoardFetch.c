@@ -8,15 +8,18 @@ class IA_BoardFetch
 	int m_iSort;
 	bool m_bDescending;
 	int m_iOffset;
-	int m_iLimit;			// 0 asks for the player's own line only
+	int m_iLimit;			// 0 asks for an own line only
 	bool m_bWantMine;		// also ask where m_sGuid stands
 	string m_sGuid;
+	int m_iPayer;			// the player whose allowance paid for it
 
 	ref array<int> m_aPlayers = {};
 	ref array<int> m_aViews = {};
+	ref array<int> m_aOffsets = {};
 
 	//------------------------------------------------------------------------------------------------
-	void AddWaiter(int playerId, int viewId)
+	//! \param offset first row of the page this player is waiting to be sent
+	void AddWaiter(int playerId, int viewId, int offset)
 	{
 		int count = m_aPlayers.Count();
 		for (int i = 0; i < count; i++)
@@ -25,10 +28,12 @@ class IA_BoardFetch
 				continue;
 			// A player looks at one view at a time; only the latest is worth answering.
 			m_aViews[i] = viewId;
+			m_aOffsets[i] = offset;
 			return;
 		}
 		m_aPlayers.Insert(playerId);
 		m_aViews.Insert(viewId);
+		m_aOffsets.Insert(offset);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -41,6 +46,7 @@ class IA_BoardFetch
 		{
 			m_aPlayers.RemoveOrdered(at);
 			m_aViews.RemoveOrdered(at);
+			m_aOffsets.RemoveOrdered(at);
 		}
 		return m_aPlayers.IsEmpty();
 	}

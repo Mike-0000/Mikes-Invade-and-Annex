@@ -168,8 +168,11 @@ class IA_BoardModel
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! \param around also ask for the page either side of the rows in view. Only for a board that
+	//!        costs the server nothing to read: every page of a stored board may be a request to
+	//!        the stats service.
 	//! \return the page to ask for next so rows firstRow..lastRow can be drawn, -1 when none is due
-	int FirstWanted(int firstRow, int lastRow)
+	int FirstWanted(int firstRow, int lastRow, bool around)
 	{
 		if (firstRow < 0)
 			firstRow = 0;
@@ -191,6 +194,9 @@ class IA_BoardModel
 			if (IsOnBoard(page) && PageState(page) == PAGE_STALE)
 				return page;
 		}
+
+		if (!around)
+			return -1;
 
 		// Then the pages either side, so a scroll finds them waiting.
 		page = lastPage + 1;

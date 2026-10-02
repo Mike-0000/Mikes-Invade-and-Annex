@@ -5,10 +5,12 @@
 //!
 //! Points earned here are queued, sent in idempotent batches, and counted on top
 //! of the last fetched total until the backend acknowledges them.
+//!
+//! Batches and rating lookups travel in the timed exchange (IA_ApiSync). A backend
+//! without it is served through the separate transport routes, as before.
 //------------------------------------------------------------------------------------------------
 class IA_TransportPilotStore
 {
-	protected static const int FLUSH_INTERVAL_MS = 60000;
 	protected static const int REQUEST_RETRY_MS = 60000;
 	// A backend that is down or not deployed yet is retried ever more slowly.
 	protected static const int BACKOFF_BASE_MS = 60000;
@@ -34,7 +36,8 @@ class IA_TransportPilotStore
 		if (!s_Instance)
 		{
 			s_Instance = new IA_TransportPilotStore();
-			GetGame().GetCallqueue().CallLater(s_Instance.Flush, FLUSH_INTERVAL_MS, true);
+			// The timed exchange takes the batches from here, or calls Flush for the separate route.
+			IA_ApiSync.GetInstance().Start();
 		}
 		return s_Instance;
 	}
@@ -112,8 +115,19 @@ class IA_TransportPilotStore
 	//! Send queued fetches now; called once per tracker tick so joins batch together.
 	void SendQueuedRequests()
 	{
+		if (m_aFetchIds.IsEmpty())
+			return;
+
+		// A player waits on the rating, so the timed exchange is asked to go early.
+		IA_ApiSync sync = IA_ApiSync.GetInstance();
+		if (sync.UsesSync())
+		{
+			sync.Hurry();
+			return;
+		}
+
 		// One request at a time, so a ratings snapshot never predates an acknowledged batch.
-		if (m_bFetchInFlight || m_bSubmitInFlight || m_aFetchIds.IsEmpty() || IsBackingOff())
+		if (m_bFetchInFlight || m_bSubmitInFlight || IsBackingOff())
 			return;
 
 		string ids = "[";
@@ -135,7 +149,9 @@ class IA_TransportPilotStore
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void Flush()
+	//! Send the waiting batch on the separate transport route. IA_ApiSync calls this on its
+	//! timer for a backend without the timed exchange.
+	void Flush()
 	{
 		if (!Replication.IsServer() || m_bSubmitInFlight || m_bFetchInFlight || IsBackingOff())
 			return;
@@ -153,10 +169,15 @@ class IA_TransportPilotStore
 	protected void BuildBatch()
 	{
 		string entries = "";
+		int taken;
 		foreach (string guid, IA_TransportPilotRecord record : m_mRecords)
 		{
 			if (!record || record.m_iPendingPoints <= 0)
 				continue;
+			// The backend takes so many players in a batch; the rest go in the next.
+			if (taken >= IA_ApiTunables.TRANSPORT_BATCH_ENTRIES)
+				continue;
+			taken = taken + 1;
 
 			record.m_iSentPoints = record.m_iPendingPoints;
 			record.m_iSentInsertions = record.m_iPendingInsertions;
@@ -205,6 +226,129 @@ class IA_TransportPilotStore
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! The batch the timed exchange should carry: the one awaiting acknowledgement, else a new one.
+	//! \param[out] entries JSON array of {playerId, playerName, points, insertions}
+	//! \return false when there is none, or a request on the separate routes is still out
+	bool SyncBatch(out string batchId, out string entries)
+	{
+		batchId = "";
+		entries = "";
+		if (!Replication.IsServer() || m_bSubmitInFlight || m_bFetchInFlight)
+			return false;
+
+		if (m_sSentEntries.IsEmpty())
+			BuildBatch();
+		batchId = m_sSentBatchId;
+		entries = m_sSentEntries;
+		return !m_sSentEntries.IsEmpty();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return JSON array of the identities whose rating the timed exchange should ask for, empty when none
+	string SyncRatingIds()
+	{
+		if (m_bSubmitInFlight || m_bFetchInFlight || m_aFetchIds.IsEmpty())
+			return "";
+
+		int count = SyncRatingCount();
+		string ids = "[";
+		for (int i = 0; i < count; i++)
+		{
+			if (i > 0)
+				ids = ids + ",";
+			ids = ids + "\"" + IA_JsonEscape(m_aFetchIds[i]) + "\"";
+		}
+		return ids + "]";
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! The timed exchange went out with what SyncBatch and SyncRatingIds gave it.
+	void OnSyncSent(bool batch, bool ratings)
+	{
+		if (batch)
+			m_bSubmitInFlight = true;
+		if (!ratings)
+			return;
+
+		m_bFetchInFlight = true;
+		m_aFetchSent.Clear();
+		int count = SyncRatingCount();
+		for (int i = 0; i < count; i++)
+		{
+			m_aFetchSent.Insert(m_aFetchIds[0]);
+			m_aFetchIds.RemoveOrdered(0);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! The stats service has no timed exchange, so nothing it carried was looked at: all of it
+	//! waits again, for the separate routes, and none of it counts as a failure.
+	void OnSyncUnsent(bool batch, bool ratings)
+	{
+		if (batch)
+			m_bSubmitInFlight = false;
+		if (!ratings)
+			return;
+
+		m_bFetchInFlight = false;
+		foreach (string asked : m_aFetchSent)
+		{
+			if (!m_aFetchIds.Contains(asked))
+				m_aFetchIds.Insert(asked);
+		}
+		m_aFetchSent.Clear();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! What the stats service said of the batch the timed exchange carried.
+	//! \param status the answer's transportStatus
+	void OnSyncBatchResult(string status)
+	{
+		// Added now, or added by an earlier attempt whose answer was lost.
+		if (status == "accepted" || status == "duplicate")
+		{
+			OnSubmitResult(true);
+			return;
+		}
+		if (status != "rejected")
+		{
+			OnSubmitResult(false);
+			return;
+		}
+
+		// Sending the same batch again would be refused again, so its points are given up.
+		Print("[IA][TransportPilot] The stats service refused a transport batch; it is dropped.", LogLevel.WARNING);
+		m_bSubmitInFlight = false;
+		foreach (string guid, IA_TransportPilotRecord record : m_mRecords)
+		{
+			if (!record)
+				continue;
+			record.m_iSentPoints = 0;
+			record.m_iSentInsertions = 0;
+		}
+		m_sSentEntries = "";
+		m_sSentBatchId = "";
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! The ratings and skin thresholds that came with the timed exchange.
+	void OnSyncRatings(notnull JsonLoadContext ctx)
+	{
+		m_bFetchInFlight = false;
+		NoteResult(true);
+		ReadRatings(ctx);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected int SyncRatingCount()
+	{
+		int count = m_aFetchIds.Count();
+		if (count > IA_ApiTunables.RATING_IDS)
+			count = IA_ApiTunables.RATING_IDS;
+		return count;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void OnRatingsFailed()
 	{
 		m_bFetchInFlight = false;
@@ -243,7 +387,13 @@ class IA_TransportPilotStore
 			Print("[IA][TransportPilot] Ratings response was not valid JSON.", LogLevel.ERROR);
 			return;
 		}
+		ReadRatings(ctx);
+	}
 
+	//------------------------------------------------------------------------------------------------
+	//! Take the "ratings" and "skins" of an answer.
+	protected void ReadRatings(notnull JsonLoadContext ctx)
+	{
 		ref array<ref IA_TransportRatingEntry> ratings = {};
 		if (!ctx.ReadValue("ratings", ratings))
 		{
@@ -287,4 +437,34 @@ class IA_TransportPilotStore
 			Print(string.Format("[IA][TransportPilot] Global ratings received for %1 players.", ratings.Count()), LogLevel.NORMAL);
 		}
 	}
+
+#ifdef WORKBENCH
+	//------------------------------------------------------------------------------------------------
+	//! Probe: the id of the batch awaiting acknowledgement, empty when none is.
+	string ProbeBatchId()
+	{
+		return m_sSentBatchId;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Probe: rating lookups waiting to be asked.
+	int ProbeWanted()
+	{
+		return m_aFetchIds.Count();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Probe: forget every player, batch and failure.
+	void ProbeClear()
+	{
+		m_mRecords.Clear();
+		m_aFetchIds.Clear();
+		m_aFetchSent.Clear();
+		m_sSentEntries = "";
+		m_sSentBatchId = "";
+		m_bSubmitInFlight = false;
+		m_bFetchInFlight = false;
+		m_iFailures = 0;
+	}
+#endif
 }
