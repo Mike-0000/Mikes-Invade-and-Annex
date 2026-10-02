@@ -1962,8 +1962,31 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
         m_iPlayerCountInZone = 0;
 		m_bCaptureRosterReady = true;
         m_eLastPublishedHud = IA_CaptureHudState.Hidden;
+		// CheckCurrentZoneComplete reads GetFactionScore, not m_captureProgress.
+		// Leaving a prior 1000 here makes HotAdd / reused map markers auto-complete.
+		USFactionScore = 0;
+		if (m_FactionScores)
+			m_FactionScores.Clear();
+		// Destroyed radio towers re-write US=1000 every frame while m_isDestroyed.
+		if (GetAreaType() == IA_AreaType.RadioTower && m_isDestroyed)
+			ResetDestroyedRadioTowerForReuse();
         IA_MissionInitializer.PublishCaptureHud(m_areaName, IA_CaptureHudState.Hidden, 0);
     }
+
+	//! Drop the wreck and flags so EnsureRadioTowersForGroup can spawn a fresh tower.
+	protected void ResetDestroyedRadioTowerForReuse()
+	{
+		m_isDestroyed = false;
+		m_qrfCooldownApplied = false;
+		m_towerDamageBound = false;
+		m_towerEntity = null;
+		m_prefabSpawned = false;
+		if (m_spawnedEntity)
+		{
+			IA_Game.AddEntityToGc(m_spawnedEntity);
+			m_spawnedEntity = null;
+		}
+	}
 
     protected void PublishCaptureHudState(IA_CaptureHudState state)
     {
