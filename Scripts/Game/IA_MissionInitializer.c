@@ -1452,13 +1452,11 @@ class IA_MissionInitializer : GenericEntity
         IA_GmDirector dir = IA_GmDirector.GetInstance();
         dir.EnsureStarted();
 
-        int liveGroup = dir.GetLiveGroupId();
+        // Same Live resolution as PlaceSite. GetLiveGroupId() stays -1 on map AOs,
+        // and BeginLiveGroup() would allocate 1001+, switch m_currentIndex, drop
+        // staggered town spawns, and stop IA_Game ticks on the original fight.
+        int liveGroup = dir.GetGroupIdForBucket(IA_GmBucket.Live);
         bool startingLive = false;
-        if (liveGroup < 0)
-        {
-            startingLive = true;
-            liveGroup = dir.BeginLiveGroup();
-        }
 
         marker.SetAreaGroup(liveGroup);
 
