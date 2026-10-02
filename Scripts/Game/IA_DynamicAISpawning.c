@@ -310,6 +310,34 @@ class IA_DynamicAISpawning
 		return false;
 	}
 
+	// Capture scoring waits on physical defenders. Cached civilians use a
+	// leftover pool after military work and must not freeze seize/town capture.
+	static bool BlocksCaptureReadiness(IA_DynamicAIGroupCache cache, vector center, float radius)
+	{
+		if (!cache || !cache.IsOwnerLive() || !cache.Intersects(center, radius))
+			return false;
+		if (cache.IsCivilianCache())
+			return false;
+		ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(cache);
+		if (budgetCache && budgetCache.IsBudgetActive())
+		{
+			// A contested objective needs one physical defender per group so
+			// the fight and capture can progress; the rest fill nearest-first.
+			if (cache.IsPaused())
+			{
+				budgetCache.RequestCaptureSeed();
+				return true;
+			}
+			return false;
+		}
+		if (cache.IsCached())
+		{
+			cache.RequestWake();
+			return true;
+		}
+		return false;
+	}
+
 	static bool EnsureReadyInRadius(vector center, float radius)
 	{
 		if (!Replication.IsServer())
@@ -317,25 +345,8 @@ class IA_DynamicAISpawning
 		bool ready = true;
 		foreach (IA_DynamicAIGroupCache cache : s_aGroups)
 		{
-			if (!cache || !cache.IsOwnerLive() || !cache.Intersects(center, radius))
-				continue;
-			ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(cache);
-			if (budgetCache && budgetCache.IsBudgetActive())
-			{
-				// A contested objective needs one physical defender per group so
-				// the fight and capture can progress; the rest fill nearest-first.
-				if (cache.IsPaused())
-				{
-					budgetCache.RequestCaptureSeed();
-					ready = false;
-				}
-				continue;
-			}
-			if (cache.IsCached())
-			{
-				cache.RequestWake();
+			if (BlocksCaptureReadiness(cache, center, radius))
 				ready = false;
-			}
 		}
 		if (!ready)
 			Start();
