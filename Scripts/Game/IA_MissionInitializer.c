@@ -1459,6 +1459,9 @@ class IA_MissionInitializer : GenericEntity
             liveGroup = dir.BeginLiveGroup();
         }
 
+		// Map markers keep stale capture/destroy state after an earlier AO.
+		// Without this, HotAdd can make CheckCurrentZoneComplete skip the fight.
+		marker.ResetForNewCapture();
         marker.SetAreaGroup(liveGroup);
 
         string name = marker.GetAreaName();
@@ -1473,6 +1476,9 @@ class IA_MissionInitializer : GenericEntity
             }
             return;
         }
+
+		if (marker.GetAreaType() == IA_AreaType.RadioTower)
+			marker.EnsureRadioTowerSpawned();
 
         IA_Game game = IA_Game.Instantiate();
         if (game && !name.IsEmpty())
