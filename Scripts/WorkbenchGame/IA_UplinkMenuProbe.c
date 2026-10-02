@@ -9,11 +9,16 @@
 //!   -iaUplinkPart 1  leaderboard only
 //!   -iaUplinkPart 2  admin menu only
 //!   -iaUplinkFull 1  play full screen instead of in the editor viewport
+//!   -iaUplinkLive 1  play an Invade & Annex world instead and read the boards from the stats
+//!                    service this Workbench profile is registered with; nothing is made up
 //------------------------------------------------------------------------------------------------
 [WorkbenchPluginAttribute(name: "IA uplink menu probe", wbModules: {"ResourceManager"})]
 class IA_UplinkMenuProbe : WorkbenchPlugin
 {
 	protected static const string WORLD = "worlds/Showcase/PBR_Vehicles.ent";
+	protected static const string WORLD_LIVE = "Worlds/IA_Arland.ent";
+	protected static const int LIVE_READY_TIMEOUT_MS = 240000;
+	protected static const int LIVE_ANSWER_TIMEOUT_MS = 40000;
 	protected static const int GAME_MODE_TIMEOUT_MS = 240000;
 	protected static const int PART_BOARD = 1;
 	protected static const int PART_ADMIN = 2;
@@ -43,9 +48,17 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		if (System.GetCLIParam("iaUplinkPart", partArg) && !partArg.IsEmpty())
 			part = partArg.ToInt();
 
+		bool live;
+		string liveArg;
+		if (System.GetCLIParam("iaUplinkLive", liveArg) && !liveArg.IsEmpty())
+			live = liveArg.ToInt() != 0;
+		string world = WORLD;
+		if (live)
+			world = WORLD_LIVE;
+
 		Workbench.OpenModule(WorldEditor);
 		WorldEditor editor = Workbench.GetModule(WorldEditor);
-		if (!editor || !editor.SetOpenedResource(WORLD))
+		if (!editor || !editor.SetOpenedResource(world))
 		{
 			Fail("could not open the probe world");
 			return;
@@ -72,14 +85,24 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		Mark("game mode");
 		Sleep(8000);
 
-		if (part != PART_ADMIN)
-			ProbeBoards();
-		if (part != PART_BOARD)
-			ProbeAdmin();
+		if (live)
+		{
+			ProbeLive();
+		}
+		else
+		{
+			if (part != PART_ADMIN)
+				ProbeBoards();
+			if (part != PART_BOARD)
+				ProbeAdmin();
+		}
 
 		Mark(string.Format("done failures=%1", m_iFailures));
 		editor.SwitchToEditMode();
 		Sleep(1000);
+		// A mission world is still being rebuilt for the editor; leaving during that crashes Workbench.
+		if (live)
+			Sleep(15000);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -249,6 +272,118 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		GetGame().GetMenuManager().CloseMenuByPreset(ChimeraMenuPreset.IA_StatisticsMenu);
 		IA_StatisticsMenu.ProbeEnd();
 		Sleep(800);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! The boards as a hosting player gets them: through the player controller, the game mode's
+	//! leaderboard manager and the stats service. Only counts are marked, never names.
+	protected void ProbeLive()
+	{
+		int waited;
+		while (!IA_LeaderboardManagerComponent.GetInstance() || !SCR_PlayerController.Cast(GetGame().GetPlayerController()))
+		{
+			Sleep(500);
+			waited = waited + 500;
+			if (waited > LIVE_READY_TIMEOUT_MS)
+			{
+				Fail("the live world has no leaderboard manager or no player controller");
+				return;
+			}
+		}
+		Mark(string.Format("live world ready after %1 ms", waited));
+		// The mission links to the stats service five seconds after it starts.
+		Sleep(9000);
+
+		GetGame().GetMenuManager().OpenMenu(ChimeraMenuPreset.IA_StatisticsMenu);
+		Sleep(2500);
+		Mark(string.Format("live session total=%1", IA_StatisticsMenu.ProbeTotal()));
+		Shot("live_session");
+
+		LiveBoard(IA_BoardProtocol.BOARD_SERVER, "live_server");
+
+		int players = LiveBoard(IA_BoardProtocol.BOARD_GLOBAL, "live_global");
+		if (players > 0)
+		{
+			IA_StatisticsMenu.ProbeTool(0);
+			Expect(WaitLiveRow(0), "the global board sorted by transport rating");
+			Shot("live_global_pilots");
+
+			// Rows far down the board, which only a page of their own brings.
+			IA_StatisticsMenu.ProbeSort(IA_BoardProtocol.SORT_KILLS);
+			Expect(WaitLiveRow(0), "the global board sorted by kills");
+			int deep = players / 2;
+			IA_StatisticsMenu.ProbeScroll(deep);
+			Expect(WaitLiveRow(deep), "a row half way down the global board");
+			Mark(string.Format("live global row %1 holds place %2", deep, IA_StatisticsMenu.ProbeRankAt(deep)));
+			Shot("live_global_deep");
+
+			IA_StatisticsMenu.ProbeScroll(players - 1);
+			Expect(WaitLiveRow(players - 1), "the last row of the global board");
+			Shot("live_global_end");
+		}
+
+		int servers = LiveBoard(IA_BoardProtocol.BOARD_SERVERS, "live_servers");
+		if (servers > 0)
+		{
+			Expect(IA_StatisticsMenu.ProbeSort(IA_BoardProtocol.SORT_PLAYERS), "servers sort by players");
+			Expect(WaitLiveRow(0), "the servers board sorted by players");
+			Shot("live_servers_players");
+			IA_StatisticsMenu.ProbeTool(2);
+			Sleep(4000);
+			Shot("live_servers_find");
+		}
+
+		GetGame().GetMenuManager().CloseMenuByPreset(ChimeraMenuPreset.IA_StatisticsMenu);
+		Sleep(800);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Open one stored board and wait for the service's first answer.
+	//! eturn the rows the board holds, -1 when no answer came
+	protected int LiveBoard(int board, string shot)
+	{
+		if (!IA_StatisticsMenu.ProbeTab(board))
+		{
+			Fail("the " + IA_BoardProtocol.BoardName(board) + " tab did not open");
+			return -1;
+		}
+
+		int total = -1;
+		int waited;
+		while (waited < LIVE_ANSWER_TIMEOUT_MS)
+		{
+			Sleep(250);
+			waited = waited + 250;
+			total = IA_StatisticsMenu.ProbeTotal();
+			if (total == 0)
+				break;
+			if (total > 0 && IA_StatisticsMenu.ProbeRankAt(0) > 0)
+				break;
+		}
+		Mark(string.Format("%1 total=%2 after %3 ms", shot, total, waited));
+		if (total < 0)
+			Fail("the " + IA_BoardProtocol.BoardName(board) + " board got no answer from the stats service");
+		Sleep(600);
+		Shot(shot);
+		return total;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! eturn true once the row at an index has arrived
+	protected bool WaitLiveRow(int index)
+	{
+		int waited;
+		while (waited < LIVE_ANSWER_TIMEOUT_MS)
+		{
+			Sleep(250);
+			waited = waited + 250;
+			if (IA_StatisticsMenu.ProbeRankAt(index) > 0)
+			{
+				Sleep(600);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	//------------------------------------------------------------------------------------------------

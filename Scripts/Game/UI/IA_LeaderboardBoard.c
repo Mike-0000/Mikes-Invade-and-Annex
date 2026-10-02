@@ -1174,7 +1174,11 @@ class IA_LeaderboardBoard : MUI_Node
 		{
 			sortX = x + m_aX[m_iSortCol];
 			sortW = m_aW[m_iSortCol];
-			surface.FillRect(sortX, y, sortW, h, MUI_ColorUtil.Fade(look.m_Tone, op * 0.05), 0);
+			// On a board shorter than the table it stops with the last row.
+			float sortH = h;
+			if (rows * ROW_H < sortH)
+				sortH = rows * ROW_H;
+			surface.FillRect(sortX, y, sortW, sortH, MUI_ColorUtil.Fade(look.m_Tone, op * 0.05), 0);
 		}
 
 		// What the best row scored, to size every row's bar against.
