@@ -391,6 +391,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Hospital", "68 0 -24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "20 0 -56", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls0(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 48");
@@ -419,7 +425,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("36 0 44");
 		layout.m_aGuardPosts.Insert("40 0 -12");
 		layout.m_aGuardPosts.Insert("28 0 24");
-		layout.m_aGuardPosts.Insert("-4 0 44");
 		layout.m_aGuardPosts.Insert("32 0 0");
 		layout.m_aGuardPosts.Insert("-4 0 32");
 		layout.m_aGuardPosts.Insert("-64 0 -12");
@@ -427,6 +432,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("44 0 28");
 		layout.m_aGuardPosts.Insert("80 0 8");
 		layout.m_aGuardPosts.Insert("-80 0 8");
+		layout.m_aGuardPosts.Insert("76 0 56");
 	}
 	protected static void BuildWalls0(IA_ComposedSiteLayout layout)
 	{
@@ -643,12 +649,17 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Hospital", "44 0 -40", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "76 0 -56", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls1(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
 		layout.m_aGuardPosts.Insert("20 0 -40");
 		layout.m_aGuardPosts.Insert("-52 0 44");
-		layout.m_aGuardPosts.Insert("-64 0 24");
 		layout.m_aGuardPosts.Insert("-48 0 24");
 		layout.m_aGuardPosts.Insert("-32 0 16");
 		layout.m_aGuardPosts.Insert("-32 0 8");
@@ -679,6 +690,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-60 0 28");
 		layout.m_aGuardPosts.Insert("80 0 -40");
 		layout.m_aGuardPosts.Insert("-44 0 0");
+		layout.m_aGuardPosts.Insert("-72 0 4");
 	}
 	protected static void BuildWalls1(IA_ComposedSiteLayout layout)
 	{
@@ -898,6 +910,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "76 0 -24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "52 0 -32", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls2(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -916,11 +934,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("28 0 56");
 		layout.m_aGuardPosts.Insert("24 0 36");
 		layout.m_aGuardPosts.Insert("52 0 52");
-		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("76 0 28");
-		layout.m_aGuardPosts.Insert("28 0 -16");
 		layout.m_aGuardPosts.Insert("40 0 12");
-		layout.m_aGuardPosts.Insert("-8 0 40");
 		layout.m_aGuardPosts.Insert("-56 0 -12");
 		layout.m_aGuardPosts.Insert("48 0 44");
 		layout.m_aGuardPosts.Insert("-76 0 36");
@@ -934,6 +949,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("56 0 36");
 		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("-24 0 -44");
+		layout.m_aGuardPosts.Insert("-56 0 28");
+		layout.m_aGuardPosts.Insert("16 0 48");
+		layout.m_aGuardPosts.Insert("32 0 -28");
 	}
 	protected static void BuildWalls2(IA_ComposedSiteLayout layout)
 	{
@@ -1154,13 +1172,18 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "36 0 -32", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "60 0 -40", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls3(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
 		layout.m_aGuardPosts.Insert("48 0 -12");
 		layout.m_aGuardPosts.Insert("-28 0 20");
 		layout.m_aGuardPosts.Insert("-52 0 52");
-		layout.m_aGuardPosts.Insert("64 0 52");
 		layout.m_aGuardPosts.Insert("20 0 48");
 		layout.m_aGuardPosts.Insert("-40 0 60");
 		layout.m_aGuardPosts.Insert("64 0 -12");
@@ -1168,7 +1191,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("24 0 36");
 		layout.m_aGuardPosts.Insert("48 0 52");
 		layout.m_aGuardPosts.Insert("80 0 -28");
-		layout.m_aGuardPosts.Insert("32 0 -16");
 		layout.m_aGuardPosts.Insert("-8 0 36");
 		layout.m_aGuardPosts.Insert("48 0 -40");
 		layout.m_aGuardPosts.Insert("-44 0 8");
@@ -1178,7 +1200,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-24 0 56");
 		layout.m_aGuardPosts.Insert("16 0 52");
 		layout.m_aGuardPosts.Insert("44 0 56");
-		layout.m_aGuardPosts.Insert("-60 0 24");
 		layout.m_aGuardPosts.Insert("24 0 60");
 		layout.m_aGuardPosts.Insert("-68 0 0");
 		layout.m_aGuardPosts.Insert("-72 0 44");
@@ -1188,8 +1209,11 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-72 0 36");
 		layout.m_aGuardPosts.Insert("40 0 -12");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
-		layout.m_aGuardPosts.Insert("-32 0 -12");
 		layout.m_aGuardPosts.Insert("-48 0 44");
+		layout.m_aGuardPosts.Insert("-36 0 12");
+		layout.m_aGuardPosts.Insert("-60 0 -12");
+		layout.m_aGuardPosts.Insert("44 0 4");
+		layout.m_aGuardPosts.Insert("-32 0 -20");
 	}
 	protected static void BuildWalls3(IA_ComposedSiteLayout layout)
 	{
@@ -1410,6 +1434,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-12 0 -56", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "52 0 -32", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls4(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -1431,7 +1461,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-36 0 12");
 		layout.m_aGuardPosts.Insert("32 0 -28");
 		layout.m_aGuardPosts.Insert("60 0 0");
-		layout.m_aGuardPosts.Insert("64 0 48");
 		layout.m_aGuardPosts.Insert("-72 0 12");
 		layout.m_aGuardPosts.Insert("72 0 -8");
 		layout.m_aGuardPosts.Insert("-32 0 32");
@@ -1439,13 +1468,14 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-48 0 36");
 		layout.m_aGuardPosts.Insert("-40 0 48");
 		layout.m_aGuardPosts.Insert("24 0 24");
-		layout.m_aGuardPosts.Insert("-36 0 -12");
-		layout.m_aGuardPosts.Insert("-60 0 24");
 		layout.m_aGuardPosts.Insert("56 0 8");
 		layout.m_aGuardPosts.Insert("40 0 -8");
 		layout.m_aGuardPosts.Insert("16 0 20");
 		layout.m_aGuardPosts.Insert("40 0 -36");
 		layout.m_aGuardPosts.Insert("-72 0 56");
+		layout.m_aGuardPosts.Insert("60 0 -20");
+		layout.m_aGuardPosts.Insert("44 0 8");
+		layout.m_aGuardPosts.Insert("-48 0 28");
 	}
 	protected static void BuildWalls4(IA_ComposedSiteLayout layout)
 	{
@@ -1665,6 +1695,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "44 0 -32", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-20 0 -40", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls5(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -1675,7 +1711,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("56 0 40");
 		layout.m_aGuardPosts.Insert("48 0 28");
 		layout.m_aGuardPosts.Insert("60 0 -16");
-		layout.m_aGuardPosts.Insert("-32 0 -8");
 		layout.m_aGuardPosts.Insert("-64 0 28");
 		layout.m_aGuardPosts.Insert("-28 0 36");
 		layout.m_aGuardPosts.Insert("-44 0 12");
@@ -1688,9 +1723,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("80 0 -16");
 		layout.m_aGuardPosts.Insert("68 0 40");
 		layout.m_aGuardPosts.Insert("56 0 56");
-		layout.m_aGuardPosts.Insert("-60 0 60");
 		layout.m_aGuardPosts.Insert("8 0 28");
-		layout.m_aGuardPosts.Insert("-64 0 20");
 		layout.m_aGuardPosts.Insert("-72 0 -4");
 		layout.m_aGuardPosts.Insert("-56 0 32");
 		layout.m_aGuardPosts.Insert("-32 0 20");
@@ -1701,6 +1734,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("52 0 52");
 		layout.m_aGuardPosts.Insert("-56 0 44");
 		layout.m_aGuardPosts.Insert("68 0 -32");
+		layout.m_aGuardPosts.Insert("60 0 -8");
+		layout.m_aGuardPosts.Insert("52 0 8");
+		layout.m_aGuardPosts.Insert("12 0 36");
 	}
 	protected static void BuildWalls5(IA_ComposedSiteLayout layout)
 	{
@@ -1918,6 +1954,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "44 0 -48", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "76 0 -32", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls6(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -1933,7 +1975,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("16 0 28");
 		layout.m_aGuardPosts.Insert("72 0 16");
 		layout.m_aGuardPosts.Insert("68 0 -16");
-		layout.m_aGuardPosts.Insert("-60 0 24");
 		layout.m_aGuardPosts.Insert("60 0 -8");
 		layout.m_aGuardPosts.Insert("-44 0 56");
 		layout.m_aGuardPosts.Insert("-40 0 12");
@@ -1954,6 +1995,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-72 0 20");
 		layout.m_aGuardPosts.Insert("68 0 4");
 		layout.m_aGuardPosts.Insert("4 0 32");
+		layout.m_aGuardPosts.Insert("-68 0 36");
 	}
 	protected static void BuildWalls6(IA_ComposedSiteLayout layout)
 	{
@@ -2172,10 +2214,15 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "44 0 -48", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "68 0 -32", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls7(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
-		layout.m_aGuardPosts.Insert("-32 0 -12");
 		layout.m_aGuardPosts.Insert("56 0 40");
 		layout.m_aGuardPosts.Insert("8 0 20");
 		layout.m_aGuardPosts.Insert("64 0 -4");
@@ -2185,7 +2232,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-40 0 8");
 		layout.m_aGuardPosts.Insert("48 0 28");
 		layout.m_aGuardPosts.Insert("-32 0 -28");
-		layout.m_aGuardPosts.Insert("60 0 52");
 		layout.m_aGuardPosts.Insert("72 0 40");
 		layout.m_aGuardPosts.Insert("-20 0 -32");
 		layout.m_aGuardPosts.Insert("56 0 12");
@@ -2208,6 +2254,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("24 0 -44");
 		layout.m_aGuardPosts.Insert("40 0 32");
 		layout.m_aGuardPosts.Insert("16 0 44");
+		layout.m_aGuardPosts.Insert("-32 0 -20");
+		layout.m_aGuardPosts.Insert("72 0 -20");
 	}
 	protected static void BuildWalls7(IA_ComposedSiteLayout layout)
 	{
@@ -2425,6 +2473,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "44 0 -48", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "68 0 -40", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls8(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -2441,15 +2495,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-60 0 40");
 		layout.m_aGuardPosts.Insert("80 0 24");
 		layout.m_aGuardPosts.Insert("-16 0 -44");
-		layout.m_aGuardPosts.Insert("-32 0 -4");
 		layout.m_aGuardPosts.Insert("36 0 8");
 		layout.m_aGuardPosts.Insert("24 0 -44");
 		layout.m_aGuardPosts.Insert("-72 0 52");
 		layout.m_aGuardPosts.Insert("-16 0 20");
-		layout.m_aGuardPosts.Insert("-64 0 24");
 		layout.m_aGuardPosts.Insert("-24 0 52");
 		layout.m_aGuardPosts.Insert("40 0 -16");
-		layout.m_aGuardPosts.Insert("68 0 56");
 		layout.m_aGuardPosts.Insert("-24 0 36");
 		layout.m_aGuardPosts.Insert("76 0 56");
 		layout.m_aGuardPosts.Insert("-56 0 36");
@@ -2461,6 +2512,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-32 0 12");
 		layout.m_aGuardPosts.Insert("-60 0 32");
 		layout.m_aGuardPosts.Insert("52 0 36");
+		layout.m_aGuardPosts.Insert("44 0 32");
+		layout.m_aGuardPosts.Insert("-72 0 -8");
+		layout.m_aGuardPosts.Insert("-76 0 40");
 	}
 	protected static void BuildWalls8(IA_ComposedSiteLayout layout)
 	{
@@ -2682,6 +2736,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "20 0 -40", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "44 0 -32", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls9(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -2693,7 +2753,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-48 0 32");
 		layout.m_aGuardPosts.Insert("76 0 24");
 		layout.m_aGuardPosts.Insert("-40 0 -8");
-		layout.m_aGuardPosts.Insert("-4 0 40");
 		layout.m_aGuardPosts.Insert("24 0 24");
 		layout.m_aGuardPosts.Insert("-24 0 -36");
 		layout.m_aGuardPosts.Insert("-68 0 32");
@@ -2702,7 +2761,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("72 0 60");
 		layout.m_aGuardPosts.Insert("-44 0 20");
 		layout.m_aGuardPosts.Insert("20 0 52");
-		layout.m_aGuardPosts.Insert("-12 0 40");
 		layout.m_aGuardPosts.Insert("12 0 32");
 		layout.m_aGuardPosts.Insert("-72 0 4");
 		layout.m_aGuardPosts.Insert("40 0 28");
@@ -2712,12 +2770,14 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-56 0 52");
 		layout.m_aGuardPosts.Insert("-80 0 0");
 		layout.m_aGuardPosts.Insert("64 0 20");
-		layout.m_aGuardPosts.Insert("-52 0 20");
 		layout.m_aGuardPosts.Insert("68 0 -20");
 		layout.m_aGuardPosts.Insert("40 0 -56");
 		layout.m_aGuardPosts.Insert("48 0 52");
 		layout.m_aGuardPosts.Insert("64 0 -28");
 		layout.m_aGuardPosts.Insert("-32 0 52");
+		layout.m_aGuardPosts.Insert("-60 0 36");
+		layout.m_aGuardPosts.Insert("-40 0 44");
+		layout.m_aGuardPosts.Insert("28 0 20");
 	}
 	protected static void BuildWalls9(IA_ComposedSiteLayout layout)
 	{
@@ -2939,6 +2999,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "44 0 -48", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "76 0 -40", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls10(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -2961,20 +3027,20 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("44 0 4");
 		layout.m_aGuardPosts.Insert("-16 0 52");
 		layout.m_aGuardPosts.Insert("-32 0 8");
-		layout.m_aGuardPosts.Insert("-68 0 60");
 		layout.m_aGuardPosts.Insert("32 0 0");
 		layout.m_aGuardPosts.Insert("-16 0 -48");
 		layout.m_aGuardPosts.Insert("60 0 -4");
 		layout.m_aGuardPosts.Insert("-8 0 -56");
 		layout.m_aGuardPosts.Insert("32 0 48");
 		layout.m_aGuardPosts.Insert("-56 0 40");
-		layout.m_aGuardPosts.Insert("68 0 52");
 		layout.m_aGuardPosts.Insert("40 0 -24");
 		layout.m_aGuardPosts.Insert("36 0 16");
 		layout.m_aGuardPosts.Insert("-36 0 60");
 		layout.m_aGuardPosts.Insert("-24 0 -56");
 		layout.m_aGuardPosts.Insert("20 0 32");
 		layout.m_aGuardPosts.Insert("60 0 -36");
+		layout.m_aGuardPosts.Insert("-32 0 56");
+		layout.m_aGuardPosts.Insert("-12 0 -60");
 	}
 	protected static void BuildWalls10(IA_ComposedSiteLayout layout)
 	{
@@ -3194,6 +3260,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "44 0 -48", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "20 0 -40", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls11(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -3211,7 +3283,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("68 0 24");
 		layout.m_aGuardPosts.Insert("76 0 56");
 		layout.m_aGuardPosts.Insert("-28 0 48");
-		layout.m_aGuardPosts.Insert("-68 0 60");
 		layout.m_aGuardPosts.Insert("28 0 -20");
 		layout.m_aGuardPosts.Insert("36 0 16");
 		layout.m_aGuardPosts.Insert("28 0 48");
@@ -3225,11 +3296,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("44 0 -4");
 		layout.m_aGuardPosts.Insert("-44 0 -8");
 		layout.m_aGuardPosts.Insert("0 0 -52");
-		layout.m_aGuardPosts.Insert("-56 0 24");
 		layout.m_aGuardPosts.Insert("32 0 24");
 		layout.m_aGuardPosts.Insert("-12 0 20");
 		layout.m_aGuardPosts.Insert("32 0 4");
 		layout.m_aGuardPosts.Insert("-56 0 56");
+		layout.m_aGuardPosts.Insert("-40 0 8");
+		layout.m_aGuardPosts.Insert("20 0 28");
 	}
 	protected static void BuildWalls11(IA_ComposedSiteLayout layout)
 	{
@@ -3451,6 +3523,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "20 0 -56", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "44 0 -48", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls12(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("-40 0 12");
@@ -3462,7 +3540,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-4 0 20");
 		layout.m_aGuardPosts.Insert("64 0 20");
 		layout.m_aGuardPosts.Insert("20 0 -44");
-		layout.m_aGuardPosts.Insert("-12 0 44");
 		layout.m_aGuardPosts.Insert("-76 0 44");
 		layout.m_aGuardPosts.Insert("-68 0 28");
 		layout.m_aGuardPosts.Insert("56 0 44");
@@ -3485,6 +3562,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-68 0 12");
 		layout.m_aGuardPosts.Insert("-52 0 56");
 		layout.m_aGuardPosts.Insert("-48 0 44");
+		layout.m_aGuardPosts.Insert("-16 0 44");
 		layout.m_aGuardPosts.Insert("16 0 -36");
 		layout.m_aGuardPosts.Insert("40 0 16");
 	}
@@ -3704,6 +3782,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "20 0 -56", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "36 0 -32", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls13(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -3721,17 +3805,14 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("32 0 52");
 		layout.m_aGuardPosts.Insert("-48 0 56");
 		layout.m_aGuardPosts.Insert("72 0 28");
-		layout.m_aGuardPosts.Insert("-32 0 -12");
 		layout.m_aGuardPosts.Insert("-80 0 24");
 		layout.m_aGuardPosts.Insert("68 0 4");
 		layout.m_aGuardPosts.Insert("-72 0 44");
 		layout.m_aGuardPosts.Insert("48 0 12");
-		layout.m_aGuardPosts.Insert("-32 0 -4");
 		layout.m_aGuardPosts.Insert("48 0 48");
 		layout.m_aGuardPosts.Insert("-24 0 -36");
 		layout.m_aGuardPosts.Insert("8 0 -60");
 		layout.m_aGuardPosts.Insert("-16 0 44");
-		layout.m_aGuardPosts.Insert("68 0 56");
 		layout.m_aGuardPosts.Insert("-36 0 8");
 		layout.m_aGuardPosts.Insert("64 0 -12");
 		layout.m_aGuardPosts.Insert("36 0 8");
@@ -3739,7 +3820,10 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("64 0 -20");
 		layout.m_aGuardPosts.Insert("-48 0 40");
 		layout.m_aGuardPosts.Insert("56 0 -20");
-		layout.m_aGuardPosts.Insert("-64 0 20");
+		layout.m_aGuardPosts.Insert("80 0 60");
+		layout.m_aGuardPosts.Insert("-48 0 20");
+		layout.m_aGuardPosts.Insert("-4 0 28");
+		layout.m_aGuardPosts.Insert("0 0 20");
 	}
 	protected static void BuildWalls13(IA_ComposedSiteLayout layout)
 	{
@@ -3959,12 +4043,17 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "52 0 -32", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "76 0 -8", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls14(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("20 0 44");
 		layout.m_aGuardPosts.Insert("-24 0 36");
 		layout.m_aGuardPosts.Insert("-44 0 8");
-		layout.m_aGuardPosts.Insert("72 0 48");
 		layout.m_aGuardPosts.Insert("80 0 24");
 		layout.m_aGuardPosts.Insert("-4 0 -40");
 		layout.m_aGuardPosts.Insert("52 0 -12");
@@ -3973,7 +4062,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("24 0 20");
 		layout.m_aGuardPosts.Insert("4 0 32");
 		layout.m_aGuardPosts.Insert("0 0 24");
-		layout.m_aGuardPosts.Insert("32 0 -8");
 		layout.m_aGuardPosts.Insert("76 0 44");
 		layout.m_aGuardPosts.Insert("-40 0 -4");
 		layout.m_aGuardPosts.Insert("-32 0 44");
@@ -3984,7 +4072,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-44 0 32");
 		layout.m_aGuardPosts.Insert("-16 0 48");
 		layout.m_aGuardPosts.Insert("24 0 40");
-		layout.m_aGuardPosts.Insert("64 0 52");
 		layout.m_aGuardPosts.Insert("-80 0 -20");
 		layout.m_aGuardPosts.Insert("-76 0 4");
 		layout.m_aGuardPosts.Insert("-32 0 24");
@@ -3995,6 +4082,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("24 0 28");
 		layout.m_aGuardPosts.Insert("-80 0 40");
 		layout.m_aGuardPosts.Insert("80 0 36");
+		layout.m_aGuardPosts.Insert("-12 0 32");
+		layout.m_aGuardPosts.Insert("12 0 -40");
+		layout.m_aGuardPosts.Insert("-48 0 52");
 	}
 	protected static void BuildWalls14(IA_ComposedSiteLayout layout)
 	{
@@ -4214,6 +4304,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "60 0 -40", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "60 0 -16", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls15(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -4245,11 +4341,11 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-72 0 56");
 		layout.m_aGuardPosts.Insert("64 0 8");
 		layout.m_aGuardPosts.Insert("32 0 20");
-		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("12 0 24");
 		layout.m_aGuardPosts.Insert("16 0 -36");
 		layout.m_aGuardPosts.Insert("-76 0 48");
 		layout.m_aGuardPosts.Insert("64 0 -28");
+		layout.m_aGuardPosts.Insert("-36 0 -4");
 	}
 	protected static void BuildWalls15(IA_ComposedSiteLayout layout)
 	{
@@ -4467,6 +4563,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "44 0 -48", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Supply", "68 0 -32", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls16(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -4491,7 +4593,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-12 0 -60");
 		layout.m_aGuardPosts.Insert("52 0 -4");
 		layout.m_aGuardPosts.Insert("-48 0 16");
-		layout.m_aGuardPosts.Insert("28 0 -16");
 		layout.m_aGuardPosts.Insert("-60 0 48");
 		layout.m_aGuardPosts.Insert("40 0 -20");
 		layout.m_aGuardPosts.Insert("-20 0 24");
@@ -4499,10 +4600,11 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("44 0 36");
 		layout.m_aGuardPosts.Insert("40 0 0");
 		layout.m_aGuardPosts.Insert("24 0 -36");
-		layout.m_aGuardPosts.Insert("-52 0 24");
 		layout.m_aGuardPosts.Insert("52 0 40");
-		layout.m_aGuardPosts.Insert("-56 0 20");
 		layout.m_aGuardPosts.Insert("12 0 -32");
+		layout.m_aGuardPosts.Insert("44 0 -28");
+		layout.m_aGuardPosts.Insert("80 0 8");
+		layout.m_aGuardPosts.Insert("72 0 -44");
 	}
 	protected static void BuildWalls16(IA_ComposedSiteLayout layout)
 	{
@@ -4723,6 +4825,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "60 0 -16", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "76 0 -16", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls17(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("-68 0 4");
@@ -4732,7 +4840,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-68 0 52");
 		layout.m_aGuardPosts.Insert("-20 0 28");
 		layout.m_aGuardPosts.Insert("52 0 44");
-		layout.m_aGuardPosts.Insert("-36 0 -8");
 		layout.m_aGuardPosts.Insert("-52 0 -4");
 		layout.m_aGuardPosts.Insert("68 0 36");
 		layout.m_aGuardPosts.Insert("-16 0 24");
@@ -4755,6 +4862,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("68 0 8");
 		layout.m_aGuardPosts.Insert("-48 0 48");
 		layout.m_aGuardPosts.Insert("-24 0 56");
+		layout.m_aGuardPosts.Insert("-36 0 -4");
 		layout.m_aGuardPosts.Insert("40 0 -12");
 		layout.m_aGuardPosts.Insert("-68 0 28");
 		layout.m_aGuardPosts.Insert("-52 0 32");
@@ -4978,6 +5086,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-12 0 -56", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "76 0 -24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls18(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -4985,7 +5099,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-68 0 -8");
 		layout.m_aGuardPosts.Insert("8 0 -36");
 		layout.m_aGuardPosts.Insert("-36 0 8");
-		layout.m_aGuardPosts.Insert("68 0 56");
 		layout.m_aGuardPosts.Insert("-80 0 -40");
 		layout.m_aGuardPosts.Insert("64 0 -32");
 		layout.m_aGuardPosts.Insert("-56 0 28");
@@ -5014,6 +5127,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("32 0 8");
 		layout.m_aGuardPosts.Insert("-44 0 44");
 		layout.m_aGuardPosts.Insert("28 0 20");
+		layout.m_aGuardPosts.Insert("64 0 -20");
 	}
 	protected static void BuildWalls18(IA_ComposedSiteLayout layout)
 	{
@@ -5233,6 +5347,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-20 0 -56", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "36 0 -32", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls19(layout);
+		layout.AddAirRaidBunker("-9 0 45", 270);
+		layout.AddAirRaidBunker("67 0 53", 90);
+		layout.AddAirRaidBunker("31 0 -11", 180);
+		layout.AddAirRaidBunker("-31 0 -11", 180);
+		layout.AddAirRaidBunker("-65 0 63", 270);
+		layout.AddAirRaidBunker("-59 0 21", 270);
 		layout.m_aGuardPosts.Insert("0 0 -58");
 		layout.m_aGuardPosts.Insert("-78 0 -8");
 		layout.m_aGuardPosts.Insert("78 0 -8");
@@ -5242,7 +5362,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-16 0 -32");
 		layout.m_aGuardPosts.Insert("-24 0 44");
 		layout.m_aGuardPosts.Insert("60 0 60");
-		layout.m_aGuardPosts.Insert("72 0 52");
 		layout.m_aGuardPosts.Insert("-20 0 28");
 		layout.m_aGuardPosts.Insert("-40 0 -12");
 		layout.m_aGuardPosts.Insert("40 0 32");
@@ -5269,6 +5388,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-56 0 52");
 		layout.m_aGuardPosts.Insert("-56 0 4");
 		layout.m_aGuardPosts.Insert("60 0 -36");
+		layout.m_aGuardPosts.Insert("20 0 24");
 	}
 	protected static void BuildWalls19(IA_ComposedSiteLayout layout)
 	{
@@ -5488,6 +5608,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-40 0 -20", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Supply", "-40 0 -4", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls20(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("-53 0 51", 270);
+		layout.AddAirRaidBunker("-45 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("-16 0 20");
@@ -5511,7 +5635,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("44 0 20");
 		layout.m_aGuardPosts.Insert("32 0 -24");
 		layout.m_aGuardPosts.Insert("32 0 -32");
-		layout.m_aGuardPosts.Insert("52 0 48");
 		layout.m_aGuardPosts.Insert("52 0 40");
 		layout.m_aGuardPosts.Insert("60 0 28");
 		layout.m_aGuardPosts.Insert("-44 0 -48");
@@ -5524,6 +5647,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("12 0 -32");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("-24 0 36");
+		layout.m_aGuardPosts.Insert("60 0 20");
 	}
 	protected static void BuildWalls20(IA_ComposedSiteLayout layout)
 	{
@@ -5699,6 +5823,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "40 0 -20", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Supply", "40 0 -4", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls21(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("-53 0 51", 270);
+		layout.AddAirRaidBunker("31 0 9", 90);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("58 0 -8");
 		layout.m_aGuardPosts.Insert("32 0 24");
@@ -5718,7 +5846,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("32 0 16");
 		layout.m_aGuardPosts.Insert("56 0 -20");
 		layout.m_aGuardPosts.Insert("-48 0 24");
-		layout.m_aGuardPosts.Insert("-4 0 32");
 		layout.m_aGuardPosts.Insert("-36 0 44");
 		layout.m_aGuardPosts.Insert("28 0 40");
 		layout.m_aGuardPosts.Insert("44 0 12");
@@ -5735,6 +5862,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("16 0 20");
 		layout.m_aGuardPosts.Insert("52 0 24");
 		layout.m_aGuardPosts.Insert("-24 0 28");
+		layout.m_aGuardPosts.Insert("-56 0 36");
 	}
 	protected static void BuildWalls21(IA_ComposedSiteLayout layout)
 	{
@@ -5909,6 +6037,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "-40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls22(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("31 0 -9", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("58 0 -8");
@@ -5934,17 +6066,17 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-48 0 12");
 		layout.m_aGuardPosts.Insert("-56 0 -16");
 		layout.m_aGuardPosts.Insert("52 0 8");
-		layout.m_aGuardPosts.Insert("48 0 48");
 		layout.m_aGuardPosts.Insert("60 0 -48");
 		layout.m_aGuardPosts.Insert("-44 0 48");
 		layout.m_aGuardPosts.Insert("44 0 40");
 		layout.m_aGuardPosts.Insert("48 0 16");
 		layout.m_aGuardPosts.Insert("44 0 32");
-		layout.m_aGuardPosts.Insert("-8 0 32");
 		layout.m_aGuardPosts.Insert("44 0 24");
 		layout.m_aGuardPosts.Insert("36 0 36");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
 		layout.m_aGuardPosts.Insert("-16 0 40");
+		layout.m_aGuardPosts.Insert("-60 0 -44");
+		layout.m_aGuardPosts.Insert("-60 0 4");
 	}
 	protected static void BuildWalls22(IA_ComposedSiteLayout layout)
 	{
@@ -6121,6 +6253,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls23(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("35 0 1", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("58 0 -8");
@@ -6133,14 +6269,11 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("16 0 -32");
 		layout.m_aGuardPosts.Insert("36 0 40");
 		layout.m_aGuardPosts.Insert("52 0 -24");
-		layout.m_aGuardPosts.Insert("32 0 8");
 		layout.m_aGuardPosts.Insert("32 0 36");
 		layout.m_aGuardPosts.Insert("-56 0 -48");
 		layout.m_aGuardPosts.Insert("-56 0 24");
-		layout.m_aGuardPosts.Insert("-48 0 48");
 		layout.m_aGuardPosts.Insert("52 0 12");
 		layout.m_aGuardPosts.Insert("52 0 -48");
-		layout.m_aGuardPosts.Insert("32 0 0");
 		layout.m_aGuardPosts.Insert("-4 0 20");
 		layout.m_aGuardPosts.Insert("48 0 24");
 		layout.m_aGuardPosts.Insert("-28 0 44");
@@ -6157,6 +6290,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("20 0 40");
 		layout.m_aGuardPosts.Insert("60 0 -40");
 		layout.m_aGuardPosts.Insert("-48 0 -8");
+		layout.m_aGuardPosts.Insert("56 0 -36");
+		layout.m_aGuardPosts.Insert("56 0 -20");
+		layout.m_aGuardPosts.Insert("-36 0 16");
 	}
 	protected static void BuildWalls23(IA_ComposedSiteLayout layout)
 	{
@@ -6333,6 +6469,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Hospital", "-48 0 -4", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "56 0 12", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls24(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("35 0 -5", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("52 0 -48");
 		layout.m_aGuardPosts.Insert("-56 0 36");
@@ -6354,10 +6494,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-44 0 40");
 		layout.m_aGuardPosts.Insert("-12 0 -32");
 		layout.m_aGuardPosts.Insert("40 0 -20");
-		layout.m_aGuardPosts.Insert("-52 0 48");
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-36 0 44");
-		layout.m_aGuardPosts.Insert("36 0 -4");
 		layout.m_aGuardPosts.Insert("-36 0 -24");
 		layout.m_aGuardPosts.Insert("36 0 28");
 		layout.m_aGuardPosts.Insert("36 0 44");
@@ -6369,6 +6507,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-52 0 28");
 		layout.m_aGuardPosts.Insert("56 0 28");
 		layout.m_aGuardPosts.Insert("60 0 44");
+		layout.m_aGuardPosts.Insert("28 0 12");
+		layout.m_aGuardPosts.Insert("40 0 8");
 	}
 	protected static void BuildWalls24(IA_ComposedSiteLayout layout)
 	{
@@ -6544,6 +6684,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Hospital", "48 0 -4", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-56 0 12", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls25(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("-53 0 51", 270);
+		layout.AddAirRaidBunker("-31 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-24 0 20");
 		layout.m_aGuardPosts.Insert("-28 0 28");
@@ -6551,14 +6695,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("4 0 28");
 		layout.m_aGuardPosts.Insert("-20 0 40");
 		layout.m_aGuardPosts.Insert("-32 0 16");
-		layout.m_aGuardPosts.Insert("-32 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -32");
 		layout.m_aGuardPosts.Insert("4 0 -40");
 		layout.m_aGuardPosts.Insert("36 0 40");
 		layout.m_aGuardPosts.Insert("-28 0 36");
 		layout.m_aGuardPosts.Insert("32 0 28");
 		layout.m_aGuardPosts.Insert("56 0 40");
-		layout.m_aGuardPosts.Insert("-28 0 -12");
 		layout.m_aGuardPosts.Insert("36 0 20");
 		layout.m_aGuardPosts.Insert("-36 0 12");
 		layout.m_aGuardPosts.Insert("-4 0 -32");
@@ -6580,6 +6722,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-20 0 24");
 		layout.m_aGuardPosts.Insert("-40 0 36");
 		layout.m_aGuardPosts.Insert("60 0 -36");
+		layout.m_aGuardPosts.Insert("-4 0 24");
+		layout.m_aGuardPosts.Insert("-8 0 -40");
 	}
 	protected static void BuildWalls25(IA_ComposedSiteLayout layout)
 	{
@@ -6756,6 +6900,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "-40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-32 0 12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls26(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("-53 0 51", 270);
+		layout.AddAirRaidBunker("-45 0 5", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("52 0 32");
@@ -6774,7 +6922,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-44 0 -48");
 		layout.m_aGuardPosts.Insert("32 0 28");
 		layout.m_aGuardPosts.Insert("-56 0 -20");
-		layout.m_aGuardPosts.Insert("-12 0 28");
 		layout.m_aGuardPosts.Insert("-56 0 8");
 		layout.m_aGuardPosts.Insert("48 0 28");
 		layout.m_aGuardPosts.Insert("8 0 -32");
@@ -6792,6 +6939,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-24 0 -32");
 		layout.m_aGuardPosts.Insert("44 0 16");
 		layout.m_aGuardPosts.Insert("-60 0 32");
+		layout.m_aGuardPosts.Insert("28 0 16");
 	}
 	protected static void BuildWalls26(IA_ComposedSiteLayout layout)
 	{
@@ -6969,11 +7117,13 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "32 0 12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls27(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("41 0 3", 90);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("58 0 -8");
-		layout.m_aGuardPosts.Insert("56 0 48");
 		layout.m_aGuardPosts.Insert("-20 0 32");
-		layout.m_aGuardPosts.Insert("-48 0 48");
 		layout.m_aGuardPosts.Insert("-36 0 28");
 		layout.m_aGuardPosts.Insert("52 0 24");
 		layout.m_aGuardPosts.Insert("28 0 24");
@@ -6985,8 +7135,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-40 0 16");
 		layout.m_aGuardPosts.Insert("24 0 40");
 		layout.m_aGuardPosts.Insert("60 0 -44");
-		layout.m_aGuardPosts.Insert("-8 0 32");
-		layout.m_aGuardPosts.Insert("44 0 8");
 		layout.m_aGuardPosts.Insert("4 0 -32");
 		layout.m_aGuardPosts.Insert("-32 0 44");
 		layout.m_aGuardPosts.Insert("-56 0 16");
@@ -6996,15 +7144,19 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-60 0 40");
 		layout.m_aGuardPosts.Insert("40 0 32");
 		layout.m_aGuardPosts.Insert("52 0 16");
-		layout.m_aGuardPosts.Insert("48 0 48");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("0 0 32");
-		layout.m_aGuardPosts.Insert("-56 0 48");
 		layout.m_aGuardPosts.Insert("-24 0 44");
 		layout.m_aGuardPosts.Insert("-52 0 -24");
 		layout.m_aGuardPosts.Insert("44 0 28");
 		layout.m_aGuardPosts.Insert("28 0 32");
 		layout.m_aGuardPosts.Insert("4 0 24");
+		layout.m_aGuardPosts.Insert("-16 0 24");
+		layout.m_aGuardPosts.Insert("36 0 44");
+		layout.m_aGuardPosts.Insert("-28 0 40");
+		layout.m_aGuardPosts.Insert("-48 0 36");
+		layout.m_aGuardPosts.Insert("60 0 0");
+		layout.m_aGuardPosts.Insert("20 0 28");
 	}
 	protected static void BuildWalls27(IA_ComposedSiteLayout layout)
 	{
@@ -7181,13 +7333,15 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-40 0 -20", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-40 0 4", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls28(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("35 0 -5", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("-48 0 28");
 		layout.m_aGuardPosts.Insert("60 0 0");
 		layout.m_aGuardPosts.Insert("40 0 36");
-		layout.m_aGuardPosts.Insert("-52 0 48");
-		layout.m_aGuardPosts.Insert("-8 0 28");
 		layout.m_aGuardPosts.Insert("16 0 -32");
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("28 0 -40");
@@ -7195,7 +7349,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("4 0 24");
 		layout.m_aGuardPosts.Insert("-48 0 20");
 		layout.m_aGuardPosts.Insert("-56 0 -48");
-		layout.m_aGuardPosts.Insert("40 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 40");
 		layout.m_aGuardPosts.Insert("-32 0 44");
 		layout.m_aGuardPosts.Insert("-36 0 28");
@@ -7217,6 +7370,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("44 0 28");
 		layout.m_aGuardPosts.Insert("24 0 20");
 		layout.m_aGuardPosts.Insert("-36 0 36");
+		layout.m_aGuardPosts.Insert("52 0 4");
+		layout.m_aGuardPosts.Insert("16 0 36");
+		layout.m_aGuardPosts.Insert("-56 0 0");
 	}
 	protected static void BuildWalls28(IA_ComposedSiteLayout layout)
 	{
@@ -7395,6 +7551,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "40 0 -20", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "40 0 4", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls29(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("-53 0 51", 270);
+		layout.AddAirRaidBunker("-31 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("58 0 -8");
 		layout.m_aGuardPosts.Insert("-52 0 4");
@@ -7406,7 +7566,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("20 0 32");
 		layout.m_aGuardPosts.Insert("-36 0 12");
 		layout.m_aGuardPosts.Insert("48 0 40");
-		layout.m_aGuardPosts.Insert("-36 0 -8");
 		layout.m_aGuardPosts.Insert("-44 0 -24");
 		layout.m_aGuardPosts.Insert("-56 0 24");
 		layout.m_aGuardPosts.Insert("-8 0 -36");
@@ -7419,7 +7578,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-32 0 -16");
 		layout.m_aGuardPosts.Insert("52 0 -24");
 		layout.m_aGuardPosts.Insert("-16 0 24");
-		layout.m_aGuardPosts.Insert("-12 0 32");
 		layout.m_aGuardPosts.Insert("-40 0 4");
 		layout.m_aGuardPosts.Insert("-40 0 -16");
 		layout.m_aGuardPosts.Insert("60 0 -40");
@@ -7431,6 +7589,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("52 0 44");
 		layout.m_aGuardPosts.Insert("8 0 28");
 		layout.m_aGuardPosts.Insert("20 0 48");
+		layout.m_aGuardPosts.Insert("-56 0 12");
+		layout.m_aGuardPosts.Insert("4 0 -32");
 	}
 	protected static void BuildWalls29(IA_ComposedSiteLayout layout)
 	{
@@ -7608,6 +7768,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "-40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceLarge", "48 0 4", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls30(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("29 0 -9", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("-32 0 36");
@@ -7638,12 +7802,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-40 0 40");
 		layout.m_aGuardPosts.Insert("16 0 28");
 		layout.m_aGuardPosts.Insert("28 0 0");
-		layout.m_aGuardPosts.Insert("-8 0 28");
 		layout.m_aGuardPosts.Insert("-20 0 24");
 		layout.m_aGuardPosts.Insert("-56 0 32");
 		layout.m_aGuardPosts.Insert("36 0 28");
 		layout.m_aGuardPosts.Insert("-8 0 -32");
 		layout.m_aGuardPosts.Insert("56 0 44");
+		layout.m_aGuardPosts.Insert("28 0 -32");
 	}
 	protected static void BuildWalls30(IA_ComposedSiteLayout layout)
 	{
@@ -7820,6 +7984,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceLarge", "-48 0 4", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls31(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("33 0 3", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("58 0 -8");
 		layout.m_aGuardPosts.Insert("48 0 28");
@@ -8031,6 +8199,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "-40 0 -12", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "-40 0 12", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls32(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("29 0 -9", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("-16 0 -32");
@@ -8054,7 +8226,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-32 0 -48");
 		layout.m_aGuardPosts.Insert("28 0 -16");
 		layout.m_aGuardPosts.Insert("24 0 28");
-		layout.m_aGuardPosts.Insert("-4 0 32");
 		layout.m_aGuardPosts.Insert("-36 0 32");
 		layout.m_aGuardPosts.Insert("-52 0 32");
 		layout.m_aGuardPosts.Insert("32 0 16");
@@ -8067,6 +8238,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-56 0 0");
 		layout.m_aGuardPosts.Insert("-24 0 44");
 		layout.m_aGuardPosts.Insert("28 0 20");
+		layout.m_aGuardPosts.Insert("40 0 32");
 	}
 	protected static void BuildWalls32(IA_ComposedSiteLayout layout)
 	{
@@ -8243,19 +8415,20 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "40 0 -12", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "40 0 12", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls33(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("-53 0 51", 270);
+		layout.AddAirRaidBunker("-29 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("58 0 -8");
 		layout.m_aGuardPosts.Insert("-32 0 32");
-		layout.m_aGuardPosts.Insert("-48 0 48");
 		layout.m_aGuardPosts.Insert("-20 0 40");
 		layout.m_aGuardPosts.Insert("60 0 -36");
 		layout.m_aGuardPosts.Insert("-28 0 28");
-		layout.m_aGuardPosts.Insert("-12 0 32");
 		layout.m_aGuardPosts.Insert("-40 0 32");
 		layout.m_aGuardPosts.Insert("16 0 40");
 		layout.m_aGuardPosts.Insert("-8 0 24");
 		layout.m_aGuardPosts.Insert("60 0 -28");
-		layout.m_aGuardPosts.Insert("-28 0 -4");
 		layout.m_aGuardPosts.Insert("44 0 36");
 		layout.m_aGuardPosts.Insert("-44 0 -24");
 		layout.m_aGuardPosts.Insert("-60 0 44");
@@ -8279,6 +8452,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-16 0 -32");
 		layout.m_aGuardPosts.Insert("-40 0 48");
 		layout.m_aGuardPosts.Insert("-44 0 44");
+		layout.m_aGuardPosts.Insert("32 0 24");
+		layout.m_aGuardPosts.Insert("36 0 40");
+		layout.m_aGuardPosts.Insert("56 0 32");
 	}
 	protected static void BuildWalls33(IA_ComposedSiteLayout layout)
 	{
@@ -8455,6 +8631,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "-40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Hospital", "48 0 20", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls34(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("35 0 -5", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("-20 0 40");
@@ -8471,7 +8651,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("52 0 -48");
 		layout.m_aGuardPosts.Insert("-40 0 28");
 		layout.m_aGuardPosts.Insert("-52 0 44");
-		layout.m_aGuardPosts.Insert("32 0 -8");
 		layout.m_aGuardPosts.Insert("-32 0 44");
 		layout.m_aGuardPosts.Insert("-60 0 12");
 		layout.m_aGuardPosts.Insert("-44 0 36");
@@ -8483,7 +8662,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("60 0 44");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
 		layout.m_aGuardPosts.Insert("-40 0 44");
-		layout.m_aGuardPosts.Insert("36 0 -4");
 		layout.m_aGuardPosts.Insert("-48 0 24");
 		layout.m_aGuardPosts.Insert("12 0 -32");
 		layout.m_aGuardPosts.Insert("-60 0 0");
@@ -8491,6 +8669,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("-28 0 -48");
 		layout.m_aGuardPosts.Insert("48 0 40");
+		layout.m_aGuardPosts.Insert("8 0 32");
+		layout.m_aGuardPosts.Insert("-48 0 0");
 	}
 	protected static void BuildWalls34(IA_ComposedSiteLayout layout)
 	{
@@ -8667,11 +8847,13 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Hospital", "-40 0 36", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls35(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("35 0 1", 180);
+		layout.AddAirRaidBunker("-31 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("58 0 -8");
 		layout.m_aGuardPosts.Insert("16 0 32");
-		layout.m_aGuardPosts.Insert("-36 0 -8");
-		layout.m_aGuardPosts.Insert("-4 0 32");
 		layout.m_aGuardPosts.Insert("40 0 12");
 		layout.m_aGuardPosts.Insert("-16 0 28");
 		layout.m_aGuardPosts.Insert("0 0 -32");
@@ -8684,13 +8866,13 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("52 0 -12");
 		layout.m_aGuardPosts.Insert("-60 0 16");
 		layout.m_aGuardPosts.Insert("36 0 40");
-		layout.m_aGuardPosts.Insert("40 0 4");
 		layout.m_aGuardPosts.Insert("0 0 20");
 		layout.m_aGuardPosts.Insert("56 0 -16");
 		layout.m_aGuardPosts.Insert("44 0 8");
 		layout.m_aGuardPosts.Insert("-12 0 24");
 		layout.m_aGuardPosts.Insert("-56 0 -48");
 		layout.m_aGuardPosts.Insert("56 0 -24");
+		layout.m_aGuardPosts.Insert("0 0 32");
 		layout.m_aGuardPosts.Insert("16 0 24");
 		layout.m_aGuardPosts.Insert("56 0 4");
 		layout.m_aGuardPosts.Insert("-40 0 12");
@@ -8703,6 +8885,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-60 0 24");
 		layout.m_aGuardPosts.Insert("-40 0 -48");
 		layout.m_aGuardPosts.Insert("56 0 28");
+		layout.m_aGuardPosts.Insert("56 0 20");
+		layout.m_aGuardPosts.Insert("52 0 -4");
 	}
 	protected static void BuildWalls35(IA_ComposedSiteLayout layout)
 	{
@@ -8880,6 +9064,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-40 0 -20", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "40 0 -12", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls36(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("31 0 -9", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("32 0 0");
@@ -8892,10 +9080,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-56 0 4");
 		layout.m_aGuardPosts.Insert("28 0 -32");
 		layout.m_aGuardPosts.Insert("16 0 40");
-		layout.m_aGuardPosts.Insert("32 0 -12");
+		layout.m_aGuardPosts.Insert("32 0 -16");
 		layout.m_aGuardPosts.Insert("32 0 44");
-		layout.m_aGuardPosts.Insert("-48 0 48");
-		layout.m_aGuardPosts.Insert("-56 0 48");
 		layout.m_aGuardPosts.Insert("56 0 36");
 		layout.m_aGuardPosts.Insert("-4 0 20");
 		layout.m_aGuardPosts.Insert("4 0 32");
@@ -8905,17 +9091,19 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("36 0 -24");
 		layout.m_aGuardPosts.Insert("28 0 12");
 		layout.m_aGuardPosts.Insert("36 0 16");
-		layout.m_aGuardPosts.Insert("-8 0 28");
 		layout.m_aGuardPosts.Insert("-16 0 20");
 		layout.m_aGuardPosts.Insert("-28 0 -12");
 		layout.m_aGuardPosts.Insert("-24 0 28");
 		layout.m_aGuardPosts.Insert("-36 0 32");
 		layout.m_aGuardPosts.Insert("-16 0 48");
-		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("-32 0 0");
 		layout.m_aGuardPosts.Insert("24 0 36");
 		layout.m_aGuardPosts.Insert("32 0 8");
+		layout.m_aGuardPosts.Insert("-8 0 24");
 		layout.m_aGuardPosts.Insert("-52 0 -16");
+		layout.m_aGuardPosts.Insert("60 0 44");
+		layout.m_aGuardPosts.Insert("36 0 32");
+		layout.m_aGuardPosts.Insert("48 0 8");
 	}
 	protected static void BuildWalls36(IA_ComposedSiteLayout layout)
 	{
@@ -9091,9 +9279,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "40 0 -20", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-32 0 -12", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls37(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("35 0 -5", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("58 0 -8");
-		layout.m_aGuardPosts.Insert("40 0 -4");
 		layout.m_aGuardPosts.Insert("56 0 -32");
 		layout.m_aGuardPosts.Insert("4 0 -36");
 		layout.m_aGuardPosts.Insert("60 0 -16");
@@ -9117,7 +9308,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-24 0 32");
 		layout.m_aGuardPosts.Insert("24 0 20");
 		layout.m_aGuardPosts.Insert("16 0 20");
-		layout.m_aGuardPosts.Insert("36 0 0");
 		layout.m_aGuardPosts.Insert("60 0 40");
 		layout.m_aGuardPosts.Insert("-24 0 48");
 		layout.m_aGuardPosts.Insert("20 0 28");
@@ -9127,6 +9317,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-56 0 16");
 		layout.m_aGuardPosts.Insert("-52 0 8");
 		layout.m_aGuardPosts.Insert("0 0 -32");
+		layout.m_aGuardPosts.Insert("-36 0 8");
+		layout.m_aGuardPosts.Insert("-40 0 20");
 	}
 	protected static void BuildWalls37(IA_ComposedSiteLayout layout)
 	{
@@ -9301,6 +9493,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Hospital", "-48 0 -4", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls38(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("31 0 -9", 180);
+		layout.AddAirRaidBunker("-53 0 51", 270);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("58 0 -8");
 		layout.m_aGuardPosts.Insert("32 0 -32");
@@ -9321,7 +9517,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-16 0 24");
 		layout.m_aGuardPosts.Insert("16 0 -32");
 		layout.m_aGuardPosts.Insert("52 0 0");
-		layout.m_aGuardPosts.Insert("-8 0 32");
 		layout.m_aGuardPosts.Insert("28 0 -44");
 		layout.m_aGuardPosts.Insert("16 0 44");
 		layout.m_aGuardPosts.Insert("52 0 12");
@@ -9337,6 +9532,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -12");
 		layout.m_aGuardPosts.Insert("-36 0 -24");
 		layout.m_aGuardPosts.Insert("28 0 24");
+		layout.m_aGuardPosts.Insert("60 0 4");
 	}
 	protected static void BuildWalls38(IA_ComposedSiteLayout layout)
 	{
@@ -9511,6 +9707,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-40 0 -12", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Hospital", "48 0 -4", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls39(layout);
+		layout.AddAirRaidBunker("-9 0 33", 270);
+		layout.AddAirRaidBunker("53 0 51", 90);
+		layout.AddAirRaidBunker("-53 0 51", 270);
+		layout.AddAirRaidBunker("-31 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -46");
 		layout.m_aGuardPosts.Insert("-58 0 -8");
 		layout.m_aGuardPosts.Insert("-40 0 8");
@@ -9532,9 +9732,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-44 0 4");
 		layout.m_aGuardPosts.Insert("44 0 -24");
 		layout.m_aGuardPosts.Insert("-52 0 0");
-		layout.m_aGuardPosts.Insert("-32 0 -12");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
-		layout.m_aGuardPosts.Insert("-28 0 -4");
 		layout.m_aGuardPosts.Insert("60 0 -44");
 		layout.m_aGuardPosts.Insert("-20 0 32");
 		layout.m_aGuardPosts.Insert("36 0 20");
@@ -9547,6 +9745,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("44 0 20");
 		layout.m_aGuardPosts.Insert("24 0 32");
 		layout.m_aGuardPosts.Insert("-20 0 20");
+		layout.m_aGuardPosts.Insert("-36 0 20");
+		layout.m_aGuardPosts.Insert("8 0 28");
 	}
 	protected static void BuildWalls39(IA_ComposedSiteLayout layout)
 	{
@@ -9719,18 +9919,19 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "-38 0 10", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-14 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls40(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-30 0 42");
 		layout.m_aGuardPosts.Insert("46 0 -42");
 		layout.m_aGuardPosts.Insert("10 0 -34");
 		layout.m_aGuardPosts.Insert("38 0 34");
-		layout.m_aGuardPosts.Insert("-6 0 22");
 		layout.m_aGuardPosts.Insert("-26 0 38");
 		layout.m_aGuardPosts.Insert("-22 0 30");
 		layout.m_aGuardPosts.Insert("14 0 22");
 		layout.m_aGuardPosts.Insert("-34 0 -38");
 		layout.m_aGuardPosts.Insert("46 0 30");
-		layout.m_aGuardPosts.Insert("-14 0 30");
 		layout.m_aGuardPosts.Insert("-42 0 -34");
 		layout.m_aGuardPosts.Insert("26 0 -38");
 		layout.m_aGuardPosts.Insert("18 0 26");
@@ -9741,8 +9942,10 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("30 0 22");
 		layout.m_aGuardPosts.Insert("34 0 -18");
 		layout.m_aGuardPosts.Insert("26 0 34");
-		layout.m_aGuardPosts.Insert("-14 0 22");
 		layout.m_aGuardPosts.Insert("18 0 42");
+		layout.m_aGuardPosts.Insert("22 0 38");
+		layout.m_aGuardPosts.Insert("-46 0 22");
+		layout.m_aGuardPosts.Insert("-34 0 30");
 	}
 	protected static void BuildWalls40(IA_ComposedSiteLayout layout)
 	{
@@ -9894,13 +10097,14 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "-38 0 18", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-14 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls41(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("22 0 22");
 		layout.m_aGuardPosts.Insert("-2 0 -34");
-		layout.m_aGuardPosts.Insert("-10 0 26");
 		layout.m_aGuardPosts.Insert("30 0 34");
 		layout.m_aGuardPosts.Insert("-50 0 14");
-		layout.m_aGuardPosts.Insert("-2 0 26");
 		layout.m_aGuardPosts.Insert("18 0 38");
 		layout.m_aGuardPosts.Insert("-18 0 26");
 		layout.m_aGuardPosts.Insert("42 0 38");
@@ -9908,7 +10112,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("42 0 -26");
 		layout.m_aGuardPosts.Insert("42 0 18");
 		layout.m_aGuardPosts.Insert("-22 0 30");
-		layout.m_aGuardPosts.Insert("-6 0 22");
 		layout.m_aGuardPosts.Insert("42 0 -34");
 		layout.m_aGuardPosts.Insert("-26 0 22");
 		layout.m_aGuardPosts.Insert("-38 0 34");
@@ -9918,6 +10121,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("26 0 -38");
 		layout.m_aGuardPosts.Insert("38 0 34");
 		layout.m_aGuardPosts.Insert("-30 0 42");
+		layout.m_aGuardPosts.Insert("-50 0 30");
+		layout.m_aGuardPosts.Insert("22 0 -34");
+		layout.m_aGuardPosts.Insert("42 0 -42");
 	}
 	protected static void BuildWalls41(IA_ComposedSiteLayout layout)
 	{
@@ -10068,6 +10274,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-14 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Supply", "42 0 10", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls42(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("29 0 1", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("30 0 30");
 		layout.m_aGuardPosts.Insert("-34 0 18");
@@ -10086,12 +10295,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("14 0 34");
 		layout.m_aGuardPosts.Insert("-50 0 42");
 		layout.m_aGuardPosts.Insert("22 0 -34");
-		layout.m_aGuardPosts.Insert("50 0 42");
 		layout.m_aGuardPosts.Insert("-26 0 26");
 		layout.m_aGuardPosts.Insert("-46 0 34");
-		layout.m_aGuardPosts.Insert("-2 0 26");
 		layout.m_aGuardPosts.Insert("-34 0 -42");
 		layout.m_aGuardPosts.Insert("34 0 38");
+		layout.m_aGuardPosts.Insert("-42 0 -42");
+		layout.m_aGuardPosts.Insert("46 0 30");
 	}
 	protected static void BuildWalls42(IA_ComposedSiteLayout layout)
 	{
@@ -10244,9 +10453,11 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-38 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Supply", "-46 0 10", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls43(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("48 0 -8");
-		layout.m_aGuardPosts.Insert("-14 0 26");
 		layout.m_aGuardPosts.Insert("-38 0 34");
 		layout.m_aGuardPosts.Insert("-42 0 26");
 		layout.m_aGuardPosts.Insert("-46 0 34");
@@ -10268,6 +10479,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-34 0 42");
 		layout.m_aGuardPosts.Insert("-22 0 -38");
 		layout.m_aGuardPosts.Insert("-6 0 -38");
+		layout.m_aGuardPosts.Insert("50 0 14");
 	}
 	protected static void BuildWalls43(IA_ComposedSiteLayout layout)
 	{
@@ -10421,6 +10633,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "42 0 10", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-38 0 10", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls44(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("29 0 -1", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("2 0 22");
 		layout.m_aGuardPosts.Insert("-50 0 -22");
@@ -10433,7 +10648,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-46 0 30");
 		layout.m_aGuardPosts.Insert("30 0 -30");
 		layout.m_aGuardPosts.Insert("18 0 42");
-		layout.m_aGuardPosts.Insert("-6 0 26");
 		layout.m_aGuardPosts.Insert("30 0 26");
 		layout.m_aGuardPosts.Insert("-46 0 -42");
 		layout.m_aGuardPosts.Insert("14 0 -42");
@@ -10445,6 +10659,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-22 0 38");
 		layout.m_aGuardPosts.Insert("18 0 34");
 		layout.m_aGuardPosts.Insert("-34 0 -38");
+		layout.m_aGuardPosts.Insert("-50 0 34");
 	}
 	protected static void BuildWalls44(IA_ComposedSiteLayout layout)
 	{
@@ -10598,10 +10813,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "-46 0 -6", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Hospital", "42 0 2", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls45(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("22 0 34");
 		layout.m_aGuardPosts.Insert("-42 0 30");
-		layout.m_aGuardPosts.Insert("-14 0 26");
 		layout.m_aGuardPosts.Insert("-42 0 14");
 		layout.m_aGuardPosts.Insert("34 0 38");
 		layout.m_aGuardPosts.Insert("-18 0 38");
@@ -10622,6 +10839,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-50 0 18");
 		layout.m_aGuardPosts.Insert("42 0 22");
 		layout.m_aGuardPosts.Insert("-34 0 -10");
+		layout.m_aGuardPosts.Insert("-42 0 22");
 	}
 	protected static void BuildWalls45(IA_ComposedSiteLayout layout)
 	{
@@ -10772,6 +10990,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "-38 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-14 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls46(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("29 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("42 0 18");
 		layout.m_aGuardPosts.Insert("30 0 34");
@@ -10788,7 +11009,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-34 0 30");
 		layout.m_aGuardPosts.Insert("22 0 38");
 		layout.m_aGuardPosts.Insert("50 0 18");
-		layout.m_aGuardPosts.Insert("-14 0 30");
 		layout.m_aGuardPosts.Insert("14 0 -42");
 		layout.m_aGuardPosts.Insert("-46 0 18");
 		layout.m_aGuardPosts.Insert("30 0 2");
@@ -10796,6 +11016,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-18 0 42");
 		layout.m_aGuardPosts.Insert("14 0 38");
 		layout.m_aGuardPosts.Insert("-42 0 10");
+		layout.m_aGuardPosts.Insert("50 0 26");
 	}
 	protected static void BuildWalls46(IA_ComposedSiteLayout layout)
 	{
@@ -10947,6 +11168,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Hospital", "42 0 2", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-38 0 18", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls47(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-22 0 -38");
 		layout.m_aGuardPosts.Insert("-2 0 22");
@@ -10959,7 +11183,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-18 0 -42");
 		layout.m_aGuardPosts.Insert("14 0 -38");
 		layout.m_aGuardPosts.Insert("34 0 30");
-		layout.m_aGuardPosts.Insert("-14 0 30");
 		layout.m_aGuardPosts.Insert("-42 0 34");
 		layout.m_aGuardPosts.Insert("50 0 26");
 		layout.m_aGuardPosts.Insert("30 0 26");
@@ -10969,8 +11192,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("10 0 -42");
 		layout.m_aGuardPosts.Insert("22 0 22");
 		layout.m_aGuardPosts.Insert("-34 0 -2");
-		layout.m_aGuardPosts.Insert("-46 0 42");
 		layout.m_aGuardPosts.Insert("-30 0 42");
+		layout.m_aGuardPosts.Insert("18 0 -34");
+		layout.m_aGuardPosts.Insert("18 0 38");
 	}
 	protected static void BuildWalls47(IA_ComposedSiteLayout layout)
 	{
@@ -11123,6 +11347,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "42 0 -6", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-30 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls48(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("29 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-42 0 2");
 		layout.m_aGuardPosts.Insert("38 0 34");
@@ -11132,7 +11359,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-42 0 14");
 		layout.m_aGuardPosts.Insert("18 0 26");
 		layout.m_aGuardPosts.Insert("-50 0 -42");
-		layout.m_aGuardPosts.Insert("-14 0 26");
 		layout.m_aGuardPosts.Insert("22 0 38");
 		layout.m_aGuardPosts.Insert("38 0 10");
 		layout.m_aGuardPosts.Insert("-18 0 30");
@@ -11147,6 +11373,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-46 0 6");
 		layout.m_aGuardPosts.Insert("-26 0 26");
 		layout.m_aGuardPosts.Insert("42 0 18");
+		layout.m_aGuardPosts.Insert("46 0 22");
 	}
 	protected static void BuildWalls48(IA_ComposedSiteLayout layout)
 	{
@@ -11304,19 +11531,19 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "-46 0 -6", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "34 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls49(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("31 0 -3", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("48 0 -8");
 		layout.m_aGuardPosts.Insert("38 0 34");
-		layout.m_aGuardPosts.Insert("-14 0 26");
 		layout.m_aGuardPosts.Insert("-30 0 26");
 		layout.m_aGuardPosts.Insert("38 0 22");
 		layout.m_aGuardPosts.Insert("10 0 -42");
-		layout.m_aGuardPosts.Insert("46 0 42");
 		layout.m_aGuardPosts.Insert("50 0 -2");
 		layout.m_aGuardPosts.Insert("-50 0 6");
 		layout.m_aGuardPosts.Insert("-22 0 22");
 		layout.m_aGuardPosts.Insert("-30 0 -10");
-		layout.m_aGuardPosts.Insert("-6 0 26");
 		layout.m_aGuardPosts.Insert("46 0 30");
 		layout.m_aGuardPosts.Insert("14 0 26");
 		layout.m_aGuardPosts.Insert("30 0 6");
@@ -11328,6 +11555,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-46 0 38");
 		layout.m_aGuardPosts.Insert("-34 0 2");
 		layout.m_aGuardPosts.Insert("2 0 26");
+		layout.m_aGuardPosts.Insert("-46 0 30");
+		layout.m_aGuardPosts.Insert("26 0 38");
+		layout.m_aGuardPosts.Insert("-50 0 42");
 	}
 	protected static void BuildWalls49(IA_ComposedSiteLayout layout)
 	{
@@ -11485,13 +11715,14 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-14 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-38 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls50(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("29 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-34 0 38");
 		layout.m_aGuardPosts.Insert("-46 0 22");
-		layout.m_aGuardPosts.Insert("30 0 -10");
 		layout.m_aGuardPosts.Insert("-38 0 26");
 		layout.m_aGuardPosts.Insert("26 0 -38");
-		layout.m_aGuardPosts.Insert("-6 0 22");
 		layout.m_aGuardPosts.Insert("18 0 22");
 		layout.m_aGuardPosts.Insert("46 0 38");
 		layout.m_aGuardPosts.Insert("-42 0 18");
@@ -11509,6 +11740,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("42 0 14");
 		layout.m_aGuardPosts.Insert("38 0 30");
 		layout.m_aGuardPosts.Insert("6 0 -34");
+		layout.m_aGuardPosts.Insert("46 0 6");
+		layout.m_aGuardPosts.Insert("30 0 18");
 	}
 	protected static void BuildWalls50(IA_ComposedSiteLayout layout)
 	{
@@ -11664,16 +11897,17 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-38 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-46 0 10", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls51(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("48 0 -8");
-		layout.m_aGuardPosts.Insert("-6 0 22");
 		layout.m_aGuardPosts.Insert("50 0 -2");
 		layout.m_aGuardPosts.Insert("42 0 14");
 		layout.m_aGuardPosts.Insert("14 0 42");
 		layout.m_aGuardPosts.Insert("-38 0 38");
 		layout.m_aGuardPosts.Insert("42 0 34");
 		layout.m_aGuardPosts.Insert("-18 0 -42");
-		layout.m_aGuardPosts.Insert("50 0 42");
 		layout.m_aGuardPosts.Insert("10 0 -34");
 		layout.m_aGuardPosts.Insert("34 0 6");
 		layout.m_aGuardPosts.Insert("-18 0 -34");
@@ -11688,6 +11922,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-30 0 -26");
 		layout.m_aGuardPosts.Insert("14 0 -38");
 		layout.m_aGuardPosts.Insert("-34 0 -22");
+		layout.m_aGuardPosts.Insert("46 0 26");
+		layout.m_aGuardPosts.Insert("-26 0 -42");
 	}
 	protected static void BuildWalls51(IA_ComposedSiteLayout layout)
 	{
@@ -11845,6 +12081,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-14 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-38 0 18", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls52(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-30 0 42");
 		layout.m_aGuardPosts.Insert("-50 0 -14");
@@ -11859,13 +12098,13 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("18 0 34");
 		layout.m_aGuardPosts.Insert("18 0 26");
 		layout.m_aGuardPosts.Insert("-14 0 42");
-		layout.m_aGuardPosts.Insert("-14 0 26");
 		layout.m_aGuardPosts.Insert("30 0 30");
 		layout.m_aGuardPosts.Insert("26 0 -34");
 		layout.m_aGuardPosts.Insert("6 0 22");
 		layout.m_aGuardPosts.Insert("46 0 26");
 		layout.m_aGuardPosts.Insert("46 0 -42");
 		layout.m_aGuardPosts.Insert("38 0 26");
+		layout.m_aGuardPosts.Insert("-18 0 26");
 		layout.m_aGuardPosts.Insert("18 0 -38");
 		layout.m_aGuardPosts.Insert("14 0 -34");
 		layout.m_aGuardPosts.Insert("50 0 18");
@@ -12020,19 +12259,20 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-14 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-38 0 18", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls53(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("2 0 22");
-		layout.m_aGuardPosts.Insert("-50 0 42");
 		layout.m_aGuardPosts.Insert("38 0 -34");
 		layout.m_aGuardPosts.Insert("34 0 22");
-		layout.m_aGuardPosts.Insert("-10 0 26");
 		layout.m_aGuardPosts.Insert("14 0 22");
 		layout.m_aGuardPosts.Insert("26 0 34");
 		layout.m_aGuardPosts.Insert("-26 0 34");
 		layout.m_aGuardPosts.Insert("30 0 18");
 		layout.m_aGuardPosts.Insert("-38 0 -42");
-		layout.m_aGuardPosts.Insert("-42 0 42");
 		layout.m_aGuardPosts.Insert("46 0 30");
+		layout.m_aGuardPosts.Insert("-50 0 38");
 		layout.m_aGuardPosts.Insert("30 0 -38");
 		layout.m_aGuardPosts.Insert("14 0 -42");
 		layout.m_aGuardPosts.Insert("-18 0 42");
@@ -12040,10 +12280,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("42 0 -42");
 		layout.m_aGuardPosts.Insert("-18 0 26");
 		layout.m_aGuardPosts.Insert("30 0 30");
-		layout.m_aGuardPosts.Insert("-6 0 22");
 		layout.m_aGuardPosts.Insert("42 0 -30");
 		layout.m_aGuardPosts.Insert("-18 0 34");
 		layout.m_aGuardPosts.Insert("-46 0 -42");
+		layout.m_aGuardPosts.Insert("-42 0 -18");
+		layout.m_aGuardPosts.Insert("-38 0 42");
+		layout.m_aGuardPosts.Insert("46 0 18");
 	}
 	protected static void BuildWalls53(IA_ComposedSiteLayout layout)
 	{
@@ -12196,21 +12438,22 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "42 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "-38 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls54(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-38 0 -42");
-		layout.m_aGuardPosts.Insert("-2 0 26");
 		layout.m_aGuardPosts.Insert("34 0 34");
 		layout.m_aGuardPosts.Insert("-46 0 26");
 		layout.m_aGuardPosts.Insert("10 0 -38");
 		layout.m_aGuardPosts.Insert("18 0 -34");
 		layout.m_aGuardPosts.Insert("2 0 -34");
 		layout.m_aGuardPosts.Insert("-38 0 14");
+		layout.m_aGuardPosts.Insert("-2 0 22");
 		layout.m_aGuardPosts.Insert("30 0 14");
-		layout.m_aGuardPosts.Insert("2 0 22");
 		layout.m_aGuardPosts.Insert("-42 0 30");
 		layout.m_aGuardPosts.Insert("14 0 42");
 		layout.m_aGuardPosts.Insert("14 0 22");
-		layout.m_aGuardPosts.Insert("-14 0 22");
 		layout.m_aGuardPosts.Insert("-38 0 6");
 		layout.m_aGuardPosts.Insert("-50 0 -42");
 		layout.m_aGuardPosts.Insert("46 0 22");
@@ -12220,6 +12463,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("38 0 10");
 		layout.m_aGuardPosts.Insert("22 0 34");
 		layout.m_aGuardPosts.Insert("10 0 26");
+		layout.m_aGuardPosts.Insert("-46 0 -18");
+		layout.m_aGuardPosts.Insert("-26 0 38");
 	}
 	protected static void BuildWalls54(IA_ComposedSiteLayout layout)
 	{
@@ -12370,9 +12615,11 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "-46 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "34 0 10", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls55(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("29 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("42 0 38");
-		layout.m_aGuardPosts.Insert("-14 0 30");
 		layout.m_aGuardPosts.Insert("50 0 26");
 		layout.m_aGuardPosts.Insert("-46 0 22");
 		layout.m_aGuardPosts.Insert("46 0 -42");
@@ -12394,6 +12641,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-30 0 -42");
 		layout.m_aGuardPosts.Insert("6 0 22");
 		layout.m_aGuardPosts.Insert("30 0 22");
+		layout.m_aGuardPosts.Insert("-34 0 10");
 	}
 	protected static void BuildWalls55(IA_ComposedSiteLayout layout)
 	{
@@ -12546,6 +12794,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "-38 0 -6", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-14 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls56(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("42 0 10");
 		layout.m_aGuardPosts.Insert("-26 0 26");
@@ -12719,13 +12970,15 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "42 0 -6", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-14 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls57(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("29 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-42 0 38");
 		layout.m_aGuardPosts.Insert("10 0 22");
 		layout.m_aGuardPosts.Insert("34 0 6");
 		layout.m_aGuardPosts.Insert("46 0 34");
 		layout.m_aGuardPosts.Insert("42 0 -18");
-		layout.m_aGuardPosts.Insert("-6 0 22");
 		layout.m_aGuardPosts.Insert("46 0 -22");
 		layout.m_aGuardPosts.Insert("30 0 18");
 		layout.m_aGuardPosts.Insert("-38 0 14");
@@ -12743,6 +12996,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("50 0 18");
 		layout.m_aGuardPosts.Insert("22 0 26");
 		layout.m_aGuardPosts.Insert("-30 0 26");
+		layout.m_aGuardPosts.Insert("10 0 -34");
 	}
 	protected static void BuildWalls57(IA_ComposedSiteLayout layout)
 	{
@@ -12894,6 +13148,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-14 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-38 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls58(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("29 0 -9", 180);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("-48 0 -8");
 		layout.m_aGuardPosts.Insert("-38 0 -42");
@@ -12906,7 +13163,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("30 0 2");
 		layout.m_aGuardPosts.Insert("10 0 22");
 		layout.m_aGuardPosts.Insert("-18 0 30");
-		layout.m_aGuardPosts.Insert("46 0 42");
 		layout.m_aGuardPosts.Insert("6 0 -34");
 		layout.m_aGuardPosts.Insert("2 0 26");
 		layout.m_aGuardPosts.Insert("-50 0 26");
@@ -12918,6 +13174,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-30 0 22");
 		layout.m_aGuardPosts.Insert("42 0 38");
 		layout.m_aGuardPosts.Insert("-14 0 34");
+		layout.m_aGuardPosts.Insert("-46 0 -14");
 	}
 	protected static void BuildWalls58(IA_ComposedSiteLayout layout)
 	{
@@ -13069,6 +13326,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-14 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "34 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls59(layout);
+		layout.AddAirRaidBunker("-9 0 27", 270);
+		layout.AddAirRaidBunker("47 0 45", 90);
+		layout.AddAirRaidBunker("-47 0 45", 270);
 		layout.m_aGuardPosts.Insert("0 0 -40");
 		layout.m_aGuardPosts.Insert("48 0 -8");
 		layout.m_aGuardPosts.Insert("18 0 34");
@@ -13079,7 +13339,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("22 0 26");
 		layout.m_aGuardPosts.Insert("38 0 22");
 		layout.m_aGuardPosts.Insert("-22 0 34");
-		layout.m_aGuardPosts.Insert("-10 0 26");
 		layout.m_aGuardPosts.Insert("-30 0 -14");
 		layout.m_aGuardPosts.Insert("42 0 10");
 		layout.m_aGuardPosts.Insert("-46 0 10");
@@ -13092,7 +13351,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("26 0 -38");
 		layout.m_aGuardPosts.Insert("-34 0 -2");
 		layout.m_aGuardPosts.Insert("-38 0 -42");
-		layout.m_aGuardPosts.Insert("-14 0 30");
+		layout.m_aGuardPosts.Insert("30 0 6");
+		layout.m_aGuardPosts.Insert("42 0 -14");
 	}
 	protected static void BuildWalls59(IA_ComposedSiteLayout layout)
 	{
@@ -13245,6 +13505,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "-20 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-36 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls60(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("-38 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 10");
@@ -13413,6 +13675,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "20 0 -38", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "36 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls61(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("38 0 -8");
 		layout.m_aGuardPosts.Insert("8 0 -46");
@@ -13424,15 +13688,15 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("32 0 -42");
 		layout.m_aGuardPosts.Insert("24 0 30");
 		layout.m_aGuardPosts.Insert("32 0 22");
-		layout.m_aGuardPosts.Insert("40 0 50");
 		layout.m_aGuardPosts.Insert("32 0 2");
 		layout.m_aGuardPosts.Insert("36 0 18");
 		layout.m_aGuardPosts.Insert("-36 0 14");
 		layout.m_aGuardPosts.Insert("36 0 -34");
 		layout.m_aGuardPosts.Insert("8 0 -34");
 		layout.m_aGuardPosts.Insert("40 0 26");
-		layout.m_aGuardPosts.Insert("-8 0 34");
 		layout.m_aGuardPosts.Insert("-32 0 -50");
+		layout.m_aGuardPosts.Insert("20 0 46");
+		layout.m_aGuardPosts.Insert("0 0 -34");
 	}
 	protected static void BuildWalls61(IA_ComposedSiteLayout layout)
 	{
@@ -13582,12 +13846,13 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-36 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Supply", "-36 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls62(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("-32 0 10");
 		layout.m_aGuardPosts.Insert("24 0 34");
 		layout.m_aGuardPosts.Insert("-32 0 26");
 		layout.m_aGuardPosts.Insert("40 0 42");
-		layout.m_aGuardPosts.Insert("-12 0 34");
 		layout.m_aGuardPosts.Insert("-36 0 -42");
 		layout.m_aGuardPosts.Insert("28 0 30");
 		layout.m_aGuardPosts.Insert("36 0 2");
@@ -13602,6 +13867,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("4 0 22");
 		layout.m_aGuardPosts.Insert("-28 0 -50");
 		layout.m_aGuardPosts.Insert("-36 0 18");
+		layout.m_aGuardPosts.Insert("40 0 34");
 	}
 	protected static void BuildWalls62(IA_ComposedSiteLayout layout)
 	{
@@ -13751,6 +14017,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "36 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Supply", "36 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls63(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("24 0 42");
 		layout.m_aGuardPosts.Insert("-12 0 -50");
@@ -13758,7 +14026,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("16 0 26");
 		layout.m_aGuardPosts.Insert("-28 0 50");
 		layout.m_aGuardPosts.Insert("36 0 -50");
-		layout.m_aGuardPosts.Insert("-8 0 30");
 		layout.m_aGuardPosts.Insert("20 0 22");
 		layout.m_aGuardPosts.Insert("8 0 -34");
 		layout.m_aGuardPosts.Insert("36 0 14");
@@ -13771,6 +14038,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-32 0 34");
 		layout.m_aGuardPosts.Insert("32 0 34");
 		layout.m_aGuardPosts.Insert("-40 0 46");
+		layout.m_aGuardPosts.Insert("-8 0 -46");
 	}
 	protected static void BuildWalls63(IA_ComposedSiteLayout layout)
 	{
@@ -13919,6 +14187,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "-36 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Hospital", "-28 0 34", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls64(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("-38 0 -8");
 		layout.m_aGuardPosts.Insert("-32 0 -6");
@@ -14088,6 +14358,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "36 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Hospital", "-28 0 34", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls65(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("38 0 -8");
 		layout.m_aGuardPosts.Insert("32 0 -34");
@@ -14256,6 +14528,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Hospital", "-28 0 34", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-36 0 -14", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls66(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("24 0 30");
 		layout.m_aGuardPosts.Insert("36 0 42");
@@ -14263,7 +14537,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("8 0 -50");
 		layout.m_aGuardPosts.Insert("-32 0 -38");
 		layout.m_aGuardPosts.Insert("20 0 22");
-		layout.m_aGuardPosts.Insert("40 0 50");
 		layout.m_aGuardPosts.Insert("16 0 30");
 		layout.m_aGuardPosts.Insert("20 0 38");
 		layout.m_aGuardPosts.Insert("40 0 10");
@@ -14276,6 +14549,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("8 0 -38");
 		layout.m_aGuardPosts.Insert("-4 0 -42");
 		layout.m_aGuardPosts.Insert("28 0 6");
+		layout.m_aGuardPosts.Insert("12 0 34");
 	}
 	protected static void BuildWalls66(IA_ComposedSiteLayout layout)
 	{
@@ -14423,11 +14697,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Hospital", "-28 0 34", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "36 0 -14", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls67(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("36 0 -46");
 		layout.m_aGuardPosts.Insert("16 0 30");
 		layout.m_aGuardPosts.Insert("28 0 14");
-		layout.m_aGuardPosts.Insert("-8 0 34");
 		layout.m_aGuardPosts.Insert("28 0 2");
 		layout.m_aGuardPosts.Insert("36 0 46");
 		layout.m_aGuardPosts.Insert("32 0 -38");
@@ -14443,6 +14718,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-12 0 -38");
 		layout.m_aGuardPosts.Insert("28 0 38");
 		layout.m_aGuardPosts.Insert("20 0 46");
+		layout.m_aGuardPosts.Insert("-36 0 10");
 	}
 	protected static void BuildWalls67(IA_ComposedSiteLayout layout)
 	{
@@ -14590,6 +14866,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "36 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-36 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls68(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("-38 0 -8");
 		layout.m_aGuardPosts.Insert("32 0 30");
@@ -14762,6 +15040,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Medical", "-36 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "36 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls69(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("38 0 -8");
 		layout.m_aGuardPosts.Insert("16 0 38");
@@ -14933,6 +15213,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-36 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-36 0 2", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls70(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("40 0 2");
 		layout.m_aGuardPosts.Insert("4 0 30");
@@ -15105,6 +15387,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "36 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "36 0 2", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls71(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("24 0 46");
 		layout.m_aGuardPosts.Insert("4 0 34");
@@ -15112,7 +15396,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-24 0 -50");
 		layout.m_aGuardPosts.Insert("-16 0 34");
 		layout.m_aGuardPosts.Insert("28 0 38");
-		layout.m_aGuardPosts.Insert("-4 0 34");
 		layout.m_aGuardPosts.Insert("-20 0 42");
 		layout.m_aGuardPosts.Insert("32 0 -46");
 		layout.m_aGuardPosts.Insert("-16 0 46");
@@ -15125,6 +15408,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 2");
 		layout.m_aGuardPosts.Insert("-28 0 22");
 		layout.m_aGuardPosts.Insert("40 0 -46");
+		layout.m_aGuardPosts.Insert("32 0 26");
 	}
 	protected static void BuildWalls71(IA_ComposedSiteLayout layout)
 	{
@@ -15278,6 +15562,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "36 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "-36 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls72(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("38 0 -8");
 		layout.m_aGuardPosts.Insert("40 0 -50");
@@ -15446,12 +15732,13 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-36 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Ammo", "36 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls73(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("-38 0 -8");
 		layout.m_aGuardPosts.Insert("32 0 -30");
 		layout.m_aGuardPosts.Insert("24 0 34");
 		layout.m_aGuardPosts.Insert("24 0 42");
-		layout.m_aGuardPosts.Insert("-8 0 34");
 		layout.m_aGuardPosts.Insert("32 0 6");
 		layout.m_aGuardPosts.Insert("28 0 30");
 		layout.m_aGuardPosts.Insert("4 0 22");
@@ -15461,11 +15748,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-8 0 26");
 		layout.m_aGuardPosts.Insert("0 0 34");
 		layout.m_aGuardPosts.Insert("36 0 -42");
-		layout.m_aGuardPosts.Insert("-4 0 30");
 		layout.m_aGuardPosts.Insert("12 0 -50");
 		layout.m_aGuardPosts.Insert("40 0 -50");
 		layout.m_aGuardPosts.Insert("40 0 14");
 		layout.m_aGuardPosts.Insert("-24 0 -50");
+		layout.m_aGuardPosts.Insert("4 0 -38");
+		layout.m_aGuardPosts.Insert("-4 0 -38");
 	}
 	protected static void BuildWalls73(IA_ComposedSiteLayout layout)
 	{
@@ -15614,6 +15902,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "-36 0 -14", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "36 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls74(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("36 0 46");
 		layout.m_aGuardPosts.Insert("40 0 38");
@@ -15632,8 +15922,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("28 0 6");
 		layout.m_aGuardPosts.Insert("36 0 -50");
 		layout.m_aGuardPosts.Insert("8 0 -50");
-		layout.m_aGuardPosts.Insert("-8 0 30");
 		layout.m_aGuardPosts.Insert("4 0 22");
+		layout.m_aGuardPosts.Insert("-36 0 30");
 	}
 	protected static void BuildWalls74(IA_ComposedSiteLayout layout)
 	{
@@ -15782,26 +16072,28 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Ammo", "36 0 -14", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Medical", "-36 0 -6", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls75(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("8 0 26");
 		layout.m_aGuardPosts.Insert("32 0 26");
 		layout.m_aGuardPosts.Insert("4 0 34");
 		layout.m_aGuardPosts.Insert("-20 0 -50");
-		layout.m_aGuardPosts.Insert("-12 0 30");
 		layout.m_aGuardPosts.Insert("-36 0 34");
 		layout.m_aGuardPosts.Insert("40 0 30");
 		layout.m_aGuardPosts.Insert("24 0 38");
 		layout.m_aGuardPosts.Insert("-32 0 22");
 		layout.m_aGuardPosts.Insert("-16 0 50");
-		layout.m_aGuardPosts.Insert("40 0 50");
 		layout.m_aGuardPosts.Insert("-40 0 22");
 		layout.m_aGuardPosts.Insert("32 0 14");
 		layout.m_aGuardPosts.Insert("-36 0 26");
+		layout.m_aGuardPosts.Insert("-16 0 30");
 		layout.m_aGuardPosts.Insert("40 0 -46");
 		layout.m_aGuardPosts.Insert("-36 0 50");
 		layout.m_aGuardPosts.Insert("16 0 42");
 		layout.m_aGuardPosts.Insert("-20 0 42");
 		layout.m_aGuardPosts.Insert("-16 0 38");
+		layout.m_aGuardPosts.Insert("-40 0 42");
 	}
 	protected static void BuildWalls75(IA_ComposedSiteLayout layout)
 	{
@@ -15950,6 +16242,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "-36 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-36 0 2", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls76(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("-4 0 -38");
 		layout.m_aGuardPosts.Insert("24 0 42");
@@ -16118,6 +16412,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Supply", "36 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "36 0 2", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls77(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("-40 0 -50");
 		layout.m_aGuardPosts.Insert("-36 0 6");
@@ -16132,12 +16428,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("0 0 -38");
 		layout.m_aGuardPosts.Insert("0 0 26");
 		layout.m_aGuardPosts.Insert("28 0 34");
-		layout.m_aGuardPosts.Insert("-4 0 34");
 		layout.m_aGuardPosts.Insert("-32 0 46");
 		layout.m_aGuardPosts.Insert("40 0 22");
 		layout.m_aGuardPosts.Insert("28 0 14");
 		layout.m_aGuardPosts.Insert("-28 0 30");
 		layout.m_aGuardPosts.Insert("36 0 -30");
+		layout.m_aGuardPosts.Insert("-28 0 18");
 	}
 	protected static void BuildWalls77(IA_ComposedSiteLayout layout)
 	{
@@ -16286,6 +16582,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-36 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-36 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls78(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("-38 0 -8");
 		layout.m_aGuardPosts.Insert("-36 0 46");
@@ -16455,6 +16753,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "36 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "36 0 -38", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls79(layout);
+		layout.AddAirRaidBunker("-9 0 35", 270);
+		layout.AddAirRaidBunker("43 0 53", 90);
 		layout.m_aGuardPosts.Insert("0 0 -48");
 		layout.m_aGuardPosts.Insert("38 0 -8");
 		layout.m_aGuardPosts.Insert("36 0 42");
@@ -16624,13 +16924,14 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -30", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls80(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -10");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
 		layout.m_aGuardPosts.Insert("-20 0 -34");
-		layout.m_aGuardPosts.Insert("-36 0 14");
 		layout.m_aGuardPosts.Insert("32 0 14");
 		layout.m_aGuardPosts.Insert("36 0 2");
 		layout.m_aGuardPosts.Insert("28 0 -10");
@@ -16638,6 +16939,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-8 0 -34");
 		layout.m_aGuardPosts.Insert("16 0 30");
 		layout.m_aGuardPosts.Insert("32 0 -2");
+		layout.m_aGuardPosts.Insert("-32 0 14");
 		layout.m_aGuardPosts.Insert("32 0 6");
 		layout.m_aGuardPosts.Insert("-36 0 -18");
 	}
@@ -16757,6 +17059,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-32 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "32 0 -14", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls81(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("-24 0 -34");
@@ -16767,12 +17071,12 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("36 0 34");
 		layout.m_aGuardPosts.Insert("-28 0 -10");
 		layout.m_aGuardPosts.Insert("36 0 -2");
-		layout.m_aGuardPosts.Insert("36 0 14");
 		layout.m_aGuardPosts.Insert("36 0 26");
 		layout.m_aGuardPosts.Insert("28 0 -30");
-		layout.m_aGuardPosts.Insert("32 0 10");
 		layout.m_aGuardPosts.Insert("-28 0 6");
 		layout.m_aGuardPosts.Insert("28 0 -2");
+		layout.m_aGuardPosts.Insert("-8 0 -34");
+		layout.m_aGuardPosts.Insert("-32 0 -34");
 	}
 	protected static void BuildWalls81(IA_ComposedSiteLayout layout)
 	{
@@ -16891,6 +17195,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -14", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls82(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("-8 0 -34");
@@ -16899,14 +17205,14 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-24 0 -34");
 		layout.m_aGuardPosts.Insert("16 0 30");
 		layout.m_aGuardPosts.Insert("32 0 2");
-		layout.m_aGuardPosts.Insert("20 0 22");
 		layout.m_aGuardPosts.Insert("36 0 6");
 		layout.m_aGuardPosts.Insert("28 0 6");
-		layout.m_aGuardPosts.Insert("-32 0 10");
 		layout.m_aGuardPosts.Insert("36 0 -2");
+		layout.m_aGuardPosts.Insert("-32 0 14");
 		layout.m_aGuardPosts.Insert("32 0 10");
 		layout.m_aGuardPosts.Insert("36 0 -34");
 		layout.m_aGuardPosts.Insert("-36 0 2");
+		layout.m_aGuardPosts.Insert("-32 0 -2");
 	}
 	protected static void BuildWalls82(IA_ComposedSiteLayout layout)
 	{
@@ -17025,22 +17331,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-32 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -6", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls83(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("34 0 -8");
-		layout.m_aGuardPosts.Insert("-32 0 6");
 		layout.m_aGuardPosts.Insert("-32 0 -34");
 		layout.m_aGuardPosts.Insert("-20 0 -34");
 		layout.m_aGuardPosts.Insert("32 0 -18");
 		layout.m_aGuardPosts.Insert("-28 0 10");
 		layout.m_aGuardPosts.Insert("-8 0 -34");
-		layout.m_aGuardPosts.Insert("36 0 10");
 		layout.m_aGuardPosts.Insert("32 0 2");
-		layout.m_aGuardPosts.Insert("28 0 10");
 		layout.m_aGuardPosts.Insert("28 0 -2");
 		layout.m_aGuardPosts.Insert("36 0 -2");
 		layout.m_aGuardPosts.Insert("36 0 30");
+		layout.m_aGuardPosts.Insert("28 0 6");
+		layout.m_aGuardPosts.Insert("36 0 6");
 		layout.m_aGuardPosts.Insert("32 0 -30");
-		layout.m_aGuardPosts.Insert("-36 0 14");
+		layout.m_aGuardPosts.Insert("28 0 -22");
+		layout.m_aGuardPosts.Insert("28 0 -14");
 	}
 	protected static void BuildWalls83(IA_ComposedSiteLayout layout)
 	{
@@ -17160,22 +17468,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "32 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -6", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls84(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("32 0 10");
 		layout.m_aGuardPosts.Insert("-20 0 -34");
 		layout.m_aGuardPosts.Insert("36 0 14");
-		layout.m_aGuardPosts.Insert("-36 0 10");
 		layout.m_aGuardPosts.Insert("-32 0 -22");
 		layout.m_aGuardPosts.Insert("-28 0 -34");
 		layout.m_aGuardPosts.Insert("-32 0 -30");
 		layout.m_aGuardPosts.Insert("-28 0 14");
 		layout.m_aGuardPosts.Insert("16 0 30");
-		layout.m_aGuardPosts.Insert("16 0 22");
 		layout.m_aGuardPosts.Insert("28 0 6");
-		layout.m_aGuardPosts.Insert("20 0 26");
 		layout.m_aGuardPosts.Insert("28 0 -30");
 		layout.m_aGuardPosts.Insert("-8 0 -34");
 		layout.m_aGuardPosts.Insert("-36 0 -18");
+		layout.m_aGuardPosts.Insert("-28 0 -26");
+		layout.m_aGuardPosts.Insert("36 0 6");
+		layout.m_aGuardPosts.Insert("-28 0 -18");
 	}
 	protected static void BuildWalls84(IA_ComposedSiteLayout layout)
 	{
@@ -17296,22 +17606,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-32 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -6", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls85(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 -26");
 		layout.m_aGuardPosts.Insert("28 0 6");
-		layout.m_aGuardPosts.Insert("36 0 14");
 		layout.m_aGuardPosts.Insert("-16 0 -34");
 		layout.m_aGuardPosts.Insert("-28 0 -34");
 		layout.m_aGuardPosts.Insert("36 0 30");
 		layout.m_aGuardPosts.Insert("36 0 -14");
-		layout.m_aGuardPosts.Insert("-32 0 6");
 		layout.m_aGuardPosts.Insert("28 0 -10");
-		layout.m_aGuardPosts.Insert("-36 0 14");
-		layout.m_aGuardPosts.Insert("28 0 14");
 		layout.m_aGuardPosts.Insert("32 0 -18");
+		layout.m_aGuardPosts.Insert("-32 0 14");
 		layout.m_aGuardPosts.Insert("28 0 -2");
 		layout.m_aGuardPosts.Insert("-28 0 10");
+		layout.m_aGuardPosts.Insert("36 0 2");
+		layout.m_aGuardPosts.Insert("8 0 -34");
+		layout.m_aGuardPosts.Insert("32 0 -30");
 	}
 	protected static void BuildWalls85(IA_ComposedSiteLayout layout)
 	{
@@ -17430,6 +17742,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "32 0 26", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "32 0 -6", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls86(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 6");
@@ -17442,10 +17756,10 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("36 0 6");
 		layout.m_aGuardPosts.Insert("-36 0 -14");
 		layout.m_aGuardPosts.Insert("-32 0 -34");
-		layout.m_aGuardPosts.Insert("-36 0 6");
-		layout.m_aGuardPosts.Insert("-32 0 10");
-		layout.m_aGuardPosts.Insert("-36 0 14");
 		layout.m_aGuardPosts.Insert("28 0 6");
+		layout.m_aGuardPosts.Insert("-32 0 14");
+		layout.m_aGuardPosts.Insert("36 0 -34");
+		layout.m_aGuardPosts.Insert("-28 0 -14");
 	}
 	protected static void BuildWalls86(IA_ComposedSiteLayout layout)
 	{
@@ -17565,22 +17879,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "24 0 26", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "32 0 -22", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls87(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -2");
 		layout.m_aGuardPosts.Insert("-32 0 -34");
-		layout.m_aGuardPosts.Insert("32 0 14");
 		layout.m_aGuardPosts.Insert("36 0 -34");
 		layout.m_aGuardPosts.Insert("36 0 34");
 		layout.m_aGuardPosts.Insert("28 0 -6");
-		layout.m_aGuardPosts.Insert("36 0 18");
-		layout.m_aGuardPosts.Insert("-32 0 10");
 		layout.m_aGuardPosts.Insert("-32 0 2");
 		layout.m_aGuardPosts.Insert("-8 0 -34");
 		layout.m_aGuardPosts.Insert("8 0 -34");
+		layout.m_aGuardPosts.Insert("36 0 22");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
 		layout.m_aGuardPosts.Insert("-28 0 6");
+		layout.m_aGuardPosts.Insert("-32 0 14");
+		layout.m_aGuardPosts.Insert("36 0 6");
 	}
 	protected static void BuildWalls87(IA_ComposedSiteLayout layout)
 	{
@@ -17699,12 +18015,13 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "32 0 26", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -30", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls88(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 -6");
 		layout.m_aGuardPosts.Insert("-12 0 -34");
-		layout.m_aGuardPosts.Insert("-32 0 6");
 		layout.m_aGuardPosts.Insert("28 0 6");
 		layout.m_aGuardPosts.Insert("36 0 -34");
 		layout.m_aGuardPosts.Insert("-36 0 2");
@@ -17713,8 +18030,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("32 0 10");
 		layout.m_aGuardPosts.Insert("-36 0 -18");
 		layout.m_aGuardPosts.Insert("-28 0 -6");
-		layout.m_aGuardPosts.Insert("16 0 22");
 		layout.m_aGuardPosts.Insert("-20 0 -34");
+		layout.m_aGuardPosts.Insert("36 0 14");
+		layout.m_aGuardPosts.Insert("-28 0 6");
 	}
 	protected static void BuildWalls88(IA_ComposedSiteLayout layout)
 	{
@@ -17832,22 +18150,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "24 0 26", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -14", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls89(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("34 0 -8");
-		layout.m_aGuardPosts.Insert("32 0 14");
 		layout.m_aGuardPosts.Insert("36 0 22");
 		layout.m_aGuardPosts.Insert("-28 0 14");
 		layout.m_aGuardPosts.Insert("36 0 2");
 		layout.m_aGuardPosts.Insert("36 0 34");
-		layout.m_aGuardPosts.Insert("28 0 10");
-		layout.m_aGuardPosts.Insert("-32 0 10");
 		layout.m_aGuardPosts.Insert("-28 0 2");
-		layout.m_aGuardPosts.Insert("-36 0 6");
-		layout.m_aGuardPosts.Insert("-36 0 14");
+		layout.m_aGuardPosts.Insert("28 0 6");
 		layout.m_aGuardPosts.Insert("-24 0 -34");
 		layout.m_aGuardPosts.Insert("28 0 -10");
-		layout.m_aGuardPosts.Insert("32 0 6");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
+		layout.m_aGuardPosts.Insert("-8 0 -34");
+		layout.m_aGuardPosts.Insert("-28 0 -26");
+		layout.m_aGuardPosts.Insert("28 0 -2");
+		layout.m_aGuardPosts.Insert("-16 0 -34");
+		layout.m_aGuardPosts.Insert("8 0 -34");
 	}
 	protected static void BuildWalls89(IA_ComposedSiteLayout layout)
 	{
@@ -17968,22 +18288,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -30", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls90(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
 		layout.m_aGuardPosts.Insert("36 0 -34");
 		layout.m_aGuardPosts.Insert("36 0 10");
-		layout.m_aGuardPosts.Insert("16 0 22");
-		layout.m_aGuardPosts.Insert("20 0 26");
 		layout.m_aGuardPosts.Insert("-32 0 14");
 		layout.m_aGuardPosts.Insert("28 0 2");
 		layout.m_aGuardPosts.Insert("28 0 10");
-		layout.m_aGuardPosts.Insert("-36 0 10");
 		layout.m_aGuardPosts.Insert("28 0 -10");
+		layout.m_aGuardPosts.Insert("20 0 30");
 		layout.m_aGuardPosts.Insert("-28 0 2");
 		layout.m_aGuardPosts.Insert("-20 0 -34");
 		layout.m_aGuardPosts.Insert("-8 0 -34");
+		layout.m_aGuardPosts.Insert("-28 0 -14");
+		layout.m_aGuardPosts.Insert("-32 0 -18");
 	}
 	protected static void BuildWalls90(IA_ComposedSiteLayout layout)
 	{
@@ -18100,22 +18422,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -14", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls91(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -26");
-		layout.m_aGuardPosts.Insert("28 0 14");
 		layout.m_aGuardPosts.Insert("-28 0 14");
 		layout.m_aGuardPosts.Insert("28 0 -6");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
 		layout.m_aGuardPosts.Insert("-32 0 2");
-		layout.m_aGuardPosts.Insert("36 0 14");
 		layout.m_aGuardPosts.Insert("36 0 22");
-		layout.m_aGuardPosts.Insert("-36 0 14");
 		layout.m_aGuardPosts.Insert("-24 0 -34");
 		layout.m_aGuardPosts.Insert("-8 0 -34");
 		layout.m_aGuardPosts.Insert("28 0 6");
 		layout.m_aGuardPosts.Insert("36 0 34");
 		layout.m_aGuardPosts.Insert("32 0 2");
+		layout.m_aGuardPosts.Insert("-16 0 -34");
+		layout.m_aGuardPosts.Insert("-28 0 -2");
+		layout.m_aGuardPosts.Insert("36 0 6");
 	}
 	protected static void BuildWalls91(IA_ComposedSiteLayout layout)
 	{
@@ -18236,9 +18560,10 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "32 0 -22", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-32 0 -14", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls92(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("34 0 -8");
-		layout.m_aGuardPosts.Insert("16 0 26");
 		layout.m_aGuardPosts.Insert("28 0 -6");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
 		layout.m_aGuardPosts.Insert("-32 0 14");
@@ -18250,8 +18575,9 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -26");
 		layout.m_aGuardPosts.Insert("36 0 14");
 		layout.m_aGuardPosts.Insert("-20 0 -34");
-		layout.m_aGuardPosts.Insert("20 0 22");
-		layout.m_aGuardPosts.Insert("-32 0 6");
+		layout.m_aGuardPosts.Insert("16 0 30");
+		layout.m_aGuardPosts.Insert("28 0 6");
+		layout.m_aGuardPosts.Insert("28 0 14");
 	}
 	protected static void BuildWalls92(IA_ComposedSiteLayout layout)
 	{
@@ -18371,22 +18697,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-32 0 -30", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls93(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("34 0 -8");
-		layout.m_aGuardPosts.Insert("-32 0 10");
 		layout.m_aGuardPosts.Insert("-28 0 6");
-		layout.m_aGuardPosts.Insert("36 0 14");
 		layout.m_aGuardPosts.Insert("28 0 2");
-		layout.m_aGuardPosts.Insert("-36 0 6");
 		layout.m_aGuardPosts.Insert("-28 0 14");
 		layout.m_aGuardPosts.Insert("-32 0 -14");
-		layout.m_aGuardPosts.Insert("28 0 14");
-		layout.m_aGuardPosts.Insert("-36 0 14");
 		layout.m_aGuardPosts.Insert("-28 0 -18");
 		layout.m_aGuardPosts.Insert("32 0 6");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
 		layout.m_aGuardPosts.Insert("28 0 -6");
+		layout.m_aGuardPosts.Insert("36 0 30");
+		layout.m_aGuardPosts.Insert("32 0 -2");
+		layout.m_aGuardPosts.Insert("-8 0 -34");
+		layout.m_aGuardPosts.Insert("-28 0 -2");
+		layout.m_aGuardPosts.Insert("-20 0 -34");
 	}
 	protected static void BuildWalls93(IA_ComposedSiteLayout layout)
 	{
@@ -18505,6 +18833,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-32 0 -30", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls94(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("34 0 -8");
@@ -18512,15 +18842,15 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-8 0 -34");
 		layout.m_aGuardPosts.Insert("-28 0 -10");
 		layout.m_aGuardPosts.Insert("32 0 10");
-		layout.m_aGuardPosts.Insert("-36 0 10");
 		layout.m_aGuardPosts.Insert("36 0 14");
 		layout.m_aGuardPosts.Insert("-28 0 6");
 		layout.m_aGuardPosts.Insert("-32 0 -18");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
 		layout.m_aGuardPosts.Insert("-28 0 -2");
 		layout.m_aGuardPosts.Insert("28 0 6");
-		layout.m_aGuardPosts.Insert("20 0 26");
 		layout.m_aGuardPosts.Insert("8 0 -34");
+		layout.m_aGuardPosts.Insert("28 0 -6");
+		layout.m_aGuardPosts.Insert("-20 0 -34");
 	}
 	protected static void BuildWalls94(IA_ComposedSiteLayout layout)
 	{
@@ -18638,22 +18968,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-32 0 -6", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-32 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls95(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("36 0 34");
-		layout.m_aGuardPosts.Insert("-32 0 10");
-		layout.m_aGuardPosts.Insert("-36 0 6");
-		layout.m_aGuardPosts.Insert("36 0 10");
 		layout.m_aGuardPosts.Insert("32 0 -22");
 		layout.m_aGuardPosts.Insert("8 0 -34");
-		layout.m_aGuardPosts.Insert("-36 0 14");
 		layout.m_aGuardPosts.Insert("-28 0 6");
-		layout.m_aGuardPosts.Insert("28 0 10");
 		layout.m_aGuardPosts.Insert("36 0 26");
 		layout.m_aGuardPosts.Insert("-32 0 -34");
 		layout.m_aGuardPosts.Insert("36 0 -18");
 		layout.m_aGuardPosts.Insert("-12 0 -34");
+		layout.m_aGuardPosts.Insert("36 0 6");
 		layout.m_aGuardPosts.Insert("-28 0 14");
+		layout.m_aGuardPosts.Insert("36 0 -2");
+		layout.m_aGuardPosts.Insert("28 0 -6");
+		layout.m_aGuardPosts.Insert("-24 0 -34");
+		layout.m_aGuardPosts.Insert("32 0 -30");
 	}
 	protected static void BuildWalls95(IA_ComposedSiteLayout layout)
 	{
@@ -18773,11 +19105,11 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "32 0 -6", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls96(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
-		layout.m_aGuardPosts.Insert("-36 0 14");
 		layout.m_aGuardPosts.Insert("32 0 14");
-		layout.m_aGuardPosts.Insert("-32 0 10");
 		layout.m_aGuardPosts.Insert("28 0 6");
 		layout.m_aGuardPosts.Insert("8 0 -34");
 		layout.m_aGuardPosts.Insert("16 0 30");
@@ -18789,6 +19121,8 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -6");
 		layout.m_aGuardPosts.Insert("36 0 -34");
 		layout.m_aGuardPosts.Insert("-16 0 -34");
+		layout.m_aGuardPosts.Insert("-36 0 -2");
+		layout.m_aGuardPosts.Insert("-32 0 -30");
 	}
 	protected static void BuildWalls96(IA_ComposedSiteLayout layout)
 	{
@@ -18907,22 +19241,24 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-32 0 -22", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "32 0 -22", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls97(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("-20 0 -34");
-		layout.m_aGuardPosts.Insert("-32 0 6");
 		layout.m_aGuardPosts.Insert("-32 0 14");
 		layout.m_aGuardPosts.Insert("-28 0 -6");
 		layout.m_aGuardPosts.Insert("-36 0 2");
 		layout.m_aGuardPosts.Insert("36 0 22");
 		layout.m_aGuardPosts.Insert("-12 0 -34");
 		layout.m_aGuardPosts.Insert("8 0 -34");
-		layout.m_aGuardPosts.Insert("-28 0 2");
+		layout.m_aGuardPosts.Insert("-28 0 6");
 		layout.m_aGuardPosts.Insert("32 0 2");
-		layout.m_aGuardPosts.Insert("-36 0 10");
 		layout.m_aGuardPosts.Insert("36 0 -2");
 		layout.m_aGuardPosts.Insert("-32 0 -2");
+		layout.m_aGuardPosts.Insert("36 0 34");
+		layout.m_aGuardPosts.Insert("-28 0 -34");
 	}
 	protected static void BuildWalls97(IA_ComposedSiteLayout layout)
 	{
@@ -19040,6 +19376,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "32 0 -6", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls98(layout);
+		layout.AddAirRaidBunker("15 0 23", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("-34 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -2");
@@ -19047,15 +19385,15 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("28 0 14");
 		layout.m_aGuardPosts.Insert("36 0 -34");
 		layout.m_aGuardPosts.Insert("-32 0 -30");
-		layout.m_aGuardPosts.Insert("16 0 26");
-		layout.m_aGuardPosts.Insert("-36 0 14");
+		layout.m_aGuardPosts.Insert("-32 0 14");
 		layout.m_aGuardPosts.Insert("-32 0 2");
 		layout.m_aGuardPosts.Insert("-36 0 -18");
 		layout.m_aGuardPosts.Insert("-16 0 -34");
 		layout.m_aGuardPosts.Insert("-8 0 -34");
 		layout.m_aGuardPosts.Insert("8 0 -34");
-		layout.m_aGuardPosts.Insert("20 0 22");
-		layout.m_aGuardPosts.Insert("-32 0 10");
+		layout.m_aGuardPosts.Insert("36 0 10");
+		layout.m_aGuardPosts.Insert("-36 0 -2");
+		layout.m_aGuardPosts.Insert("16 0 30");
 	}
 	protected static void BuildWalls98(IA_ComposedSiteLayout layout)
 	{
@@ -19174,6 +19512,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "32 0 -22", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-32 0 -14", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls99(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-39 0 9", 270);
 		layout.m_aGuardPosts.Insert("0 0 -32");
 		layout.m_aGuardPosts.Insert("34 0 -8");
 		layout.m_aGuardPosts.Insert("-20 0 -34");
@@ -19183,13 +19523,13 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -2");
 		layout.m_aGuardPosts.Insert("32 0 6");
 		layout.m_aGuardPosts.Insert("-28 0 -26");
-		layout.m_aGuardPosts.Insert("28 0 14");
-		layout.m_aGuardPosts.Insert("36 0 14");
 		layout.m_aGuardPosts.Insert("36 0 -2");
 		layout.m_aGuardPosts.Insert("36 0 22");
 		layout.m_aGuardPosts.Insert("36 0 34");
-		layout.m_aGuardPosts.Insert("-36 0 10");
 		layout.m_aGuardPosts.Insert("-36 0 -2");
+		layout.m_aGuardPosts.Insert("-8 0 -34");
+		layout.m_aGuardPosts.Insert("-28 0 10");
+		layout.m_aGuardPosts.Insert("-28 0 -34");
 	}
 	protected static void BuildWalls99(IA_ComposedSiteLayout layout)
 	{
@@ -19305,14 +19645,13 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls100(layout);
-		layout.m_aGuardPosts.Insert("28 0 -4");
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("28 0 -12");
 		layout.m_aGuardPosts.Insert("28 0 -20");
 		layout.m_aGuardPosts.Insert("28 0 12");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
 		layout.m_aGuardPosts.Insert("-28 0 4");
-		layout.m_aGuardPosts.Insert("28 0 4");
-		layout.m_aGuardPosts.Insert("-28 0 16");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
 		layout.m_aGuardPosts.Insert("28 0 -28");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
@@ -19422,18 +19761,17 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls101(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("28 0 -28");
 		layout.m_aGuardPosts.Insert("-28 0 -12");
 		layout.m_aGuardPosts.Insert("28 0 -12");
 		layout.m_aGuardPosts.Insert("-28 0 12");
 		layout.m_aGuardPosts.Insert("28 0 -20");
-		layout.m_aGuardPosts.Insert("28 0 12");
 		layout.m_aGuardPosts.Insert("28 0 4");
 		layout.m_aGuardPosts.Insert("-28 0 -20");
-		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("28 0 -4");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
-		layout.m_aGuardPosts.Insert("-28 0 -4");
 	}
 	protected static void BuildWalls101(IA_ComposedSiteLayout layout)
 	{
@@ -19540,18 +19878,17 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls102(layout);
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("28 0 -28");
 		layout.m_aGuardPosts.Insert("28 0 -20");
-		layout.m_aGuardPosts.Insert("28 0 4");
-		layout.m_aGuardPosts.Insert("-28 0 16");
 		layout.m_aGuardPosts.Insert("-28 0 -12");
 		layout.m_aGuardPosts.Insert("-28 0 0");
 		layout.m_aGuardPosts.Insert("28 0 -12");
 		layout.m_aGuardPosts.Insert("-28 0 -20");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
-		layout.m_aGuardPosts.Insert("28 0 -4");
+		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 8");
-		layout.m_aGuardPosts.Insert("28 0 12");
 	}
 	protected static void BuildWalls102(IA_ComposedSiteLayout layout)
 	{
@@ -19658,14 +19995,15 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls103(layout);
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("-28 0 -28");
 		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 12");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
-		layout.m_aGuardPosts.Insert("28 0 4");
 		layout.m_aGuardPosts.Insert("-28 0 0");
-		layout.m_aGuardPosts.Insert("-28 0 12");
+		layout.m_aGuardPosts.Insert("-28 0 8");
 		layout.m_aGuardPosts.Insert("28 0 -20");
 		layout.m_aGuardPosts.Insert("28 0 -28");
 	}
@@ -19774,12 +20112,12 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls104(layout);
-		layout.m_aGuardPosts.Insert("-28 0 16");
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 -28");
 		layout.m_aGuardPosts.Insert("28 0 12");
 		layout.m_aGuardPosts.Insert("28 0 -20");
-		layout.m_aGuardPosts.Insert("28 0 0");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
 		layout.m_aGuardPosts.Insert("-28 0 0");
 		layout.m_aGuardPosts.Insert("-28 0 -12");
@@ -19891,16 +20229,16 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls105(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 12");
 		layout.m_aGuardPosts.Insert("28 0 -16");
-		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("28 0 -24");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
-		layout.m_aGuardPosts.Insert("28 0 16");
 		layout.m_aGuardPosts.Insert("28 0 0");
 	}
 	protected static void BuildWalls105(IA_ComposedSiteLayout layout)
@@ -20008,16 +20346,16 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls106(layout);
-		layout.m_aGuardPosts.Insert("28 0 12");
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("-28 0 -28");
 		layout.m_aGuardPosts.Insert("28 0 -4");
 		layout.m_aGuardPosts.Insert("28 0 -24");
 		layout.m_aGuardPosts.Insert("28 0 -16");
+		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
 		layout.m_aGuardPosts.Insert("-28 0 12");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
-		layout.m_aGuardPosts.Insert("-28 0 0");
-		layout.m_aGuardPosts.Insert("28 0 4");
 	}
 	protected static void BuildWalls106(IA_ComposedSiteLayout layout)
 	{
@@ -20124,7 +20462,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls107(layout);
-		layout.m_aGuardPosts.Insert("28 0 4");
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("28 0 -16");
 		layout.m_aGuardPosts.Insert("-28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
@@ -20133,7 +20472,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("28 0 -28");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 -8");
-		layout.m_aGuardPosts.Insert("-28 0 16");
 		layout.m_aGuardPosts.Insert("-28 0 0");
 	}
 	protected static void BuildWalls107(IA_ComposedSiteLayout layout)
@@ -20241,8 +20579,9 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls108(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("28 0 -4");
-		layout.m_aGuardPosts.Insert("28 0 16");
 		layout.m_aGuardPosts.Insert("-28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
@@ -20250,7 +20589,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 4");
 		layout.m_aGuardPosts.Insert("28 0 -12");
-		layout.m_aGuardPosts.Insert("-28 0 0");
 	}
 	protected static void BuildWalls108(IA_ComposedSiteLayout layout)
 	{
@@ -20357,11 +20695,11 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls109(layout);
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
-		layout.m_aGuardPosts.Insert("28 0 0");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
-		layout.m_aGuardPosts.Insert("-28 0 16");
 		layout.m_aGuardPosts.Insert("-28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 0");
 		layout.m_aGuardPosts.Insert("28 0 -28");
@@ -20474,16 +20812,16 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls110(layout);
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("-28 0 -4");
-		layout.m_aGuardPosts.Insert("-28 0 16");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
 		layout.m_aGuardPosts.Insert("28 0 -16");
-		layout.m_aGuardPosts.Insert("28 0 -4");
-		layout.m_aGuardPosts.Insert("28 0 4");
 		layout.m_aGuardPosts.Insert("-28 0 8");
+		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 -12");
+		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 -28");
-		layout.m_aGuardPosts.Insert("28 0 12");
 	}
 	protected static void BuildWalls110(IA_ComposedSiteLayout layout)
 	{
@@ -20590,16 +20928,16 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls111(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("28 0 -4");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
 		layout.m_aGuardPosts.Insert("28 0 -28");
-		layout.m_aGuardPosts.Insert("-28 0 0");
 		layout.m_aGuardPosts.Insert("28 0 4");
 		layout.m_aGuardPosts.Insert("-28 0 8");
 		layout.m_aGuardPosts.Insert("28 0 -16");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
-		layout.m_aGuardPosts.Insert("28 0 16");
 	}
 	protected static void BuildWalls111(IA_ComposedSiteLayout layout)
 	{
@@ -20706,16 +21044,16 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls112(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("28 0 -24");
 		layout.m_aGuardPosts.Insert("-28 0 -20");
 		layout.m_aGuardPosts.Insert("-28 0 12");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
 		layout.m_aGuardPosts.Insert("28 0 -12");
-		layout.m_aGuardPosts.Insert("28 0 12");
-		layout.m_aGuardPosts.Insert("-28 0 -4");
+		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 -12");
 		layout.m_aGuardPosts.Insert("28 0 0");
-		layout.m_aGuardPosts.Insert("-28 0 4");
 	}
 	protected static void BuildWalls112(IA_ComposedSiteLayout layout)
 	{
@@ -20822,16 +21160,16 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls113(layout);
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("28 0 -28");
 		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 -12");
 		layout.m_aGuardPosts.Insert("28 0 -20");
 		layout.m_aGuardPosts.Insert("-28 0 4");
-		layout.m_aGuardPosts.Insert("-28 0 12");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
-		layout.m_aGuardPosts.Insert("28 0 -4");
 	}
 	protected static void BuildWalls113(IA_ComposedSiteLayout layout)
 	{
@@ -20938,6 +21276,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls114(layout);
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("-28 0 -4");
 		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 4");
@@ -20945,8 +21285,7 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -20");
 		layout.m_aGuardPosts.Insert("28 0 -28");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
-		layout.m_aGuardPosts.Insert("28 0 -4");
-		layout.m_aGuardPosts.Insert("-28 0 12");
+		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -12");
 	}
 	protected static void BuildWalls114(IA_ComposedSiteLayout layout)
@@ -21054,16 +21393,17 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls115(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("-28 0 -28");
-		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
-		layout.m_aGuardPosts.Insert("28 0 12");
-		layout.m_aGuardPosts.Insert("-28 0 -4");
 		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 0");
 		layout.m_aGuardPosts.Insert("28 0 -16");
 		layout.m_aGuardPosts.Insert("28 0 -28");
-		layout.m_aGuardPosts.Insert("-28 0 12");
+		layout.m_aGuardPosts.Insert("-28 0 -8");
+		layout.m_aGuardPosts.Insert("-28 0 8");
+		layout.m_aGuardPosts.Insert("28 0 8");
 	}
 	protected static void BuildWalls115(IA_ComposedSiteLayout layout)
 	{
@@ -21170,6 +21510,8 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "-24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls116(layout);
+		layout.AddAirRaidBunker("-31 0 15", 270);
+		layout.AddAirRaidBunker("31 0 1", 90);
 		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("28 0 -12");
 		layout.m_aGuardPosts.Insert("-28 0 -4");
@@ -21177,8 +21519,6 @@ class IA_BaseDesignRecipes
 		layout.m_aGuardPosts.Insert("-28 0 -12");
 		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("28 0 -28");
-		layout.m_aGuardPosts.Insert("-28 0 12");
-		layout.m_aGuardPosts.Insert("28 0 0");
 		layout.m_aGuardPosts.Insert("28 0 -20");
 	}
 	protected static void BuildWalls116(IA_ComposedSiteLayout layout)
@@ -21286,15 +21626,15 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-24 0 24", 0, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls117(layout);
-		layout.m_aGuardPosts.Insert("28 0 12");
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("28 0 -24");
-		layout.m_aGuardPosts.Insert("-28 0 4");
 		layout.m_aGuardPosts.Insert("28 0 -4");
-		layout.m_aGuardPosts.Insert("-28 0 -4");
 		layout.m_aGuardPosts.Insert("-28 0 -28");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
 		layout.m_aGuardPosts.Insert("-28 0 12");
 		layout.m_aGuardPosts.Insert("28 0 4");
+		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 -16");
 	}
 	protected static void BuildWalls117(IA_ComposedSiteLayout layout)
@@ -21402,14 +21742,14 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("Fuel", "-24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls118(layout);
-		layout.m_aGuardPosts.Insert("-28 0 0");
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("28 0 -24");
 		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
 		layout.m_aGuardPosts.Insert("28 0 8");
 		layout.m_aGuardPosts.Insert("28 0 0");
 		layout.m_aGuardPosts.Insert("-28 0 -8");
-		layout.m_aGuardPosts.Insert("28 0 16");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
 		layout.m_aGuardPosts.Insert("-28 0 8");
 		layout.m_aGuardPosts.Insert("28 0 -16");
@@ -21519,15 +21859,16 @@ class IA_BaseDesignRecipes
 		layout.AddComposition("Fuel", "-24 0 24", 180, IA_DynamicSiteModuleRole.Supply, -1, true);
 		layout.AddComposition("MaintenanceSmall", "24 0 24", 90, IA_DynamicSiteModuleRole.Supply, -1, true);
 		BuildWalls119(layout);
+		layout.AddAirRaidBunker("31 0 15", 90);
+		layout.AddAirRaidBunker("-31 0 1", 270);
 		layout.m_aGuardPosts.Insert("28 0 -8");
 		layout.m_aGuardPosts.Insert("28 0 -20");
 		layout.m_aGuardPosts.Insert("28 0 8");
-		layout.m_aGuardPosts.Insert("-28 0 -4");
 		layout.m_aGuardPosts.Insert("28 0 0");
 		layout.m_aGuardPosts.Insert("28 0 -28");
-		layout.m_aGuardPosts.Insert("28 0 16");
 		layout.m_aGuardPosts.Insert("-28 0 8");
 		layout.m_aGuardPosts.Insert("-28 0 -24");
+		layout.m_aGuardPosts.Insert("-28 0 -8");
 		layout.m_aGuardPosts.Insert("-28 0 -16");
 	}
 	protected static void BuildWalls119(IA_ComposedSiteLayout layout)

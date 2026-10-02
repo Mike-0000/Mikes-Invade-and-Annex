@@ -1,0 +1,13 @@
+Turret : "{0147F3C32DF990FF}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/WeapSystems/Mi8MT_PKMT_mount_front.et" {
+ ID "51ACD0965653D003"
+ components {
+  MeshObject "{51ACD09C4E0B7D16}" {
+   Materials {
+    MaterialAssignClass "{A70DA6F8C357204C}" {
+     SourceMaterial "Exterier_35715EB3956D22B9"
+     AssignedMaterial "{28410A3800797F51}Assets/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8_Body_Paint9.emat"
+    }
+   }
+  }
+ }
+}

@@ -13,14 +13,15 @@ Enforce: no ternary. Every `new` in a `ref`. Colors `Color.FromSRGBA`. Paint `Dr
 
 - `IA_AdminConfigMenu` / `IA_StatisticsMenu` — `MUI_MenuBase`. Override `BuildUI`. Mount failure → `OnMUIMountFailed` → legacy layout.
 - `IA_NotificationDisplay` — `MUI_HudHost` + `MakePassThroughOverlay`. Tick from `DisplayUpdate`. No `MenuWithEditorContext`.
-- `IA_LeaderboardRow` — composite in I&A (Row + Labels). Pattern for I&A-only widgets: `Create(runtime)`, `protected ref` columns, `GetRow()` for `AddChild`.
-- Hint overlays — `CreateHintLayer`, last child of the overlay, `AddHint` per control. Help calls `Toggle()`. Copy stays in I&A.
+- Uplink kit (`Scripts/Game/UI`) — `IA_UplinkFrame`, `IA_UplinkTabs`, `IA_UplinkButton/Toggle/Field/Choice/Slider/Meter/Scroll/Caption/Note/Pair`. Each has static `Create(runtime, ...)` that adopts and names the node. Tabs, Choice and Caption are plain `MUI_Node`s; the rest subclass the MUI control (`MUI_Button`, `MUI_Toggle`, `MUI_NumericField`, …), so the menu keeps `MUI_*` member types. Colours and shared shapes come from `IA_UplinkStyle.Get()` (not a node). `IA_UplinkPair` puts two controls in a row and carries gamepad up/down across both columns.
+- `IA_LeaderboardBoard` — paints the whole table from `IA_BoardModel` through two helper children (`IA_BoardViewport`, `IA_BoardRowsLayer`). No per-row nodes.
+- Hint overlays (admin menu only) — `CreateHintLayer`, last child of the overlay, `AddHint` per control. Help calls `Toggle()`. Copy stays in I&A.
 - Pause menu stays vanilla.
 
 Do **not** resurrect `IA_MikesMenuHost`. Do **not** add I&A screens inside Mikes-UI.
 
 ## Build pattern
 
-Overlay (`MakeOverlay`, fill 0) → `CreateFxBackdrop` → `CreateCard` (width, padding, `SetAlign(0.5, 0.5)`, staggered `SetIntro`). Store every kept control as `protected ref MUI_*`. Lists: `SetViewportHeight`. Buttons in a row: Hug + Grow 1, never Fill width. Custom I&A nodes: `runtime.Adopt` + `AddChild`.
+Overlay (`MakeOverlay`, fill 0) → `CreateFxBackdrop` → `IA_UplinkFrame.Create` → children; a hint layer, when the menu has one, last child of the overlay. Store every kept control as `protected ref MUI_*`. Lists: `SetViewportHeight`. Buttons in a row: Hug + Grow 1, never Fill width. Custom I&A nodes: `runtime.Adopt` + `AddChild`.
 
 If the compositor is wrong, patch `F:\Mikes-UI-Exp`, not a copy here.

@@ -31,7 +31,7 @@ class IA_InfrastructureTestPlacer : IA_DynamicSitePlacer
 			IA_DynamicSiteLayout layout = IA_DynamicSiteLayout.CreateById(id);
 			foreach (IA_DynamicSiteModule mod : layout.m_aModules)
 			{
-				if (mod.m_iRole != IA_DynamicSiteModuleRole.Dressing)
+				if (mod.m_iRole != IA_DynamicSiteModuleRole.Dressing && mod.m_iRole != IA_DynamicSiteModuleRole.Shelter)
 					continue;
 				Check(!mod.m_bRequired, "optional facility " + mod.m_sId);
 				for (int mode = 0; mode < 3; mode++)

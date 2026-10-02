@@ -1,6 +1,5 @@
 //------------------------------------------------------------------------------------------------
-//! One player's current-session stats. In-memory only; JSON field names must match
-//! these members for JsonLoadContext on clients.
+//! One player's current-session stats. In-memory only.
 //------------------------------------------------------------------------------------------------
 [BaseContainerProps(configRoot: true)]
 class IA_SessionRankEntry
@@ -28,6 +27,12 @@ class IA_SessionRankEntry
 
 	[Attribute("0", UIWidgets.EditBox, "Score / session XP")]
 	int score;
+
+	[Attribute("0", UIWidgets.EditBox, "Transport rating earned this session")]
+	int transport;
+
+	[Attribute("0", UIWidgets.EditBox, "Combat insertions flown this session")]
+	int insertions;
 
 	[Attribute("1", UIWidgets.EditBox, "SCR_ECharacterRank id")]
 	int rankId;

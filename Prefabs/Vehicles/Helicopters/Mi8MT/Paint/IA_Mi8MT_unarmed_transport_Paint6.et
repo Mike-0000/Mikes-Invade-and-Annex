@@ -1,0 +1,28 @@
+Vehicle : "{DF5CCB7C0FF049F4}Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et" {
+ ID "5A7CEB06421662F8"
+ components {
+  IA_HeliPaintRigComponent "{D3A91F5C7E20D001}" {
+  }
+  MeshObject "{51DAA09FEFBFC0E7}" {
+   Materials {
+    MaterialAssignClass "{ACCCAE928F5A02D6}" {
+     SourceMaterial "Exterier_35715EB3956D22B9"
+     AssignedMaterial "{C1B7766D5DF37B33}Assets/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8_Body_Paint6.emat"
+    }
+   }
+  }
+  SlotManagerComponent "{55BCE45E438E4CFF}" {
+   Slots {
+    RegisteringComponentSlotInfo door_rear {
+     Prefab "{B0DA1063286B5D15}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8MT_rear_door_Paint6.et"
+    }
+    RegisteringComponentSlotInfo RotorMain {
+     Prefab "{74FE339D74787954}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_VehPart_Mi8_rotor_main_Paint6.et"
+    }
+    RegisteringComponentSlotInfo RotorTail {
+     Prefab "{E9C656E5ADED5B74}Prefabs/Vehicles/Helicopters/Mi8MT/Paint/IA_VehPart_Mi8_rotor_tail_Paint6.et"
+    }
+   }
+  }
+ }
+}

@@ -2571,7 +2571,7 @@
         "position": [
           20.42,
           0,
-          -25.83
+          -27.33
         ],
         "yaw": 0,
         "kind": "mesh",
@@ -2870,6 +2870,56 @@
         "owner": 18
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          38
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -66,
+          0,
+          54
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -36,
+          0,
+          -14
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          24,
+          0,
+          -20
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          58,
+          0,
+          10
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -79.987,
@@ -2912,19 +2962,9 @@
         -4
       ],
       [
-        52,
-        0,
-        12
-      ],
-      [
         32,
         0,
         20
-      ],
-      [
-        28,
-        0,
-        -16
       ],
       [
         -60,
@@ -3050,12 +3090,22 @@
         36,
         0,
         4
+      ],
+      [
+        52,
+        0,
+        -32
+      ],
+      [
+        -72,
+        0,
+        4
       ]
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1597,
-    "roots": 211
+    "expanded": 1621,
+    "roots": 217
   },
   {
     "name": "Full / HQ Command 2",
@@ -5536,11 +5586,11 @@
       {
         "key": "VigBriefing",
         "position": [
-          -7.0,
+          -16.499,
           0,
-          41.176
+          54.76
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.3,
@@ -5643,7 +5693,7 @@
         "position": [
           -20.42,
           0,
-          -25.83
+          -27.33
         ],
         "yaw": 0,
         "kind": "mesh",
@@ -5824,7 +5874,7 @@
       {
         "key": "VigComms",
         "position": [
-          -15.499,
+          7.499,
           0,
           53.26
         ],
@@ -5839,11 +5889,11 @@
       {
         "key": "VigPower",
         "position": [
-          8.199,
+          8.699,
           0,
-          54.76
+          57.76
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -5942,6 +5992,56 @@
         "owner": 17
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          38
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          36,
+          0,
+          -14
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -24,
+          0,
+          -20
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -66,
+          0,
+          54
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -58,
+          0,
+          10
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -79.987,
@@ -5994,11 +6094,6 @@
         8
       ],
       [
-        -64,
-        0,
-        52
-      ],
-      [
         68,
         0,
         -60
@@ -6032,11 +6127,6 @@
         -20,
         0,
         -36
-      ],
-      [
-        -8,
-        0,
-        36
       ],
       [
         56,
@@ -6122,12 +6212,22 @@
         16,
         0,
         44
+      ],
+      [
+        72,
+        0,
+        -44
+      ],
+      [
+        -68,
+        0,
+        -44
       ]
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1601,
-    "roots": 212
+    "expanded": 1625,
+    "roots": 218
   },
   {
     "name": "Full / HQ Command 3",
@@ -8956,11 +9056,11 @@
       {
         "key": "VigWater",
         "position": [
-          -34.359,
+          -44.64,
           0,
-          -12.73
+          -23.251
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.2,
@@ -9014,6 +9114,56 @@
         "owner": 19
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          38
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -66,
+          0,
+          54
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -32,
+          0,
+          -16
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          28,
+          0,
+          -18
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          58,
+          0,
+          12
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -79.987,
@@ -9026,12 +9176,7 @@
         -8
       ],
       [
-        -60,
-        0,
-        52
-      ],
-      [
-        -48,
+        -52,
         0,
         -24
       ],
@@ -9166,6 +9311,11 @@
         -8
       ],
       [
+        -48,
+        0,
+        -28
+      ],
+      [
         72,
         0,
         -4
@@ -9198,8 +9348,8 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1604,
-    "roots": 212
+    "expanded": 1628,
+    "roots": 218
   },
   {
     "name": "Full / HQ Garrison 1",
@@ -11742,7 +11892,7 @@
         "position": [
           -20.42,
           0,
-          -23.83
+          -26.83
         ],
         "yaw": 0,
         "kind": "mesh",
@@ -12117,6 +12267,56 @@
         "owner": 16
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          38
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          36,
+          0,
+          -14
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -24,
+          0,
+          -20
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -66,
+          0,
+          54
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -58,
+          0,
+          10
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -79.987,
@@ -12301,8 +12501,8 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1754,
-    "roots": 214
+    "expanded": 1778,
+    "roots": 220
   },
   {
     "name": "Full / HQ Garrison 2",
@@ -14885,18 +15085,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           6.12,
           0,
-          39.976
+          41.876
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -14994,20 +15194,6 @@
         "residual": 0.8,
         "half_width": 4,
         "half_depth": 4,
-        "expanded": 5
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
-          68.477,
-          0,
-          55.71
-        ],
-        "yaw": 90,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
         "expanded": 5
       },
       {
@@ -15206,11 +15392,11 @@
       {
         "key": "VigStoresCovered",
         "position": [
-          70.077,
+          70.377,
           0,
-          52.47
+          59.97
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 1.9,
@@ -15223,7 +15409,7 @@
         "position": [
           71.277,
           0,
-          58.47
+          52.47
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -15232,6 +15418,56 @@
         "half_depth": 0.7,
         "expanded": 5,
         "owner": 16
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          36
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -66,
+          0,
+          54
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -36,
+          0,
+          -14
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          24,
+          0,
+          -20
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          58,
+          0,
+          10
+        ],
+        "yaw": 90
       }
     ],
     "posts": [
@@ -15418,8 +15654,8 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1762,
-    "roots": 215
+    "expanded": 1780,
+    "roots": 220
   },
   {
     "name": "Full / HQ Garrison 3",
@@ -18337,6 +18573,56 @@
         "owner": 16
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          38
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          24,
+          0,
+          -20
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -36,
+          0,
+          -14
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -66,
+          0,
+          36
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          58,
+          0,
+          10
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -79.987,
@@ -18362,11 +18648,6 @@
         -56,
         0,
         60
-      ],
-      [
-        20,
-        0,
-        -20
       ],
       [
         8,
@@ -18517,12 +18798,17 @@
         -32,
         0,
         -40
+      ],
+      [
+        -48,
+        0,
+        12
       ]
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1756,
-    "roots": 214
+    "expanded": 1780,
+    "roots": 220
   },
   {
     "name": "Full / HQ Depot 1",
@@ -21191,20 +21477,6 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
-        "position": [
-          68.477,
-          0,
-          55.71
-        ],
-        "yaw": 90,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
         "key": "VigComms",
         "position": [
           11.499,
@@ -21357,11 +21629,11 @@
       {
         "key": "HQPlateStack",
         "position": [
-          18.536,
+          11.16,
           0,
-          -21.13
+          -35.265
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.2163,
@@ -21372,11 +21644,11 @@
       {
         "key": "VigStoresCovered",
         "position": [
-          70.077,
+          70.377,
           0,
-          52.47
+          59.97
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 1.9,
@@ -21389,7 +21661,7 @@
         "position": [
           71.277,
           0,
-          58.47
+          52.47
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -21398,6 +21670,56 @@
         "half_depth": 0.7,
         "expanded": 5,
         "owner": 17
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          38
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -66,
+          0,
+          54
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -36,
+          0,
+          -14
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          24,
+          0,
+          -20
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          58,
+          0,
+          10
+        ],
+        "yaw": 90
       }
     ],
     "posts": [
@@ -21410,11 +21732,6 @@
         79.987,
         0,
         -8
-      ],
-      [
-        -32,
-        0,
-        -12
       ],
       [
         -48,
@@ -21580,12 +21897,17 @@
         72,
         0,
         24
+      ],
+      [
+        68,
+        0,
+        44
       ]
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1794,
-    "roots": 211
+    "expanded": 1813,
+    "roots": 216
   },
   {
     "name": "Full / HQ Depot 2",
@@ -24036,11 +24358,11 @@
       {
         "key": "VigBriefing",
         "position": [
-          -7.0,
+          -16.499,
           0,
-          41.176
+          54.76
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.3,
@@ -24240,20 +24562,6 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
-        "position": [
-          -68.477,
-          0,
-          55.23
-        ],
-        "yaw": 90,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
         "key": "HQDirtWorn",
         "position": [
           -70.477,
@@ -24284,7 +24592,7 @@
       {
         "key": "VigComms",
         "position": [
-          -15.499,
+          7.499,
           0,
           53.26
         ],
@@ -24299,11 +24607,11 @@
       {
         "key": "VigPower",
         "position": [
-          8.199,
+          8.699,
           0,
-          54.76
+          57.76
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -24374,11 +24682,11 @@
       {
         "key": "VigStoresCovered",
         "position": [
-          -34.844,
+          -44.64,
           0,
-          -12.7
+          -22.651
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 1.9,
@@ -24419,11 +24727,11 @@
       {
         "key": "VigStoresCovered",
         "position": [
-          -70.077,
+          -70.377,
           0,
-          58.47
+          59.97
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 1.9,
@@ -24475,6 +24783,56 @@
         "half_depth": 0.7,
         "expanded": 5,
         "owner": 17
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          38
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          24,
+          0,
+          -20
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -66,
+          0,
+          54
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -32,
+          0,
+          -14
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          58,
+          0,
+          10
+        ],
+        "yaw": 90
       }
     ],
     "posts": [
@@ -24661,8 +25019,8 @@
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1798,
-    "roots": 212
+    "expanded": 1817,
+    "roots": 217
   },
   {
     "name": "Full / HQ Depot 3",
@@ -27317,20 +27675,6 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
-        "position": [
-          -68.477,
-          0,
-          55.23
-        ],
-        "yaw": 90,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
         "key": "HQDirtWorn",
         "position": [
           -4.497,
@@ -27467,11 +27811,11 @@
       {
         "key": "VigStoresCovered",
         "position": [
-          -70.077,
+          -70.377,
           0,
-          58.47
+          59.97
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 1.9,
@@ -27540,6 +27884,56 @@
         "owner": 17
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          38
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -66,
+          0,
+          54
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -28,
+          0,
+          -18
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          66,
+          0,
+          54
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          32,
+          0,
+          -16
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          60,
+          0,
+          14
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -79.987,
@@ -27600,11 +27994,6 @@
         8,
         0,
         -16
-      ],
-      [
-        -60,
-        0,
-        56
       ],
       [
         60,
@@ -27720,12 +28109,17 @@
         52,
         0,
         24
+      ],
+      [
+        40,
+        0,
+        -36
       ]
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1796,
-    "roots": 211
+    "expanded": 1815,
+    "roots": 216
   },
   {
     "name": "Full / HQ Border 1",
@@ -30817,104 +31211,56 @@
         "half_width": 0.6277,
         "half_depth": 3.8039,
         "expanded": 5
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          38
+        ],
+        "yaw": 270
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          -81.13,
+          66,
           0,
-          -49.691
+          54
         ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 90
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          81.13,
+          28,
           0,
-          -49.691
+          -18
         ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 180
       },
       {
-        "key": "HQDirtWorn",
         "position": [
-          4.497,
+          -66,
           0,
-          -2.29
+          54
         ],
-        "yaw": 90,
-        "kind": "decal",
-        "residual": 0.8,
-        "half_width": 4,
-        "half_depth": 4,
-        "expanded": 5
+        "yaw": 270
       },
       {
-        "key": "HQDirtPatch",
         "position": [
-          -45.2,
+          -32,
           0,
-          -7.765
+          -16
         ],
-        "yaw": 0,
-        "kind": "decal",
-        "residual": 0.8,
-        "half_width": 2.5,
-        "half_depth": 2.5,
-        "expanded": 3
+        "yaw": 180
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          -45.2,
+          34,
           0,
-          -5.765
+          26
         ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
-        "key": "HQDirtPatch",
-        "position": [
-          45.2,
-          0,
-          29.445
-        ],
-        "yaw": 0,
-        "kind": "decal",
-        "residual": 0.8,
-        "half_width": 2.5,
-        "half_depth": 2.5,
-        "expanded": 3
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
-          45.2,
-          0,
-          27.445
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 90
       }
     ],
     "posts": [
@@ -30982,11 +31328,6 @@
         44,
         0,
         -44
-      ],
-      [
-        36,
-        0,
-        24
       ],
       [
         48,
@@ -31097,12 +31438,17 @@
         -68,
         0,
         24
+      ],
+      [
+        -16,
+        0,
+        0
       ]
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1727,
-    "roots": 237
+    "expanded": 1720,
+    "roots": 236
   },
   {
     "name": "Full / HQ Border 2",
@@ -34168,18 +34514,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           6.12,
           0,
-          39.976
+          41.876
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -34194,90 +34540,56 @@
         "half_width": 0.6277,
         "half_depth": 3.8039,
         "expanded": 5
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          36
+        ],
+        "yaw": 90
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          81.13,
+          -66,
           0,
-          49.691
+          54
         ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 270
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          -81.13,
+          -38,
           0,
-          -49.691
+          -12
         ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 180
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          81.13,
+          66,
           0,
-          -49.691
+          54
         ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 90
       },
       {
-        "key": "HQDirtWorn",
         "position": [
-          -4.497,
+          24,
           0,
-          -2.77
+          -20
         ],
-        "yaw": 90,
-        "kind": "decal",
-        "residual": 0.8,
-        "half_width": 4,
-        "half_depth": 4,
-        "expanded": 5
+        "yaw": 180
       },
       {
-        "key": "HQDirtPatch",
         "position": [
-          44.08,
+          58,
           0,
-          -7.765
+          10
         ],
-        "yaw": 0,
-        "kind": "decal",
-        "residual": 0.8,
-        "half_width": 2.5,
-        "half_depth": 2.5,
-        "expanded": 3
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
-          44.08,
-          0,
-          -5.765
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 90
       }
     ],
     "posts": [
@@ -34355,6 +34667,11 @@
         -64,
         0,
         20
+      ],
+      [
+        44,
+        0,
+        0
       ],
       [
         56,
@@ -34455,16 +34772,11 @@
         36,
         0,
         -8
-      ],
-      [
-        -64,
-        0,
-        -36
       ]
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1729,
+    "expanded": 1724,
     "roots": 236
   },
   {
@@ -37557,104 +37869,56 @@
         "half_width": 0.6277,
         "half_depth": 3.8039,
         "expanded": 5
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          38
+        ],
+        "yaw": 270
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          -81.13,
+          66,
           0,
-          -49.691
+          54
         ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 90
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          81.13,
+          28,
           0,
-          -49.691
+          -18
         ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 180
       },
       {
-        "key": "HQDirtWorn",
         "position": [
-          -4.497,
+          -66,
           0,
-          -2.77
+          54
         ],
-        "yaw": 90,
-        "kind": "decal",
-        "residual": 0.8,
-        "half_width": 4,
-        "half_depth": 4,
-        "expanded": 5
+        "yaw": 270
       },
       {
-        "key": "HQDirtWorn",
         "position": [
-          37.487,
+          -32,
           0,
-          35.71
+          -16
         ],
-        "yaw": 90,
-        "kind": "decal",
-        "residual": 0.8,
-        "half_width": 4,
-        "half_depth": 4,
-        "expanded": 5
+        "yaw": 180
       },
       {
-        "key": "HQDuckboards",
         "position": [
-          35.487,
+          34,
           0,
-          35.71
+          26
         ],
-        "yaw": 90,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
-        "key": "HQDirtPatch",
-        "position": [
-          7.93,
-          0,
-          -21.765
-        ],
-        "yaw": 0,
-        "kind": "decal",
-        "residual": 0.8,
-        "half_width": 2.5,
-        "half_depth": 2.5,
-        "expanded": 3
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
-          7.93,
-          0,
-          -19.765
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "yaw": 90
       }
     ],
     "posts": [
@@ -37744,11 +38008,6 @@
         24
       ],
       [
-        -64,
-        0,
-        52
-      ],
-      [
         72,
         0,
         -40
@@ -37757,6 +38016,11 @@
         -12,
         0,
         -40
+      ],
+      [
+        -80,
+        0,
+        -44
       ],
       [
         -72,
@@ -37824,6 +38088,11 @@
         -36
       ],
       [
+        8,
+        0,
+        -20
+      ],
+      [
         64,
         0,
         8
@@ -37832,17 +38101,12 @@
         -60,
         0,
         -20
-      ],
-      [
-        40,
-        0,
-        12
       ]
     ],
     "guns": 6,
     "heavy": 1,
-    "expanded": 1723,
-    "roots": 237
+    "expanded": 1714,
+    "roots": 236
   },
   {
     "name": "Compact / HQ Command 1",
@@ -39846,11 +40110,11 @@
       {
         "key": "VigRest",
         "position": [
-          -19.103,
+          -11.65,
           0,
-          -20.39
+          -28.714
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -40105,11 +40369,11 @@
       {
         "key": "VigStoresCovered",
         "position": [
-          -11.65,
+          -18.903,
           0,
-          -28.514
+          -20.39
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 1.9,
@@ -40131,6 +40395,40 @@
         "half_depth": 0.7,
         "expanded": 5,
         "owner": 17
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          27
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          54,
+          0,
+          41
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          34,
+          0,
+          -13
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -24,
+          0,
+          -19
+        ],
+        "yaw": 180
       }
     ],
     "posts": [
@@ -40205,11 +40503,6 @@
         44
       ],
       [
-        -28,
-        0,
-        -16
-      ],
-      [
         28,
         0,
         -8
@@ -40218,11 +40511,6 @@
         -52,
         0,
         -28
-      ],
-      [
-        -8,
-        0,
-        28
       ],
       [
         -36,
@@ -40295,11 +40583,6 @@
         12
       ],
       [
-        -24,
-        0,
-        -20
-      ],
-      [
         -56,
         0,
         40
@@ -40313,12 +40596,27 @@
         -36,
         0,
         44
+      ],
+      [
+        -28,
+        0,
+        -32
+      ],
+      [
+        24,
+        0,
+        -4
+      ],
+      [
+        -40,
+        0,
+        -24
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1288,
-    "roots": 167
+    "expanded": 1304,
+    "roots": 171
   },
   {
     "name": "Compact / HQ Command 2",
@@ -42380,20 +42678,6 @@
       {
         "key": "HQDuckboards",
         "position": [
-          6.12,
-          0,
-          27.836
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
           -60.9,
           0,
           37.551
@@ -42624,6 +42908,40 @@
         "owner": 16
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          25
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -54,
+          0,
+          41
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -20,
+          0,
+          -21
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          52,
+          0,
+          47
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         59.752,
@@ -42808,8 +43126,8 @@
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1310,
-    "roots": 168
+    "expanded": 1321,
+    "roots": 171
   },
   {
     "name": "Compact / HQ Command 3",
@@ -45099,6 +45417,40 @@
         "owner": 15
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          27
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          54,
+          0,
+          41
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          20,
+          0,
+          -21
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -52,
+          0,
+          47
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         59.752,
@@ -45181,11 +45533,6 @@
         -44
       ],
       [
-        56,
-        0,
-        44
-      ],
-      [
         12,
         0,
         -24
@@ -45214,11 +45561,6 @@
         -52,
         0,
         -20
-      ],
-      [
-        52,
-        0,
-        40
       ],
       [
         40,
@@ -45279,12 +45621,22 @@
         16,
         0,
         -40
+      ],
+      [
+        -40,
+        0,
+        -4
+      ],
+      [
+        -20,
+        0,
+        -32
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1195,
-    "roots": 167
+    "expanded": 1211,
+    "roots": 171
   },
   {
     "name": "Compact / HQ Garrison 1",
@@ -47489,7 +47841,7 @@
         "position": [
           -27.338,
           0,
-          -12.83
+          8.17
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -47502,11 +47854,11 @@
       {
         "key": "VigSanitation",
         "position": [
-          -26.338,
+          -26.739,
           0,
-          8.17
+          -12.83
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.4,
@@ -47519,7 +47871,7 @@
         "position": [
           -25.939,
           0,
-          -17.33
+          12.67
         ],
         "yaw": 0,
         "kind": "mesh",
@@ -47605,6 +47957,40 @@
         "owner": 14
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          27
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -54,
+          0,
+          41
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -34,
+          0,
+          -13
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          20,
+          0,
+          -21
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         59.752,
@@ -47635,11 +48021,6 @@
         28,
         0,
         -4
-      ],
-      [
-        12,
-        0,
-        28
       ],
       [
         -40,
@@ -47712,11 +48093,6 @@
         -32
       ],
       [
-        8,
-        0,
-        24
-      ],
-      [
         40,
         0,
         28
@@ -47740,11 +48116,6 @@
         -36,
         0,
         -4
-      ],
-      [
-        -32,
-        0,
-        12
       ],
       [
         36,
@@ -47785,12 +48156,27 @@
         -52,
         0,
         -44
+      ],
+      [
+        -24,
+        0,
+        32
+      ],
+      [
+        16,
+        0,
+        28
+      ],
+      [
+        -20,
+        0,
+        36
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1256,
-    "roots": 169
+    "expanded": 1272,
+    "roots": 173
   },
   {
     "name": "Compact / HQ Garrison 2",
@@ -49688,11 +50074,11 @@
       {
         "key": "VigBriefing",
         "position": [
-          -7.0,
+          -16.499,
           0,
-          29.036
+          42.62
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.3,
@@ -49934,7 +50320,7 @@
       {
         "key": "VigComms",
         "position": [
-          -15.499,
+          7.499,
           0,
           41.12
         ],
@@ -49949,11 +50335,11 @@
       {
         "key": "VigPower",
         "position": [
-          8.199,
+          8.699,
           0,
-          42.62
+          45.62
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -49996,7 +50382,7 @@
         "position": [
           27.338,
           0,
-          -12.83
+          8.17
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -50009,11 +50395,11 @@
       {
         "key": "VigSanitation",
         "position": [
-          26.338,
+          26.739,
           0,
-          8.17
+          -12.83
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.4,
@@ -50026,7 +50412,7 @@
         "position": [
           25.939,
           0,
-          -17.33
+          12.67
         ],
         "yaw": 0,
         "kind": "mesh",
@@ -50116,7 +50502,7 @@
         "position": [
           28.177,
           0,
-          14.61
+          20.61
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -50125,6 +50511,40 @@
         "half_depth": 0.7,
         "expanded": 5,
         "owner": 15
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          27
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          54,
+          0,
+          41
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          34,
+          0,
+          -13
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -20,
+          0,
+          -21
+        ],
+        "yaw": 180
       }
     ],
     "posts": [
@@ -50209,11 +50629,6 @@
         -20
       ],
       [
-        -20,
-        0,
-        -16
-      ],
-      [
         -60,
         0,
         -44
@@ -50274,11 +50689,6 @@
         -24
       ],
       [
-        36,
-        0,
-        -12
-      ],
-      [
         28,
         0,
         -40
@@ -50287,11 +50697,6 @@
         -40,
         0,
         48
-      ],
-      [
-        56,
-        0,
-        44
       ],
       [
         -60,
@@ -50307,12 +50712,27 @@
         48,
         0,
         -28
+      ],
+      [
+        -52,
+        0,
+        36
+      ],
+      [
+        48,
+        0,
+        20
+      ],
+      [
+        -16,
+        0,
+        -40
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1480,
-    "roots": 170
+    "expanded": 1496,
+    "roots": 174
   },
   {
     "name": "Compact / HQ Garrison 3",
@@ -52649,6 +53069,40 @@
         "owner": 15
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          27
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -54,
+          0,
+          41
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -12,
+          0,
+          -23
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          52,
+          0,
+          47
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -59.752,
@@ -52664,11 +53118,6 @@
         -16,
         0,
         -32
-      ],
-      [
-        48,
-        0,
-        48
       ],
       [
         24,
@@ -52761,11 +53210,6 @@
         36
       ],
       [
-        -8,
-        0,
-        -20
-      ],
-      [
         -28,
         0,
         -36
@@ -52779,6 +53223,11 @@
         52,
         0,
         28
+      ],
+      [
+        -8,
+        0,
+        -16
       ],
       [
         44,
@@ -52816,11 +53265,6 @@
         -36
       ],
       [
-        -48,
-        0,
-        40
-      ],
-      [
         -20,
         0,
         -44
@@ -52829,12 +53273,22 @@
         40,
         0,
         48
+      ],
+      [
+        -48,
+        0,
+        28
+      ],
+      [
+        20,
+        0,
+        48
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1478,
-    "roots": 170
+    "expanded": 1494,
+    "roots": 174
   },
   {
     "name": "Compact / HQ Depot 1",
@@ -55115,6 +55569,40 @@
         "owner": 15
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          27
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          54,
+          0,
+          41
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          34,
+          0,
+          -13
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -20,
+          0,
+          -21
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -59.752,
@@ -55160,11 +55648,6 @@
         -28,
         0,
         -40
-      ],
-      [
-        48,
-        0,
-        44
       ],
       [
         -48,
@@ -55295,12 +55778,17 @@
         52,
         0,
         12
+      ],
+      [
+        -24,
+        0,
+        28
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1358,
-    "roots": 166
+    "expanded": 1374,
+    "roots": 170
   },
   {
     "name": "Compact / HQ Depot 2",
@@ -57288,11 +57776,11 @@
       {
         "key": "VigWorkshop",
         "position": [
-          -31.93,
+          -48.14,
           0,
-          -13.88
+          -30.206
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -57342,20 +57830,6 @@
         "residual": 0.8,
         "half_width": 4,
         "half_depth": 4,
-        "expanded": 5
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
-          6.12,
-          0,
-          27.836
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
         "expanded": 5
       },
       {
@@ -57510,7 +57984,7 @@
         "position": [
           -48.14,
           0,
-          -31.122
+          3.362
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -57566,6 +58040,40 @@
         "owner": 15
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          25
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -54,
+          0,
+          41
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -28,
+          0,
+          -17
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          52,
+          0,
+          47
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         59.752,
@@ -57581,11 +58089,6 @@
         56,
         0,
         -48
-      ],
-      [
-        56,
-        0,
-        48
       ],
       [
         -48,
@@ -57688,11 +58191,6 @@
         8
       ],
       [
-        -48,
-        0,
-        4
-      ],
-      [
         -28,
         0,
         40
@@ -57714,11 +58212,6 @@
       ],
       [
         -36,
-        0,
-        44
-      ],
-      [
-        52,
         0,
         44
       ],
@@ -57746,12 +58239,27 @@
         36,
         0,
         -36
+      ],
+      [
+        52,
+        0,
+        36
+      ],
+      [
+        32,
+        0,
+        -48
+      ],
+      [
+        -12,
+        0,
+        -36
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1497,
-    "roots": 165
+    "expanded": 1508,
+    "roots": 168
   },
   {
     "name": "Compact / HQ Depot 3",
@@ -60046,6 +60554,40 @@
         "owner": 15
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          27
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          54,
+          0,
+          41
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          20,
+          0,
+          -21
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -52,
+          0,
+          47
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         59.752,
@@ -60138,11 +60680,6 @@
         32
       ],
       [
-        -52,
-        0,
-        48
-      ],
-      [
         36,
         0,
         0
@@ -60171,11 +60708,6 @@
         -40,
         0,
         8
-      ],
-      [
-        56,
-        0,
-        44
       ],
       [
         44,
@@ -60226,12 +60758,22 @@
         -32,
         0,
         44
+      ],
+      [
+        -28,
+        0,
+        -40
+      ],
+      [
+        -28,
+        0,
+        -28
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1400,
-    "roots": 167
+    "expanded": 1416,
+    "roots": 171
   },
   {
     "name": "Compact / HQ Border 1",
@@ -63056,6 +63598,40 @@
         "owner": 17
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          27
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -54,
+          0,
+          41
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -34,
+          0,
+          -11
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          20,
+          0,
+          -21
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -59.752,
@@ -63183,11 +63759,6 @@
         48
       ],
       [
-        24,
-        0,
-        -20
-      ],
-      [
         -24,
         0,
         0
@@ -63201,11 +63772,6 @@
         -20,
         0,
         -28
-      ],
-      [
-        -36,
-        0,
-        -12
       ],
       [
         -36,
@@ -63236,12 +63802,22 @@
         40,
         0,
         -12
+      ],
+      [
+        -56,
+        0,
+        -40
+      ],
+      [
+        -16,
+        0,
+        -32
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1519,
-    "roots": 208
+    "expanded": 1535,
+    "roots": 212
   },
   {
     "name": "Compact / HQ Border 2",
@@ -65689,11 +66265,11 @@
       {
         "key": "VigBriefing",
         "position": [
-          -7.0,
+          -16.499,
           0,
-          29.036
+          42.62
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.3,
@@ -65962,7 +66538,7 @@
       {
         "key": "VigComms",
         "position": [
-          -15.499,
+          7.499,
           0,
           41.12
         ],
@@ -65977,11 +66553,11 @@
       {
         "key": "VigPower",
         "position": [
-          8.199,
+          8.699,
           0,
-          42.62
+          45.62
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -66080,6 +66656,40 @@
         "owner": 16
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          27
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          54,
+          0,
+          41
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          34,
+          0,
+          -11
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          -20,
+          0,
+          -21
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -59.752,
@@ -66087,19 +66697,9 @@
         -8
       ],
       [
-        52,
-        0,
-        40
-      ],
-      [
         -56,
         0,
         -44
-      ],
-      [
-        -20,
-        0,
-        -16
       ],
       [
         52,
@@ -66212,11 +66812,6 @@
         -48
       ],
       [
-        48,
-        0,
-        44
-      ],
-      [
         16,
         0,
         -40
@@ -66260,12 +66855,27 @@
         -56,
         0,
         48
+      ],
+      [
+        -40,
+        0,
+        40
+      ],
+      [
+        52,
+        0,
+        8
+      ],
+      [
+        12,
+        0,
+        32
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1531,
-    "roots": 209
+    "expanded": 1547,
+    "roots": 213
   },
   {
     "name": "Compact / HQ Border 3",
@@ -69090,6 +69700,40 @@
         "owner": 15
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          27
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -54,
+          0,
+          41
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -20,
+          0,
+          -21
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          52,
+          0,
+          47
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -20,
@@ -69100,11 +69744,6 @@
         -20,
         0,
         -4
-      ],
-      [
-        52,
-        0,
-        48
       ],
       [
         36,
@@ -69157,11 +69796,6 @@
         48
       ],
       [
-        12,
-        0,
-        24
-      ],
-      [
         -12,
         0,
         -32
@@ -69185,11 +69819,6 @@
         -52,
         0,
         0
-      ],
-      [
-        -20,
-        0,
-        -20
       ],
       [
         12,
@@ -69270,12 +69899,27 @@
         -44,
         0,
         4
+      ],
+      [
+        32,
+        0,
+        44
+      ],
+      [
+        -56,
+        0,
+        20
+      ],
+      [
+        28,
+        0,
+        -40
       ]
     ],
     "guns": 5,
     "heavy": 1,
-    "expanded": 1518,
-    "roots": 208
+    "expanded": 1534,
+    "roots": 212
   },
   {
     "name": "Courtyard / HQ Command 1",
@@ -71195,18 +71839,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           -51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -71411,6 +72055,32 @@
         "owner": 13
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          22
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -48,
+          0,
+          28
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -14,
+          0,
+          -22
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -50.309,
@@ -71488,11 +72158,6 @@
         -43
       ],
       [
-        -47,
-        0,
-        29
-      ],
-      [
         -35,
         0,
         13
@@ -71531,12 +72196,17 @@
         -35,
         0,
         33
+      ],
+      [
+        37,
+        0,
+        37
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1148,
-    "roots": 156
+    "expanded": 1159,
+    "roots": 159
   },
   {
     "name": "Courtyard / HQ Command 2",
@@ -73354,11 +74024,11 @@
       {
         "key": "VigBriefing",
         "position": [
-          -7.0,
+          -16.499,
           0,
-          23.646
+          37.23
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.3,
@@ -73485,18 +74155,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -73599,7 +74269,7 @@
       {
         "key": "VigComms",
         "position": [
-          -15.499,
+          7.499,
           0,
           35.73
         ],
@@ -73614,11 +74284,11 @@
       {
         "key": "VigPower",
         "position": [
-          8.199,
+          8.699,
           0,
-          37.23
+          40.23
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -73715,6 +74385,32 @@
         "half_depth": 0.7,
         "expanded": 5,
         "owner": 15
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          22
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          48,
+          0,
+          28
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          14,
+          0,
+          -22
+        ],
+        "yaw": 180
       }
     ],
     "posts": [
@@ -73841,8 +74537,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1175,
-    "roots": 159
+    "expanded": 1186,
+    "roots": 162
   },
   {
     "name": "Courtyard / HQ Command 3",
@@ -75777,18 +76473,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           -51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -75994,6 +76690,32 @@
         "owner": 14
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          22
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -48,
+          0,
+          28
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -14,
+          0,
+          -22
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -50.309,
@@ -76118,8 +76840,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1060,
-    "roots": 157
+    "expanded": 1071,
+    "roots": 160
   },
   {
     "name": "Courtyard / HQ Garrison 1",
@@ -78024,18 +78746,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboard",
@@ -78242,6 +78964,32 @@
         "owner": 11
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          22
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          48,
+          0,
+          28
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          18,
+          0,
+          -20
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         50.309,
@@ -78329,11 +79077,6 @@
         41
       ],
       [
-        -11,
-        0,
-        17
-      ],
-      [
         25,
         0,
         -23
@@ -78362,12 +79105,17 @@
         29,
         0,
         -35
+      ],
+      [
+        9,
+        0,
+        17
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1288,
-    "roots": 155
+    "expanded": 1299,
+    "roots": 158
   },
   {
     "name": "Courtyard / HQ Garrison 2",
@@ -80272,32 +81020,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
-        "position": [
-          6.12,
-          0,
-          22.446
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           -51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboard",
@@ -80461,6 +81195,32 @@
         "owner": 13
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          20
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -48,
+          0,
+          28
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -14,
+          0,
+          -22
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -50.309,
@@ -80548,11 +81308,6 @@
         33
       ],
       [
-        -19,
-        0,
-        -23
-      ],
-      [
         29,
         0,
         -35
@@ -80581,12 +81336,17 @@
         45,
         0,
         5
+      ],
+      [
+        -51,
+        0,
+        -15
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1295,
-    "roots": 153
+    "expanded": 1301,
+    "roots": 155
   },
   {
     "name": "Courtyard / HQ Garrison 3",
@@ -82491,18 +83251,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -82575,9 +83335,9 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
-          -20.647,
+          -22.547,
           0,
           -23.23
         ],
@@ -82585,8 +83345,8 @@
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "VigComms",
@@ -82709,6 +83469,32 @@
         "owner": 13
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          22
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          48,
+          0,
+          28
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -14,
+          0,
+          -22
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -50.309,
@@ -82759,11 +83545,6 @@
         29,
         0,
         33
-      ],
-      [
-        -11,
-        0,
-        -19
       ],
       [
         21,
@@ -82829,12 +83610,17 @@
         -47,
         0,
         33
+      ],
+      [
+        21,
+        0,
+        -31
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1200,
-    "roots": 155
+    "expanded": 1210,
+    "roots": 158
   },
   {
     "name": "Courtyard / HQ Depot 1",
@@ -84960,6 +85746,32 @@
         "owner": 13
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          22
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -48,
+          0,
+          36
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -18,
+          0,
+          -20
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -50.309,
@@ -85032,11 +85844,6 @@
         -7
       ],
       [
-        -19,
-        0,
-        -15
-      ],
-      [
         21,
         0,
         -43
@@ -85050,11 +85857,6 @@
         33,
         0,
         17
-      ],
-      [
-        -43,
-        0,
-        41
       ],
       [
         25,
@@ -85080,12 +85882,22 @@
         -43,
         0,
         -7
+      ],
+      [
+        -43,
+        0,
+        -27
+      ],
+      [
+        45,
+        0,
+        -19
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1224,
-    "roots": 155
+    "expanded": 1236,
+    "roots": 158
   },
   {
     "name": "Courtyard / HQ Depot 2",
@@ -86873,11 +87685,11 @@
       {
         "key": "VigBriefing",
         "position": [
-          -7.0,
+          -16.499,
           0,
-          23.646
+          37.23
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.3,
@@ -87063,7 +87875,7 @@
       {
         "key": "VigComms",
         "position": [
-          -15.499,
+          7.499,
           0,
           35.73
         ],
@@ -87078,11 +87890,11 @@
       {
         "key": "VigPower",
         "position": [
-          8.199,
+          8.699,
           0,
-          37.23
+          40.23
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -87211,6 +88023,32 @@
         "owner": 13
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          22
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          48,
+          0,
+          36
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          14,
+          0,
+          -22
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -50.309,
@@ -87223,17 +88061,7 @@
         -8
       ],
       [
-        17,
-        0,
-        -23
-      ],
-      [
         41,
-        0,
-        -27
-      ],
-      [
-        13,
         0,
         -27
       ],
@@ -87283,11 +88111,6 @@
         25
       ],
       [
-        13,
-        0,
-        37
-      ],
-      [
         49,
         0,
         25
@@ -87331,12 +88154,27 @@
         -11,
         0,
         -39
+      ],
+      [
+        -27,
+        0,
+        -39
+      ],
+      [
+        -51,
+        0,
+        21
+      ],
+      [
+        -39,
+        0,
+        41
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1229,
-    "roots": 155
+    "expanded": 1241,
+    "roots": 158
   },
   {
     "name": "Courtyard / HQ Depot 3",
@@ -89505,6 +90343,32 @@
         "owner": 13
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          22
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -48,
+          0,
+          36
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -14,
+          0,
+          -22
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -50.309,
@@ -89540,11 +90404,6 @@
         49,
         0,
         -15
-      ],
-      [
-        -15,
-        0,
-        -23
       ],
       [
         -43,
@@ -89607,11 +90466,6 @@
         1
       ],
       [
-        13,
-        0,
-        21
-      ],
-      [
         -31,
         0,
         9
@@ -89625,12 +90479,22 @@
         21,
         0,
         13
+      ],
+      [
+        41,
+        0,
+        -43
+      ],
+      [
+        33,
+        0,
+        9
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1128,
-    "roots": 158
+    "expanded": 1140,
+    "roots": 161
   },
   {
     "name": "Courtyard / HQ Border 1",
@@ -91564,18 +92428,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -91795,6 +92659,32 @@
         "owner": 15
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          22
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          48,
+          0,
+          28
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          22,
+          0,
+          -18
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         50.309,
@@ -91907,20 +92797,20 @@
         -31
       ],
       [
-        -7,
-        0,
-        17
-      ],
-      [
         41,
         0,
         5
+      ],
+      [
+        -35,
+        0,
+        -27
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1144,
-    "roots": 158
+    "expanded": 1155,
+    "roots": 161
   },
   {
     "name": "Courtyard / HQ Border 2",
@@ -93855,32 +94745,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
-        "position": [
-          6.12,
-          0,
-          22.446
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           -51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -94101,6 +94977,32 @@
         "owner": 15
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          8,
+          0,
+          20
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -48,
+          0,
+          28
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          -22,
+          0,
+          -18
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -50.309,
@@ -94173,11 +95075,6 @@
         -11
       ],
       [
-        -19,
-        0,
-        -11
-      ],
-      [
         17,
         0,
         -19
@@ -94210,23 +95107,28 @@
       [
         -23,
         0,
-        -15
-      ],
-      [
-        -23,
-        0,
         25
       ],
       [
         -27,
         0,
         -31
+      ],
+      [
+        13,
+        0,
+        13
+      ],
+      [
+        -35,
+        0,
+        -43
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1181,
-    "roots": 159
+    "expanded": 1187,
+    "roots": 161
   },
   {
     "name": "Courtyard / HQ Border 3",
@@ -96175,18 +97077,18 @@
         "expanded": 5
       },
       {
-        "key": "HQDuckboards",
+        "key": "HQDuckboard",
         "position": [
           51.45,
           0,
-          32.151
+          34.051
         ],
         "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
+        "half_depth": 1.9039,
+        "expanded": 4
       },
       {
         "key": "HQDuckboards",
@@ -96393,6 +97295,32 @@
         "owner": 14
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -8,
+          0,
+          22
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          48,
+          0,
+          28
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          14,
+          0,
+          -22
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         50.309,
@@ -96425,11 +97353,6 @@
         -35
       ],
       [
-        -7,
-        0,
-        17
-      ],
-      [
         -35,
         0,
         9
@@ -96453,11 +97376,6 @@
         -23,
         0,
         1
-      ],
-      [
-        45,
-        0,
-        25
       ],
       [
         45,
@@ -96505,20 +97423,30 @@
         21
       ],
       [
-        13,
+        25,
         0,
-        -19
+        5
+      ],
+      [
+        41,
+        0,
+        -35
       ],
       [
         25,
         0,
-        5
+        -31
+      ],
+      [
+        -15,
+        0,
+        41
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1175,
-    "roots": 158
+    "expanded": 1186,
+    "roots": 161
   },
   {
     "name": "Roadside / HQ Command 1",
@@ -98626,6 +99554,24 @@
         "owner": 13
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -15,
+          0,
+          34
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          37,
+          0,
+          4
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -98678,11 +99624,6 @@
         21
       ],
       [
-        32,
-        0,
-        1
-      ],
-      [
         -28,
         0,
         -3
@@ -98726,12 +99667,17 @@
         8,
         0,
         1
+      ],
+      [
+        28,
+        0,
+        33
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1105,
-    "roots": 154
+    "expanded": 1113,
+    "roots": 156
   },
   {
     "name": "Roadside / HQ Command 2",
@@ -100640,20 +101586,6 @@
       {
         "key": "HQDuckboards",
         "position": [
-          6.12,
-          0,
-          30.536
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
           -40.66,
           0,
           40.251
@@ -100840,6 +101772,24 @@
         "owner": 12
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          9,
+          0,
+          28
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -39,
+          0,
+          8
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -100944,8 +101894,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1150,
-    "roots": 154
+    "expanded": 1153,
+    "roots": 155
   },
   {
     "name": "Roadside / HQ Command 3",
@@ -103083,6 +104033,24 @@
         "owner": 14
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -11,
+          0,
+          36
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          37,
+          0,
+          4
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -103187,8 +104155,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1046,
-    "roots": 156
+    "expanded": 1054,
+    "roots": 158
   },
   {
     "name": "Roadside / HQ Garrison 1",
@@ -105268,6 +106236,24 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          9,
+          0,
+          30
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -37,
+          0,
+          4
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -105300,16 +106286,6 @@
         29
       ],
       [
-        12,
-        0,
-        29
-      ],
-      [
-        -40,
-        0,
-        5
-      ],
-      [
         -20,
         0,
         9
@@ -105340,11 +106316,6 @@
         1
       ],
       [
-        -32,
-        0,
-        5
-      ],
-      [
         24,
         0,
         25
@@ -105368,12 +106339,27 @@
         -28,
         0,
         -27
+      ],
+      [
+        -12,
+        0,
+        -39
+      ],
+      [
+        20,
+        0,
+        -31
+      ],
+      [
+        12,
+        0,
+        -7
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1068,
-    "roots": 152
+    "expanded": 1076,
+    "roots": 154
   },
   {
     "name": "Roadside / HQ Garrison 2",
@@ -107180,7 +108166,7 @@
         "position": [
           -19.103,
           0,
-          -13.09
+          -14.59
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -107223,7 +108209,7 @@
       {
         "key": "VigPower",
         "position": [
-          16.2,
+          32.62,
           0,
           41.62
         ],
@@ -107367,11 +108353,11 @@
       {
         "key": "VigWaste",
         "position": [
-          -5.297,
+          -18.303,
           0,
-          -16.09
+          -11.59
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 1,
@@ -107408,6 +108394,24 @@
         "half_depth": 3.4,
         "expanded": 6,
         "owner": 10
+      }
+    ],
+    "shelters": [
+      {
+        "position": [
+          11,
+          0,
+          36
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -23,
+          0,
+          -8
+        ],
+        "yaw": 180
       }
     ],
     "posts": [
@@ -107514,8 +108518,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1263,
-    "roots": 149
+    "expanded": 1271,
+    "roots": 151
   },
   {
     "name": "Roadside / HQ Garrison 3",
@@ -109566,6 +110570,24 @@
         "owner": 12
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          9,
+          0,
+          30
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -39,
+          0,
+          8
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -109594,11 +110616,6 @@
       ],
       [
         -40,
-        0,
-        25
-      ],
-      [
-        8,
         0,
         25
       ],
@@ -109666,12 +110683,17 @@
         32,
         0,
         9
+      ],
+      [
+        16,
+        0,
+        9
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1179,
-    "roots": 150
+    "expanded": 1187,
+    "roots": 152
   },
   {
     "name": "Roadside / HQ Depot 1",
@@ -111754,6 +112776,24 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -15,
+          0,
+          34
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          37,
+          0,
+          4
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -111826,11 +112866,6 @@
         17
       ],
       [
-        40,
-        0,
-        1
-      ],
-      [
         28,
         0,
         21
@@ -111854,12 +112889,17 @@
         24,
         0,
         49
+      ],
+      [
+        12,
+        0,
+        -31
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1193,
-    "roots": 152
+    "expanded": 1201,
+    "roots": 154
   },
   {
     "name": "Roadside / HQ Depot 2",
@@ -113753,20 +114793,6 @@
       {
         "key": "HQDuckboards",
         "position": [
-          6.12,
-          0,
-          30.536
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
           -40.66,
           0,
           -40.251
@@ -113913,6 +114939,24 @@
         "owner": 12
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          9,
+          0,
+          28
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -39,
+          0,
+          8
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -114017,8 +115061,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1206,
-    "roots": 150
+    "expanded": 1209,
+    "roots": 151
   },
   {
     "name": "Roadside / HQ Depot 3",
@@ -115793,9 +116837,9 @@
       {
         "key": "VigBriefing",
         "position": [
-          16.499,
+          -8.499,
           0,
-          45.32
+          49.82
         ],
         "yaw": 0,
         "kind": "mesh",
@@ -115955,11 +116999,11 @@
       {
         "key": "VigPower",
         "position": [
-          -8.699,
+          13.0,
           0,
-          48.32
+          31.536
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -116058,6 +117102,24 @@
         "owner": 12
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          19,
+          0,
+          46
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -37,
+          0,
+          4
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -116093,11 +117155,6 @@
         -28,
         0,
         -7
-      ],
-      [
-        -40,
-        0,
-        1
       ],
       [
         -32,
@@ -116158,12 +117215,17 @@
         -28,
         0,
         13
+      ],
+      [
+        -36,
+        0,
+        -3
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1232,
-    "roots": 149
+    "expanded": 1240,
+    "roots": 151
   },
   {
     "name": "Roadside / HQ Border 1",
@@ -118253,20 +119315,6 @@
       {
         "key": "HQDuckboards",
         "position": [
-          40.66,
-          0,
-          40.251
-        ],
-        "yaw": 0,
-        "kind": "mesh",
-        "residual": 0.35,
-        "half_width": 0.6277,
-        "half_depth": 3.8039,
-        "expanded": 5
-      },
-      {
-        "key": "HQDuckboards",
-        "position": [
           -40.66,
           0,
           -40.251
@@ -118481,6 +119529,24 @@
         "owner": 14
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          22
+        ],
+        "yaw": 180
+      },
+      {
+        "position": [
+          39,
+          0,
+          38
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -118575,18 +119641,18 @@
       [
         32,
         0,
-        41
+        5
       ],
       [
-        32,
+        36,
         0,
-        5
+        -43
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1103,
-    "roots": 170
+    "expanded": 1106,
+    "roots": 171
   },
   {
     "name": "Roadside / HQ Border 2",
@@ -120573,11 +121639,11 @@
       {
         "key": "VigBriefing",
         "position": [
-          -7.0,
+          -16.499,
           0,
-          31.736
+          45.32
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2.3,
@@ -120789,7 +121855,7 @@
       {
         "key": "VigComms",
         "position": [
-          -15.499,
+          7.499,
           0,
           43.82
         ],
@@ -120804,11 +121870,11 @@
       {
         "key": "VigPower",
         "position": [
-          8.199,
+          8.699,
           0,
-          45.32
+          48.32
         ],
-        "yaw": 0,
+        "yaw": 90,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -120892,6 +121958,24 @@
         "owner": 14
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          30
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          37,
+          0,
+          4
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -120907,11 +121991,6 @@
         32,
         0,
         -31
-      ],
-      [
-        36,
-        0,
-        1
       ],
       [
         -20,
@@ -120992,12 +122071,17 @@
         -36,
         0,
         29
+      ],
+      [
+        -24,
+        0,
+        33
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1205,
-    "roots": 169
+    "expanded": 1213,
+    "roots": 171
   },
   {
     "name": "Roadside / HQ Border 3",
@@ -123305,6 +124389,24 @@
         "owner": 14
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          11,
+          0,
+          36
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -37,
+          0,
+          4
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -39.517,
@@ -123345,11 +124447,6 @@
         36,
         0,
         -15
-      ],
-      [
-        -40,
-        0,
-        9
       ],
       [
         -8,
@@ -123405,12 +124502,17 @@
         -32,
         0,
         13
+      ],
+      [
+        -24,
+        0,
+        9
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 1245,
-    "roots": 169
+    "expanded": 1253,
+    "roots": 171
   },
   {
     "name": "CommandPost / HQ Command 1",
@@ -125102,6 +126204,24 @@
         "owner": 11
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -15,
+          0,
+          20
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          35,
+          0,
+          0
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -125159,11 +126279,6 @@
         -27
       ],
       [
-        36,
-        0,
-        1
-      ],
-      [
         20,
         0,
         25
@@ -125179,15 +126294,20 @@
         -27
       ],
       [
-        -16,
+        -32,
         0,
-        17
+        9
+      ],
+      [
+        -36,
+        0,
+        -3
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 904,
-    "roots": 123
+    "expanded": 912,
+    "roots": 125
   },
   {
     "name": "CommandPost / HQ Command 2",
@@ -126852,6 +127972,24 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          14
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          35,
+          0,
+          0
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -126869,11 +128007,6 @@
         -35
       ],
       [
-        32,
-        0,
-        -3
-      ],
-      [
         -36,
         0,
         -23
@@ -126882,11 +128015,6 @@
         -28,
         0,
         -15
-      ],
-      [
-        36,
-        0,
-        5
       ],
       [
         -12,
@@ -126932,12 +128060,22 @@
         -32,
         0,
         21
+      ],
+      [
+        28,
+        0,
+        9
+      ],
+      [
+        24,
+        0,
+        -31
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 902,
-    "roots": 121
+    "expanded": 910,
+    "roots": 123
   },
   {
     "name": "CommandPost / HQ Command 3",
@@ -128601,6 +129739,24 @@
         "owner": 9
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -15,
+          0,
+          20
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          35,
+          0,
+          0
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -128611,11 +129767,6 @@
         35.47,
         0,
         -8
-      ],
-      [
-        28,
-        0,
-        1
       ],
       [
         -24,
@@ -128653,14 +129804,14 @@
         21
       ],
       [
+        28,
+        0,
+        5
+      ],
+      [
         12,
         0,
         -31
-      ],
-      [
-        -20,
-        0,
-        17
       ],
       [
         -12,
@@ -128681,12 +129832,17 @@
         36,
         0,
         -35
+      ],
+      [
+        28,
+        0,
+        -35
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 822,
-    "roots": 121
+    "expanded": 830,
+    "roots": 123
   },
   {
     "name": "CommandPost / HQ Garrison 1",
@@ -130409,6 +131565,24 @@
         "owner": 11
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          14
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          35,
+          0,
+          0
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         35.47,
@@ -130451,11 +131625,6 @@
         -3
       ],
       [
-        -12,
-        0,
-        13
-      ],
-      [
         36,
         0,
         -31
@@ -130489,12 +131658,17 @@
         32,
         0,
         -27
+      ],
+      [
+        8,
+        0,
+        5
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 911,
-    "roots": 125
+    "expanded": 919,
+    "roots": 127
   },
   {
     "name": "CommandPost / HQ Garrison 2",
@@ -132086,9 +133260,9 @@
       {
         "key": "VigPower",
         "position": [
-          7.5,
+          -12.699,
           0,
-          15.846
+          20.13
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -132159,6 +133333,24 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          9,
+          0,
+          14
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -35,
+          0,
+          0
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         35.47,
@@ -132196,11 +133388,6 @@
         -19
       ],
       [
-        -16,
-        0,
-        17
-      ],
-      [
         -32,
         0,
         17
@@ -132209,11 +133396,6 @@
         32,
         0,
         9
-      ],
-      [
-        -32,
-        0,
-        1
       ],
       [
         -8,
@@ -132231,6 +133413,11 @@
         -23
       ],
       [
+        -20,
+        0,
+        17
+      ],
+      [
         8,
         0,
         -23
@@ -132239,12 +133426,17 @@
         16,
         0,
         9
+      ],
+      [
+        -24,
+        0,
+        5
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 881,
-    "roots": 121
+    "expanded": 889,
+    "roots": 123
   },
   {
     "name": "CommandPost / HQ Garrison 3",
@@ -133894,6 +135086,24 @@
         "owner": 9
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          14
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          35,
+          0,
+          0
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -133948,11 +135158,6 @@
       [
         36,
         0,
-        1
-      ],
-      [
-        36,
-        0,
         -31
       ],
       [
@@ -133974,12 +135179,17 @@
         20,
         0,
         13
+      ],
+      [
+        32,
+        0,
+        25
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 786,
-    "roots": 120
+    "expanded": 794,
+    "roots": 122
   },
   {
     "name": "CommandPost / HQ Depot 1",
@@ -135556,11 +136766,11 @@
       {
         "key": "VigComms",
         "position": [
-          6.0,
+          -12.199,
           0,
-          15.846
+          33.63
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -135689,6 +136899,24 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          9,
+          0,
+          14
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -35,
+          0,
+          32
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -135773,8 +137001,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 967,
-    "roots": 124
+    "expanded": 975,
+    "roots": 126
   },
   {
     "name": "CommandPost / HQ Depot 2",
@@ -137324,11 +138552,11 @@
       {
         "key": "VigComms",
         "position": [
-          -6.0,
+          -12.199,
           0,
-          15.846
+          33.63
         ],
-        "yaw": 90,
+        "yaw": 0,
         "kind": "mesh",
         "residual": 0.35,
         "half_width": 2,
@@ -137427,6 +138655,24 @@
         "owner": 9
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          14
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          35,
+          0,
+          0
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -137491,11 +138737,6 @@
       [
         -8,
         0,
-        9
-      ],
-      [
-        -8,
-        0,
         -35
       ],
       [
@@ -137507,12 +138748,17 @@
         -36,
         0,
         -3
+      ],
+      [
+        16,
+        0,
+        -23
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 993,
-    "roots": 120
+    "expanded": 1001,
+    "roots": 122
   },
   {
     "name": "CommandPost / HQ Depot 3",
@@ -139062,9 +140308,9 @@
       {
         "key": "VigComms",
         "position": [
-          6.0,
+          -11.499,
           0,
-          15.846
+          20.13
         ],
         "yaw": 90,
         "kind": "mesh",
@@ -139077,7 +140323,7 @@
       {
         "key": "VigPower",
         "position": [
-          -12.699,
+          12.699,
           0,
           20.13
         ],
@@ -139165,6 +140411,24 @@
         "owner": 11
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          9,
+          0,
+          14
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -35,
+          0,
+          32
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -139207,11 +140471,6 @@
         33
       ],
       [
-        12,
-        0,
-        13
-      ],
-      [
         8,
         0,
         -23
@@ -139232,11 +140491,6 @@
         -31
       ],
       [
-        -36,
-        0,
-        33
-      ],
-      [
         36,
         0,
         33
@@ -139245,12 +140499,22 @@
         24,
         0,
         -31
+      ],
+      [
+        -28,
+        0,
+        -19
+      ],
+      [
+        28,
+        0,
+        13
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 895,
-    "roots": 120
+    "expanded": 903,
+    "roots": 122
   },
   {
     "name": "CommandPost / HQ Border 1",
@@ -141041,6 +142305,24 @@
         "owner": 8
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          15,
+          0,
+          18
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -35,
+          0,
+          0
+        ],
+        "yaw": 270
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -141056,11 +142338,6 @@
         -28,
         0,
         -27
-      ],
-      [
-        -36,
-        0,
-        5
       ],
       [
         12,
@@ -141121,12 +142398,17 @@
         -16,
         0,
         -31
+      ],
+      [
+        -8,
+        0,
+        -23
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 855,
-    "roots": 131
+    "expanded": 863,
+    "roots": 133
   },
   {
     "name": "CommandPost / HQ Border 2",
@@ -142963,6 +144245,24 @@
         "owner": 11
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -15,
+          0,
+          20
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          35,
+          0,
+          0
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -142978,11 +144278,6 @@
         20,
         0,
         -31
-      ],
-      [
-        -20,
-        0,
-        17
       ],
       [
         -32,
@@ -143013,6 +144308,11 @@
         -24,
         0,
         9
+      ],
+      [
+        -20,
+        0,
+        13
       ],
       [
         -32,
@@ -143047,8 +144347,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 867,
-    "roots": 134
+    "expanded": 875,
+    "roots": 136
   },
   {
     "name": "CommandPost / HQ Border 3",
@@ -144873,6 +146173,24 @@
         "owner": 11
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          14
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          35,
+          0,
+          4
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -35.47,
@@ -144940,11 +146258,6 @@
         17
       ],
       [
-        32,
-        0,
-        9
-      ],
-      [
         -16,
         0,
         -19
@@ -144953,12 +146266,17 @@
         32,
         0,
         25
+      ],
+      [
+        -32,
+        0,
+        9
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 984,
-    "roots": 133
+    "expanded": 992,
+    "roots": 135
   },
   {
     "name": "RallyPost / HQ Command 1",
@@ -146394,6 +147712,24 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          7
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -27.376,
@@ -146441,11 +147777,6 @@
         -28
       ],
       [
-        20,
-        0,
-        -20
-      ],
-      [
         24,
         0,
         -28
@@ -146454,12 +147785,17 @@
         -28,
         0,
         -28
+      ],
+      [
+        28,
+        0,
+        -24
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 748,
-    "roots": 104
+    "expanded": 756,
+    "roots": 106
   },
   {
     "name": "RallyPost / HQ Command 2",
@@ -147911,16 +149247,29 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          15,
+          0,
+          11
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         27.376,
         0,
         -8
-      ],
-      [
-        -16,
-        0,
-        -20
       ],
       [
         20,
@@ -147938,14 +149287,14 @@
         -16
       ],
       [
-        16,
-        0,
-        16
-      ],
-      [
         -24,
         0,
         8
+      ],
+      [
+        16,
+        0,
+        20
       ],
       [
         -24,
@@ -147958,11 +149307,6 @@
         4
       ],
       [
-        -24,
-        0,
-        -16
-      ],
-      [
         -20,
         0,
         12
@@ -147970,13 +149314,23 @@
       [
         -28,
         0,
+        -16
+      ],
+      [
+        -28,
+        0,
         -28
+      ],
+      [
+        -20,
+        0,
+        24
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 790,
-    "roots": 105
+    "expanded": 798,
+    "roots": 107
   },
   {
     "name": "RallyPost / HQ Command 3",
@@ -149399,6 +150753,24 @@
         "owner": 9
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          7
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -27.376,
@@ -149426,11 +150798,6 @@
         0
       ],
       [
-        -8,
-        0,
-        4
-      ],
-      [
         24,
         0,
         16
@@ -149439,11 +150806,6 @@
         16,
         0,
         20
-      ],
-      [
-        16,
-        0,
-        -20
       ],
       [
         -20,
@@ -149459,12 +150821,22 @@
         -28,
         0,
         4
+      ],
+      [
+        -20,
+        0,
+        -24
+      ],
+      [
+        20,
+        0,
+        -24
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 663,
-    "roots": 103
+    "expanded": 671,
+    "roots": 105
   },
   {
     "name": "RallyPost / HQ Garrison 1",
@@ -150945,6 +152317,24 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          15,
+          0,
+          11
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -27.376,
@@ -150977,22 +152367,12 @@
         8
       ],
       [
-        -20,
-        0,
-        -16
-      ],
-      [
         8,
         0,
         -16
       ],
       [
         -16,
-        0,
-        16
-      ],
-      [
-        20,
         0,
         16
       ],
@@ -151005,12 +152385,22 @@
         -20,
         0,
         -24
+      ],
+      [
+        -8,
+        0,
+        -16
+      ],
+      [
+        28,
+        0,
+        4
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 755,
-    "roots": 107
+    "expanded": 763,
+    "roots": 109
   },
   {
     "name": "RallyPost / HQ Garrison 2",
@@ -152432,12 +153822,25 @@
         "owner": 9
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          7
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          25,
+          0,
+          25
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
-      [
-        24,
-        0,
-        28
-      ],
       [
         16,
         0,
@@ -152457,11 +153860,6 @@
         -20,
         0,
         4
-      ],
-      [
-        28,
-        0,
-        24
       ],
       [
         28,
@@ -152492,12 +153890,22 @@
         28,
         0,
         -4
+      ],
+      [
+        -28,
+        0,
+        -24
+      ],
+      [
+        -20,
+        0,
+        24
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 734,
-    "roots": 103
+    "expanded": 742,
+    "roots": 105
   },
   {
     "name": "RallyPost / HQ Garrison 3",
@@ -153934,6 +155342,24 @@
         "owner": 9
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          15,
+          0,
+          11
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         27.376,
@@ -153966,17 +155392,7 @@
         -4
       ],
       [
-        12,
-        0,
-        8
-      ],
-      [
         -20,
-        0,
-        12
-      ],
-      [
-        20,
         0,
         12
       ],
@@ -153991,15 +155407,25 @@
         20
       ],
       [
-        -16,
+        12,
         0,
-        -20
+        -12
+      ],
+      [
+        20,
+        0,
+        28
+      ],
+      [
+        8,
+        0,
+        -16
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 655,
-    "roots": 104
+    "expanded": 663,
+    "roots": 106
   },
   {
     "name": "RallyPost / HQ Depot 1",
@@ -155364,7 +156790,7 @@
       {
         "key": "VigPower",
         "position": [
-          -12.699,
+          12.699,
           0,
           13.39
         ],
@@ -155467,6 +156893,24 @@
         "owner": 9
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -15,
+          0,
+          11
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         27.376,
@@ -155509,14 +156953,14 @@
         16
       ],
       [
-        16,
-        0,
-        -20
-      ],
-      [
         24,
         0,
         12
+      ],
+      [
+        16,
+        0,
+        -24
       ],
       [
         20,
@@ -155524,15 +156968,15 @@
         0
       ],
       [
-        -16,
+        -20,
         0,
-        8
+        20
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 739,
-    "roots": 106
+    "expanded": 747,
+    "roots": 108
   },
   {
     "name": "RallyPost / HQ Depot 2",
@@ -156971,16 +158415,29 @@
         "owner": 9
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          15,
+          0,
+          11
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -20,
         0,
         -24
-      ],
-      [
-        20,
-        0,
-        8
       ],
       [
         -28,
@@ -156996,6 +158453,11 @@
         20,
         0,
         -20
+      ],
+      [
+        24,
+        0,
+        8
       ],
       [
         16,
@@ -157035,8 +158497,8 @@
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 840,
-    "roots": 104
+    "expanded": 848,
+    "roots": 106
   },
   {
     "name": "RallyPost / HQ Depot 3",
@@ -158374,7 +159836,7 @@
       {
         "key": "VigPower",
         "position": [
-          -12.699,
+          12.699,
           0,
           13.39
         ],
@@ -158447,16 +159909,29 @@
         "owner": 8
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -15,
+          0,
+          11
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          23,
+          0,
+          9
+        ],
+        "yaw": 90
+      }
+    ],
     "posts": [
       [
         -28,
         0,
         28
-      ],
-      [
-        -20,
-        0,
-        12
       ],
       [
         -16,
@@ -158472,11 +159947,6 @@
         -24,
         0,
         20
-      ],
-      [
-        16,
-        0,
-        8
       ],
       [
         -28,
@@ -158504,15 +159974,25 @@
         24
       ],
       [
-        -16,
+        28,
         0,
-        8
+        28
+      ],
+      [
+        8,
+        0,
+        -12
+      ],
+      [
+        8,
+        0,
+        0
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 756,
-    "roots": 102
+    "expanded": 764,
+    "roots": 104
   },
   {
     "name": "RallyPost / HQ Border 1",
@@ -160127,6 +161607,24 @@
         "owner": 8
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          9,
+          0,
+          7
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         27.376,
@@ -160164,11 +161662,6 @@
         -16
       ],
       [
-        -24,
-        0,
-        -20
-      ],
-      [
         -28,
         0,
         4
@@ -160187,12 +161680,17 @@
         16,
         0,
         12
+      ],
+      [
+        20,
+        0,
+        28
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 714,
-    "roots": 118
+    "expanded": 722,
+    "roots": 120
   },
   {
     "name": "RallyPost / HQ Border 2",
@@ -161852,16 +163350,29 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          -9,
+          0,
+          7
+        ],
+        "yaw": 270
+      },
+      {
+        "position": [
+          21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -27.376,
         0,
         -8
-      ],
-      [
-        -8,
-        0,
-        4
       ],
       [
         20,
@@ -161912,12 +163423,17 @@
         16,
         0,
         20
+      ],
+      [
+        -28,
+        0,
+        0
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 734,
-    "roots": 121
+    "expanded": 742,
+    "roots": 123
   },
   {
     "name": "RallyPost / HQ Border 3",
@@ -163565,6 +165081,24 @@
         "owner": 10
       }
     ],
+    "shelters": [
+      {
+        "position": [
+          15,
+          0,
+          13
+        ],
+        "yaw": 90
+      },
+      {
+        "position": [
+          -21,
+          0,
+          -17
+        ],
+        "yaw": 180
+      }
+    ],
     "posts": [
       [
         -27.376,
@@ -163582,11 +165116,6 @@
         24
       ],
       [
-        16,
-        0,
-        16
-      ],
-      [
         -24,
         0,
         -28
@@ -163600,11 +165129,6 @@
         -20,
         0,
         0
-      ],
-      [
-        -24,
-        0,
-        -20
       ],
       [
         20,
@@ -163625,11 +165149,21 @@
         -24,
         0,
         16
+      ],
+      [
+        -20,
+        0,
+        12
+      ],
+      [
+        -24,
+        0,
+        -4
       ]
     ],
     "guns": 4,
     "heavy": 0,
-    "expanded": 773,
-    "roots": 120
+    "expanded": 781,
+    "roots": 122
   }
 ]

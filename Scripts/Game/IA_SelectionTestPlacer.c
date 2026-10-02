@@ -181,12 +181,12 @@ class IA_SelectionTestPlacer : IA_DynamicSitePlacer
 		int checkedModules = 0;
 		foreach (IA_DynamicSiteModule mod : layout.m_aModules)
 		{
-			if (mod.m_iRole != IA_DynamicSiteModuleRole.Dressing)
+			if (mod.m_iRole != IA_DynamicSiteModuleRole.Dressing && mod.m_iRole != IA_DynamicSiteModuleRole.Shelter)
 				checkedModules++;
 			else
-				Check(!mod.m_bRequired && mod.m_iPerimeterSide == -1, "dressing cannot reject a site or change wall coverage");
+				Check(!mod.m_bRequired && mod.m_iPerimeterSide == -1, "optional scenery cannot reject a site or change wall coverage");
 		}
-		Check(m_iPadChecks == checkedModules, "live site validation checks all structural modules without tracing optional dressing");
+		Check(m_iPadChecks == checkedModules, "live site validation checks all structural modules without tracing optional scenery");
 		int requiredPassed = m_iTerrainModulesPassed;
 		m_iPadChecks = 0;
 		Check(super.ValidateTerrain(vector.Zero, 0, layout, true), "survey reuses immediate HQ screening");

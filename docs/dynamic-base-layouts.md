@@ -250,3 +250,40 @@ layouts at all 24 headings, including clipped-radius containment and rejection o
 outside posts. These tests verify waypoint geometry; individual combat movement
 and cover selection still require a live playtest. A Defend waypoint is an AI order,
 not a physical movement barrier.
+
+## Camouflaged bunkers (2026-09-27)
+
+These legacy fixture layouts are not used at runtime. Live bases get their bunkers
+from the generated recipes; see
+[Air-raid bunkers](dynamic-base-compositions.md#air-raid-bunkers-2026-09-27).
+
+Each layout places optional roofed bunkers for the
+[air-raid drill](dynamic-base-garrison.md#air-raid-cover-2026-09-27). The prefab is
+the stock `Sandbag_01_bunker_burlap_camonet_CompositionDestruction.et`: a sandbag
+bunker with a roof and camouflage net, multi-phase destruction and horizontal
+alignment. Its three `CoverPost` smart actions sit up to 1.69 m from its centre and
+face its local +Z, so yaw 180 turns them toward the gate.
+
+| Layout | Bunkers (x, z, yaw) | Capture circle |
+|---|---|---|
+| Full | (−14, 10, 180), (14, 10, 180), (−20, 32, 180), (22, 30, 180), (−5, 55.5, 0), (24, 3, 90) | (0, 24) r 35 |
+| Compact | (−13, 8, 180), (16, 12, 180), (−16, 38.5, 0), (16, 38.5, 0) | (0, 17) r 30 |
+| Courtyard | (−10, 6, 180), (10, 6, 180), (6.5, −7.75, 180) | (0, 10) r 22 |
+| Roadside | (−15.75, 27.75, 180), (16.25, 26.5, 180) | (0, 19) r 20 |
+| CommandPost | (−5, −9, 180), (5, −9, 180) | (0, 0) r 18 |
+| RallyPost | (−4.1, −5, 180), (4.1, −5, 180) | (0, −11) r 9 |
+
+Bunkers use the `Shelter` module role. Like dressing, they skip survey and terrain
+validation and never affect site search or size selection. Construction still checks
+ground support and obstruction, and skips a bunker that fails. Each has a 5.5 m square
+pad (`SHELTER_HALF_EXTENT_M` 2.75, an estimate the Workbench footprint check will
+confirm) and counts as 4 entities.
+
+`tools/check_dynamic_base_layouts.py` requires every bunker centre plus a 1.7 m post
+reach to lie inside the capture circle, so sheltered defenders still contest capture.
+Courtyard, Roadside and CommandPost bunkers were moved in to meet it, and RallyPost
+gained its two. At these yaws, every cover post is at least 1.5 m inside its circle.
+RallyPost is tight: its bunker pads are 0.15 m from the power dressing pad and 1.25 m
+from the HQ pad. Estimated entity totals against the 850 budget are Full 793, Compact
+582, Courtyard 370, Roadside 344, CommandPost 247 and RallyPost 122. The SVG layout
+sheet does not show the bunkers yet.

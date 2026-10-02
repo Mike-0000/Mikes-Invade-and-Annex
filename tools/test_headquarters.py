@@ -2,6 +2,7 @@
 from pathlib import Path
 from collections import Counter
 import json
+import math
 import re
 import sys
 import unittest
@@ -9,6 +10,7 @@ import unittest
 sys.dont_write_bytecode=True
 from author_base_compositions import REF,parse
 from author_base_designs import CAPS,RECIPE_EXPANDED_BUDGET,box,overlap
+from author_base_designs import SHELTERS,SHELTER_POST_REACH,shelter_box,shelter_entrance,gun_reserves
 import author_headquarters as hq
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -262,6 +264,53 @@ class HeadquartersTests(unittest.TestCase):
                 self.assertLess(abs(p[2]),r['wall_half_depth'],r['name'])
                 a=(p[0]-1.5,p[2]-1.5,p[0]+1.5,p[2]+1.5)
                 self.assertFalse(any(overlap(a,box(m),1) for m in r['modules']),(r['name'],p))
+
+    def test_air_raid_bunkers(self):
+        """Bunkers inside the capture circle, planned before the dressing and
+        emitted before the belt so they are down before the gun phase."""
+        _,_,catalog,measure=hq.load_inputs()
+        for r in self.recipes:
+            name=r['name']; capture=r['capture']
+            plan=hq.Plan(r['size'],r['variant'],catalog,measure)
+            shelters=r['shelters']
+            self.assertEqual(len(shelters),SHELTERS[r['size']],name)
+            lim_x,lim_z=plan.limits()
+            lane=(-hq.LANE_HALF,-r['half_depth'],hq.LANE_HALF,capture[2])
+            reserves=gun_reserves(r['modules'],catalog)
+            aprons=[a for m in r['modules'] for a,_ in hq.Plan.aprons(None,m)]
+            solid=[d for d in r['dressing'] if d['kind'] in hq.SOLID]
+            for i,s in enumerate(shelters):
+                body=shelter_box(s); door=shelter_entrance(s)
+                x,z=s['position'][0],s['position'][2]
+                self.assertLessEqual(math.dist((x,z),(capture[0],capture[2]))+SHELTER_POST_REACH,min(r['half_width'],r['half_depth'])-1,(name,s))
+                for a in (body,door):
+                    self.assertTrue(a[0]>=-lim_x+1-1e-6 and a[2]<=lim_x-1+1e-6 and a[1]>=-lim_z+1-1e-6 and a[3]<=lim_z-1+1e-6,(name,s))
+                for m in r['modules']:
+                    self.assertFalse(overlap(body,box(m),1),(name,s,m['key']))
+                    self.assertFalse(overlap(door,hq.Plan.bare(None,m)),(name,s,m['key']))
+                self.assertFalse(any(overlap(body,a,1) for a in aprons),(name,s))
+                self.assertFalse(overlap(body,lane,1),(name,s))
+                self.assertFalse(any(overlap(body,a) for a in reserves),(name,s))
+                for d in solid:
+                    a=plan.dbox(d)
+                    self.assertFalse(overlap(body,a,0.6),(name,s,d['key']))
+                    # Roads and duckboards are walkable; nothing else blocks the way in.
+                    if d['kind']!='road' and not d['key'].startswith('HQDuckboard'):
+                        self.assertFalse(overlap(door,a),(name,s,d['key']))
+                for other in shelters[i+1:]:
+                    self.assertFalse(overlap(body,shelter_box(other),1),(name,s,other))
+                    self.assertFalse(overlap(body,shelter_entrance(other)) or overlap(door,shelter_box(other)),(name,s,other))
+                for p in r['posts']:
+                    a=(p[0]-1.5,p[2]-1.5,p[0]+1.5,p[2]+1.5)
+                    self.assertFalse(overlap(a,body,1) or overlap(a,door,1),(name,p,s))
+                # Cover posts (local +Z) face away from the capture point.
+                yaw=math.radians(s['yaw'])
+                self.assertGreater((x-capture[0])*math.sin(yaw)+(z-capture[2])*math.cos(yaw),0,(name,s))
+        text=read('Scripts/Game/IA_HeadquartersRecipes.c')
+        self.assertEqual(text.count('layout.AddAirRaidBunker('),sum(SHELTERS)*hq.HQ_VARIANTS)
+        for build in text.split('protected static void Build')[1:]:
+            dressing=[i for i in (build.find('layout.AddObstacle('),build.find('layout.AddDressingItem(')) if i>=0]
+            self.assertLess(build.rfind('layout.AddAirRaidBunker('),min(dressing))
 
     def test_runtime_selection_wiring(self):
         placer=read('Scripts/Game/IA_DynamicSitePlacer.c')

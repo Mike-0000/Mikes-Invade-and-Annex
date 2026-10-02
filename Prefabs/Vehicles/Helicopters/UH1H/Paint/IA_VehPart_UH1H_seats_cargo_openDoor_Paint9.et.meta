@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{D3A91F5C7E20C309}Prefabs/Vehicles/Helicopters/UH1H/Paint/IA_VehPart_UH1H_seats_cargo_openDoor_Paint9.et"
+ Configurations {
+  EntityTemplateResourceClass PC {
+  }
+  EntityTemplateResourceClass XBOX_ONE : PC {
+  }
+  EntityTemplateResourceClass XBOX_SERIES : PC {
+  }
+  EntityTemplateResourceClass PS4 : PC {
+  }
+  EntityTemplateResourceClass PS5 : PC {
+  }
+  EntityTemplateResourceClass HEADLESS : PC {
+  }
+ }
+}

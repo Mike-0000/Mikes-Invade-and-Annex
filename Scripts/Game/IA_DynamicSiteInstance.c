@@ -18,6 +18,7 @@ class IA_DynamicSiteInstance
 	protected ref IA_DynamicSiteLayout m_Layout;
 	protected ref IA_AreaInstance m_Host;
 	protected ref array<IEntity> m_aRoots;
+	protected ref array<IEntity> m_aShelters;
 	protected ref array<ref IA_AiGroup> m_aGarrison;
 	protected int m_iGarrisonBudget;
 	protected int m_iGarrisonSpawned;
@@ -43,6 +44,7 @@ class IA_DynamicSiteInstance
 	void IA_DynamicSiteInstance()
 	{
 		m_aRoots = new array<IEntity>();
+		m_aShelters = new array<IEntity>();
 		m_aGarrison = new array<ref IA_AiGroup>();
 	}
 
@@ -226,6 +228,31 @@ class IA_DynamicSiteInstance
 	int GetRootCount()
 	{
 		return m_aRoots.Count();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Spawned air-raid bunkers; also owned as roots for cleanup.
+	void AddShelter(IEntity shelter)
+	{
+		if (!shelter)
+			return;
+		if (m_aShelters.Find(shelter) == -1)
+			m_aShelters.Insert(shelter);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	int GetShelterCount()
+	{
+		return m_aShelters.Count();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Null once the bunker has been deleted.
+	IEntity GetShelter(int index)
+	{
+		if (index < 0 || index >= m_aShelters.Count())
+			return null;
+		return m_aShelters[index];
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -572,6 +599,21 @@ class IA_DynamicSiteInstance
 			m_Host.RemoveMilitaryGroup(group);
 	}
 
+	//------------------------------------------------------------------------------------------------
+	int GetGarrisonCount()
+	{
+		return m_aGarrison.Count();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	IA_AiGroup GetGarrisonGroup(int index)
+	{
+		if (index < 0 || index >= m_aGarrison.Count())
+			return null;
+		return m_aGarrison[index];
+	}
+
+	//------------------------------------------------------------------------------------------------
 	int GetGarrisonBudget()
 	{
 		return m_iGarrisonBudget;
@@ -801,6 +843,7 @@ class IA_DynamicSiteInstance
 		m_aRoots.Clear();
 		m_Panels.Clear();
 		m_Emplacements.Clear();
+		m_aShelters.Clear();
 		m_aGarrison.Clear();
 		m_Host = null;
 		m_bCleanupArmed = false;

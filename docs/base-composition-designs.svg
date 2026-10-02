@@ -225,6 +225,12 @@
 <path d="M 95.07 70.08 L 95.07 63.26" stroke="#c5b488" stroke-width="3"/>
 <path d="M 95.07 63.99 L 95.07 57.16" stroke="#c5b488" stroke-width="3"/>
 <path d="M 95.07 57.89 L 95.07 51.07" stroke="#c5b488" stroke-width="3"/>
+<rect x="272.98" y="100.18" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="447.77" y="81.78" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="364.98" y="228.97" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="222.38" y="228.97" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="144.18" y="58.78" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="157.98" y="155.38" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
 <circle cx="300.00" cy="343.40" r="2" fill="#ffcf73"/>
 <circle cx="120.60" cy="228.40" r="2" fill="#ffcf73"/>
 <circle cx="235.60" cy="99.60" r="2" fill="#ffcf73"/>
@@ -253,7 +259,6 @@
 <circle cx="382.80" cy="108.80" r="2" fill="#ffcf73"/>
 <circle cx="392.00" cy="237.60" r="2" fill="#ffcf73"/>
 <circle cx="364.40" cy="154.80" r="2" fill="#ffcf73"/>
-<circle cx="290.80" cy="108.80" r="2" fill="#ffcf73"/>
 <circle cx="373.60" cy="210.00" r="2" fill="#ffcf73"/>
 <circle cx="290.80" cy="136.40" r="2" fill="#ffcf73"/>
 <circle cx="152.80" cy="237.60" r="2" fill="#ffcf73"/>
@@ -261,6 +266,7 @@
 <circle cx="401.20" cy="145.60" r="2" fill="#ffcf73"/>
 <circle cx="484.00" cy="191.60" r="2" fill="#ffcf73"/>
 <circle cx="116.00" cy="191.60" r="2" fill="#ffcf73"/>
+<circle cx="474.80" cy="81.20" r="2" fill="#ffcf73"/>
 <text x="635" y="50" font-size="16">Full / Encampment 1</text>
 <rect x="693.0" y="49.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
 <rect x="877.64" y="52.17" width="44.73" height="44.25" fill="#326f88"/>
@@ -492,6 +498,12 @@
 <path d="M 695.07 70.08 L 695.07 63.26" stroke="#c5b488" stroke-width="3"/>
 <path d="M 695.07 63.99 L 695.07 57.16" stroke="#c5b488" stroke-width="3"/>
 <path d="M 695.07 57.89 L 695.07 51.07" stroke="#c5b488" stroke-width="3"/>
+<rect x="872.98" y="100.18" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="1047.78" y="81.78" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="964.98" y="228.97" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="822.38" y="228.97" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="744.17" y="58.78" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="757.98" y="155.38" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
 <circle cx="900.00" cy="343.40" r="2" fill="#ffcf73"/>
 <circle cx="720.60" cy="228.40" r="2" fill="#ffcf73"/>
 <circle cx="1079.40" cy="228.40" r="2" fill="#ffcf73"/>
@@ -513,7 +525,6 @@
 <circle cx="817.20" cy="182.40" r="2" fill="#ffcf73"/>
 <circle cx="973.60" cy="274.40" r="2" fill="#ffcf73"/>
 <circle cx="1038.00" cy="210.00" r="2" fill="#ffcf73"/>
-<circle cx="1047.20" cy="99.60" r="2" fill="#ffcf73"/>
 <circle cx="734.40" cy="182.40" r="2" fill="#ffcf73"/>
 <circle cx="1065.60" cy="228.40" r="2" fill="#ffcf73"/>
 <circle cx="826.40" cy="136.40" r="2" fill="#ffcf73"/>
@@ -521,13 +532,14 @@
 <circle cx="789.60" cy="127.20" r="2" fill="#ffcf73"/>
 <circle cx="808.00" cy="99.60" r="2" fill="#ffcf73"/>
 <circle cx="955.20" cy="154.80" r="2" fill="#ffcf73"/>
-<circle cx="817.20" cy="237.60" r="2" fill="#ffcf73"/>
-<circle cx="762.00" cy="154.80" r="2" fill="#ffcf73"/>
 <circle cx="1028.80" cy="191.60" r="2" fill="#ffcf73"/>
 <circle cx="992.00" cy="228.40" r="2" fill="#ffcf73"/>
 <circle cx="936.80" cy="164.00" r="2" fill="#ffcf73"/>
 <circle cx="992.00" cy="292.80" r="2" fill="#ffcf73"/>
 <circle cx="734.40" cy="81.20" r="2" fill="#ffcf73"/>
+<circle cx="1038.00" cy="256.00" r="2" fill="#ffcf73"/>
+<circle cx="1001.20" cy="191.60" r="2" fill="#ffcf73"/>
+<circle cx="789.60" cy="145.60" r="2" fill="#ffcf73"/>
 <text x="35" y="405" font-size="16">Full / RoadControl 1</text>
 <rect x="93.00000000000003" y="404.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
 <rect x="277.64" y="407.17" width="44.73" height="44.25" fill="#326f88"/>
@@ -756,6 +768,12 @@
 <path d="M 95.07 425.82 L 95.07 419.00" stroke="#c5b488" stroke-width="3"/>
 <path d="M 95.07 419.36 L 95.07 412.54" stroke="#c5b488" stroke-width="3"/>
 <path d="M 95.07 412.89 L 95.07 406.07" stroke="#c5b488" stroke-width="3"/>
+<rect x="272.98" y="455.18" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="447.77" y="436.77" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="364.98" y="583.98" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="222.38" y="583.98" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="144.18" y="413.77" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="157.98" y="510.38" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
 <circle cx="300.00" cy="698.40" r="2" fill="#ffcf73"/>
 <circle cx="120.60" cy="583.40" r="2" fill="#ffcf73"/>
 <circle cx="479.40" cy="583.40" r="2" fill="#ffcf73"/>
@@ -772,15 +790,12 @@
 <circle cx="162.00" cy="473.00" r="2" fill="#ffcf73"/>
 <circle cx="484.00" cy="509.80" r="2" fill="#ffcf73"/>
 <circle cx="263.20" cy="666.20" r="2" fill="#ffcf73"/>
-<circle cx="226.40" cy="574.20" r="2" fill="#ffcf73"/>
 <circle cx="382.80" cy="546.60" r="2" fill="#ffcf73"/>
 <circle cx="355.20" cy="666.20" r="2" fill="#ffcf73"/>
 <circle cx="134.40" cy="445.40" r="2" fill="#ffcf73"/>
 <circle cx="263.20" cy="519.00" r="2" fill="#ffcf73"/>
-<circle cx="152.80" cy="509.80" r="2" fill="#ffcf73"/>
 <circle cx="244.80" cy="445.40" r="2" fill="#ffcf73"/>
 <circle cx="392.00" cy="601.80" r="2" fill="#ffcf73"/>
-<circle cx="456.40" cy="436.20" r="2" fill="#ffcf73"/>
 <circle cx="244.80" cy="482.20" r="2" fill="#ffcf73"/>
 <circle cx="474.80" cy="436.20" r="2" fill="#ffcf73"/>
 <circle cx="171.20" cy="482.20" r="2" fill="#ffcf73"/>
@@ -792,6 +807,9 @@
 <circle cx="226.40" cy="537.40" r="2" fill="#ffcf73"/>
 <circle cx="162.00" cy="491.40" r="2" fill="#ffcf73"/>
 <circle cx="419.60" cy="482.20" r="2" fill="#ffcf73"/>
+<circle cx="401.20" cy="491.40" r="2" fill="#ffcf73"/>
+<circle cx="134.40" cy="583.40" r="2" fill="#ffcf73"/>
+<circle cx="125.20" cy="473.00" r="2" fill="#ffcf73"/>
 <text x="635" y="405" font-size="16">Full / Logistics 1</text>
 <rect x="693.0" y="404.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
 <rect x="877.64" y="407.17" width="44.73" height="44.25" fill="#326f88"/>
@@ -1017,6 +1035,12 @@
 <path d="M 695.07 425.08 L 695.07 418.26" stroke="#c5b488" stroke-width="3"/>
 <path d="M 695.07 418.99 L 695.07 412.16" stroke="#c5b488" stroke-width="3"/>
 <path d="M 695.07 412.89 L 695.07 406.07" stroke="#c5b488" stroke-width="3"/>
+<rect x="872.98" y="455.18" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="1047.78" y="436.77" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="964.98" y="583.98" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="822.38" y="583.98" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="744.17" y="413.77" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="757.98" y="510.38" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
 <circle cx="900.00" cy="698.40" r="2" fill="#ffcf73"/>
 <circle cx="720.60" cy="583.40" r="2" fill="#ffcf73"/>
 <circle cx="808.00" cy="537.40" r="2" fill="#ffcf73"/>
@@ -1028,7 +1052,6 @@
 <circle cx="890.80" cy="519.00" r="2" fill="#ffcf73"/>
 <circle cx="1047.20" cy="519.00" r="2" fill="#ffcf73"/>
 <circle cx="946.00" cy="666.20" r="2" fill="#ffcf73"/>
-<circle cx="872.40" cy="463.80" r="2" fill="#ffcf73"/>
 <circle cx="725.20" cy="463.80" r="2" fill="#ffcf73"/>
 <circle cx="743.60" cy="500.60" r="2" fill="#ffcf73"/>
 <circle cx="1028.80" cy="463.80" r="2" fill="#ffcf73"/>
@@ -1051,6 +1074,7 @@
 <circle cx="743.60" cy="537.40" r="2" fill="#ffcf73"/>
 <circle cx="780.40" cy="436.20" r="2" fill="#ffcf73"/>
 <circle cx="789.60" cy="463.80" r="2" fill="#ffcf73"/>
+<circle cx="863.20" cy="463.80" r="2" fill="#ffcf73"/>
 <circle cx="936.80" cy="647.80" r="2" fill="#ffcf73"/>
 <circle cx="992.00" cy="528.20" r="2" fill="#ffcf73"/>
 <text x="35" y="760" font-size="16">Full / Camouflaged 1</text>
@@ -1279,6 +1303,12 @@
 <path d="M 95.07 780.08 L 95.07 773.26" stroke="#c5b488" stroke-width="3"/>
 <path d="M 95.07 773.99 L 95.07 767.16" stroke="#c5b488" stroke-width="3"/>
 <path d="M 95.07 767.89 L 95.07 761.07" stroke="#c5b488" stroke-width="3"/>
+<rect x="272.98" y="810.17" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="447.77" y="791.77" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="364.98" y="938.98" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="222.38" y="938.98" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="144.18" y="768.77" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="157.98" y="865.38" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
 <circle cx="300.00" cy="1053.40" r="2" fill="#ffcf73"/>
 <circle cx="120.60" cy="938.40" r="2" fill="#ffcf73"/>
 <circle cx="479.40" cy="938.40" r="2" fill="#ffcf73"/>
@@ -1303,7 +1333,6 @@
 <circle cx="272.40" cy="1058.00" r="2" fill="#ffcf73"/>
 <circle cx="419.60" cy="929.20" r="2" fill="#ffcf73"/>
 <circle cx="189.60" cy="883.20" r="2" fill="#ffcf73"/>
-<circle cx="364.40" cy="956.80" r="2" fill="#ffcf73"/>
 <circle cx="162.00" cy="809.60" r="2" fill="#ffcf73"/>
 <circle cx="392.00" cy="966.00" r="2" fill="#ffcf73"/>
 <circle cx="254.00" cy="864.80" r="2" fill="#ffcf73"/>
@@ -1311,10 +1340,11 @@
 <circle cx="401.20" cy="837.20" r="2" fill="#ffcf73"/>
 <circle cx="392.00" cy="920.00" r="2" fill="#ffcf73"/>
 <circle cx="355.20" cy="1002.80" r="2" fill="#ffcf73"/>
-<circle cx="180.40" cy="864.80" r="2" fill="#ffcf73"/>
 <circle cx="419.60" cy="828.00" r="2" fill="#ffcf73"/>
-<circle cx="171.20" cy="874.00" r="2" fill="#ffcf73"/>
 <circle cx="327.60" cy="993.60" r="2" fill="#ffcf73"/>
+<circle cx="401.20" cy="984.40" r="2" fill="#ffcf73"/>
+<circle cx="484.00" cy="901.60" r="2" fill="#ffcf73"/>
+<circle cx="465.60" cy="1021.20" r="2" fill="#ffcf73"/>
 <text x="635" y="760" font-size="16">Full / Encampment 2</text>
 <rect x="693.0" y="759.0" width="413.99999999999994" height="322.0" fill="none" stroke="#516976"/>
 <rect x="877.64" y="762.17" width="44.73" height="44.25" fill="#326f88"/>
@@ -1544,6 +1574,12 @@
 <path d="M 695.07 780.08 L 695.07 773.26" stroke="#c5b488" stroke-width="3"/>
 <path d="M 695.07 773.99 L 695.07 767.16" stroke="#c5b488" stroke-width="3"/>
 <path d="M 695.07 767.89 L 695.07 761.07" stroke="#c5b488" stroke-width="3"/>
+<rect x="872.98" y="810.17" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="1047.78" y="791.77" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="964.98" y="938.98" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="822.38" y="938.98" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="744.17" y="768.77" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
+<rect x="757.98" y="865.38" width="12.65" height="12.65" fill="#55642f" stroke="#ffcf73"/>
 <circle cx="900.00" cy="1053.40" r="2" fill="#ffcf73"/>
 <circle cx="720.60" cy="938.40" r="2" fill="#ffcf73"/>
 <circle cx="1079.40" cy="938.40" r="2" fill="#ffcf73"/>
@@ -1554,7 +1590,6 @@
 <circle cx="1028.80" cy="828.00" r="2" fill="#ffcf73"/>
 <circle cx="1010.40" cy="855.60" r="2" fill="#ffcf73"/>
 <circle cx="1038.00" cy="956.80" r="2" fill="#ffcf73"/>
-<circle cx="826.40" cy="938.40" r="2" fill="#ffcf73"/>
 <circle cx="752.80" cy="855.60" r="2" fill="#ffcf73"/>
 <circle cx="835.60" cy="837.20" r="2" fill="#ffcf73"/>
 <circle cx="798.80" cy="892.40" r="2" fill="#ffcf73"/>
@@ -1567,9 +1602,7 @@
 <circle cx="1084.00" cy="956.80" r="2" fill="#ffcf73"/>
 <circle cx="1056.40" cy="828.00" r="2" fill="#ffcf73"/>
 <circle cx="1028.80" cy="791.20" r="2" fill="#ffcf73"/>
-<circle cx="762.00" cy="782.00" r="2" fill="#ffcf73"/>
 <circle cx="918.40" cy="855.60" r="2" fill="#ffcf73"/>
-<circle cx="752.80" cy="874.00" r="2" fill="#ffcf73"/>
 <circle cx="734.40" cy="929.20" r="2" fill="#ffcf73"/>
 <circle cx="771.20" cy="846.40" r="2" fill="#ffcf73"/>
 <circle cx="826.40" cy="874.00" r="2" fill="#ffcf73"/>
@@ -1580,4 +1613,7 @@
 <circle cx="1019.60" cy="800.40" r="2" fill="#ffcf73"/>
 <circle cx="771.20" cy="818.80" r="2" fill="#ffcf73"/>
 <circle cx="1056.40" cy="993.60" r="2" fill="#ffcf73"/>
+<circle cx="1038.00" cy="938.40" r="2" fill="#ffcf73"/>
+<circle cx="1019.60" cy="901.60" r="2" fill="#ffcf73"/>
+<circle cx="927.60" cy="837.20" r="2" fill="#ffcf73"/>
 </g></svg>

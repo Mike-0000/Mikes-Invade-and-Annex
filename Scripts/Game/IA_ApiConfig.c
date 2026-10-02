@@ -62,7 +62,6 @@ class IA_ApiConfigManager
 {
     private static const string CONFIG_DIR = "$profile:MikesInvadeAndAnnex";
     private static const string CONFIG_PATH = CONFIG_DIR + "/api_config.json";
-	private static const string SERVER_NAME_PATH = CONFIG_DIR + "/server_name.txt";
     
     private static ref IA_ApiConfig m_Config;
 
@@ -73,42 +72,6 @@ class IA_ApiConfigManager
         
         return m_Config;
     }
-	
-	static string GetServerNameFromFile()
-	{
-		FileHandle file = FileIO.OpenFile(SERVER_NAME_PATH, FileMode.READ);
-        if (file)
-        {
-            string serverName;
-            int readBytes = file.ReadLine(serverName);
-            file.Close();
-            
-            if (readBytes > 0 && serverName != "")
-            {
-                IA_Log.Info("IA_ApiConfigManager: Server name '" + serverName + "' loaded from " + SERVER_NAME_PATH);
-                return serverName;
-            }
-        }
-        
-        IA_Log.Info("IA_ApiConfigManager: No server name file found or it's empty. Creating a new default config.");
-        string defaultServerName = "Default Name - PLEASE RENAME IN server_name.txt, in I&A Server Profile Folder";
-		
-		FileIO.MakeDirectory(CONFIG_DIR);
-        FileHandle writeFile = FileIO.OpenFile(SERVER_NAME_PATH, FileMode.WRITE);
-        if (writeFile)
-        {
-            writeFile.WriteLine(defaultServerName);
-            writeFile.Close();
-			IA_Log.Info("IA_ApiConfigManager: Created default server name file at " + SERVER_NAME_PATH);
-            return defaultServerName;
-        }
-		else
-		{
-			Print("IA_ApiConfigManager: Failed to create default server name file at " + SERVER_NAME_PATH, LogLevel.ERROR);
-		}
-		
-		return "Default Name - PLEASE RENAME IN server_name.txt, in I&A Server Profile Folder";
-	}
 
     static void SaveConfig()
     {

@@ -5,6 +5,14 @@
 //------------------------------------------------------------------------------------------------
 modded class SCR_PlayerController
 {
+	protected static const int IA_HELI_PAINT_MIN_GAP_MS = 120;
+	protected int m_iIA_LastHeliPaintMs = -IA_HELI_PAINT_MIN_GAP_MS;
+	protected int m_iIA_LastHeliStateMs = -IA_HELI_PAINT_MIN_GAP_MS;
+	protected static const int IA_BOARD_MIN_GAP_MS = 100;
+	protected static const int IA_STANDING_MIN_GAP_MS = 1000;
+	protected int m_iIA_LastBoardAskMs = -IA_BOARD_MIN_GAP_MS;
+	protected int m_iIA_LastStandingAskMs = -IA_STANDING_MIN_GAP_MS;
+
 	//------------------------------------------------------------------------------------------------
 	void IA_AskUpdateAdminConfig(string packed)
 	{
@@ -88,6 +96,45 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Admin solo test: repaint the nearest helicopter with its next skin, where it stands.
+	void IA_AskPreviewHeliSkin()
+	{
+		if (Replication.IsServer())
+		{
+			IA_PreviewHeliSkinIfAdmin();
+			return;
+		}
+
+		Rpc(RpcAsk_IA_PreviewHeliSkin);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Paint bay: ask the server for this player's rating and the thresholds in force.
+	void IA_AskHeliPaintState()
+	{
+		if (Replication.IsServer())
+		{
+			IA_AnswerHeliPaint(false, IA_HeliSkinCatalog.SKIN_NONE);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_HeliPaintState);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Paint bay: ask the server to put a skin on the helicopter this player pilots.
+	void IA_AskSetHeliSkin(int skinId)
+	{
+		if (Replication.IsServer())
+		{
+			IA_AnswerHeliPaint(true, skinId);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_SetHeliSkin, skinId);
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void IA_AskForceQRF(int type)
 	{
 		if (Replication.IsServer())
@@ -144,6 +191,41 @@ modded class SCR_PlayerController
 	protected void RpcAsk_IA_PromoteSelf()
 	{
 		IA_PromoteSelfIfAdmin();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_PreviewHeliSkin()
+	{
+		IA_PreviewHeliSkinIfAdmin();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_HeliSkinPreviewResult(string message)
+	{
+		SCR_HintManagerComponent.ShowCustomHint(message, "Skin preview", 6);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_HeliPaintState()
+	{
+		IA_AnswerHeliPaint(false, IA_HeliSkinCatalog.SKIN_NONE);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_SetHeliSkin(int skinId)
+	{
+		IA_AnswerHeliPaint(true, skinId);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_HeliPaintReply(int result, int rating, bool admin, int skinId, string thresholds)
+	{
+		IA_HeliPaintMenu.OnServerReply(result, rating, admin, skinId, thresholds);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -270,6 +352,69 @@ modded class SCR_PlayerController
 		}
 
 		session.PromotePlayer(GetPlayerId());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_PreviewHeliSkinIfAdmin()
+	{
+		if (!IA_IsAdminCaller())
+		{
+			Print("[IA] Heli skin preview rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
+			return;
+		}
+
+		string message = IA_HeliSkinPreview.CycleNearest(GetControlledEntity());
+		if (GetPlayerId() == SCR_PlayerController.GetLocalPlayerId())
+		{
+			RpcDo_IA_HeliSkinPreviewResult(message);
+			return;
+		}
+
+		Rpc(RpcDo_IA_HeliSkinPreviewResult, message);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: answer a paint bay request. The client only names a skin; the seat, the paint
+	//! channel and the unlock are all checked here.
+	protected void IA_AnswerHeliPaint(bool apply, int skinId)
+	{
+		// A paint bay waits for its answer before it asks again; anything faster is not one.
+		int now = System.GetTickCount();
+		if (apply)
+		{
+			if (now - m_iIA_LastHeliPaintMs < IA_HELI_PAINT_MIN_GAP_MS)
+				return;
+			m_iIA_LastHeliPaintMs = now;
+		}
+		else
+		{
+			if (now - m_iIA_LastHeliStateMs < IA_HELI_PAINT_MIN_GAP_MS)
+				return;
+			m_iIA_LastHeliStateMs = now;
+		}
+
+		int rating = IA_HeliPaintService.ReadRating(GetPlayerId());
+		bool admin = IA_IsAdminCaller();
+		int result = IA_HeliPaintService.RESULT_STATE;
+		if (apply)
+		{
+			result = IA_HeliPaintService.TrySetSkin(GetControlledEntity(), skinId, rating, admin);
+			if (result == IA_HeliPaintService.RESULT_APPLIED)
+				IA_HeliSkinPadService.RememberChoice(GetPlayerId(), skinId);
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print(string.Format("[IA][HeliPaint] Player %1 asked for skin %2: result %3.", GetPlayerId(), skinId, result), LogLevel.NORMAL);
+			}
+		}
+
+		string thresholds = IA_HeliSkinCatalog.PackThresholds();
+		if (GetPlayerId() == SCR_PlayerController.GetLocalPlayerId())
+		{
+			RpcDo_IA_HeliPaintReply(result, rating, admin, skinId, thresholds);
+			return;
+		}
+
+		Rpc(RpcDo_IA_HeliPaintReply, result, rating, admin, skinId, thresholds);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -655,6 +800,149 @@ modded class SCR_PlayerController
 			return;
 
 		IA_GmDirector.GetInstance().ForgetKnownSite(x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Client: ask for the page of a leaderboard that holds one row. The answer reaches
+	//! IA_StatisticsMenu as a head and one or more row chunks.
+	//! \param viewId the menu's tag for this board and sort order, sent back with the answer
+	//! \param board an IA_BoardProtocol.BOARD_ value
+	//! \param sortKey an IA_BoardProtocol.SORT_ value
+	//! \param offset index of a row on the wanted page
+	void IA_AskLeaderboardPage(int viewId, int board, int sortKey, bool descending, int offset)
+	{
+		if (Replication.IsServer())
+		{
+			IA_AnswerLeaderboardPage(viewId, board, sortKey, descending, offset);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_LeaderboardPage, viewId, board, sortKey, descending, offset);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_LeaderboardPage(int viewId, int board, int sortKey, bool descending, int offset)
+	{
+		IA_AnswerLeaderboardPage(viewId, board, sortKey, descending, offset);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_AnswerLeaderboardPage(int viewId, int board, int sortKey, bool descending, int offset)
+	{
+		ref array<string> none = {};
+		int now = System.GetTickCount();
+		if (now - m_iIA_LastBoardAskMs < IA_BOARD_MIN_GAP_MS)
+		{
+			IA_SendLeaderboardPage(viewId, IA_BoardProtocol.STATUS_BUSY, 0, offset, none, "");
+			return;
+		}
+		m_iIA_LastBoardAskMs = now;
+
+		IA_LeaderboardManagerComponent boards = IA_LeaderboardManagerComponent.GetInstance();
+		if (!boards)
+		{
+			IA_SendLeaderboardPage(viewId, IA_BoardProtocol.STATUS_OFFLINE, 0, offset, none, "");
+			return;
+		}
+
+		boards.Request(GetPlayerId(), viewId, board, sortKey, descending, offset);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: send this player one page. The rows go out in chunks short enough for an RPC
+	//! string, so a page's size on the wire never depends on how long the names are.
+	//! \param total rows on the board; on IA_BoardProtocol.STATUS_LIMITED the seconds to wait
+	//! \param rows packed IA_BoardRow lines, the first being row number offset
+	//! \param mine the player's own packed line, empty when they are not on the board
+	void IA_SendLeaderboardPage(int viewId, int status, int total, int offset, notnull array<string> rows, string mine)
+	{
+		bool local = GetPlayerId() == SCR_PlayerController.GetLocalPlayerId();
+		if (local)
+			RpcDo_IA_LeaderboardHead(viewId, status, total, offset, mine);
+		else
+			Rpc(RpcDo_IA_LeaderboardHead, viewId, status, total, offset, mine);
+
+		// A refusal has no rows; its head ends the answer.
+		if (status != IA_BoardProtocol.STATUS_OK)
+			return;
+
+		ref array<string> chunks = {};
+		ref array<int> firsts = {};
+		IA_BoardProtocol.SplitRows(rows, offset, chunks, firsts);
+		int last = chunks.Count() - 1;
+		for (int i = 0; i <= last; i++)
+		{
+			IA_SendLeaderboardRows(local, viewId, firsts[i], i == last, chunks[i]);
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_SendLeaderboardRows(bool local, int viewId, int offset, bool last, string rows)
+	{
+		if (local)
+		{
+			RpcDo_IA_LeaderboardRows(viewId, offset, last, rows);
+			return;
+		}
+		Rpc(RpcDo_IA_LeaderboardRows, viewId, offset, last, rows);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_LeaderboardHead(int viewId, int status, int total, int offset, string mine)
+	{
+		IA_StatisticsMenu.OnBoardHead(viewId, status, total, offset, mine);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_LeaderboardRows(int viewId, int offset, bool last, string rows)
+	{
+		IA_StatisticsMenu.OnBoardRows(viewId, offset, last, rows);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Client: ask where this player stands on the session board. A hosting player reads it live.
+	void IA_AskSessionStanding()
+	{
+		if (Replication.IsServer())
+			return;
+
+		Rpc(RpcAsk_IA_SessionStanding);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_SessionStanding()
+	{
+		int now = System.GetTickCount();
+		if (now - m_iIA_LastStandingAskMs < IA_STANDING_MIN_GAP_MS)
+			return;
+		m_iIA_LastStandingAskMs = now;
+
+		IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+		if (session)
+			session.SendStanding(GetPlayerId());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: tell this player their own place on the session board.
+	void IA_SendSessionStanding(int place, int total, int rankId, int kills, int deaths, int score)
+	{
+		if (GetPlayerId() == SCR_PlayerController.GetLocalPlayerId())
+			return;
+
+		Rpc(RpcDo_IA_SessionStanding, place, total, rankId, kills, deaths, score);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_SessionStanding(int place, int total, int rankId, int kills, int deaths, int score)
+	{
+		IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+		if (session)
+			session.OnLocalStanding(place, total, rankId, kills, deaths, score);
 	}
 
 	protected bool IA_IsAdminCaller()

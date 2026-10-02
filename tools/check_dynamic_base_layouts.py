@@ -10,6 +10,9 @@ import re
 SOURCE = Path(__file__).resolve().parents[1] / 'Scripts/Game/IA_DynamicSiteLayout.c'
 TEXT = SOURCE.read_text(encoding='utf-8')
 NUMBER = r'-?\d+(?:\.\d+)?'
+SHELTER_HALF = float(re.search(r'SHELTER_HALF_EXTENT_M = (' + NUMBER + ');', TEXT)[1])
+# Stock bunker cover posts sit up to 1.69 m from its centre (Sandbag_01_bunker_base.et).
+SHELTER_POST_REACH = 1.7
 
 
 def inside(point, box, clearance=0):
@@ -41,6 +44,11 @@ def read_layout(name):
             angle = math.radians(yaw)
             w, d = abs(math.cos(angle)) * w + abs(math.sin(angle)) * d, abs(math.sin(angle)) * w + abs(math.cos(angle)) * d
             boxes.append((match[1], (x-w, z-d, x+w, z+d)))
+        elif 'layout.AddShelter(' in line:
+            match = re.search(r'AddShelter\("([^"]+)", (.*)\);', line)
+            x, z = [float(value) for value in re.findall(NUMBER, match[2])][:2]
+            half = SHELTER_HALF
+            boxes.append((match[1], (x-half, z-half, x+half, z+half)))
         elif 'layout.AddCover(' in line:
             match = re.search(r'AddCover\("([^"]+)", (.*)\);', line)
             x, z, yaw, style, side = [float(value) for value in re.findall(NUMBER, match[2])]
@@ -82,6 +90,13 @@ def validate(name):
             overlap_z = min(a[3], b[3]) - max(a[1], b[1])
             assert overlap_x <= 1e-6 or overlap_z <= 1e-6, (name, first, second, 'overlapping pads')
     assert abs(capture[0]) + radius <= half_w and abs(capture[1]) + radius <= half_d, (name, 'capture radius')
+    # Defenders sheltering from aircraft must still hold the capture zone.
+    shelters = 0
+    for module, (left, bottom, right, top) in boxes:
+        if module.startswith('shelter_'):
+            shelters += 1
+            centre = ((left + right) / 2, (bottom + top) / 2)
+            assert math.dist(centre, capture) + SHELTER_POST_REACH <= radius, (name, module, 'bunker outside capture circle')
     # Spawn groups are 2, 2, then groups of at most 4. Each uses its own post.
     required_posts = 2 + math.ceil(max(0, max_guards - 4) / 4)
     assert name in ('Full', 'Compact') or len(posts) >= required_posts, (name, 'too few guard posts')
@@ -97,10 +112,10 @@ def validate(name):
             point = tuple(start[i] + (end[i] - start[i]) * step / steps for i in range(2))
             for module, box in boxes:
                 # Large layouts retain their existing interior route rules.
-                if name in ('Full', 'Compact') and not module.startswith(('wall_', 'dressing_')):
+                if name in ('Full', 'Compact') and not module.startswith(('wall_', 'dressing_', 'shelter_')):
                     continue
                 assert not inside(point, box, 1.2), (name, module, 'blocked reserved route')
-    print(f'PASS {name}: {half_w*2:g} x {half_d*2:g} m, {len(boxes)} modules, {max_guards} guards, three clear approaches')
+    print(f'PASS {name}: {half_w*2:g} x {half_d*2:g} m, {len(boxes)} modules, {max_guards} guards, three clear approaches, {shelters} bunkers in the capture circle')
 
 
 if __name__ == '__main__':

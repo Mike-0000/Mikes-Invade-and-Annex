@@ -224,4 +224,5 @@ Leave backup tables. Drop only when the user says the live board looks right. RL
 
 - `servers`: `id` uuid PK, `name`, `owner_email`, `created_at`, `last_seen`, `is_active`
 - `player_stats`: PK `(player_bohemia_id, server_id)` → `servers.id`; counters `kills`, `deaths`, `hvt_kills`, `hvt_guard_kills`, `contribution_score`; `player_name_last_seen`, `first_seen`, `last_seen`
-- Writes go Azure `invadestats` → `upsert_player_stat` (additive on conflict) and `register_server`
+- `player_transport_ratings`: PK `player_bohemia_id`, global, no server column; a server merge never touches it. `transport_batches.server_id` is `ON DELETE SET NULL`, so deleting the donor server keeps its batch history. Thresholds: `transport_skin_thresholds`
+- Writes go Azure `invade-annex-api` (`backend/azure-functions`) → `api_submit_stats` (additive on conflict) and `register_server`. Older builds still write through the original `invadestats` app → `upsert_player_stat`

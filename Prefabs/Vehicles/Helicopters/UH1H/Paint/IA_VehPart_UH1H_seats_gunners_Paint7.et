@@ -1,0 +1,17 @@
+GenericEntity : "{67030528FA4FA725}Prefabs/Vehicles/Helicopters/UH1H/VehParts/Seats/VehPart_UH1H_seats_gunners.et" {
+ ID "4B42E71698F5739C"
+ components {
+  MeshObject "{4B42E716914465B9}" {
+   Materials {
+    MaterialAssignClass "{F6F81CB34E60381E}" {
+     SourceMaterial "UH_1H_Interior01_04455994F64CAB1E"
+     AssignedMaterial "{D3A91F5C7E20A107}Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Interior01_Paint7.emat"
+    }
+    MaterialAssignClass "{605B84C2DA2294F8}" {
+     SourceMaterial "UH_1H_Interior02_5AAD70D749C12511"
+     AssignedMaterial "{D3A91F5C7E20A207}Assets/Vehicles/Helicopters/UH1H/Paint/IA_UH_1H_Interior02_Paint7.emat"
+    }
+   }
+  }
+ }
+}

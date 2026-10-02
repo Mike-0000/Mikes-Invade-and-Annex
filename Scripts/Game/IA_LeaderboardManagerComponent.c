@@ -1,212 +1,109 @@
-// Scripts/Game/IA_LeaderboardManagerComponent.c
-[ComponentEditorProps(category: "Invade & Annex/Components", description: "Manages and replicates the global leaderboard data.")]
-class IA_LeaderboardManagerComponentClass: ScriptComponentClass
+//------------------------------------------------------------------------------------------------
+//! Server: answers a player's request for one page of a leaderboard.
+//!
+//! Nothing is replicated. The menu asks through the player's controller for a board, a sort
+//! order and an offset; the answer goes back to that one player as a few short RPCs
+//! (see SCR_PlayerController.IA_SendLeaderboardPage). The session board is read from RAM. The
+//! others come from the stats service through IA_BoardService, which holds what was answered
+//! and limits how often the service is asked.
+//------------------------------------------------------------------------------------------------
+[ComponentEditorProps(category: "Invade & Annex/Components", description: "Serves leaderboard pages to players on request.")]
+class IA_LeaderboardManagerComponentClass : ScriptComponentClass
 {
-};
+}
 
 class IA_LeaderboardManagerComponent : ScriptComponent
 {
-    [RplProp(onRplName: "OnLeaderboardDataChanged")]
-    private string m_sReplicatedLeaderboardJson;
-	
-	[RplProp(onRplName: "OnServerLeaderboardDataChanged")]
-    private string m_sReplicatedServerLeaderboardJson;
-	
-	[RplProp(onRplName: "OnGlobalServerLeaderboardDataChanged")]
-	private string m_sReplicatedGlobalServerLeaderboardJson;
-	
-	private const int LEADERBOARD_FETCH_INTERVAL = 30; // 30 seconds
+	protected ref IA_BoardService m_Service;
+	protected static IA_LeaderboardManagerComponent s_Instance;
 
-    private ref ScriptInvoker m_OnLeaderboardDataUpdated;
-	private ref ScriptInvoker m_OnServerLeaderboardDataUpdated;
-	private ref ScriptInvoker m_OnGlobalServerLeaderboardDataUpdated;
-    private static IA_LeaderboardManagerComponent s_Instance;
-
-    static IA_LeaderboardManagerComponent GetInstance()
-    {
-        return s_Instance;
-    }
-
-    ScriptInvoker GetOnLeaderboardDataUpdated()
-    {
-        if (!m_OnLeaderboardDataUpdated)
-            m_OnLeaderboardDataUpdated = new ScriptInvoker();
-        return m_OnLeaderboardDataUpdated;
-    }
-	
-	ScriptInvoker GetOnServerLeaderboardDataUpdated()
-    {
-        if (!m_OnServerLeaderboardDataUpdated)
-            m_OnServerLeaderboardDataUpdated = new ScriptInvoker();
-        return m_OnServerLeaderboardDataUpdated;
-    }
-	
-	ScriptInvoker GetOnGlobalServerLeaderboardDataUpdated()
-    {
-        if (!m_OnGlobalServerLeaderboardDataUpdated)
-            m_OnGlobalServerLeaderboardDataUpdated = new ScriptInvoker();
-        return m_OnGlobalServerLeaderboardDataUpdated;
-    }
-
-    //------------------------------------------------------------------------------------------------
-    // OVERRIDES
-    //------------------------------------------------------------------------------------------------
-    override void OnPostInit(IEntity owner)
-    {
-        super.OnPostInit(owner);
-        SetEventMask(owner, EntityEvent.INIT);
-    }
-    
-    override void EOnInit(IEntity owner)
-    {
-        if (s_Instance)
-        {
-            Print("IA_LeaderboardManagerComponent already exists. Deleting this one.", LogLevel.WARNING);
-            //delete this;
-            return;
-        }
-        s_Instance = this;
-
-        // Fetching is now handled by IA_ApiHandler on init and after stat submission.
-        // No longer need to call fetch from here.
-
-        if (!Replication.IsServer())
-		{
-            GetOnLeaderboardDataUpdated().Invoke(m_sReplicatedLeaderboardJson);
-			GetOnServerLeaderboardDataUpdated().Invoke(m_sReplicatedServerLeaderboardJson);
-			GetOnGlobalServerLeaderboardDataUpdated().Invoke(m_sReplicatedGlobalServerLeaderboardJson);
-		}
-    }
-
-    override void OnDelete(IEntity owner)
-    {
-        if (s_Instance == this)
-            s_Instance = null;
-
-        super.OnDelete(owner);
-    }
-
-    //------------------------------------------------------------------------------------------------
-    // PUBLIC API
-    //------------------------------------------------------------------------------------------------
-
-    // Called by the API handler on the server
-    void UpdateLeaderboardData(string jsonData)
-    {
-        if (!Replication.IsServer())
-        {
-            Print("UpdateLeaderboardData can only be called on the server.", LogLevel.ERROR);
-            return;
-        }
-
-        m_sReplicatedLeaderboardJson = jsonData;
-        Replication.BumpMe();
-
-        // Also invoke for server-side logic if needed
-        GetOnLeaderboardDataUpdated().Invoke(jsonData);
-    }
-	
-	void UpdateServerLeaderboardData(string jsonData)
-    {
-        if (!Replication.IsServer())
-        {
-            Print("UpdateServerLeaderboardData can only be called on the server.", LogLevel.ERROR);
-            return;
-        }
-
-        m_sReplicatedServerLeaderboardJson = jsonData;
-        Replication.BumpMe();
-
-        // Also invoke for server-side logic if needed
-        GetOnServerLeaderboardDataUpdated().Invoke(jsonData);
-    }
-	
-	void UpdateGlobalServerLeaderboardData(string jsonData)
+	//------------------------------------------------------------------------------------------------
+	static IA_LeaderboardManagerComponent GetInstance()
 	{
-		if(!Replication.IsServer())
+		return s_Instance;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	override void OnPostInit(IEntity owner)
+	{
+		super.OnPostInit(owner);
+		SetEventMask(owner, EntityEvent.INIT);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	override void EOnInit(IEntity owner)
+	{
+		if (s_Instance && s_Instance != this)
 		{
-			Print("UpdateGlobalServerLeaderboardData can only be called on the server.", LogLevel.ERROR);
+			Print("[IA][Leaderboard] Instance already exists.", LogLevel.WARNING);
 			return;
 		}
-		
-		m_sReplicatedGlobalServerLeaderboardJson = jsonData;
-		Replication.BumpMe();
-		
-		GetOnGlobalServerLeaderboardDataUpdated().Invoke(jsonData);
-	}
-	
-	// These methods are no longer needed as the ApiHandler drives the updates.
-	/*
-	private void FetchLeaderboardData()
-    {
-        if (!Replication.IsServer()) return;
-
-        Print("IA_LeaderboardManagerComponent: Server is fetching new leaderboard data.", LogLevel.NORMAL);
-        IA_ApiHandler.GetInstance().FetchGlobalLeaderboardForServer();
-    }
-	
-	private void FetchServerLeaderboardData()
-    {
-        if (!Replication.IsServer()) return;
-
-        Print("IA_LeaderboardManagerComponent: Server is fetching new SERVER-ONLY leaderboard data.", LogLevel.NORMAL);
-        IA_ApiHandler.GetInstance().FetchServerLeaderboard();
-    }
-	
-	private void FetchGlobalServerLeaderboardData()
-	{
-		if (!Replication.IsServer()) return;
-		
-		Print("IA_LeaderboardManagerComponent: Server is fetching new GLOBAL SERVER leaderboard data.", LogLevel.NORMAL);
-		IA_ApiHandler.GetInstance().FetchGlobalServerLeaderboard();
-	}
-	*/
-    
-    string GetCachedLeaderboardData()
-    {
-        return m_sReplicatedLeaderboardJson;
-    }
-	
-	string GetCachedServerLeaderboardData()
-    {
-        return m_sReplicatedServerLeaderboardJson;
-    }
-	
-	string GetCachedGlobalServerLeaderboardData()
-	{
-		return m_sReplicatedGlobalServerLeaderboardJson;
+		s_Instance = this;
 	}
 
-    //------------------------------------------------------------------------------------------------
-    // REPLICATION
-    //------------------------------------------------------------------------------------------------
-    private void OnLeaderboardDataChanged()
-    {
-        // This is called on clients when the data arrives
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print("IA_LeaderboardManagerComponent: Replicated leaderboard data received on client.", LogLevel.NORMAL);
-        }
-        GetOnLeaderboardDataUpdated().Invoke(m_sReplicatedLeaderboardJson);
-    }
-	
-	private void OnServerLeaderboardDataChanged()
-    {
-        // This is called on clients when the server-specific data arrives
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print("IA_LeaderboardManagerComponent: Replicated SERVER leaderboard data received on client.", LogLevel.NORMAL);
-        }
-        GetOnServerLeaderboardDataUpdated().Invoke(m_sReplicatedServerLeaderboardJson);
-    }
-	
-	private void OnGlobalServerLeaderboardDataChanged()
+	//------------------------------------------------------------------------------------------------
+	override void OnDelete(IEntity owner)
 	{
-		// This is called on clients when the global server data arrives
-		if (IA_Log.IsDebugEnabled())
+		if (m_Service)
+			m_Service.Close();
+		m_Service = null;
+		if (s_Instance == this)
+			s_Instance = null;
+		super.OnDelete(owner);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Answer one player's request. Every argument comes from a client, so all are checked here.
+	//! \param viewId the client's tag for this board and sort order, sent back with the answer
+	void Request(int playerId, int viewId, int board, int sortKey, bool descending, int offset)
+	{
+		if (!Replication.IsServer())
+			return;
+
+		IA_BoardService service = Service();
+		if (!IA_BoardProtocol.IsBoard(board) || !IA_BoardProtocol.IsSort(sortKey) || offset < 0 || offset > IA_BoardProtocol.MAX_OFFSET)
 		{
-			Print("IA_LeaderboardManagerComponent: Replicated GLOBAL SERVER leaderboard data received on client.", LogLevel.NORMAL);
+			service.SendStatus(playerId, viewId, offset, IA_BoardProtocol.STATUS_FAILED);
+			return;
 		}
-		GetOnGlobalServerLeaderboardDataUpdated().Invoke(m_sReplicatedGlobalServerLeaderboardJson);
+
+		int pageOffset = IA_BoardProtocol.PageOffset(offset);
+		if (board == IA_BoardProtocol.BOARD_SESSION)
+		{
+			ServeSession(playerId, viewId, sortKey, descending, pageOffset);
+			return;
+		}
+
+		service.Request(playerId, viewId, board, sortKey, descending, pageOffset);
 	}
-}; 
+
+	//------------------------------------------------------------------------------------------------
+	//! The service is made by the first request, which only a server gets.
+	protected IA_BoardService Service()
+	{
+		if (!m_Service)
+		{
+			m_Service = new IA_BoardService();
+			m_Service.Open();
+		}
+		return m_Service;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void ServeSession(int playerId, int viewId, int sortKey, bool descending, int offset)
+	{
+		IA_BoardService service = Service();
+		IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+		if (!session)
+		{
+			service.SendStatus(playerId, viewId, offset, IA_BoardProtocol.STATUS_OFFLINE);
+			return;
+		}
+
+		ref array<string> rows = {};
+		string mine;
+		string guid = SCR_PlayerIdentityUtils.GetPlayerIdentityId(playerId);
+		int total = session.BuildBoardPage(sortKey, descending, offset, IA_BoardProtocol.PAGE_ROWS, guid, playerId, rows, mine);
+		service.Send(playerId, viewId, IA_BoardProtocol.STATUS_OK, total, offset, rows, mine);
+	}
+}

@@ -1,0 +1,17 @@
+MetaFileClass {
+ Name "{28E5E49794662326}Assets/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8_Body_Paint10.emat"
+ Configurations {
+  EMATResourceClass PC {
+  }
+  EMATResourceClass XBOX_ONE : PC {
+  }
+  EMATResourceClass XBOX_SERIES : PC {
+  }
+  EMATResourceClass PS4 : PC {
+  }
+  EMATResourceClass PS5 : PC {
+  }
+  EMATResourceClass HEADLESS : PC {
+  }
+ }
+}

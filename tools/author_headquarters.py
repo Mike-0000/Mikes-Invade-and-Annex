@@ -23,6 +23,7 @@ import sys
 sys.dont_write_bytecode=True
 from author_base_compositions import Author, Node, REF, guid, resource, metadata
 from author_base_designs import SIZES, CAPS, RECIPE_EXPANDED_BUDGET, box, overlap, mesh_box, vec
+from author_base_designs import SHELTERS, SHELTER_EXPANDED, square, shelter_box, shelter_entrance, gun_reserves, plan_shelters
 
 ROOT=Path(__file__).resolve().parents[1]
 OUT='Prefabs/BaseCompositions/Headquarters/'
@@ -644,7 +645,7 @@ class Plan:
         self.rng=random.Random(40503+size_id*1999+variant*337)
         self.catalog=catalog; self.measure=measure
         self.Wl,self.Dl=wall_extent(self.W,self.D)
-        self.modules=[]; self.walls=[]; self.belt=[]; self.dressing=[]
+        self.modules=[]; self.walls=[]; self.belt=[]; self.dressing=[]; self.shelters=[]
         self.guns=0; self.heavy=0
         self.lanes=[]
         self.capture=[0,0,0]
@@ -962,6 +963,8 @@ class Plan:
             return True
         if any(overlap(a,self.bare(o),0.6) for o in self.modules):
             return False
+        if any(overlap(a,shelter_box(s),0.6) for s in self.shelters):
+            return False
         # Road segments butt together; everything else keeps a walking gap.
         if any(overlap(a,self.dbox(d),0.3) for d in self.solid()+list(extra) if kind!='road' or d['kind']!='road'):
             return False
@@ -970,6 +973,8 @@ class Plan:
         if not lane_ok and any(overlap(a,lane,0.3) for lane in self.lanes):
             return False
         if not apron_ok and any(overlap(a,ap) for o in self.modules for ap,_ in self.aprons(o)):
+            return False
+        if not apron_ok and any(overlap(a,shelter_entrance(s)) for s in self.shelters):
             return False
         return not overlap(a,(self.capture[0]-1.5,self.capture[2]-1.5,self.capture[0]+1.5,self.capture[2]+1.5))
 
@@ -1175,6 +1180,7 @@ class Plan:
                 break
             if self.place_row(key,'Supply',True,-mirror if placed%2 else mirror):
                 placed+=1
+        self.build_shelters()
         self.build_walls()
         self.build_belt()
         self.build_roads()
@@ -1191,20 +1197,45 @@ class Plan:
         roots=self.roots()
         assert roots<=ROOT_LIMIT,(self.name,self.variant,'roots',roots)
         assert self.expanded()+self.guns*12<=RECIPE_EXPANDED_BUDGET,(self.name,self.variant,'expanded')
+        assert len(self.shelters)==SHELTERS[self.size],(self.name,self.variant,'shelters',len(self.shelters))
         posts=self.posts()
         assert len(posts)>=(16 if self.size<2 else 6),(self.name,self.variant,'posts',len(posts))
         self._posts=posts
 
     def expanded(self):
-        return sum(m['expanded'] for m in self.modules+self.walls+self.belt+self.dressing)
+        return sum(m['expanded'] for m in self.modules+self.walls+self.belt+self.dressing)+len(self.shelters)*SHELTER_EXPANDED
 
     def roots(self):
-        return len(self.modules)+len(self.walls)+len(self.belt)+len(self.dressing)
+        return len(self.modules)+len(self.walls)+len(self.belt)+len(self.dressing)+len(self.shelters)
+
+    def entries(self):
+        """Fixed guard posts at the three gates."""
+        return [[0,0,-self.Dl+5],[-self.Wl+5,0,-8],[self.Wl-5,0,-8]]
+
+    def build_shelters(self):
+        """Air-raid bunkers inside the capture circle. Planned after the
+        buildings and before the dressing so vignettes and paths work around
+        them; they stay off doors, the lane, the gate throats and gun crews."""
+        lim_x,lim_z=self.limits()
+        keep_out=[(box(m),1) for m in self.modules]
+        keep_out+=[(a,1) for m in self.modules for a,_ in self.aprons(m)]
+        keep_out+=[(self.dbox(d),1) for d in self.solid()]
+        keep_out+=[(lane,1) for lane in self.lanes]
+        keep_out.append((square(self.capture,2.5),0))
+        keep_out+=[(r,0) for r in gun_reserves(self.modules,self.catalog)]
+        keep_out+=[((-self.Wl,-13,-self.Wl+12,-3),0),((self.Wl-12,-13,self.Wl,-3),0)]
+        keep_out+=[(square(p,1.5),1) for p in self.entries()]
+        entrance_keep_out=[(self.bare(m),0) for m in self.modules]+[(self.dbox(d),0) for d in self.solid()]
+        count=SHELTERS[self.size]
+        while count and (self.roots()+count>ROOT_LIMIT or
+                         self.expanded()+count*SHELTER_EXPANDED+self.guns*12>RECIPE_EXPANDED_BUDGET):
+            count-=1
+        self.shelters=plan_shelters(count,self.capture,min(self.W,self.D),lim_x-1,lim_z-1,keep_out,entrance_keep_out)
 
     def posts(self):
         posts=[]
         lim_x=int(self.Wl)-4; lim_z=int(self.Dl)-4
-        points=[self.capture,[0,0,-self.Dl+5],[-self.Wl+5,0,-8],[self.Wl-5,0,-8]]
+        points=[self.capture]+self.entries()
         tail=[[x,0,z] for z in range(-lim_z,lim_z+1,4) for x in range(-lim_x,lim_x+1,4)]
         self.rng.shuffle(tail)
         for p in points+tail:
@@ -1212,6 +1243,8 @@ class Plan:
             if any(overlap(a,box(m),1) for m in self.modules):
                 continue
             if any(overlap(a,self.dbox(d),0.5) for d in self.solid()):
+                continue
+            if any(overlap(a,shelter_box(s),1) or overlap(a,shelter_entrance(s),1) for s in self.shelters):
                 continue
             if any(math.dist((p[0],p[2]),(q[0],q[2]))<5 for q in posts):
                 continue
@@ -1224,7 +1257,7 @@ class Plan:
         return {'name':f'{self.name} / HQ {ARCHETYPES[self.archetype]} {self.variant%3+1}','size':self.size,'variant':self.variant,
                 'archetype':ARCHETYPES[self.archetype],'half_width':self.W,'half_depth':self.D,'wall_half_width':self.Wl,
                 'wall_half_depth':self.Dl,'garrison':self.garrison,'capture':self.capture,'modules':self.modules,
-                'walls':self.walls,'belt':self.belt,'dressing':self.dressing,'posts':self._posts,'guns':self.guns,'heavy':self.heavy,
+                'walls':self.walls,'belt':self.belt,'dressing':self.dressing,'shelters':self.shelters,'posts':self._posts,'guns':self.guns,'heavy':self.heavy,
                 'expanded':self.expanded(),'roots':self.roots()}
 
 
@@ -1262,6 +1295,9 @@ def recipe_script(recipes):
             lines += [f'\t\tlayout.AddComposition("{m["key"]}", {vec(m["position"])}, {m["yaw"]}, IA_DynamicSiteModuleRole.{m["role"]}, {m["side"]}, {required});']
         for w in r['walls']:
             lines += [f'\t\tlayout.AddWallRun("{w["key"]}", {vec(w["position"])}, {w["yaw"]}, {w["side"]});']
+        # Bunkers before the belt: the first dressing starts the gun phase.
+        for s in r['shelters']:
+            lines += [f'\t\tlayout.AddAirRaidBunker({vec(s["position"])}, {s["yaw"]});']
         for b in r['belt']:
             lines += [f'\t\tlayout.AddObstacle("{b["key"]}", {vec(b["position"])}, {b["yaw"]});']
         for d in r['dressing']:
@@ -1296,6 +1332,9 @@ def sheet(recipes):
         for x in sorted(r['dressing'],key=lambda x:x['kind']!='decal'):
             a,bb,c,d=mesh_box(x,MEASURE_CACHE)
             rows += [f'<rect x="{cx+a*scale:.2f}" y="{cy-d*scale:.2f}" width="{(c-a)*scale:.2f}" height="{(d-bb)*scale:.2f}" fill="{tones[x["kind"]]}" fill-opacity="{0.45 if x["kind"]=="decal" else 0.9}"/>']
+        for s in r['shelters']:
+            a,bb,c,d=shelter_box(s)
+            rows += [f'<rect x="{cx+a*scale:.2f}" y="{cy-d*scale:.2f}" width="{(c-a)*scale:.2f}" height="{(d-bb)*scale:.2f}" fill="#55642f" stroke="#ffcf73"/>']
         for m in r['modules']:
             a,bb,c,d=box(m)
             rows += [f'<rect x="{cx+a*scale:.2f}" y="{cy-d*scale:.2f}" width="{(c-a)*scale:.2f}" height="{(d-bb)*scale:.2f}" fill="{colors.get(m["role"],"#777")}" fill-opacity="0.85"/>',

@@ -1,5 +1,10 @@
 //------------------------------------------------------------------------------------------------
 //! Server-authoritative session ranks. RAM only — gone on restart. No API / DB.
+//!
+//! The board itself is not replicated: it grows with every player who joins, and one
+//! replicated string of it outgrew what the engine sends. Each player is pushed their own
+//! standing through their controller, which is all the HUD chip shows, and the leaderboard
+//! menu asks for the board a page at a time (IA_LeaderboardManagerComponent).
 //------------------------------------------------------------------------------------------------
 [ComponentEditorProps(category: "Invade & Annex/Components", description: "Current-session rank board (resets on restart).")]
 class IA_SessionRankManagerComponentClass : SCR_BaseGameModeComponentClass
@@ -12,15 +17,19 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 	protected static const int XP_KILL = 15;
 	protected static const int XP_HVT = 75;
 	protected static const int XP_HVT_GUARD = 25;
-
-	[RplProp(onRplName: "OnReplicated")]
-	protected string m_sJson;
+	protected static const int STANDING_FIRST_ASK_MS = 1500;
+	protected static const int STANDING_RETRY_MS = 4000;
 
 	protected ref map<string, ref IA_SessionRankEntry> m_mPlayers;
 	protected ref map<string, int> m_mAoStartScore;
 	protected ref array<ref IA_SessionRankEntry> m_aSorted;
 	protected ref ScriptInvoker m_OnUpdated;
 	protected bool m_bReplicatePending;
+	protected ref map<int, string> m_mSentStanding;	// server: what each player was last told
+	protected ref IA_SessionRankEntry m_LocalEntry;	// client: this player's own standing
+	protected int m_iLocalPlace;
+	protected int m_iPlayerCount;
+	protected bool m_bStandingKnown;
 	protected static IA_SessionRankManagerComponent s_Instance;
 
 	//------------------------------------------------------------------------------------------------
@@ -38,20 +47,32 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
-	string GetCachedJson()
-	{
-		return m_sJson;
-	}
-
-	//------------------------------------------------------------------------------------------------
+	//! Server only: every entry, best session XP first.
 	array<ref IA_SessionRankEntry> GetSorted()
 	{
 		return m_aSorted;
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! \return players on the session board, as last told to this machine
+	int GetPlayerCount()
+	{
+		if (Replication.IsServer())
+		{
+			if (!m_mPlayers)
+				return 0;
+			return m_mPlayers.Count();
+		}
+		return m_iPlayerCount;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! This player's own entry: the pushed standing on a client, the live entry on the server.
 	IA_SessionRankEntry FindLocal()
 	{
+		if (!Replication.IsServer())
+			return m_LocalEntry;
+
 		if (!m_aSorted)
 			return null;
 
@@ -74,6 +95,9 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 	//------------------------------------------------------------------------------------------------
 	int GetLocalPlace()
 	{
+		if (!Replication.IsServer())
+			return m_iLocalPlace;
+
 		if (!m_aSorted)
 			return 0;
 
@@ -122,17 +146,18 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 		s_Instance = this;
 		m_mPlayers = new map<string, ref IA_SessionRankEntry>();
 		m_aSorted = new array<ref IA_SessionRankEntry>();
+		m_mSentStanding = new map<int, string>();
 
+		// A push made before this component streamed in is lost, so a client also asks.
 		if (!Replication.IsServer())
-		{
-			RebuildFromJson(m_sJson);
-			GetOnUpdated().Invoke(m_sJson);
-		}
+			GetGame().GetCallqueue().CallLater(this.PullStanding, STANDING_FIRST_ASK_MS, false);
 	}
 
 	//------------------------------------------------------------------------------------------------
 	override void OnDelete(IEntity owner)
 	{
+		GetGame().GetCallqueue().Remove(this.PullStanding);
+		GetGame().GetCallqueue().Remove(this.FlushReplication);
 		if (s_Instance == this)
 			s_Instance = null;
 		super.OnDelete(owner);
@@ -310,6 +335,153 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Session XP for flying troops into the AO; one XP per transport rating point.
+	//! Called once for each credited insertion.
+	void AwardTransport(string playerId, string playerName, int points)
+	{
+		if (points < 1)
+			return;
+		AwardXp(playerId, playerName, points, 0, 0, 0, 0, 0);
+
+		if (!m_mPlayers)
+			return;
+		IA_SessionRankEntry entry = m_mPlayers.Get(playerId);
+		if (!entry)
+			return;
+		entry.transport = entry.transport + points;
+		entry.insertions = entry.insertions + 1;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: tell one player where they stand now. Answers the client's own ask.
+	void SendStanding(int playerId)
+	{
+		if (!Replication.IsServer())
+			return;
+
+		// Identity not resolved yet: say nothing, the client asks again.
+		IA_SessionRankEntry entry = EnsurePlayerById(playerId);
+		if (!entry)
+			return;
+
+		RebuildSorted();
+		int total = m_aSorted.Count();
+		for (int i = 0; i < total; i++)
+		{
+			if (m_aSorted[i] != entry)
+				continue;
+			PushStanding(entry, i + 1, total, true);
+			return;
+		}
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Client: the server's word on this player's own standing.
+	void OnLocalStanding(int place, int total, int rankId, int kills, int deaths, int score)
+	{
+		if (Replication.IsServer())
+			return;
+
+		if (!m_LocalEntry)
+			m_LocalEntry = new IA_SessionRankEntry();
+		m_LocalEntry.playerId = GetLocalPlayerGuid();
+		m_LocalEntry.netId = SCR_PlayerController.GetLocalPlayerId();
+		m_LocalEntry.rankId = rankId;
+		m_LocalEntry.kills = kills;
+		m_LocalEntry.deaths = deaths;
+		m_LocalEntry.score = score;
+		m_iLocalPlace = place;
+		m_iPlayerCount = total;
+		m_bStandingKnown = true;
+		GetOnUpdated().Invoke("");
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: one page of the session board in the asked order, as packed IA_BoardRow lines.
+	//! \param playerGuid identity of the asking player, for their own line
+	//! \param playerId player manager id of the asking player, used when the identity is unknown
+	//! \param[out] rows the page
+	//! \param[out] mine the asking player's own line, empty when they are not on the board
+	//! \return players on the board
+	int BuildBoardPage(int sortKey, bool descending, int offset, int limit, string playerGuid, int playerId, notnull array<string> rows, out string mine)
+	{
+		rows.Clear();
+		mine = "";
+		if (!m_mPlayers)
+			return 0;
+
+		ref array<IA_SessionRankEntry> order = {};
+		ref array<float> values = {};
+		foreach (string id, IA_SessionRankEntry entry : m_mPlayers)
+		{
+			if (!entry)
+				continue;
+
+			// Insertion sort: the board is one session's players, and ties keep the higher XP first.
+			float value = BoardSortValue(entry, sortKey);
+			int at = order.Count();
+			while (at > 0)
+			{
+				IA_SessionRankEntry other = order[at - 1];
+				float otherValue = values[at - 1];
+				bool before = false;
+				if (value == otherValue)
+					before = entry.score > other.score;
+				else if (descending)
+					before = value > otherValue;
+				else
+					before = value < otherValue;
+				if (!before)
+					break;
+				at = at - 1;
+			}
+			order.InsertAt(entry, at);
+			values.InsertAt(value, at);
+		}
+
+		int total = order.Count();
+		for (int i = 0; i < total; i++)
+		{
+			IA_SessionRankEntry listed = order[i];
+			bool own = playerId > 0 && listed.netId == playerId;
+			if (!playerGuid.IsEmpty() && listed.playerId == playerGuid)
+				own = true;
+			bool inPage = i >= offset && i < offset + limit;
+			if (!own && !inPage)
+				continue;
+
+			string line = IA_BoardRow.Pack(i + 1, listed.PlayerName, listed.kills, listed.deaths, listed.hvt_kills, listed.hvt_guard_kills, listed.obj_score, listed.score, listed.transport, listed.insertions, 0, listed.rankId);
+			if (inPage)
+				rows.Insert(line);
+			if (own)
+				mine = line;
+		}
+		return total;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected float BoardSortValue(notnull IA_SessionRankEntry entry, int sortKey)
+	{
+		if (sortKey == IA_BoardProtocol.SORT_KILLS)
+			return entry.kills;
+		if (sortKey == IA_BoardProtocol.SORT_DEATHS)
+			return entry.deaths;
+		if (sortKey == IA_BoardProtocol.SORT_KD)
+			return IA_BoardRow.KillRatio(entry.kills, entry.deaths);
+		if (sortKey == IA_BoardProtocol.SORT_HVT)
+			return entry.hvt_kills;
+		if (sortKey == IA_BoardProtocol.SORT_GUARD)
+			return entry.hvt_guard_kills;
+		if (sortKey == IA_BoardProtocol.SORT_OBJ)
+			return entry.obj_score;
+		if (sortKey == IA_BoardProtocol.SORT_TRANSPORT)
+			return entry.transport;
+		if (sortKey == IA_BoardProtocol.SORT_INSERTIONS)
+			return entry.insertions;
+		return entry.score;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected void AwardXp(string playerId, string playerName, int xp, int kills, int deaths, int hvt, int guard, int obj)
 	{
 		if (!Replication.IsServer())
@@ -379,6 +551,8 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 		entry.hvt_guard_kills = 0;
 		entry.obj_score = 0;
 		entry.score = 0;
+		entry.transport = 0;
+		entry.insertions = 0;
 		entry.rankId = SCR_ECharacterRank.PRIVATE;
 		entry.netId = ResolveNetId(playerId);
 		m_mPlayers.Insert(playerId, entry);
@@ -432,40 +606,50 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 			return;
 
 		RebuildSorted();
-		m_sJson = BuildJson();
-		Replication.BumpMe();
-		GetOnUpdated().Invoke(m_sJson);
+		int total = m_aSorted.Count();
+		for (int i = 0; i < total; i++)
+		{
+			PushStanding(m_aSorted[i], i + 1, total, false);
+		}
+		GetOnUpdated().Invoke("");
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void OnReplicated()
+	//! Server: send a player their standing when it differs from what they were last told.
+	protected void PushStanding(IA_SessionRankEntry entry, int place, int total, bool force)
 	{
-		RebuildFromJson(m_sJson);
-		GetOnUpdated().Invoke(m_sJson);
+		if (!entry || entry.netId <= 0)
+			return;
+		// A hosting player reads the live entry.
+		if (entry.netId == SCR_PlayerController.GetLocalPlayerId())
+			return;
+
+		string stamp = string.Format("%1|%2|%3|%4|%5|%6", place, total, entry.rankId, entry.kills, entry.deaths, entry.score);
+		if (!force && m_mSentStanding.Get(entry.netId) == stamp)
+			return;
+
+		PlayerManager players = GetGame().GetPlayerManager();
+		if (!players)
+			return;
+		SCR_PlayerController controller = SCR_PlayerController.Cast(players.GetPlayerController(entry.netId));
+		if (!controller)
+			return;
+
+		m_mSentStanding.Set(entry.netId, stamp);
+		controller.IA_SendSessionStanding(place, total, entry.rankId, entry.kills, entry.deaths, entry.score);
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void RebuildFromJson(string jsonData)
+	//! Client: ask until the first standing arrives.
+	protected void PullStanding()
 	{
-		m_aSorted = new array<ref IA_SessionRankEntry>();
-		if (!jsonData || jsonData.IsEmpty())
+		if (m_bStandingKnown)
 			return;
 
-		JsonLoadContext jsonContext = new JsonLoadContext();
-		if (!jsonContext.LoadFromString(jsonData))
-		{
-			Print("[IA][SessionRank] Failed to load session JSON.", LogLevel.ERROR);
-			return;
-		}
-
-		ref array<ref IA_SessionRankEntry> loaded = new array<ref IA_SessionRankEntry>();
-		if (!jsonContext.ReadValue("", loaded))
-		{
-			Print("[IA][SessionRank] Failed to read session entries.", LogLevel.ERROR);
-			return;
-		}
-
-		m_aSorted = loaded;
+		SCR_PlayerController controller = SCR_PlayerController.Cast(GetGame().GetPlayerController());
+		if (controller)
+			controller.IA_AskSessionStanding();
+		GetGame().GetCallqueue().CallLater(this.PullStanding, STANDING_RETRY_MS, false);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -496,41 +680,5 @@ class IA_SessionRankManagerComponent : SCR_BaseGameModeComponent
 				m_aSorted[j + 1] = tmp;
 			}
 		}
-	}
-
-	//------------------------------------------------------------------------------------------------
-	protected string BuildJson()
-	{
-		string json = "[";
-		int count = 0;
-		if (m_aSorted)
-			count = m_aSorted.Count();
-
-		int i;
-		for (i = 0; i < count; i++)
-		{
-			IA_SessionRankEntry e = m_aSorted[i];
-			if (!e)
-				continue;
-
-			if (i > 0)
-				json = json + ",";
-
-			json = json + "{";
-			json = json + "\"playerId\": \"" + IA_JsonEscape(e.playerId) + "\",";
-			json = json + "\"PlayerName\": \"" + IA_JsonEscape(e.PlayerName) + "\",";
-			json = json + "\"kills\": " + e.kills.ToString() + ",";
-			json = json + "\"deaths\": " + e.deaths.ToString() + ",";
-			json = json + "\"hvt_kills\": " + e.hvt_kills.ToString() + ",";
-			json = json + "\"hvt_guard_kills\": " + e.hvt_guard_kills.ToString() + ",";
-			json = json + "\"obj_score\": " + e.obj_score.ToString() + ",";
-			json = json + "\"score\": " + e.score.ToString() + ",";
-			json = json + "\"rankId\": " + e.rankId.ToString() + ",";
-			json = json + "\"netId\": " + e.netId.ToString();
-			json = json + "}";
-		}
-
-		json = json + "]";
-		return json;
 	}
 }

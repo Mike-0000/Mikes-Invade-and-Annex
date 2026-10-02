@@ -97,15 +97,19 @@ for name in ['Full', 'Compact', 'Courtyard', 'Roadside', 'CommandPost', 'RallyPo
     section = layout.split('static IA_DynamicSiteLayout Create' + name + '()', 1)[1].split('return layout;', 1)[0]
     modules = re.findall(r'layout.Add(?:Module|Dressing)\("\w+", (PREFAB_\w+),', section)
     covers = section.count('layout.AddCover(')
-    roots = len(modules) + covers
+    shelters = section.count('layout.AddShelter(')
+    roots = len(modules) + covers + shelters
     expanded = sum(count(prefabs[key]) for key in modules) + covers * count(prefabs['PREFAB_COVER'])
+    expanded += shelters * count(prefabs['PREFAB_SHELTER'])
     for key, estimate in re.findall(r'layout.AddDressing\("\w+", (PREFAB_\w+),[^;]*, (\d+)\);', section):
         assert int(estimate) >= count(prefabs[key]), (name, key, 'underestimated dressing entities')
+    shelter_estimate = int(re.search(r'SHELTER_EXPANDED_ENTITIES = (\d+);', layout)[1])
+    assert shelter_estimate >= count(prefabs['PREFAB_SHELTER']), (name, 'underestimated shelter entities')
     assert roots <= 256, (name, roots)
     placer = (REPO / 'Scripts/Game/IA_DynamicSitePlacer.c').read_text()
     ceiling = int(re.search(r'MAX_EXPANDED = (\d+)', placer)[1])
     assert expanded <= ceiling, (name, expanded)
-    print(f'{name}: {roots} roots, <= {expanded}/{ceiling} expanded entities')
+    print(f'{name}: {roots} roots ({shelters} shelters), <= {expanded}/{ceiling} expanded entities')
 
 guids = set()
 for prefab in (REPO / 'Prefabs/DynamicBase').glob('*.et'):

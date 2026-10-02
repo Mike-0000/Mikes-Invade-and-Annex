@@ -30,14 +30,43 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 	protected IEntity m_RespawnerOwnerEntity; 		// Stores the entity this component is attached to
 	protected IEntity m_RespawnerSpawnedVehicle; 	// Stores the vehicle spawned by this respawner
 
+	// Server: every helicopter pad, for IA_HeliSkinPadService.
+	protected static ref array<IA_VehicleRespawner> s_aHeliPads = {};
+
+	//------------------------------------------------------------------------------------------------
+	static array<IA_VehicleRespawner> GetHeliPads()
+	{
+		return s_aHeliPads;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	bool IsHeliPad()
+	{
+		return m_eVehicleSpawnType == IA_VehicleSpawnType.GENERIC_HELI || m_eVehicleSpawnType == IA_VehicleSpawnType.ATTACK_HELI || m_eVehicleSpawnType == IA_VehicleSpawnType.TRANSPORT_HELI;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return the vehicle this pad spawned while it is still parked on the pad, null otherwise
+	IEntity GetParkedVehicle()
+	{
+		if (!m_RespawnerOwnerEntity || !m_RespawnerSpawnedVehicle)
+			return null;
+		if (vector.Distance(m_RespawnerSpawnedVehicle.GetOrigin(), m_RespawnerOwnerEntity.GetOrigin()) >= MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN)
+			return null;
+		return m_RespawnerSpawnedVehicle;
+	}
+
 	//------------------------------------------------------------------------------------------------
 	override void OnPostInit(IEntity owner)
 	{
-		super.OnPostInit(owner); 
+		super.OnPostInit(owner);
 		m_RespawnerOwnerEntity = owner; // Store our owner
 
 		if (RplSession.Mode() == RplMode.Client || !GetGame().InPlayMode())
 			return;
+
+		if (IsHeliPad())
+			s_aHeliPads.Insert(this);
 
 		if (m_fRespawnCheckInterval <= 0)
 			m_fRespawnCheckInterval = DEFAULT_RESPAWN_INTERVAL_S;
@@ -195,7 +224,7 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			
 		if (RplSession.Mode() == RplMode.Client || !GetGame().InPlayMode())
 			return;
-		
+
 		// If an alive vehicle (spawned by this spawner) is already present and close, do nothing.
 		if (m_RespawnerSpawnedVehicle && IsVehicleAlive(m_RespawnerSpawnedVehicle) && 
 			vector.Distance(m_RespawnerSpawnedVehicle.GetOrigin(), m_RespawnerOwnerEntity.GetOrigin()) < MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN)
@@ -300,6 +329,9 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			}
 		}
 		
+		// A helicopter of a paint family spawns as its twin on a free paint channel; anything else has none and spawns as it is.
+		vehiclePrefabToSpawn = IA_HeliPaintRigComponent.ResolveSpawnPrefab(vehiclePrefabToSpawn);
+
 		Resource resource = Resource.Load(vehiclePrefabToSpawn);
 		if (!resource || !resource.IsValid())
 		{
@@ -336,6 +368,8 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 	void ~IA_VehicleRespawner()
 	{
 		//Print(string.Format("IA_VehicleRespawner %1: Destructor called.", m_RespawnerOwnerEntity), LogLevel.DEBUG);
+		if (s_aHeliPads)
+			s_aHeliPads.RemoveItem(this);
 		if (GetGame() && GetGame().GetCallqueue()) // Check if game and callqueue exist (e.g. during editor shutdown)
 		{
 			GetGame().GetCallqueue().Remove(CheckVehicleStatus);

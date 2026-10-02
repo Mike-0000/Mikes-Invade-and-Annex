@@ -1,0 +1,351 @@
+#ifdef WORKBENCH
+[WorkbenchPluginAttribute(name: "IA transport pilot regression", wbModules: {"ResourceManager"})]
+class IA_TransportPilotTest : WorkbenchPlugin
+{
+	protected int m_iFailures;
+
+	override void RunCommandline()
+	{
+		TestWeighting();
+		TestCreditRules();
+		TestGlobalRating();
+		TestSkinEligibility();
+		TestBackoff();
+		TestCardPayload();
+		TestCardMerge();
+		TestCardText();
+		TestCardTiming();
+		TestCardPreview();
+
+		if (m_iFailures == 0)
+			Print("[IA][TransportPilotTest] PASS", LogLevel.NORMAL);
+		Workbench.Exit(m_iFailures);
+	}
+
+	protected void TestWeighting()
+	{
+		Check(IA_TransportScoring.InsertionPoints(0) == 30, "a dropoff inside the objective pays the hot weight");
+		Check(IA_TransportScoring.InsertionPoints(150) == 30, "the hot band reaches 150 m past the circle");
+		Check(IA_TransportScoring.InsertionPoints(575) == 20, "the weight falls linearly across the band");
+		Check(IA_TransportScoring.InsertionPoints(1000) == 10, "the band edge pays base points");
+		Check(IA_TransportScoring.InsertionPoints(1001) == 0, "a dropoff past the band pays nothing");
+		Check(IA_TransportScoring.InsertionPoints(300) > IA_TransportScoring.InsertionPoints(800), "closer dropoffs pay more");
+		Check(IA_TransportScoring.MaxPointsPerInsertion() == 30, "the backend cap matches the scoring maximum");
+
+		Check(IA_TransportScoring.EdgeDistance("100 0 0", "0 50 0", 40) == 60, "edge distance is horizontal and measured from the circle");
+		Check(IA_TransportScoring.EdgeDistance("10 0 0", "0 0 0", 40) == 0, "a point inside the circle is at distance zero");
+	}
+
+	protected void TestCreditRules()
+	{
+		Check(!IA_TransportScoring.IsCreditableRide(299, 500000, -1), "a seat shuffle is not transport");
+		Check(IA_TransportScoring.IsCreditableRide(300, 500000, -1), "a first ride of 300 m is creditable");
+		Check(!IA_TransportScoring.IsCreditableRide(2000, 500000, 400000), "the same passenger cannot be credited twice inside the cooldown");
+		Check(IA_TransportScoring.IsCreditableRide(2000, 520000, 400000), "the passenger is creditable again after the cooldown");
+	}
+
+	protected void TestGlobalRating()
+	{
+		ref IA_TransportPilotRecord record = new IA_TransportPilotRecord();
+		record.m_iPendingPoints = 3000;
+		Check(record.GetRating() == IA_TransportPilotRecord.RATING_UNKNOWN, "local points alone never produce a rating");
+
+		record.m_iGlobalRating = 2400;
+		record.m_iPendingPoints = 60;
+		record.m_iSentPoints = 50;
+		Check(record.GetRating() == 2510, "unacknowledged points count on top of the global total");
+	}
+
+	protected void TestSkinEligibility()
+	{
+		IA_HeliSkinDef tan = IA_HeliSkinCatalog.FindDefByKey("huey_tan");
+		Check(tan != null, "desert tan keeps the key the backend holds a threshold for");
+		if (!tan)
+			return;
+
+		// A livery is one paint colour; the catalogue is walked by threshold, not by its order.
+		array<ref IA_HeliSkinDef> defs = IA_HeliSkinCatalog.GetDefs();
+		IA_HeliSkinDef cheapest = IA_HeliSkinCatalog.FindNextLocked(0);
+		IA_HeliSkinDef top = IA_HeliSkinCatalog.FindBestUnlocked(int.MAX);
+		Check(defs.Count() > 1 && cheapest && top && cheapest != top, "the catalogue holds several liveries");
+		if (!cheapest || !top)
+			return;
+
+		ref array<string> keys = {};
+		ref array<int> ids = {};
+		foreach (IA_HeliSkinDef def : defs)
+		{
+			Check(def.m_iId > 0 && !ids.Contains(def.m_iId) && !keys.Contains(def.m_sKey), def.m_sKey + " has an id and a key of its own");
+			Check(def.m_iRequiredPoints > 0 && !def.m_sDisplayName.IsEmpty() && def.m_vPaint.Length() > 0, def.m_sKey + " has a threshold, a name and a paint colour");
+			Check(IA_HeliSkinCatalog.FindDef(def.m_iId) == def, def.m_sKey + " is found by its id");
+			ids.Insert(def.m_iId);
+			keys.Insert(def.m_sKey);
+		}
+
+		int required = tan.m_iRequiredPoints;
+		int lowest = cheapest.m_iRequiredPoints;
+		int highest = top.m_iRequiredPoints;
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(IA_TransportPilotRecord.RATING_UNKNOWN) == null, "an unknown rating unlocks nothing");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(lowest - 1) == null, "a rating below the first threshold unlocks nothing");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(lowest) == cheapest, "the first threshold unlocks the first livery");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(required) == tan, "its threshold unlocks desert tan");
+		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required - 10, required + 20) == tan, "crossing a threshold reports the unlock");
+		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(required, required + 30) == null, "an already unlocked livery is not reported again");
+		Check(IA_HeliSkinCatalog.FindNewlyUnlocked(0, highest) == top, "several thresholds crossed at once report the highest");
+		Check(IA_HeliSkinCatalog.FindNextLocked(required - 1) == tan, "the next locked livery is the progress target");
+		Check(IA_HeliSkinCatalog.FindNextLocked(highest) == null, "nothing is left to work towards past the last threshold");
+
+		// The pad gives a pilot what they last chose, else the best they have earned.
+		Check(IA_HeliSkinPadService.PickLivery(highest, -1) == top, "a pilot who has not chosen gets their best livery");
+		Check(IA_HeliSkinPadService.PickLivery(highest, cheapest.m_iId) == cheapest, "a pilot who chose a livery gets it back");
+		Check(IA_HeliSkinPadService.PickLivery(highest, IA_HeliSkinCatalog.SKIN_NONE) == null, "a pilot who chose stock paint keeps it");
+		Check(IA_HeliSkinPadService.PickLivery(lowest, top.m_iId) == cheapest, "a choice that is not unlocked falls back to the best earned");
+		Check(IA_HeliSkinPadService.PickLivery(lowest - 1, top.m_iId) == null, "a pilot who has earned nothing gets stock paint");
+
+		// Every helicopter type is a family with paint channels of its own.
+		string huey = "Prefabs/Vehicles/Helicopters/UH1H/UH1H.et";
+		string hip = "Prefabs/Vehicles/Helicopters/Mi8MT/Mi8MT_unarmed_transport.et";
+		string jeep = "Prefabs/Vehicles/Wheeled/M151A2/M151A2.et";
+		int none = IA_HeliPaintChannels.CHANNEL_NONE;
+		int last = IA_HeliPaintChannels.CHANNEL_COUNT;
+		IA_HeliPaintFamily hueyFamily = IA_HeliPaintChannels.FindStockFamily(huey);
+		IA_HeliPaintFamily hipFamily = IA_HeliPaintChannels.FindStockFamily(hip);
+		Check(hueyFamily && hipFamily && hueyFamily != hipFamily, "the Huey and the Hip are paint families of their own");
+		Check(!IA_HeliPaintChannels.FindStockFamily(jeep) && !IA_HeliPaintChannels.IsStockAirframe(jeep), "a vehicle no family lists has none");
+		if (!hueyFamily || !hipFamily)
+			return;
+
+		int hueyFirst = IA_HeliPaintChannels.ToChannel(hueyFamily, 1);
+		int hueyLast = IA_HeliPaintChannels.ToChannel(hueyFamily, last);
+		int hipFirst = IA_HeliPaintChannels.ToChannel(hipFamily, 1);
+		int total = IA_HeliPaintChannels.GetChannelTotal();
+		Check(hueyFirst == 1 && hipFirst == last + 1, "families take their channel numbers in the order the manifest lists them");
+		Check(IA_HeliPaintChannels.GetFamily(hipFirst) == hipFamily && IA_HeliPaintChannels.GetLocalChannel(hipFirst) == 1, "a channel number names its family and its place in it");
+		Check(IA_HeliPaintChannels.IsChannel(total) && !IA_HeliPaintChannels.IsChannel(total + 1) && !IA_HeliPaintChannels.IsChannel(none), "there is no channel past the last family");
+		Check(IA_HeliPaintChannels.ToChannel(hueyFamily, last + 1) == none && IA_HeliPaintChannels.ToChannel(null, 1) == none, "a family has no channel past its last");
+
+		ResourceName twin = IA_HeliPaintChannels.FindChannelPrefab(huey, hueyFirst);
+		Check(twin.Contains("Paint/IA_UH1H_Paint1.et"), "the stock Huey has a twin on the first paint channel");
+		Check(IA_HeliPaintChannels.FindChannelPrefab("Prefabs/Vehicles/Helicopters/UH1H/UH1H_armed.et", hueyLast).Contains("IA_UH1H_armed_Paint"), "each stock airframe has its own twin on every channel");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(huey, none).IsEmpty(), "a pad without a channel keeps the stock airframe");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(huey, hipFirst).IsEmpty(), "an airframe has no twin on a channel of another family");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(hip, hipFirst).Contains("Mi8MT/Paint/"), "the Hip has twins on its own channels");
+		Check(IA_HeliPaintChannels.FindChannelPrefab(jeep, hueyFirst).IsEmpty(), "a vehicle without paint channels spawns as it is");
+		Check(IA_HeliPaintChannels.FindChannel(twin) == hueyFirst, "a twin is recognised as its channel");
+		Check(IA_HeliPaintChannels.FindChannel(twin.GetPath()) == hueyFirst, "a twin is recognised without its GUID");
+		Check(IA_HeliPaintChannels.FindChannel(IA_HeliPaintChannels.FindChannelPrefab(huey, hueyLast)) == hueyLast, "the last channel maps back to itself");
+		Check(IA_HeliPaintChannels.FindChannel(IA_HeliPaintChannels.FindChannelPrefab(hip, hipFirst)) == hipFirst, "a Hip twin maps back to its channel");
+		Check(IA_HeliPaintChannels.FindChannel(huey) == none, "a stock airframe has no paint channel");
+		Check(IA_HeliPaintChannels.GetMaterial(0, 2) != IA_HeliPaintChannels.GetMaterial(0, 1), "each channel has its own body material");
+		Check(IA_HeliPaintChannels.GetMaterial(0, hipFirst).Contains("Mi8"), "a Hip channel paints Hip materials");
+		Check(IA_HeliPaintChannels.GetMaterial(0, none).IsEmpty(), "no channel has no material");
+		Check(IA_HeliPaintChannels.GetMaterial(hueyFamily.m_aSurfaces.Count(), hueyFirst).IsEmpty(), "a surface the family does not have has no material");
+		Check(IA_HeliSkinPaint.Apply(none, tan.m_iId) == 0, "nothing is painted without a channel");
+		Check(IA_HeliSkinPaint.Apply(hueyFirst, 9999) == 0, "an unknown livery paints nothing");
+
+		// The threshold from the backend replaces the built-in default for every server.
+		IA_HeliSkinCatalog.SetRequiredPoints("huey_tan", required + 500);
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(required) != tan, "a raised central threshold locks the livery again");
+		IA_HeliSkinCatalog.SetRequiredPoints("huey_tan", 0);
+		IA_HeliSkinCatalog.SetRequiredPoints("unknown_skin", 1);
+		Check(tan.m_iRequiredPoints == required + 500, "invalid thresholds and unknown keys are ignored");
+		IA_HeliSkinCatalog.SetRequiredPoints("huey_tan", required);
+	}
+
+	protected void TestBackoff()
+	{
+		Check(IA_TransportScoring.BackoffMs(1, 60000, 1800000) == 60000, "the first failure waits the base interval");
+		Check(IA_TransportScoring.BackoffMs(3, 60000, 1800000) == 240000, "each further failure doubles the wait");
+		Check(IA_TransportScoring.BackoffMs(40, 60000, 1800000) == 1800000, "the wait is capped without overflowing");
+	}
+
+	protected void TestCardPayload()
+	{
+		ref IA_PilotDropoffPayload sent = new IA_PilotDropoffPayload();
+		sent.m_iKind = IA_PilotDropoffPayload.KIND_DROP;
+		sent.m_iTroops = 12;
+		sent.m_iPoints = 360;
+		sent.m_iRating = 12700;
+		sent.m_iRequired = 50000;
+		sent.m_iEdgeM = 40;
+		sent.m_sSkinName = "Desert Tan";
+		Check(sent.Pack() == "0|12|360|12700|50000|40|0|-|Desert Tan", "the card payload wire format is pinned");
+
+		IA_PilotDropoffPayload got = IA_PilotDropoffPayload.Parse(sent.Pack());
+		Check(got != null, "a packed payload parses");
+		if (got)
+		{
+			Check(got.IsDrop() && got.m_iTroops == 12 && got.m_iPoints == 360, "troops and points survive the round trip");
+			Check(got.m_iRating == 12700 && got.m_iRequired == 50000 && got.m_iEdgeM == 40, "rating, threshold and distance survive the round trip");
+			Check(got.m_sSkinName == "Desert Tan" && !got.HasUnlock(), "an absent unlock stays absent");
+			Check(got.WeightTenths() == 30 && got.IsHotLz(), "a full hot-LZ cabin reads x3.0");
+		}
+
+		sent.m_iRating = IA_TransportPilotRecord.RATING_UNKNOWN;
+		got = IA_PilotDropoffPayload.Parse(sent.Pack());
+		Check(got && got.m_iRating < 0, "an unknown rating stays unknown");
+
+		Check(IA_PilotDropoffPayload.Parse("Combat insertion: +30 transport rating") == null, "plain text is not a payload");
+		Check(IA_PilotDropoffPayload.Parse("0|0|0|100|50000|0|0|-|-") == null, "a drop with no passengers is rejected");
+		Check(IA_PilotDropoffPayload.Parse("7|1|30|100|50000|0|0|-|-") == null, "an unknown kind is rejected");
+		Check(IA_PilotDropoffPayload.Parse("1|0|0|100|50000|0|0|-|-") != null, "a status needs no passengers");
+	}
+
+	protected void TestCardMerge()
+	{
+		// Two ticks of one landing, the first before the global total was known.
+		IA_PilotDropoffPayload card = IA_PilotDropoffPayload.Parse("0|4|120|-1|0|0|0|-|-");
+		IA_PilotDropoffPayload second = IA_PilotDropoffPayload.Parse("0|8|160|12700|50000|600|0|-|Desert Tan");
+		Check(card != null && second != null, "merge inputs parse");
+		if (!card || !second)
+			return;
+
+		card.Merge(second);
+		Check(card.m_iTroops == 12 && card.m_iPoints == 280, "passengers and points add up on one card");
+		Check(card.m_iEdgeM == 400, "the distance is averaged per passenger");
+		Check(card.m_iRating == 12700 && card.m_iRequired == 50000, "the newer total wins");
+		Check(card.WeightTenths() == 23 && !card.IsHotLz(), "a mixed landing is not a hot LZ");
+
+		// A rating card that arrives while the landing is on screen must not downgrade it.
+		IA_PilotDropoffPayload status = IA_PilotDropoffPayload.Parse("1|0|0|50020|0|0|50000|Desert Tan|Desert Tan");
+		Check(status != null && status.HasUnlock(), "a status can carry an unlock");
+		if (!status)
+			return;
+
+		card.Merge(status);
+		Check(card.IsDrop() && card.m_iTroops == 12, "a status merged into a landing keeps the landing");
+		Check(card.HasUnlock() && card.m_iUnlockedRequired == 50000 && card.m_iRating == 50020, "the unlock and the new total are taken");
+
+		card.Merge(second);
+		Check(card.HasUnlock(), "an unlock stays announced once reported");
+
+		IA_PilotDropoffPayload seat = IA_PilotDropoffPayload.Parse("1|0|0|900|50000|0|0|-|Desert Tan");
+		if (seat)
+		{
+			seat.Merge(second);
+			Check(seat.IsDrop(), "a landing merged into a rating card upgrades it");
+		}
+	}
+
+	protected void TestCardText()
+	{
+		Check(IA_PilotDropoffPayload.FormatNumber(0) == "0", "zero has no separator");
+		Check(IA_PilotDropoffPayload.FormatNumber(999) == "999", "three digits have no separator");
+		Check(IA_PilotDropoffPayload.FormatNumber(12700) == "12,700", "thousands are separated");
+		Check(IA_PilotDropoffPayload.FormatNumber(1234567) == "1,234,567", "millions are separated twice");
+
+		Check(IA_PilotDropoffPayload.PercentTenths(12700, 50000) == 254, "progress is in tenths of a percent");
+		Check(IA_PilotDropoffPayload.PercentTenths(49999, 50000) == 999, "progress never rounds up to complete");
+		Check(IA_PilotDropoffPayload.PercentTenths(50000, 50000) == 1000, "the threshold is complete");
+		Check(IA_PilotDropoffPayload.PercentTenths(100, 0) == 0, "no threshold is no progress");
+		Check(IA_PilotDropoffPayload.FormatPercent(254) == "25.4%", "tenths are shown");
+		Check(IA_PilotDropoffPayload.FormatPercent(5) == "0.5%", "a small start is still visible");
+		Check(IA_PilotDropoffPayload.FormatPercent(1000) == "100%", "complete has no decimals");
+
+		IA_PilotDropoffPayload drop = IA_PilotDropoffPayload.Parse("0|12|360|12700|50000|40|0|-|Desert Tan");
+		IA_PilotDropoffPayload status = IA_PilotDropoffPayload.Parse("1|0|0|12700|50000|0|0|-|Desert Tan");
+		if (drop && status)
+		{
+			Check(drop.ToLine() == "Combat insertion: 12 troops, +360 transport rating (12,700 / 50,000 Desert Tan)", "the legacy HUD gets one line per landing");
+			Check(status.ToLine().IsEmpty(), "the legacy HUD shows no rating-only line");
+		}
+	}
+
+	protected void TestCardTiming()
+	{
+		Check(IA_TransportScoring.IsNewPilotSeat(10000, -1), "a first pilot seat is new");
+		Check(!IA_TransportScoring.IsNewPilotSeat(10000, 9000), "staying in the seat is not a new seat");
+		Check(IA_TransportScoring.IsNewPilotSeat(20000, 9000), "sitting down again after a break is a new seat");
+		Check(IA_TransportScoring.IsStatusDue(10000, -1), "the first rating card is due");
+		Check(!IA_TransportScoring.IsStatusDue(100000, 40000), "a rating card is not repeated inside the cooldown");
+		Check(IA_TransportScoring.IsStatusDue(160000, 40000), "a rating card is due again after the cooldown");
+
+		IA_HeliSkinDef tan = IA_HeliSkinCatalog.FindDefByKey("huey_tan");
+		if (!tan)
+			return;
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints - 1) != tan, "a livery is not unlocked below its threshold");
+		Check(IA_HeliSkinCatalog.FindBestUnlocked(tan.m_iRequiredPoints) == tan, "the best unlocked livery is reported once earned");
+	}
+
+	protected void TestCardPreview()
+	{
+		// The preview imitates a pilot working towards the last livery.
+		IA_HeliSkinDef top = IA_HeliSkinCatalog.FindBestUnlocked(int.MAX);
+		if (!top)
+			return;
+		int required = top.m_iRequiredPoints;
+
+		ref IA_PilotHudPreview seat = IA_PilotHudPreview.Create(IA_PilotHudPreviewScene.Seat);
+		Check(seat.Count() == 1 && seat.NextOpensCard(), "a preview scene opens its own card");
+		Check(seat.NextDelayMs() == IA_PilotHudPreview.LEAD_IN_MS, "the first preview card waits for the menus to close");
+
+		ref IA_PilotDropoffPayload card = FoldPreview(IA_PilotHudPreviewScene.Seat);
+		Check(card && !card.IsDrop() && card.m_iRating > 0 && card.m_iRequired > card.m_iRating && card.m_iRequired <= required, "the seat preview is a rating card below a threshold");
+		int start = 0;
+		if (card)
+			start = card.m_iRating;
+
+		card = FoldPreview(IA_PilotHudPreviewScene.Landing);
+		Check(card && card.m_iTroops == 12 && card.m_iPoints == 360 && card.IsHotLz(), "the landing preview is a full hot-LZ cabin on one card");
+		Check(card && card.m_iRating == start + 360 && !card.HasUnlock(), "the landing preview adds its points to the total");
+
+		card = FoldPreview(IA_PilotHudPreviewScene.FarLanding);
+		Check(card && card.m_iTroops == 5 && card.m_iPoints == 99 && !card.IsHotLz(), "the far landing preview is paid by the real scoring rules");
+
+		ref IA_PilotHudPreview syncing = IA_PilotHudPreview.Create(IA_PilotHudPreviewScene.Syncing);
+		IA_PilotDropoffPayload banked = IA_PilotDropoffPayload.Parse(syncing.TakeNext());
+		Check(banked && banked.IsDrop() && banked.m_iRating < 0, "the syncing preview lands before the total is known");
+		Check(syncing.NextDelayMs() == IA_PilotHudPreview.SYNC_MS && !syncing.NextOpensCard(), "the total follows into the same card");
+		card = FoldPreview(IA_PilotHudPreviewScene.Syncing);
+		Check(card && card.IsDrop() && card.m_iRating == start + card.m_iPoints, "the syncing preview ends with the total");
+
+		card = FoldPreview(IA_PilotHudPreviewScene.Unlock);
+		Check(card && card.HasUnlock() && card.m_iUnlockedRequired == required, "the unlock preview crosses the threshold");
+		Check(card && card.m_iTroops == 10 && card.m_iRating == required + 100 && card.m_iRequired == 0, "passengers after the unlock stay on the unlock card");
+
+		card = FoldPreview(IA_PilotHudPreviewScene.UnlockedSeat);
+		Check(card && !card.IsDrop() && !card.HasUnlock() && card.m_iRequired == 0 && !card.m_sSkinName.IsEmpty(), "the unlocked seat preview names the owned skin without announcing it again");
+
+		card = FoldPreview(IA_PilotHudPreviewScene.LateUnlock);
+		Check(card && !card.IsDrop() && card.HasUnlock(), "the late unlock preview arrives on a rating card");
+
+		ref IA_PilotHudPreview all = IA_PilotHudPreview.Create(IA_PilotHudPreviewScene.All);
+		int updates = all.Count();
+		int cards = 0;
+		while (!all.IsDone())
+		{
+			if (all.NextOpensCard())
+				cards = cards + 1;
+			if (!IA_PilotDropoffPayload.Parse(all.TakeNext()))
+				cards = -100;
+		}
+		Check(updates == 14 && cards == 7, "play all runs every scene as its own card");
+	}
+
+	protected IA_PilotDropoffPayload FoldPreview(IA_PilotHudPreviewScene scene)
+	{
+		ref IA_PilotHudPreview preview = IA_PilotHudPreview.Create(scene);
+		ref IA_PilotDropoffPayload card;
+		ref IA_PilotDropoffPayload update;
+		while (!preview.IsDone())
+		{
+			update = IA_PilotDropoffPayload.Parse(preview.TakeNext());
+			if (!update)
+				return null;
+			if (card)
+				card.Merge(update);
+			else
+				card = update;
+		}
+		return card;
+	}
+
+	protected void Check(bool condition, string description)
+	{
+		if (condition)
+			return;
+		m_iFailures = m_iFailures + 1;
+		Print("[IA][TransportPilotTest] FAIL: " + description, LogLevel.ERROR);
+	}
+}
+#endif

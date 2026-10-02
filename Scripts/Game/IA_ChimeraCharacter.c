@@ -202,6 +202,10 @@ modded class SCR_ChimeraCharacter{
 				{
 					notificationDisplay.QueueNotification(taskTitle, "red", 10000);
 				}
+				else if (messageType == "PilotProgress")
+				{
+					notificationDisplay.ShowPilotProgress(taskTitle);
+				}
 			
 			
 			

@@ -1,0 +1,13 @@
+GenericEntity : "{8952883E000BE636}Prefabs/Vehicles/Helicopters/Mi8MT/VehParts/Mi8MT_rear_door.et" {
+ ID "4B42E71698F5739C"
+ components {
+  MeshObject "{4B42E716914465B9}" {
+   Materials {
+    MaterialAssignClass "{EAE5703EA827AEE8}" {
+     SourceMaterial "Exterier_35715EB3956D22B9"
+     AssignedMaterial "{B7A4D22AA9F2188E}Assets/Vehicles/Helicopters/Mi8MT/Paint/IA_Mi8_Body_Paint1.emat"
+    }
+   }
+  }
+ }
+}

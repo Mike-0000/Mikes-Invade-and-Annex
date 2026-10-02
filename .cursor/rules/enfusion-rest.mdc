@@ -1,0 +1,20 @@
+---
+description: Proven Enfusion REST and JSON facts (RestContext, RestCallback, JsonLoadContext). Extracted from enfusion-enforce.mdc; add new web-service facts here.
+globs: **/*Api*.c, **/*Rest*.c, **/IA_Board*.c, **/IA_StatsManager.c, **/IA_TransportPilotStore.c
+alwaysApply: false
+---
+
+# Enfusion REST and JSON (living)
+
+Part of the engine handbook `.cursor/rules/enfusion-enforce.mdc`; the same rules for adding facts apply (one bullet: claim, consequence, evidence; changelog line in the handbook).
+
+## Calls and their answers
+
+- **An HTTP `404` with an empty body arrives in the error callback, as `GetHttpCode()` 404 and `GetRestResult()` `EREST_ERROR_UNKNOWN`.** It is not `EREST_ERROR_NOTIMPLEMENTED` and not a timeout, so a missing route is told from a failure by the code alone. Decide on `GetHttpCode()` first and use `GetRestResult()` only for `EREST_ERROR_TIMEOUT`. Evidence: `runtime: IA_UplinkMenuProbe` mark `error, code 404, result EREST_ERROR_UNKNOWN`, `logs_2026-10-01_21-34-11`; `IA_ApiHandler.OnSyncError`.
+- **In the error callback of a `POST` answered with an empty body, `RestCallback.GetData()` holds the request body that was sent, not an answer.** Never read it as the service's message, and never print it: it is the server's own payload. Evidence: `runtime:` the mark above reported 559 characters while the local stats server logged `POST /api/syncMissing 404 in=559B out=0B`, `logs_2026-10-01_21-34-11`.
+- **`RestCallback.GetHttpCode()` assigns to an `int`.** It is declared as `HttpCode`; `int code = cb.GetHttpCode();` compiles and reads 200 in the success callback and 404 in the error callback. Evidence: `GameLib/generated/online/RestCallback.c:39-42,86`; `runtime: IA_UplinkMenuProbe` marks `answer, code 200` and `error, code 404`, `logs_2026-10-01_21-34-11`.
+- **`RestCallback.GetData()` and `JsonLoadContext.LoadFromString` take an answer of 54,543 characters whole.** Nothing was cut and every member read back, so an answer of that size needs no chunking on the way in; sizes beyond it are not measured. Strings sent on to clients are another matter: an RPC string has its own limit. Evidence: `runtime: IA_UplinkMenuProbe` marks `dev largest: asked with 5103 characters, answer=54543 chars` and `the last player named stands at 3835`, `logs_2026-10-01_21-34-11`.
+
+## Reading JSON
+
+- **`JsonLoadContext.ReadValue` fills an `array<ref T>` from a JSON array of objects**, matching each object's keys to the members of `T` with the same names (one-letter names work). It returns false when the key is absent and true with an empty array for `[]`, so false means a malformed answer, not an empty page. Read an API page into typed rows instead of hand-parsing. Evidence: `IA_BoardService.ParseAnswer`; `IA_UplinkMenuProbe` PASS, `logs_2026-10-01_18-36-24` and `logs_2026-10-01_18-53-21`.
