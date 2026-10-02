@@ -25,5 +25,6 @@ function route(name, method, handler) {
 route('registerServer', 'POST', handlers.registerServer);
 route('submitStats', 'POST', handlers.submitStats);
 route('getAllLeaderboards', 'GET', handlers.getAllLeaderboards);
+route('leaderboard', 'GET', handlers.getLeaderboard);
 route('submitTransport', 'POST', handlers.submitTransport);
 route('getTransportRatings', 'POST', handlers.getTransportRatings);

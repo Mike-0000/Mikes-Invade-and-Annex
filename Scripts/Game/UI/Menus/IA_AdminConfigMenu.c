@@ -4,7 +4,13 @@
 //------------------------------------------------------------------------------------------------
 class IA_AdminConfigMenu : MUI_MenuBase
 {
-	protected ref MUI_Tabs m_Tabs;
+	protected static const float FRAME_W = 1120;
+	protected static const float SCROLL_H = 430;
+	protected static const float PREVIEW_BTN_W = 340;
+
+	protected ref IA_UplinkFrame m_Frame;
+	protected ref IA_UplinkTabs m_Tabs;
+	protected ref IA_UplinkScroll m_Scroll;
 	protected ref MUI_Panel m_PageScaling;
 	protected ref MUI_Panel m_PageCiv;
 	protected ref MUI_Panel m_PageArty;
@@ -47,8 +53,8 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_NumericField m_DynamicAICaptureSeedField;
 	protected ref MUI_Toggle m_DynamicAIHardCapToggle;
 	protected ref MUI_NumericField m_MilVehField;
-	protected ref MUI_Dropdown m_NormalSkillDrop;
-	protected ref MUI_Dropdown m_EliteSkillDrop;
+	protected ref IA_UplinkChoice m_NormalSkillDrop;
+	protected ref IA_UplinkChoice m_EliteSkillDrop;
 	protected ref MUI_NumericField m_NormalFireField;
 	protected ref MUI_NumericField m_EliteFireField;
 	protected ref MUI_NumericField m_NormalPercField;
@@ -109,15 +115,81 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	protected ref MUI_Toggle m_DynamicBaseEmplacementsToggle;
 	protected ref MUI_NumericField m_DynamicBaseChanceField;
 	protected ref MUI_Toggle m_DynamicBaseInGmToggle;
-	protected ref MUI_Dropdown m_DynamicBaseSizeDrop;
+	protected ref IA_UplinkChoice m_DynamicBaseSizeDrop;
+
+#ifdef WORKBENCH
+	// The open menu, for a Workbench probe to turn its pages without a pointer.
+	protected static IA_AdminConfigMenu s_Probe;
+#endif
 
 	//------------------------------------------------------------------------------------------------
 	override void OnMenuOpen()
 	{
 		super.OnMenuOpen();
-		if (IsMUIOpen())
-			PopulateFromConfig();
+		if (!IsMUIOpen())
+			return;
+
+		PopulateFromConfig();
+#ifdef WORKBENCH
+		s_Probe = this;
+#endif
+
+		// A gamepad starts on the section rail.
+		MUI_Runtime runtime = GetRuntime();
+		InputManager input = GetGame().GetInputManager();
+		if (runtime && input && !input.IsUsingMouseAndKeyboard())
+			runtime.FocusNode(m_Tabs);
 	}
+
+#ifdef WORKBENCH
+	//------------------------------------------------------------------------------------------------
+	override void OnMenuClose()
+	{
+		if (s_Probe == this)
+			s_Probe = null;
+		super.OnMenuClose();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static bool ProbeTab(int index)
+	{
+		if (!s_Probe || !s_Probe.m_Tabs)
+			return false;
+		s_Probe.m_Tabs.SetIndex(index);
+		return s_Probe.m_Tabs.GetIndex() == index;
+	}
+
+	//------------------------------------------------------------------------------------------------
+	static void ProbeScroll(float y)
+	{
+		if (s_Probe && s_Probe.m_Scroll)
+			s_Probe.m_Scroll.SetScrollY(y);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return whether the help overlay is open after the toggle
+	static bool ProbeHelp()
+	{
+		if (!s_Probe || !s_Probe.m_Hints)
+			return false;
+		s_Probe.OnAdminHelp();
+		return s_Probe.m_Hints.IsOpen();
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! \return how many controls the open page offers, the rail and the action bar included
+	static int ProbeControls()
+	{
+		if (!s_Probe)
+			return 0;
+		MUI_Runtime runtime = s_Probe.GetRuntime();
+		if (!runtime)
+			return 0;
+		ref array<MUI_Node> found = {};
+		runtime.CollectFocusables(found);
+		return found.Count();
+	}
+#endif
 
 	//------------------------------------------------------------------------------------------------
 	override void OnMUIMountFailed()
@@ -134,18 +206,22 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	override void BuildUI(notnull MUI_Runtime runtime)
 	{
-		ref IA_MuiShell shell = IA_MuiShell.Create(
-			runtime,
-			"ADMIN CONFIG",
-			"COMMAND UPLINK",
-			"Live source of truth  •  Changes apply on Save",
-			880
-		);
+		IA_UplinkStyle look = IA_UplinkStyle.Get();
+
+		ref MUI_Panel overlay = runtime.CreatePanel("overlay");
+		overlay.MakeOverlay();
+		overlay.SetFill(Color.FromInt(0));
+		overlay.SetIntro(0, 0.35, 0);
+
+		ref MUI_FxBackdrop fx = runtime.CreateFxBackdrop("fx");
+		fx.SetIntro(0, 0.55, 0);
+
+		m_Frame = IA_UplinkFrame.Create(runtime, "frame", FRAME_W, "COMMAND UPLINK", "ADMIN CONFIG", "Live source of truth  •  Changes apply on Save");
+		m_Frame.SetStatus("LIVE CONFIG", look.m_Green, false);
 
 		m_Hints = runtime.CreateHintLayer("hints");
 
-		m_Tabs = runtime.CreateTabs("tabs");
-		m_Tabs.SetIntro(0.28, 0.4, 16);
+		m_Tabs = IA_UplinkTabs.Create(runtime, "tabs");
 		m_Tabs.AddTab("Scaling");
 		m_Tabs.AddTab("Civilians");
 		m_Tabs.AddTab("Artillery");
@@ -155,20 +231,10 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Tabs.AddTab("Director");
 		m_Tabs.AddTab("Defense");
 		m_Tabs.AddTab("Dynamic AI");
-		// Nine pages fit the existing card using the library's compact tab buttons.
-		int tabCount = m_Tabs.GetChildCount();
-		for (int tabIndex = 0; tabIndex < tabCount; tabIndex++)
-		{
-			MUI_Button tabButton = MUI_Button.Cast(m_Tabs.GetChild(tabIndex));
-			if (tabButton)
-				tabButton.SetCompact();
-		}
 		m_Tabs.GetOnChanged().Insert(OnAdminTabChanged);
 
-		ref MUI_ScrollView scroll = runtime.CreateScrollView("scroll");
-		scroll.SetViewportHeight(420);
-		scroll.SetGap(12);
-		scroll.SetIntro(0.32, 0.4, 16);
+		m_Scroll = IA_UplinkScroll.Create(runtime, "scroll");
+		m_Scroll.SetViewportHeight(SCROLL_H);
 
 		m_PageScaling = MakePage(runtime, "pageScaling");
 		m_PageCiv = MakePage(runtime, "pageCiv");
@@ -180,79 +246,68 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_PageDefense = MakePage(runtime, "pageDefense");
 		m_PageDynamicAI = MakePage(runtime, "pageDynamicAI");
 
-		m_AIField = runtime.CreateNumericField("AI scale multiplier", "ai");
+		m_AIField = IA_UplinkField.Create(runtime, "AI scale multiplier", "ai");
 		m_AIField.SetRange(0.1, 10);
 		m_AIField.SetStep(0.1);
 		m_AIField.SetDecimals(2);
 
-		m_StaticAIField = runtime.CreateNumericField("Static AI scale override (0 = dynamic)", "staticAi");
+		m_StaticAIField = IA_UplinkField.Create(runtime, "Static AI scale override (0 = dynamic)", "staticAi");
 		m_StaticAIField.SetRange(0, 20);
 		m_StaticAIField.SetStep(0.1);
 		m_StaticAIField.SetDecimals(2);
 
-		m_MilVehField = runtime.CreateNumericField("Military vehicle count multiplier", "milVeh");
+		m_MilVehField = IA_UplinkField.Create(runtime, "Military vehicle count multiplier", "milVeh");
 		m_MilVehField.SetRange(0, 10);
 		m_MilVehField.SetStep(0.1);
 		m_MilVehField.SetDecimals(2);
 
-		m_PageScaling.AddChild(m_AIField);
-		m_PageScaling.AddChild(m_StaticAIField);
-		m_PageScaling.AddChild(m_MilVehField);
+		AddCaption(runtime, m_PageScaling, "Enemy strength", "strengthCap");
+		AddPair(runtime, m_PageScaling, "aiRow", m_AIField, m_StaticAIField);
+		AddPair(runtime, m_PageScaling, "milVehRow", m_MilVehField, null);
 		m_Hints.AddHint(m_Tabs, "Settings pages", "Choose a tab to view a different group of settings. Help updates to explain the open tab.");
 		m_Hints.AddHint(m_AIField, "Enemy strength", "Multiplies player-based AI scaling while Dynamic AI Spawning is OFF and no static override is set. Dynamic AI Spawning ON uses the Dynamic AI scale on that tab; this saved value is kept for when it is switched OFF.");
 		m_Hints.AddHint(m_StaticAIField, "Fixed enemy strength", "When Dynamic AI Spawning is OFF, a value above 0 replaces player-based AI scaling; 0 uses normal scaling. Dynamic AI Spawning ON uses the Dynamic AI scale on that tab and keeps this saved override for when it is switched OFF.");
 		m_Hints.AddHint(m_MilVehField, "Enemy vehicle count", "Changes how many enemy military vehicles appear. 1 is normal, 0.5 is about half, and 2 is about double.");
 
-		ref MUI_Label combatLbl = runtime.CreateLabel("AI combat  •  Skill is aim accuracy only. Fire rate and spotting are separate.", "combatLbl");
-		combatLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		combatLbl.SetMuted(true);
+		ref IA_UplinkNote combatLbl = IA_UplinkNote.Create(runtime, "Skill is aim accuracy only. Fire rate and spotting are separate.", "combatLbl");
+		AddCaption(runtime, m_PageScaling, "AI combat", "combatCap");
 		m_PageScaling.AddChild(combatLbl);
 
-		m_NormalSkillDrop = runtime.CreateDropdown("normalSkill");
+		m_NormalSkillDrop = IA_UplinkChoice.Create(runtime, "Normal troop skill", "normalSkill");
 		FillSkillDropdown(m_NormalSkillDrop);
 		m_NormalSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(EAISkill.VETERAN));
 
-		m_EliteSkillDrop = runtime.CreateDropdown("eliteSkill");
+		m_EliteSkillDrop = IA_UplinkChoice.Create(runtime, "Elite troop skill", "eliteSkill");
 		FillSkillDropdown(m_EliteSkillDrop);
 		m_EliteSkillDrop.SetIndex(IA_Config.SkillToMenuIndex(EAISkill.EXPERT));
 
-		m_NormalFireField = runtime.CreateNumericField("Normal fire rate (1 = vanilla)", "nFire");
+		m_NormalFireField = IA_UplinkField.Create(runtime, "Normal fire rate (1 = vanilla)", "nFire");
 		m_NormalFireField.SetRange(0.05, 2);
 		m_NormalFireField.SetStep(0.05);
 		m_NormalFireField.SetDecimals(2);
 		m_NormalFireField.SetValue(1);
 
-		m_EliteFireField = runtime.CreateNumericField("Elite fire rate", "eFire");
+		m_EliteFireField = IA_UplinkField.Create(runtime, "Elite fire rate", "eFire");
 		m_EliteFireField.SetRange(0.05, 2);
 		m_EliteFireField.SetStep(0.05);
 		m_EliteFireField.SetDecimals(2);
 		m_EliteFireField.SetValue(1.25);
 
-		m_NormalPercField = runtime.CreateNumericField("Normal spotting (1 = vanilla)", "nPerc");
+		m_NormalPercField = IA_UplinkField.Create(runtime, "Normal spotting (1 = vanilla)", "nPerc");
 		m_NormalPercField.SetRange(0.1, 4);
 		m_NormalPercField.SetStep(0.1);
 		m_NormalPercField.SetDecimals(2);
 		m_NormalPercField.SetValue(1);
 
-		m_ElitePercField = runtime.CreateNumericField("Elite spotting", "ePerc");
+		m_ElitePercField = IA_UplinkField.Create(runtime, "Elite spotting", "ePerc");
 		m_ElitePercField.SetRange(0.1, 4);
 		m_ElitePercField.SetStep(0.1);
 		m_ElitePercField.SetDecimals(2);
 		m_ElitePercField.SetValue(1.5);
 
-		ref MUI_Label nSkillLbl = runtime.CreateLabel("Normal troop skill", "nSkillLbl");
-		nSkillLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		ref MUI_Label eSkillLbl = runtime.CreateLabel("Elite troop skill", "eSkillLbl");
-		eSkillLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-
-		m_PageScaling.AddChild(nSkillLbl);
-		m_PageScaling.AddChild(m_NormalSkillDrop);
-		m_PageScaling.AddChild(eSkillLbl);
-		m_PageScaling.AddChild(m_EliteSkillDrop);
-		m_PageScaling.AddChild(m_NormalFireField);
-		m_PageScaling.AddChild(m_EliteFireField);
-		m_PageScaling.AddChild(m_NormalPercField);
-		m_PageScaling.AddChild(m_ElitePercField);
+		AddPair(runtime, m_PageScaling, "skillRow", m_NormalSkillDrop, m_EliteSkillDrop);
+		AddPair(runtime, m_PageScaling, "fireRow", m_NormalFireField, m_EliteFireField);
+		AddPair(runtime, m_PageScaling, "percRow", m_NormalPercField, m_ElitePercField);
 		m_Hints.AddHint(m_NormalSkillDrop, "Normal aim skill", "Aim accuracy for regular infantry, including commander FOB guards that are not marked elite. Veteran is the I&A default. Does not change reaction time.");
 		m_Hints.AddHint(m_EliteSkillDrop, "Elite aim skill", "Aim accuracy for elite patrols and the elite fireteam at a commander FOB. Expert is the I&A default. Cylon (Cyclone) is perfect aim. Does not change reaction time.");
 		m_Hints.AddHint(m_NormalFireField, "Normal fire rate", "How quickly regular infantry shoot. 1 is vanilla. Values above 1 shoot faster. Vanilla clamps 0.05 to 2.");
@@ -260,41 +315,41 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(m_NormalPercField, "Normal spotting", "How quickly regular infantry visually detect targets. 1 is vanilla.");
 		m_Hints.AddHint(m_ElitePercField, "Elite spotting", "How quickly elite infantry visually detect targets. Default 1.5.");
 
-		m_civField = runtime.CreateNumericField("Civilian count multiplier", "civ");
+		m_civField = IA_UplinkField.Create(runtime, "Civilian count multiplier", "civ");
 		m_civField.SetRange(0, 100);
 		m_civField.SetStep(0.1);
 		m_civField.SetDecimals(2);
 
-		m_CivVehField = runtime.CreateNumericField("Civilian vehicle multiplier", "civVeh");
+		m_CivVehField = IA_UplinkField.Create(runtime, "Civilian vehicle multiplier", "civVeh");
 		m_CivVehField.SetRange(0, 10);
 		m_CivVehField.SetStep(0.1);
 		m_CivVehField.SetDecimals(2);
 
-		m_RevoltField = runtime.CreateNumericField("Revolt threshold (0-1)", "revolt");
+		m_RevoltField = IA_UplinkField.Create(runtime, "Revolt threshold (0-1)", "revolt");
 		m_RevoltField.SetRange(0, 1);
 		m_RevoltField.SetStep(0.01);
 		m_RevoltField.SetDecimals(2);
 
-		m_RevoltNotifField = runtime.CreateNumericField("Revolt notification delay (seconds)", "revoltNotif");
+		m_RevoltNotifField = IA_UplinkField.Create(runtime, "Revolt notification delay (seconds)", "revoltNotif");
 		m_RevoltNotifField.SetRange(0, 600);
 		m_RevoltNotifField.SetStep(1);
 		m_RevoltNotifField.SetDecimals(0);
 		m_RevoltNotifField.SetValue(30);
 
-		m_RevoltReinfField = runtime.CreateNumericField("Revolt reinforcement delay (seconds)", "revoltReinf");
+		m_RevoltReinfField = IA_UplinkField.Create(runtime, "Revolt reinforcement delay (seconds)", "revoltReinf");
 		m_RevoltReinfField.SetRange(0, 3600);
 		m_RevoltReinfField.SetStep(5);
 		m_RevoltReinfField.SetDecimals(0);
 		m_RevoltReinfField.SetValue(180);
 
-		m_CivSpawnToggle = runtime.CreateToggle("Enable civilian spawning", "civSpawn");
+		m_CivSpawnToggle = IA_UplinkToggle.Create(runtime, "Enable civilian spawning", "civSpawn");
 
-		m_PageCiv.AddChild(m_civField);
-		m_PageCiv.AddChild(m_CivVehField);
-		m_PageCiv.AddChild(m_RevoltField);
-		m_PageCiv.AddChild(m_RevoltNotifField);
-		m_PageCiv.AddChild(m_RevoltReinfField);
-		m_PageCiv.AddChild(m_CivSpawnToggle);
+		AddCaption(runtime, m_PageCiv, "Population", "civCap");
+		AddPair(runtime, m_PageCiv, "civSpawnRow", m_CivSpawnToggle, null);
+		AddPair(runtime, m_PageCiv, "civRow", m_civField, m_CivVehField);
+		AddCaption(runtime, m_PageCiv, "Revolt", "revoltCap");
+		AddPair(runtime, m_PageCiv, "revoltRow", m_RevoltField, m_RevoltNotifField);
+		AddPair(runtime, m_PageCiv, "revoltReinfRow", m_RevoltReinfField, null);
 		m_Hints.AddHint(m_civField, "Civilian population", "Changes how many civilians appear. 1 is normal, 0.5 is about half, and 2 is about double.");
 		m_Hints.AddHint(m_CivVehField, "Civilian traffic", "Changes how many civilian vehicles appear. 1 is normal, 0.5 is about half, and 2 is about double.");
 		m_Hints.AddHint(m_RevoltField, "When a revolt begins", "Sets how many civilians players can kill before a revolt starts. For example, 0.11 means 11 percent.");
@@ -302,42 +357,40 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(m_RevoltReinfField, "Revolt reinforcement delay", "How many seconds pass before extra resistance fighters arrive to support the revolt.");
 		m_Hints.AddHint(m_CivSpawnToggle, "Civilian spawning", "Controls whether civilians appear in areas captured by players.");
 
-		m_artyField = runtime.CreateNumericField("Time between strikes (seconds)", "arty");
+		m_artyField = IA_UplinkField.Create(runtime, "Time between strikes (seconds)", "arty");
 		m_artyField.SetRange(0, 3600);
 		m_artyField.SetStep(10);
 		m_artyField.SetDecimals(0);
 
-		m_ArtyMinField = runtime.CreateNumericField("Smoke to impact min (seconds)", "artyMin");
+		m_ArtyMinField = IA_UplinkField.Create(runtime, "Smoke to impact min (seconds)", "artyMin");
 		m_ArtyMinField.SetRange(0, 600);
 		m_ArtyMinField.SetStep(1);
 		m_ArtyMinField.SetDecimals(0);
 
-		m_ArtyMaxField = runtime.CreateNumericField("Smoke to impact max (seconds)", "artyMax");
+		m_ArtyMaxField = IA_UplinkField.Create(runtime, "Smoke to impact max (seconds)", "artyMax");
 		m_ArtyMaxField.SetRange(0, 600);
 		m_ArtyMaxField.SetStep(1);
 		m_ArtyMaxField.SetDecimals(0);
 
-		ref MUI_Label artyDelayLbl = runtime.CreateLabel("After warning smoke, each strike waits a random time in this range before rounds land. Separate from the time between strikes.", "artyDelayLbl");
-		artyDelayLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		artyDelayLbl.SetMuted(true);
+		ref IA_UplinkNote artyDelayLbl = IA_UplinkNote.Create(runtime, "After warning smoke, each strike waits a random time in this range before rounds land. Separate from the time between strikes.", "artyDelayLbl");
 
-		m_ArtyChanceLabel = runtime.CreateLabel("Strike chance  18%", "artyChanceLbl");
-		m_ArtyChanceLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		m_ArtyChanceLabel.SetMuted(true);
+		m_ArtyChanceLabel = IA_UplinkNote.Create(runtime, "Strike chance  18%", "artyChanceLbl");
+		m_ArtyChanceLabel.SetColor(look.m_Gold);
 
-		m_ArtyChanceSlider = runtime.CreateSlider("artyChance");
+		m_ArtyChanceSlider = IA_UplinkSlider.Create(runtime, "artyChance");
 		m_ArtyChanceSlider.SetRange(0, 1);
 		m_ArtyChanceSlider.SetStep(0.01);
 		m_ArtyChanceSlider.SetValue(0.18);
 		m_ArtyChanceSlider.GetOnChanged().Insert(OnArtyChanceChanged);
 
-		m_ArtyChanceProgress = runtime.CreateProgress("artyChanceBar");
+		m_ArtyChanceProgress = IA_UplinkMeter.Create(runtime, "artyChanceBar");
 		m_ArtyChanceProgress.SetValue(0.18);
 
-		m_PageArty.AddChild(m_artyField);
-		m_PageArty.AddChild(m_ArtyMinField);
-		m_PageArty.AddChild(m_ArtyMaxField);
+		AddCaption(runtime, m_PageArty, "Strike timing", "artyCap");
+		AddPair(runtime, m_PageArty, "artyRow", m_artyField, null);
+		AddPair(runtime, m_PageArty, "artyDelayRow", m_ArtyMinField, m_ArtyMaxField);
 		m_PageArty.AddChild(artyDelayLbl);
+		AddCaption(runtime, m_PageArty, "Strike chance", "artyChanceCap");
 		m_PageArty.AddChild(m_ArtyChanceLabel);
 		m_PageArty.AddChild(m_ArtyChanceSlider);
 		m_PageArty.AddChild(m_ArtyChanceProgress);
@@ -346,24 +399,22 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(m_ArtyMaxField, "Longest warning time", "The longest possible delay between the red warning smoke and the incoming rounds.");
 		m_Hints.AddHint(m_ArtyChanceSlider, "Chance of a strike", "Controls how often enemy artillery attacks while players are fighting at an objective. A higher value means more frequent strikes.");
 
-		m_heliToggle = runtime.CreateToggle("Disable HQ helipads", "heli");
-		m_groundToggle = runtime.CreateToggle("Disable HQ ground vehicles", "ground");
-		m_RolesToggle = runtime.CreateToggle("Enforce pilot role restrictions", "roles");
+		m_heliToggle = IA_UplinkToggle.Create(runtime, "Disable HQ helipads", "heli");
+		m_groundToggle = IA_UplinkToggle.Create(runtime, "Disable HQ ground vehicles", "ground");
+		m_RolesToggle = IA_UplinkToggle.Create(runtime, "Enforce pilot role restrictions", "roles");
 
-		m_HaloMaxField = runtime.CreateNumericField("HALO Jump max players (0 = off)", "haloMax");
+		m_HaloMaxField = IA_UplinkField.Create(runtime, "HALO Jump max players (0 = off)", "haloMax");
 		m_HaloMaxField.SetRange(0, 128);
 		m_HaloMaxField.SetStep(1);
 		m_HaloMaxField.SetDecimals(0);
 		m_HaloMaxField.SetValue(IA_Config.HALO_JUMP_MAX_PLAYERS_DEFAULT);
 
-		ref MUI_Label hqPrefabLbl = runtime.CreateLabel("HQ vehicle prefab lists still come from the mission .conf (Workbench). Everything else is controlled here.", "hqPrefabLbl");
-		hqPrefabLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		hqPrefabLbl.SetMuted(true);
+		ref IA_UplinkNote hqPrefabLbl = IA_UplinkNote.Create(runtime, "HQ vehicle prefab lists still come from the mission .conf (Workbench). Everything else is controlled here.", "hqPrefabLbl");
 
-		m_PageHq.AddChild(m_heliToggle);
-		m_PageHq.AddChild(m_groundToggle);
-		m_PageHq.AddChild(m_RolesToggle);
-		m_PageHq.AddChild(m_HaloMaxField);
+		AddCaption(runtime, m_PageHq, "Headquarters", "hqCap");
+		AddPair(runtime, m_PageHq, "hqVehRow", m_heliToggle, m_groundToggle);
+		AddPair(runtime, m_PageHq, "hqRoleRow", m_RolesToggle, null);
+		AddPair(runtime, m_PageHq, "haloRow", m_HaloMaxField, null);
 		m_PageHq.AddChild(hqPrefabLbl);
 		m_Hints.AddHint(m_heliToggle, "Disable HQ helicopters", "Turn this on to stop helicopters from appearing at the player HQ.");
 		m_Hints.AddHint(m_groundToggle, "Disable HQ ground vehicles", "Turn this on to stop ground vehicles from appearing at the player HQ.");
@@ -373,33 +424,32 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		BuildPilotPreviewSection(runtime);
 		BuildFactionPage(runtime);
 
-		ref MUI_Label qrfLbl = runtime.CreateLabel("Spawn QRF through the normal mission path", "qrfLbl");
-		qrfLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		qrfLbl.SetMuted(true);
+		ref IA_UplinkNote qrfLbl = IA_UplinkNote.Create(runtime, "Spawn QRF through the normal mission path", "qrfLbl");
 
-		m_QrfInfantryBtn = runtime.CreateButton("Infantry QRF", "qrfInf");
+		m_QrfInfantryBtn = IA_UplinkButton.Create(runtime, "Infantry QRF", "qrfInf");
 		m_QrfInfantryBtn.GetOnClicked().Insert(OnQrfInfantry);
-		m_QrfMotorizedBtn = runtime.CreateButton("Motorized QRF", "qrfMotor");
+		m_QrfMotorizedBtn = IA_UplinkButton.Create(runtime, "Motorized QRF", "qrfMotor");
 		m_QrfMotorizedBtn.GetOnClicked().Insert(OnQrfMotorized);
-		m_QrfMechanizedBtn = runtime.CreateButton("Mechanized QRF", "qrfMech");
+		m_QrfMechanizedBtn = IA_UplinkButton.Create(runtime, "Mechanized QRF", "qrfMech");
 		m_QrfMechanizedBtn.GetOnClicked().Insert(OnQrfMechanized);
-		m_QrfArmouredBtn = runtime.CreateButton("Armoured QRF", "qrfArmour");
+		m_QrfArmouredBtn = IA_UplinkButton.Create(runtime, "Armoured QRF", "qrfArmour");
 		m_QrfArmouredBtn.GetOnClicked().Insert(OnQrfArmoured);
-		m_QrfAirborneBtn = runtime.CreateButton("Airborne QRF", "qrfAir");
+		m_QrfAirborneBtn = IA_UplinkButton.Create(runtime, "Airborne QRF", "qrfAir");
 		m_QrfAirborneBtn.MakeAccent();
 		m_QrfAirborneBtn.GetOnClicked().Insert(OnQrfAirborne);
 
 		ref MUI_Row qrfRow1 = runtime.CreateRow("qrfRow1");
-		qrfRow1.SetGap(12);
+		qrfRow1.SetGap(10);
 		qrfRow1.AddChild(m_QrfInfantryBtn);
 		qrfRow1.AddChild(m_QrfMotorizedBtn);
 		qrfRow1.AddChild(m_QrfMechanizedBtn);
 
 		ref MUI_Row qrfRow2 = runtime.CreateRow("qrfRow2");
-		qrfRow2.SetGap(12);
+		qrfRow2.SetGap(10);
 		qrfRow2.AddChild(m_QrfArmouredBtn);
 		qrfRow2.AddChild(m_QrfAirborneBtn);
 
+		AddCaption(runtime, m_PageQrf, "Quick reaction force", "qrfCap");
 		m_PageQrf.AddChild(qrfLbl);
 		m_PageQrf.AddChild(qrfRow1);
 		m_PageQrf.AddChild(qrfRow2);
@@ -410,28 +460,26 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(m_QrfArmouredBtn, "Armoured QRF", "Sends tanks supported by infantry.");
 		m_Hints.AddHint(m_QrfAirborneBtn, "Airborne QRF", "Drops enemy paratroopers near the objective after a short warning.");
 
-		ref MUI_Label gmModeLbl = runtime.CreateLabel("Place and activate sites from the Director map instead.", "gmModeLbl");
-		gmModeLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		gmModeLbl.SetMuted(true);
+		ref IA_UplinkNote gmModeLbl = IA_UplinkNote.Create(runtime, "Place and activate sites from the Director map instead.", "gmModeLbl");
 
-		m_GmModeToggle = runtime.CreateToggle("Don't auto-start map AOs", "gmMode");
-		m_GmAutoActivateToggle = runtime.CreateToggle("After Live: start Staging, or the next map AO", "gmAutoAct");
-		m_GmAutoQrfToggle = runtime.CreateToggle("Auto QRF on Live AOs", "gmAutoQrf");
-		m_GmAutoArtyToggle = runtime.CreateToggle("Auto artillery on Live AOs", "gmAutoArty");
-		m_GmAutoSideToggle = runtime.CreateToggle("Auto side missions", "gmAutoSide");
-		m_GmAutoSupportToggle = runtime.CreateToggle("Auto mortar + radio on Activate", "gmAutoSup");
+		m_GmModeToggle = IA_UplinkToggle.Create(runtime, "Don't auto-start map AOs", "gmMode");
+		m_GmAutoActivateToggle = IA_UplinkToggle.Create(runtime, "After Live: start Staging, or the next map AO", "gmAutoAct");
+		m_GmAutoQrfToggle = IA_UplinkToggle.Create(runtime, "Auto QRF on Live AOs", "gmAutoQrf");
+		m_GmAutoArtyToggle = IA_UplinkToggle.Create(runtime, "Auto artillery on Live AOs", "gmAutoArty");
+		m_GmAutoSideToggle = IA_UplinkToggle.Create(runtime, "Auto side missions", "gmAutoSide");
+		m_GmAutoSupportToggle = IA_UplinkToggle.Create(runtime, "Auto mortar + radio on Activate", "gmAutoSup");
 
-		ref MUI_Button openDirBtn = runtime.CreateButton("Open Director Map", "openDir");
+		ref MUI_Button openDirBtn = IA_UplinkButton.Create(runtime, "Open Director Map", "openDir");
 		openDirBtn.MakeAccent();
 		openDirBtn.GetOnClicked().Insert(OnOpenDirector);
 
+		openDirBtn.SetMinWidth(280);
+
+		AddCaption(runtime, m_PageDirector, "Game Master direction", "gmCap");
 		m_PageDirector.AddChild(gmModeLbl);
-		m_PageDirector.AddChild(m_GmModeToggle);
-		m_PageDirector.AddChild(m_GmAutoActivateToggle);
-		m_PageDirector.AddChild(m_GmAutoQrfToggle);
-		m_PageDirector.AddChild(m_GmAutoArtyToggle);
-		m_PageDirector.AddChild(m_GmAutoSideToggle);
-		m_PageDirector.AddChild(m_GmAutoSupportToggle);
+		AddPair(runtime, m_PageDirector, "gmRow1", m_GmModeToggle, m_GmAutoActivateToggle);
+		AddPair(runtime, m_PageDirector, "gmRow2", m_GmAutoQrfToggle, m_GmAutoArtyToggle);
+		AddPair(runtime, m_PageDirector, "gmRow3", m_GmAutoSideToggle, m_GmAutoSupportToggle);
 		m_PageDirector.AddChild(openDirBtn);
 		m_Hints.AddHint(m_GmModeToggle, "Manual objectives", "Stops I&A from choosing and starting objectives automatically. A Game Master can place and start them from the Director map.");
 		m_Hints.AddHint(m_GmAutoActivateToggle, "Continue after an objective", "Automatically starts a staged objective, or the next unused map objective, when the current one is completed.");
@@ -444,35 +492,28 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		BuildDefensePage(runtime);
 		BuildDynamicAIPage(runtime);
 
-		scroll.AddChild(m_PageScaling);
-		scroll.AddChild(m_PageCiv);
-		scroll.AddChild(m_PageArty);
-		scroll.AddChild(m_PageHq);
-		scroll.AddChild(m_PageFactions);
-		scroll.AddChild(m_PageQrf);
-		scroll.AddChild(m_PageDirector);
-		scroll.AddChild(m_PageDefense);
-		scroll.AddChild(m_PageDynamicAI);
+		m_Scroll.AddChild(m_PageScaling);
+		m_Scroll.AddChild(m_PageCiv);
+		m_Scroll.AddChild(m_PageArty);
+		m_Scroll.AddChild(m_PageHq);
+		m_Scroll.AddChild(m_PageFactions);
+		m_Scroll.AddChild(m_PageQrf);
+		m_Scroll.AddChild(m_PageDirector);
+		m_Scroll.AddChild(m_PageDefense);
+		m_Scroll.AddChild(m_PageDynamicAI);
 
-		ref MUI_Panel footerBtns = runtime.CreatePanel("footerBtns");
-		footerBtns.GetStyle().m_Fill = Color.FromInt(0);
-		footerBtns.GetStyle().m_fRadius = 0;
-		footerBtns.GetStyle().m_fGap = 12;
-		footerBtns.GetStyle().m_bBlockHit = false;
-		footerBtns.SetFillWidth();
-		footerBtns.SetIntro(0.52, 0.4, 18);
-
+		// Everyday actions on the first row, the ones that end an objective on the second.
 		ref MUI_Row persistRow = runtime.CreateRow("persistRow");
-		persistRow.SetGap(12);
+		persistRow.SetGap(10);
 
-		ref MUI_Button saveBtn = runtime.CreateButton("Save", "save");
+		ref MUI_Button saveBtn = IA_UplinkButton.Create(runtime, "Save", "save");
 		saveBtn.MakeAccent();
 		saveBtn.GetOnClicked().Insert(OnMikesSave);
 
-		ref MUI_Button persistBtn = runtime.CreateButton("Save for restart", "persist");
+		ref MUI_Button persistBtn = IA_UplinkButton.Create(runtime, "Save for restart", "persist");
 		persistBtn.GetOnClicked().Insert(OnMikesPersist);
 
-		ref MUI_Button clearBtn = runtime.CreateButton("Clear saved", "clearSaved");
+		ref MUI_Button clearBtn = IA_UplinkButton.Create(runtime, "Clear saved", "clearSaved");
 		clearBtn.GetOnClicked().Insert(OnMikesClearPersisted);
 
 		persistRow.AddChild(saveBtn);
@@ -482,53 +523,54 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(persistBtn, "Save for restart", "Applies these settings now and remembers them for future server restarts.");
 		m_Hints.AddHint(clearBtn, "Clear saved settings", "Forgets the settings saved for future restarts. The server will return to the mission's normal settings after the next restart.");
 
-		ref MUI_Row actionRow = runtime.CreateRow("actionRow");
-		actionRow.SetGap(12);
-
-		ref MUI_Button promoteBtn = runtime.CreateButton("Promote Self", "promote");
+		ref MUI_Button promoteBtn = IA_UplinkButton.Create(runtime, "Promote Self", "promote");
 		promoteBtn.GetOnClicked().Insert(OnMikesPromoteSelf);
 
-		ref MUI_Button completeBtn = runtime.CreateButton("Complete Zone", "complete");
+		ref MUI_Button completeBtn = IA_UplinkButton.Create(runtime, "Complete Zone", "complete");
 		completeBtn.MakeDanger();
 		completeBtn.GetOnClicked().Insert(OnMikesComplete);
 
-		ref MUI_Button completeDefendBtn = runtime.CreateButton("Complete + Defend", "completeDef");
+		ref MUI_Button completeDefendBtn = IA_UplinkButton.Create(runtime, "Complete + Defend", "completeDef");
 		completeDefendBtn.MakeDanger();
 		completeDefendBtn.GetOnClicked().Insert(OnMikesCompleteAndDefend);
 
-		ref MUI_Button helpBtn = runtime.CreateButton("Help", "help");
+		ref MUI_Button helpBtn = IA_UplinkButton.Create(runtime, "Help", "help");
 		helpBtn.GetOnClicked().Insert(OnAdminHelp);
 
-		ref MUI_Button closeBtn = runtime.CreateButton("Close", "close");
+		ref MUI_Button closeBtn = IA_UplinkButton.Create(runtime, "Close", "close");
 		closeBtn.GetOnClicked().Insert(OnMUIBack);
 
-		actionRow.AddChild(helpBtn);
-		actionRow.AddChild(promoteBtn);
-		actionRow.AddChild(completeBtn);
-		actionRow.AddChild(closeBtn);
+		persistRow.AddChild(helpBtn);
+		persistRow.AddChild(promoteBtn);
+		persistRow.AddChild(closeBtn);
 		m_Hints.AddHint(promoteBtn, "Become Game Master", "Gives you Game Master access so you can use the Director map and other Game Master tools.");
 		m_Hints.AddHint(completeBtn, "Complete the current objective", "Immediately marks the current objective as captured and moves the mission forward. Skips a defense even if one was placed.");
 
-		ref MUI_Button seizeBaseBtn = runtime.CreateButton("Complete objectives + seize base", "seizeBase");
+		ref MUI_Button seizeBaseBtn = IA_UplinkButton.Create(runtime, "Complete objectives + seize base", "seizeBase");
 		seizeBaseBtn.MakeDanger();
 		seizeBaseBtn.GetOnClicked().Insert(OnMikesCompleteAndSeizeBase);
 
-		ref MUI_Row actionRow2 = runtime.CreateRow("actionRow2");
-		actionRow2.SetGap(12);
-		actionRow2.AddChild(completeDefendBtn);
-		actionRow2.AddChild(seizeBaseBtn);
+		ref MUI_Row actionRow = runtime.CreateRow("actionRow");
+		actionRow.SetGap(10);
+		actionRow.AddChild(completeBtn);
+		actionRow.AddChild(completeDefendBtn);
+		actionRow.AddChild(seizeBaseBtn);
 		m_Hints.AddHint(completeDefendBtn, "Complete and start field-base assault", "Finishes remaining required objectives and starts one field-base attempt. Seize the command area, then start the normal defense at that same site without an extra regroup or warning countdown. If a base job is already running, this leaves it alone. If placement fails, an authored defense is forced when a Defend marker remains.");
 		m_Hints.AddHint(seizeBaseBtn, "Complete objectives and seize a base", "Finishes remaining required objectives and starts one validated field-base attempt. Geometry and AI limits still apply. If placement fails, an authored defense is forced when a Defend marker remains.");
 
-		footerBtns.AddChild(persistRow);
-		footerBtns.AddChild(actionRow);
-		footerBtns.AddChild(actionRow2);
+		ref IA_UplinkNote footNote = IA_UplinkNote.Create(runtime, "Save applies now  •  Save for restart writes the server profile (applied after the mission .conf)", "footNote");
 
-		shell.GetCard().AddChild(m_Tabs);
-		shell.GetCard().AddChild(scroll);
-		shell.AddFooter(runtime, "Save applies now  •  Save for restart writes the server profile (applied after the mission .conf)", footerBtns);
-		shell.Mount(runtime);
-		shell.GetOverlay().AddChild(m_Hints);
+		m_Frame.AddChild(m_Tabs);
+		m_Frame.AddChild(m_Scroll);
+		m_Frame.AddChild(persistRow);
+		m_Frame.AddChild(actionRow);
+		m_Frame.AddChild(footNote);
+
+		overlay.AddChild(fx);
+		overlay.AddChild(m_Frame);
+		overlay.AddChild(m_Hints);
+		runtime.SetRoot(overlay);
+		runtime.SetPromptText("<action name='MenuSelect' scale='1.35'/>  Select", "<action name='MenuBack' scale='1.35'/>  Close");
 
 		ShowAdminPage(0);
 	}
@@ -541,51 +583,70 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! Two controls side by side; a null \p right leaves that half of the row free.
+	protected void AddPair(notnull MUI_Runtime runtime, notnull MUI_Panel page, string name, notnull MUI_Node left, MUI_Node right)
+	{
+		page.AddChild(IA_UplinkPair.Create(runtime, name, left, right));
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void AddCaption(notnull MUI_Runtime runtime, notnull MUI_Panel page, string text, string name)
+	{
+		page.AddChild(IA_UplinkCaption.Create(runtime, text, name));
+	}
+
+	//------------------------------------------------------------------------------------------------
 	//! Solo test path for the transport pilot card: replays scripted updates on this client's HUD.
 	protected void BuildPilotPreviewSection(notnull MUI_Runtime runtime)
 	{
-		ref MUI_Label previewLbl = runtime.CreateLabel("Pilot card preview  •  Plays on your HUD only. No passengers needed, no points awarded.", "pilotPreviewLbl");
-		previewLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		previewLbl.SetMuted(true);
+		ref IA_UplinkNote previewLbl = IA_UplinkNote.Create(runtime, "Plays on your HUD only. No passengers needed, no points awarded.", "pilotPreviewLbl");
 
-		ref MUI_Button seatBtn = runtime.CreateButton("Pilot seat", "pilotPrevSeat");
+		ref MUI_Button seatBtn = IA_UplinkButton.Create(runtime, "Pilot seat", "pilotPrevSeat");
 		seatBtn.GetOnClicked().Insert(OnPilotPreviewSeat);
-		ref MUI_Button landingBtn = runtime.CreateButton("Full landing", "pilotPrevLanding");
+		ref MUI_Button landingBtn = IA_UplinkButton.Create(runtime, "Full landing", "pilotPrevLanding");
 		landingBtn.GetOnClicked().Insert(OnPilotPreviewLanding);
-		ref MUI_Button farBtn = runtime.CreateButton("Far landing", "pilotPrevFar");
+		ref MUI_Button farBtn = IA_UplinkButton.Create(runtime, "Far landing", "pilotPrevFar");
 		farBtn.GetOnClicked().Insert(OnPilotPreviewFarLanding);
-		ref MUI_Button syncBtn = runtime.CreateButton("Total syncing", "pilotPrevSync");
+		ref MUI_Button syncBtn = IA_UplinkButton.Create(runtime, "Total syncing", "pilotPrevSync");
 		syncBtn.GetOnClicked().Insert(OnPilotPreviewSyncing);
-		ref MUI_Button unlockBtn = runtime.CreateButton("Skin unlock", "pilotPrevUnlock");
+		ref MUI_Button unlockBtn = IA_UplinkButton.Create(runtime, "Skin unlock", "pilotPrevUnlock");
 		unlockBtn.GetOnClicked().Insert(OnPilotPreviewUnlock);
-		ref MUI_Button lateBtn = runtime.CreateButton("Late unlock", "pilotPrevLate");
+		ref MUI_Button lateBtn = IA_UplinkButton.Create(runtime, "Late unlock", "pilotPrevLate");
 		lateBtn.GetOnClicked().Insert(OnPilotPreviewLateUnlock);
-		ref MUI_Button ownedBtn = runtime.CreateButton("Unlocked seat", "pilotPrevOwned");
+		ref MUI_Button ownedBtn = IA_UplinkButton.Create(runtime, "Unlocked seat", "pilotPrevOwned");
 		ownedBtn.GetOnClicked().Insert(OnPilotPreviewUnlockedSeat);
-		ref MUI_Button allBtn = runtime.CreateButton("Play all", "pilotPrevAll");
+		ref MUI_Button allBtn = IA_UplinkButton.Create(runtime, "Play all", "pilotPrevAll");
 		allBtn.MakeAccent();
 		allBtn.GetOnClicked().Insert(OnPilotPreviewAll);
-		ref MUI_Button skinBtn = runtime.CreateButton("Cycle nearest heli skin", "pilotPrevSkin");
+		ref MUI_Button skinBtn = IA_UplinkButton.Create(runtime, "Cycle nearest heli skin", "pilotPrevSkin");
 		skinBtn.GetOnClicked().Insert(OnSkinPreview);
 
+		// One width for all nine, so the three rows stand as a grid.
+		ref array<MUI_Button> previewBtns = {seatBtn, landingBtn, farBtn, syncBtn, unlockBtn, lateBtn, ownedBtn, allBtn, skinBtn};
+		foreach (MUI_Button previewBtn : previewBtns)
+		{
+			previewBtn.SetMinWidth(PREVIEW_BTN_W);
+		}
+
 		ref MUI_Row previewRow1 = runtime.CreateRow("pilotPrevRow1");
-		previewRow1.SetGap(12);
+		previewRow1.SetGap(10);
 		previewRow1.AddChild(seatBtn);
 		previewRow1.AddChild(landingBtn);
 		previewRow1.AddChild(farBtn);
 
 		ref MUI_Row previewRow2 = runtime.CreateRow("pilotPrevRow2");
-		previewRow2.SetGap(12);
+		previewRow2.SetGap(10);
 		previewRow2.AddChild(syncBtn);
 		previewRow2.AddChild(unlockBtn);
 		previewRow2.AddChild(lateBtn);
 
 		ref MUI_Row previewRow3 = runtime.CreateRow("pilotPrevRow3");
-		previewRow3.SetGap(12);
+		previewRow3.SetGap(10);
 		previewRow3.AddChild(ownedBtn);
 		previewRow3.AddChild(allBtn);
 		previewRow3.AddChild(skinBtn);
 
+		AddCaption(runtime, m_PageHq, "Pilot card preview", "pilotPreviewCap");
 		m_PageHq.AddChild(previewLbl);
 		m_PageHq.AddChild(previewRow1);
 		m_PageHq.AddChild(previewRow2);
@@ -605,65 +666,61 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	//------------------------------------------------------------------------------------------------
 	protected void BuildDynamicAIPage(notnull MUI_Runtime runtime)
 	{
-		m_DynamicAISpawningToggle = runtime.CreateToggle("Dynamic AI Spawning", "dynamicAiSpawning");
-		m_PageDynamicAI.AddChild(m_DynamicAISpawningToggle);
+		m_DynamicAISpawningToggle = IA_UplinkToggle.Create(runtime, "Dynamic AI Spawning", "dynamicAiSpawning");
+		AddCaption(runtime, m_PageDynamicAI, "Dynamic AI spawning", "dynamicAiCap");
+		AddPair(runtime, m_PageDynamicAI, "dynamicAiOnRow", m_DynamicAISpawningToggle, null);
 		m_Hints.AddHint(m_DynamicAISpawningToggle, "Dynamic AI Spawning", "Caches supported soldiers and restores survivors as needed. ON uses the Dynamic AI scale below instead of player-count scaling, even with budget 0. Far squads that would exceed the budget record reserves instead of creating every soldier; the leader still spawns. Vehicles and assigned mortar gunners stay spawned. OFF restores reserves and resumes saved scaling. Positions and casualties persist; equipment/ammo reset.");
-		m_DynamicAIScaleField = runtime.CreateNumericField("Dynamic AI scale", "dynamicAiScale");
+		m_DynamicAIScaleField = IA_UplinkField.Create(runtime, "Dynamic AI scale", "dynamicAiScale");
 		m_DynamicAIScaleField.SetRange(IA_Config.DYNAMIC_AI_SCALE_MIN, IA_Config.DYNAMIC_AI_SCALE_MAX);
 		m_DynamicAIScaleField.SetStep(0.1);
 		m_DynamicAIScaleField.SetDecimals(2);
 		m_DynamicAIScaleField.SetValue(IA_Config.DYNAMIC_AI_SCALE_DEFAULT);
-		m_PageDynamicAI.AddChild(m_DynamicAIScaleField);
 		m_Hints.AddHint(m_DynamicAIScaleField, "Dynamic AI scale", "Roster strength while Dynamic AI Spawning is ON. Replaces player-count scaling and the Scaling-tab multiplier or static override. 0.8 is 80 percent of the baseline roster. 1.0 is full strength. Changing this does not rebuild an already assigned roster.");
 		m_DynamicAIBudgetField = MakeDynamicAIField(runtime, "Dynamic AI Budget (soldiers; 0 = distance only)", "dynamicAiBudget", 0, IA_Config.DYNAMIC_AI_BUDGET_MAX, 10, IA_Config.DYNAMIC_AI_BUDGET_DEFAULT, "Target count of physical infantry. Far new squads seed reserves once this number is already live. Nearest squads restore first. Farther squads stay cached or are evicted. Live soldiers already inside 400 m are not deleted immediately. Vehicles and assigned mortar gunners stay spawned. 0 is distance-only caching.");
 
-		ref MUI_Label modes = runtime.CreateLabel("Budget 0: distance only. Positive budget: nearest squads first. Dynamic AI scale applies while ON. Save applies now; Save for restart also remembers changes.", "dynamicAiModes");
-		modes.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		modes.SetMuted(true);
+		AddPair(runtime, m_PageDynamicAI, "dynamicAiScaleRow", m_DynamicAIScaleField, m_DynamicAIBudgetField);
+
+		ref IA_UplinkNote modes = IA_UplinkNote.Create(runtime, "Budget 0: distance only. Positive budget: nearest squads first. Dynamic AI scale applies while ON. Save applies now; Save for restart also remembers changes.", "dynamicAiModes");
 		m_PageDynamicAI.AddChild(modes);
 
-		ref MUI_Label distances = runtime.CreateLabel("Distances (meters)  |  Applies to every player", "dynamicAiDistances");
-		distances.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		distances.SetBold(true);
-		m_PageDynamicAI.AddChild(distances);
+		AddCaption(runtime, m_PageDynamicAI, "Distances (meters)  |  Applies to every player", "dynamicAiDistances");
 		m_DynamicAIWakeField = MakeDynamicAIField(runtime, "Wake / eligibility distance (m)", "dynamicAiWake", 100, 5000, 50, 1000, "Distance only: requests the whole squad. Budget mode: admits squads to nearest-first allocation up to the soldier budget. Larger values provide more approach time.");
 		m_DynamicAICacheField = MakeDynamicAIField(runtime, "Cache / outer retention distance (m)", "dynamicAiCache", 150, 7500, 50, 1500, "Distance only: all soldiers must remain beyond this distance for the quiet period. Budget mode: an existing allocation remains eligible out to this distance.");
 		m_DynamicAICloseField = MakeDynamicAIField(runtime, "Close keep distance (m; budget)", "dynamicAiClose", 50, 2000, 50, 300, "Live soldiers inside this band stay in the close-keep hysteresis. They are not deleted while you remain this close. Walking in does not restore every cached squad over the budget; nearest groups fill first.");
 		m_DynamicAIReleaseField = MakeDynamicAIField(runtime, "Keep release distance (m; budget)", "dynamicAiRelease", 100, 3000, 50, 400, "Close-keep hysteresis ends beyond this distance. Individual live soldiers inside it cannot be removed. Farther teammates of the same squad can still be cached to free budget for nearer groups.");
 
-		ref MUI_Label distanceOrder = runtime.CreateLabel("Save keeps release at least 50 m beyond protection, wake at least as far as release, and cache at least 50 m beyond wake.", "dynamicAiDistanceOrder");
-		distanceOrder.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		distanceOrder.SetMuted(true);
+		AddPair(runtime, m_PageDynamicAI, "dynamicAiWakeRow", m_DynamicAIWakeField, m_DynamicAICacheField);
+		AddPair(runtime, m_PageDynamicAI, "dynamicAiKeepRow", m_DynamicAICloseField, m_DynamicAIReleaseField);
+
+		ref IA_UplinkNote distanceOrder = IA_UplinkNote.Create(runtime, "Save keeps release at least 50 m beyond protection, wake at least as far as release, and cache at least 50 m beyond wake.", "dynamicAiDistanceOrder");
 		m_PageDynamicAI.AddChild(distanceOrder);
 
-		ref MUI_Label timing = runtime.CreateLabel("Timing (seconds)", "dynamicAiTiming");
-		timing.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		timing.SetBold(true);
-		m_PageDynamicAI.AddChild(timing);
+		AddCaption(runtime, m_PageDynamicAI, "Timing (seconds)", "dynamicAiTiming");
 		m_DynamicAICacheQuietField = MakeDynamicAIField(runtime, "Departure quiet time (s; distance only)", "dynamicAiCacheQuiet", 0, 600, 5, 60, "How long a squad must remain outside cache distance before distance-only removal. Returning players restart the timer. 0 removes the departure delay; other safety checks still apply.");
 		m_DynamicAICombatQuietField = MakeDynamicAIField(runtime, "Combat quiet time (s; both modes)", "dynamicAiCombatQuiet", 10, 300, 5, 60, "Protects recent combat only while a player is inside wake distance. Native AI-vs-AI targets do not keep far squads spawned. Lower values release nearby troops sooner after fighting.");
 		m_DynamicAIMinLiveField = MakeDynamicAIField(runtime, "Minimum live time (s; budget)", "dynamicAiMinLive", 5, 300, 5, 30, "Newly observed or restored soldiers stay live for at least this long. Prevents rapid removal immediately after a spawn.");
 		m_DynamicAIEvictDelayField = MakeDynamicAIField(runtime, "Allocation reduction delay (s; budget)", "dynamicAiEvictDelay", 1, 120, 1, 10, "A lower squad allocation must remain pending for this long before removals begin. Higher values smooth brief priority changes; lower values free capacity sooner.");
-		ref MUI_Label stability = runtime.CreateLabel("Allocation stability (meters)", "dynamicAiStability");
-		stability.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		stability.SetBold(true);
-		m_PageDynamicAI.AddChild(stability);
+		AddPair(runtime, m_PageDynamicAI, "dynamicAiQuietRow", m_DynamicAICacheQuietField, m_DynamicAICombatQuietField);
+		AddPair(runtime, m_PageDynamicAI, "dynamicAiLiveRow", m_DynamicAIMinLiveField, m_DynamicAIEvictDelayField);
+
+		AddCaption(runtime, m_PageDynamicAI, "Allocation stability", "dynamicAiStability");
 		m_DynamicAIRetentionField = MakeDynamicAIField(runtime, "Existing allocation preference (m; budget)", "dynamicAiRetention", 0, 500, 10, 50, "Subtracts this distance from the ranking of already allocated squads. Reduces swapping between similar distances. 0 uses nearest distance without this preference.");
 		m_DynamicAICaptureSeedField = MakeDynamicAIField(runtime, "Capture seed window (s; budget)", "dynamicAiCaptureSeed", 5, 120, 5, 30, "A contested objective may restore one defender over the budget for this long so capture can start. The rest of that squad still fills nearest-first.");
-		m_DynamicAIHardCapToggle = runtime.CreateToggle("Hard cap (combat does not block eviction)", "dynamicAiHardCap");
-		m_PageDynamicAI.AddChild(m_DynamicAIHardCapToggle);
+		m_DynamicAIHardCapToggle = IA_UplinkToggle.Create(runtime, "Hard cap (combat does not block eviction)", "dynamicAiHardCap");
+		AddPair(runtime, m_PageDynamicAI, "dynamicAiStabilityRow", m_DynamicAIRetentionField, m_DynamicAICaptureSeedField);
+		AddPair(runtime, m_PageDynamicAI, "dynamicAiHardCapRow", m_DynamicAIHardCapToggle, null);
 		m_Hints.AddHint(m_DynamicAIHardCapToggle, "Hard cap", "When on, a squad in recent combat can still be evicted if it is overallocated and outside the keep-release distance. Close soldiers stay. Use this when you want the budget to stay tight during a running fight.");
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! A whole-number field with its hint; the caller places it.
 	protected MUI_NumericField MakeDynamicAIField(notnull MUI_Runtime runtime, string label, string name, int minimum, int maximum, int step, int initialValue, string hint)
 	{
-		ref MUI_NumericField field = runtime.CreateNumericField(label, name);
+		ref MUI_NumericField field = IA_UplinkField.Create(runtime, label, name);
 		field.SetRange(minimum, maximum);
 		field.SetStep(step);
 		field.SetDecimals(0);
 		field.SetValue(initialValue);
-		m_PageDynamicAI.AddChild(field);
 		m_Hints.AddHint(field, label, hint);
 		return field;
 	}
@@ -674,41 +731,31 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		if (!m_PageDefense)
 			return;
 
-		ref MUI_Label intro = runtime.CreateLabel("Applies to the next defense after an AO group completes. Enhanced is the default.", "defIntro");
-		intro.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		intro.SetMuted(true);
-		m_PageDefense.AddChild(intro);
+		ref IA_UplinkNote intro = IA_UplinkNote.Create(runtime, "Applies to the next defense after an AO group completes. Enhanced is the default.", "defIntro");
 
-		ref MUI_Label baseIntro = runtime.CreateLabel("Applies after this AO's required objectives; successful placement uses the captured base for defense.", "dynBaseIntro");
-		baseIntro.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		baseIntro.SetMuted(true);
+		ref IA_UplinkNote baseIntro = IA_UplinkNote.Create(runtime, "Applies after this AO's required objectives; successful placement uses the captured base for defense.", "dynBaseIntro");
+		AddCaption(runtime, m_PageDefense, "Field base", "dynBaseCap");
 		m_PageDefense.AddChild(baseIntro);
 
-		m_DynamicBaseEnabledToggle = runtime.CreateToggle("Dynamic field base after required objectives", "dynBaseOn");
-		m_PageDefense.AddChild(m_DynamicBaseEnabledToggle);
+		m_DynamicBaseEnabledToggle = IA_UplinkToggle.Create(runtime, "Dynamic field base after required objectives", "dynBaseOn");
 		m_Hints.AddHint(m_DynamicBaseEnabledToggle, "Dynamic field base", "After required objectives, try to place a USSR field base to seize and immediately defend using the same defense settings, doctrines and phases as an authored position. Off uses the existing authored-defense roll.");
 
-		m_DynamicBaseEmplacementsToggle = runtime.CreateToggle("Optional finite-ammunition base emplacements", "dynBaseGuns");
-		m_PageDefense.AddChild(m_DynamicBaseEmplacementsToggle);
+		m_DynamicBaseEmplacementsToggle = IA_UplinkToggle.Create(runtime, "Optional finite-ammunition base emplacements", "dynBaseGuns");
+		AddPair(runtime, m_PageDefense, "dynBaseRow", m_DynamicBaseEnabledToggle, m_DynamicBaseEmplacementsToggle);
 		m_Hints.AddHint(m_DynamicBaseEmplacementsToggle, "Base emplacements", "Allow PKM, NSV and AA positions in newly constructed bases. Crews come from the existing defender budget. Off leaves the fortifications unarmed; it does not alter an active base.");
 
-		m_DynamicBaseChanceField = runtime.CreateNumericField("Dynamic base chance (0 disables automatic selection)", "dynBaseChance");
+		m_DynamicBaseChanceField = IA_UplinkField.Create(runtime, "Dynamic base chance (0 disables automatic selection)", "dynBaseChance");
 		m_DynamicBaseChanceField.SetRange(0, 100);
 		m_DynamicBaseChanceField.SetStep(1);
 		m_DynamicBaseChanceField.SetDecimals(0);
 		m_DynamicBaseChanceField.SetValue(100);
-		m_PageDefense.AddChild(m_DynamicBaseChanceField);
 		m_Hints.AddHint(m_DynamicBaseChanceField, "Selection chance", "0 disables automatic selection. 100 always attempts a legal site. Missed or failed placement returns to the authored 80% defense roll.");
 
-		m_DynamicBaseInGmToggle = runtime.CreateToggle("Allow automatic dynamic base in Game Master mode", "dynBaseGm");
-		m_PageDefense.AddChild(m_DynamicBaseInGmToggle);
+		m_DynamicBaseInGmToggle = IA_UplinkToggle.Create(runtime, "Allow automatic dynamic base in Game Master mode", "dynBaseGm");
+		AddPair(runtime, m_PageDefense, "dynBaseGmRow", m_DynamicBaseInGmToggle, null);
 		m_Hints.AddHint(m_DynamicBaseInGmToggle, "Game Master auto", "When Game Master mode is on, automatic base selection stays off unless this is enabled. The seize-base command still works.");
 
-		ref MUI_Label sizeLbl = runtime.CreateLabel("Dynamic base size", "dynBaseSizeLbl");
-		sizeLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		sizeLbl.SetMuted(true);
-		m_PageDefense.AddChild(sizeLbl);
-		m_DynamicBaseSizeDrop = runtime.CreateDropdown("dynBaseSize");
+		m_DynamicBaseSizeDrop = IA_UplinkChoice.Create(runtime, "Dynamic base size", "dynBaseSize");
 		m_DynamicBaseSizeDrop.AddItem("Auto");
 		m_DynamicBaseSizeDrop.AddItem("Full");
 		m_DynamicBaseSizeDrop.AddItem("Compact");
@@ -717,158 +764,154 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_DynamicBaseSizeDrop.AddItem("Command post (64 x 56 m)");
 		m_DynamicBaseSizeDrop.AddItem("Rally post (36 x 48 m)");
 		m_DynamicBaseSizeDrop.SetIndex(0);
-		m_PageDefense.AddChild(m_DynamicBaseSizeDrop);
+		AddPair(runtime, m_PageDefense, "dynBaseSizeRow", m_DynamicBaseChanceField, m_DynamicBaseSizeDrop);
 		m_Hints.AddHint(m_DynamicBaseSizeDrop, "Base size", "Auto tries six layouts, from the full operating base down to a 36 x 48 m fortified rally post. Choose a named layout to require that design. Smaller bases have fewer occupying guards; capture and the normal defense take place at the same base.");
 
-		m_DefendLegacyToggle = runtime.CreateToggle("Use legacy defense (12-16 min, no events)", "defLegacy");
-		m_PageDefense.AddChild(m_DefendLegacyToggle);
+		m_DefendLegacyToggle = IA_UplinkToggle.Create(runtime, "Use legacy defense (12-16 min, no events)", "defLegacy");
+		AddCaption(runtime, m_PageDefense, "Defense clock", "defClockCap");
+		m_PageDefense.AddChild(intro);
+		AddPair(runtime, m_PageDefense, "defLegacyRow", m_DefendLegacyToggle, null);
 		m_Hints.AddHint(m_DefendLegacyToggle, "Legacy defense", "Turn this on to keep the original timer-only hold for the next defense. Leave it off for named doctrines and mini-objectives.");
 
-		m_DefendDurMinField = runtime.CreateNumericField("Enhanced duration min (minutes)", "defDurMin");
+		m_DefendDurMinField = IA_UplinkField.Create(runtime, "Enhanced duration min (minutes)", "defDurMin");
 		m_DefendDurMinField.SetRange(8, 40);
 		m_DefendDurMinField.SetStep(1);
 		m_DefendDurMinField.SetDecimals(0);
 		m_DefendDurMinField.SetValue(18);
 
-		m_DefendDurMaxField = runtime.CreateNumericField("Enhanced duration max (minutes)", "defDurMax");
+		m_DefendDurMaxField = IA_UplinkField.Create(runtime, "Enhanced duration max (minutes)", "defDurMax");
 		m_DefendDurMaxField.SetRange(8, 40);
 		m_DefendDurMaxField.SetStep(1);
 		m_DefendDurMaxField.SetDecimals(0);
 		m_DefendDurMaxField.SetValue(22);
 
-		m_DefendPrepMinField = runtime.CreateNumericField("PREPARE min (seconds)", "defPrepMin");
+		m_DefendPrepMinField = IA_UplinkField.Create(runtime, "PREPARE min (seconds)", "defPrepMin");
 		m_DefendPrepMinField.SetRange(15, 300);
 		m_DefendPrepMinField.SetStep(5);
 		m_DefendPrepMinField.SetDecimals(0);
 		m_DefendPrepMinField.SetValue(120);
 
-		m_DefendPrepMaxField = runtime.CreateNumericField("PREPARE max (seconds)", "defPrepMax");
+		m_DefendPrepMaxField = IA_UplinkField.Create(runtime, "PREPARE max (seconds)", "defPrepMax");
 		m_DefendPrepMaxField.SetRange(15, 300);
 		m_DefendPrepMaxField.SetStep(5);
 		m_DefendPrepMaxField.SetDecimals(0);
 		m_DefendPrepMaxField.SetValue(180);
 
-		m_DefendEventsField = runtime.CreateNumericField("Guaranteed mini-objectives", "defEvents");
+		m_DefendEventsField = IA_UplinkField.Create(runtime, "Guaranteed mini-objectives", "defEvents");
 		m_DefendEventsField.SetRange(0, 3);
 		m_DefendEventsField.SetStep(1);
 		m_DefendEventsField.SetDecimals(0);
 		m_DefendEventsField.SetValue(2);
 
-		m_PageDefense.AddChild(m_DefendDurMinField);
-		m_PageDefense.AddChild(m_DefendDurMaxField);
-		m_PageDefense.AddChild(m_DefendPrepMinField);
-		m_PageDefense.AddChild(m_DefendPrepMaxField);
-		m_PageDefense.AddChild(m_DefendEventsField);
+		AddPair(runtime, m_PageDefense, "defDurRow", m_DefendDurMinField, m_DefendDurMaxField);
+		AddPair(runtime, m_PageDefense, "defPrepRow", m_DefendPrepMinField, m_DefendPrepMaxField);
 		m_Hints.AddHint(m_DefendDurMinField, "Shortest Enhanced hold", "Minimum minutes for an Enhanced defense clock after PREPARE.");
 		m_Hints.AddHint(m_DefendDurMaxField, "Longest Enhanced hold", "Maximum minutes for an Enhanced defense clock after PREPARE.");
 		m_Hints.AddHint(m_DefendPrepMinField, "Shortest PREPARE", "Minimum seconds before the main clock starts if players have not made contact.");
 		m_Hints.AddHint(m_DefendPrepMaxField, "Longest PREPARE", "Maximum seconds the PREPARE phase can last before the clock starts automatically.");
 		m_Hints.AddHint(m_DefendEventsField, "Guaranteed events", "How many optional mini-objectives always appear (max 3). A third event can still roll from the player-count chances below. Hunts never start in CRISIS.");
 
-		m_DefendThirdLowField = runtime.CreateNumericField("Third-event chance (1-8 players)", "defThirdLow");
+		m_DefendThirdLowField = IA_UplinkField.Create(runtime, "Third-event chance (1-8 players)", "defThirdLow");
 		m_DefendThirdLowField.SetRange(0, 1);
 		m_DefendThirdLowField.SetStep(0.05);
 		m_DefendThirdLowField.SetDecimals(2);
 		m_DefendThirdLowField.SetValue(0.25);
 
-		m_DefendThirdMidField = runtime.CreateNumericField("Third-event chance (9-16 players)", "defThirdMid");
+		m_DefendThirdMidField = IA_UplinkField.Create(runtime, "Third-event chance (9-16 players)", "defThirdMid");
 		m_DefendThirdMidField.SetRange(0, 1);
 		m_DefendThirdMidField.SetStep(0.05);
 		m_DefendThirdMidField.SetDecimals(2);
 		m_DefendThirdMidField.SetValue(0.50);
 
-		m_DefendThirdHighField = runtime.CreateNumericField("Third-event chance (17+ players)", "defThirdHigh");
+		m_DefendThirdHighField = IA_UplinkField.Create(runtime, "Third-event chance (17+ players)", "defThirdHigh");
 		m_DefendThirdHighField.SetRange(0, 1);
 		m_DefendThirdHighField.SetStep(0.05);
 		m_DefendThirdHighField.SetDecimals(2);
 		m_DefendThirdHighField.SetValue(0.75);
 
-		m_PageDefense.AddChild(m_DefendThirdLowField);
-		m_PageDefense.AddChild(m_DefendThirdMidField);
-		m_PageDefense.AddChild(m_DefendThirdHighField);
+		AddCaption(runtime, m_PageDefense, "Mini-objectives", "defEventsCap");
+		AddPair(runtime, m_PageDefense, "defEventsRow", m_DefendEventsField, m_DefendThirdLowField);
+		AddPair(runtime, m_PageDefense, "defThirdRow", m_DefendThirdMidField, m_DefendThirdHighField);
 		m_Hints.AddHint(m_DefendThirdLowField, "Third event at low pop", "Chance of a third mini-objective when 1 to 8 players are connected.");
 		m_Hints.AddHint(m_DefendThirdMidField, "Third event at mid pop", "Chance of a third mini-objective when 9 to 16 players are connected.");
 		m_Hints.AddHint(m_DefendThirdHighField, "Third event at high pop", "Chance of a third mini-objective when 17 or more players are connected.");
 
-		m_DefendPriSuccMinField = runtime.CreateNumericField("Priority success reduction min (sec)", "defPriSMin");
+		m_DefendPriSuccMinField = IA_UplinkField.Create(runtime, "Priority success reduction min (sec)", "defPriSMin");
 		m_DefendPriSuccMinField.SetRange(30, 600);
 		m_DefendPriSuccMinField.SetStep(10);
 		m_DefendPriSuccMinField.SetDecimals(0);
 		m_DefendPriSuccMinField.SetValue(120);
 
-		m_DefendPriSuccMaxField = runtime.CreateNumericField("Priority success reduction max (sec)", "defPriSMax");
+		m_DefendPriSuccMaxField = IA_UplinkField.Create(runtime, "Priority success reduction max (sec)", "defPriSMax");
 		m_DefendPriSuccMaxField.SetRange(30, 600);
 		m_DefendPriSuccMaxField.SetStep(10);
 		m_DefendPriSuccMaxField.SetDecimals(0);
 		m_DefendPriSuccMaxField.SetValue(240);
 
-		m_DefendPriFailMinField = runtime.CreateNumericField("Priority timeout penalty min (sec)", "defPriFMin");
+		m_DefendPriFailMinField = IA_UplinkField.Create(runtime, "Priority timeout penalty min (sec)", "defPriFMin");
 		m_DefendPriFailMinField.SetRange(30, 600);
 		m_DefendPriFailMinField.SetStep(10);
 		m_DefendPriFailMinField.SetDecimals(0);
 		m_DefendPriFailMinField.SetValue(180);
 
-		m_DefendPriFailMaxField = runtime.CreateNumericField("Priority timeout penalty max (sec)", "defPriFMax");
+		m_DefendPriFailMaxField = IA_UplinkField.Create(runtime, "Priority timeout penalty max (sec)", "defPriFMax");
 		m_DefendPriFailMaxField.SetRange(30, 600);
 		m_DefendPriFailMaxField.SetStep(10);
 		m_DefendPriFailMaxField.SetDecimals(0);
 		m_DefendPriFailMaxField.SetValue(300);
 
-		m_PageDefense.AddChild(m_DefendPriSuccMinField);
-		m_PageDefense.AddChild(m_DefendPriSuccMaxField);
-		m_PageDefense.AddChild(m_DefendPriFailMinField);
-		m_PageDefense.AddChild(m_DefendPriFailMaxField);
+		AddCaption(runtime, m_PageDefense, "High priority event", "defPriorityCap");
+		AddPair(runtime, m_PageDefense, "defPriSRow", m_DefendPriSuccMinField, m_DefendPriSuccMaxField);
+		AddPair(runtime, m_PageDefense, "defPriFRow", m_DefendPriFailMinField, m_DefendPriFailMaxField);
 		m_Hints.AddHint(m_DefendPriSuccMinField, "Priority success floor", "Shortest time removed from the hold clock when the HIGH PRIORITY event succeeds. Remaining time will not be cut below 6 minutes.");
 		m_Hints.AddHint(m_DefendPriSuccMaxField, "Priority success ceiling", "Longest time removed from the hold clock when the HIGH PRIORITY event succeeds.");
 		m_Hints.AddHint(m_DefendPriFailMinField, "Priority timeout floor", "Shortest extra time added when the HIGH PRIORITY deadline expires.");
 		m_Hints.AddHint(m_DefendPriFailMaxField, "Priority timeout ceiling", "Longest extra time added when the HIGH PRIORITY deadline expires.");
 
-		m_DefendDocSiegeToggle = runtime.CreateToggle("Siege doctrine", "defDocSiege");
-		m_DefendDocBreakToggle = runtime.CreateToggle("Breakthrough doctrine", "defDocBreak");
-		m_DefendDocAirToggle = runtime.CreateToggle("Air Assault doctrine", "defDocAir");
-		m_DefendDocCmdToggle = runtime.CreateToggle("Command Offensive doctrine", "defDocCmd");
+		m_DefendDocSiegeToggle = IA_UplinkToggle.Create(runtime, "Siege doctrine", "defDocSiege");
+		m_DefendDocBreakToggle = IA_UplinkToggle.Create(runtime, "Breakthrough doctrine", "defDocBreak");
+		m_DefendDocAirToggle = IA_UplinkToggle.Create(runtime, "Air Assault doctrine", "defDocAir");
+		m_DefendDocCmdToggle = IA_UplinkToggle.Create(runtime, "Command Offensive doctrine", "defDocCmd");
 		m_DefendDocSiegeToggle.SetChecked(true);
 		m_DefendDocBreakToggle.SetChecked(true);
 		m_DefendDocAirToggle.SetChecked(true);
 		m_DefendDocCmdToggle.SetChecked(true);
-		m_PageDefense.AddChild(m_DefendDocSiegeToggle);
-		m_PageDefense.AddChild(m_DefendDocBreakToggle);
-		m_PageDefense.AddChild(m_DefendDocAirToggle);
-		m_PageDefense.AddChild(m_DefendDocCmdToggle);
+		AddCaption(runtime, m_PageDefense, "Doctrines", "defDocCap");
+		AddPair(runtime, m_PageDefense, "defDocRow1", m_DefendDocSiegeToggle, m_DefendDocBreakToggle);
+		AddPair(runtime, m_PageDefense, "defDocRow2", m_DefendDocAirToggle, m_DefendDocCmdToggle);
 		m_Hints.AddHint(m_DefendDocSiegeToggle, "Siege", "Allows scout-to-spotting-team and deliberate infantry pushes. Disable the others to force this doctrine.");
 		m_Hints.AddHint(m_DefendDocBreakToggle, "Breakthrough", "Allows motorized and mechanized dismounts. Needs a nearby road or it rerolls.");
 		m_Hints.AddHint(m_DefendDocAirToggle, "Air Assault", "Allows HALO insertions with the ground attack. Needs an open LZ or it rerolls.");
 		m_Hints.AddHint(m_DefendDocCmdToggle, "Command Offensive", "Allows mixed attacks directed from a commander FOB.");
 
-		m_DefendEvtCmdToggle = runtime.CreateToggle("Commander FOB event", "defEvtCmd");
-		m_DefendEvtEliteToggle = runtime.CreateToggle("Elite patrol event", "defEvtElite");
-		m_DefendEvtScoutToggle = runtime.CreateToggle("Scout / spotting event", "defEvtScout");
-		m_DefendEvtConvoyToggle = runtime.CreateToggle("Reinforcement convoy event", "defEvtConvoy");
-		m_DefendEvtSniperToggle = runtime.CreateToggle("Sniper pair event", "defEvtSniper");
+		m_DefendEvtCmdToggle = IA_UplinkToggle.Create(runtime, "Commander FOB event", "defEvtCmd");
+		m_DefendEvtEliteToggle = IA_UplinkToggle.Create(runtime, "Elite patrol event", "defEvtElite");
+		m_DefendEvtScoutToggle = IA_UplinkToggle.Create(runtime, "Scout / spotting event", "defEvtScout");
+		m_DefendEvtConvoyToggle = IA_UplinkToggle.Create(runtime, "Reinforcement convoy event", "defEvtConvoy");
+		m_DefendEvtSniperToggle = IA_UplinkToggle.Create(runtime, "Sniper pair event", "defEvtSniper");
 		m_DefendEvtCmdToggle.SetChecked(true);
 		m_DefendEvtEliteToggle.SetChecked(true);
 		m_DefendEvtScoutToggle.SetChecked(true);
 		m_DefendEvtConvoyToggle.SetChecked(true);
 		m_DefendEvtSniperToggle.SetChecked(true);
-		m_PageDefense.AddChild(m_DefendEvtCmdToggle);
-		m_PageDefense.AddChild(m_DefendEvtEliteToggle);
-		m_PageDefense.AddChild(m_DefendEvtScoutToggle);
-		m_PageDefense.AddChild(m_DefendEvtConvoyToggle);
-		m_PageDefense.AddChild(m_DefendEvtSniperToggle);
+		AddCaption(runtime, m_PageDefense, "Mini-objective types", "defEvtCap");
+		AddPair(runtime, m_PageDefense, "defEvtRow1", m_DefendEvtCmdToggle, m_DefendEvtEliteToggle);
+		AddPair(runtime, m_PageDefense, "defEvtRow2", m_DefendEvtScoutToggle, m_DefendEvtConvoyToggle);
+		AddPair(runtime, m_PageDefense, "defEvtRow3", m_DefendEvtSniperToggle, null);
 		m_Hints.AddHint(m_DefendEvtCmdToggle, "Commander FOB", "Optional officer hunt. Success cancels the next major assault and one later event.");
 		m_Hints.AddHint(m_DefendEvtEliteToggle, "Elite patrol", "Hunt a special-forces squad before it homes on gunfire.");
 		m_Hints.AddHint(m_DefendEvtScoutToggle, "Scout then spotting team", "Destroy the scout before recon finishes or extra infantry squads are called onto the hold.");
 		m_Hints.AddHint(m_DefendEvtConvoyToggle, "Convoy", "Destroy marked transports before they dismount extra troops at the line.");
 		m_Hints.AddHint(m_DefendEvtSniperToggle, "Sniper pair", "Hunt the pair after they fire to remove precision overwatch.");
 
-		m_DefendHotDropLabel = runtime.CreateLabel("Air Assault hot-drop chance  20%", "defHotLbl");
-		m_DefendHotDropLabel.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		m_DefendHotDropLabel.SetMuted(true);
-		m_DefendHotDropSlider = runtime.CreateSlider("defHotDrop");
+		m_DefendHotDropLabel = IA_UplinkNote.Create(runtime, "Air Assault hot-drop chance  20%", "defHotLbl");
+		m_DefendHotDropLabel.SetColor(IA_UplinkStyle.Get().m_Gold);
+		m_DefendHotDropSlider = IA_UplinkSlider.Create(runtime, "defHotDrop");
 		m_DefendHotDropSlider.SetRange(0, 1);
 		m_DefendHotDropSlider.SetStep(0.01);
 		m_DefendHotDropSlider.SetValue(0.20);
 		m_DefendHotDropSlider.GetOnChanged().Insert(OnDefendHotDropChanged);
+		AddCaption(runtime, m_PageDefense, "Air assault", "defHotCap");
 		m_PageDefense.AddChild(m_DefendHotDropLabel);
 		m_PageDefense.AddChild(m_DefendHotDropSlider);
 		m_Hints.AddHint(m_DefendHotDropSlider, "Hot-drop chance", "Chance an Air Assault drop lands inside or near the AO instead of a 150 to 300 meter perimeter LZ. Never on a player.");
@@ -902,16 +945,15 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		if (!m_PageFactions)
 			return;
 
-		ref MUI_Label infLbl = runtime.CreateLabel("Infantry enemies for future spawns. Auto-detect uses the usual mod-aware rotation.", "infFacLbl");
-		infLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		infLbl.SetMuted(true);
+		ref IA_UplinkNote infLbl = IA_UplinkNote.Create(runtime, "Infantry enemies for future spawns. Auto-detect uses the usual mod-aware rotation.", "infFacLbl");
+		AddCaption(runtime, m_PageFactions, "Enemy infantry", "infFacCap");
 		m_PageFactions.AddChild(infLbl);
 		m_Hints.AddHint(infLbl, "Enemy infantry factions", "Choose which factions future enemy foot soldiers will come from.");
 
-		m_EnemyAutoToggle = runtime.CreateToggle("Auto-detect infantry factions", "enfAuto");
+		m_EnemyAutoToggle = IA_UplinkToggle.Create(runtime, "Auto-detect infantry factions", "enfAuto");
 		m_EnemyAutoToggle.SetChecked(true);
 		m_EnemyAutoToggle.GetOnChanged().Insert(OnEnemyAutoChanged);
-		m_PageFactions.AddChild(m_EnemyAutoToggle);
+		AddPair(runtime, m_PageFactions, "enfAutoRow", m_EnemyAutoToggle, null);
 		m_Hints.AddHint(m_EnemyAutoToggle, "Choose infantry automatically", "Turn this on to let I&A choose suitable enemy infantry factions. Turn it off to use your selections below.");
 
 		m_EnemyFactionToggles = new array<ref MUI_Toggle>();
@@ -920,16 +962,15 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		IA_AdminConfigUtil.CollectFactionChoices(EEntityCatalogType.CHARACTER, 1, m_EnemyFactionChoiceKeys, infNames);
 		AddFactionToggles(runtime, m_PageFactions, "enf_", m_EnemyFactionChoiceKeys, infNames, m_EnemyFactionToggles, false);
 
-		ref MUI_Label vehLbl = runtime.CreateLabel("Vehicle enemies. Match infantry unless you need a different catalog (common with mixed-faction mods).", "vehFacLbl");
-		vehLbl.SetFontSize(runtime.GetTheme().FONT_SMALL);
-		vehLbl.SetMuted(true);
+		ref IA_UplinkNote vehLbl = IA_UplinkNote.Create(runtime, "Vehicle enemies. Match infantry unless you need a different catalog (common with mixed-faction mods).", "vehFacLbl");
+		AddCaption(runtime, m_PageFactions, "Enemy vehicles", "vehFacCap");
 		m_PageFactions.AddChild(vehLbl);
 		m_Hints.AddHint(vehLbl, "Enemy vehicle factions", "Choose which factions future enemy military vehicles will come from.");
 
-		m_VehicleMatchToggle = runtime.CreateToggle("Vehicle factions match infantry", "vehMatch");
+		m_VehicleMatchToggle = IA_UplinkToggle.Create(runtime, "Vehicle factions match infantry", "vehMatch");
 		m_VehicleMatchToggle.SetChecked(true);
 		m_VehicleMatchToggle.GetOnChanged().Insert(OnVehicleMatchChanged);
-		m_PageFactions.AddChild(m_VehicleMatchToggle);
+		AddPair(runtime, m_PageFactions, "vehMatchRow", m_VehicleMatchToggle, null);
 		m_Hints.AddHint(m_VehicleMatchToggle, "Match infantry factions", "Turn this on to use the same enemy factions for vehicles and infantry. Turn it off to choose vehicle factions separately.");
 
 		m_VehicleFactionToggles = new array<ref MUI_Toggle>();
@@ -940,23 +981,34 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! One switch per faction, two to a row.
 	protected void AddFactionToggles(notnull MUI_Runtime runtime, notnull MUI_Panel page, string namePrefix, notnull array<string> keys, notnull array<string> names, notnull array<ref MUI_Toggle> toggles, bool vehicle)
 	{
 		int count = keys.Count();
+		MUI_Toggle held;
 		int i;
 		for (i = 0; i < count; i++)
 		{
 			string label = names[i];
 			if (label.IsEmpty())
 				label = keys[i];
-			ref MUI_Toggle toggle = runtime.CreateToggle(label, namePrefix + keys[i]);
+			ref MUI_Toggle toggle = IA_UplinkToggle.Create(runtime, label, namePrefix + keys[i]);
 			if (vehicle)
 				toggle.GetOnChanged().Insert(OnVehicleFactionToggleChanged);
 			else
 				toggle.GetOnChanged().Insert(OnEnemyFactionToggleChanged);
 			toggles.Insert(toggle);
-			page.AddChild(toggle);
+
+			if (!held)
+			{
+				held = toggle;
+				continue;
+			}
+			AddPair(runtime, page, namePrefix + "row" + i.ToString(), held, toggle);
+			held = null;
 		}
+		if (held)
+			AddPair(runtime, page, namePrefix + "rowLast", held, null);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1136,6 +1188,12 @@ class IA_AdminConfigMenu : MUI_MenuBase
 			m_PageDefense.SetVisible(index == 7);
 		if (m_PageDynamicAI)
 			m_PageDynamicAI.SetVisible(index == 8);
+
+		// Each section opens at its top.
+		if (m_Scroll)
+			m_Scroll.SetScrollY(0);
+		if (m_Frame)
+			m_Frame.SetNote(string.Format("SECTION %1 OF 9", index + 1));
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1606,7 +1664,7 @@ class IA_AdminConfigMenu : MUI_MenuBase
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void FillSkillDropdown(MUI_Dropdown drop)
+	protected void FillSkillDropdown(IA_UplinkChoice drop)
 	{
 		if (!drop)
 			return;

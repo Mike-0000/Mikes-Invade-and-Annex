@@ -11,8 +11,13 @@ Base URL: `https://invade-annex-api.azurewebsites.net/api`
 | `POST /registerServer` | `register_server` |
 | `POST /submitStats` | `api_submit_stats` |
 | `GET /getAllLeaderboards?serverGuid=` | `api_get_all_leaderboards` |
+| `GET /leaderboard?serverGuid=&board=&sort=&dir=&offset=&limit=&playerId=` | `api_get_leaderboard` |
 | `POST /submitTransport` | `submit_transport_batch` |
 | `POST /getTransportRatings` | `get_transport_ratings` |
+
+`getAllLeaderboards` is the legacy route: three whole boards in one answer. The
+current build asks `/leaderboard` for a page at a time and no longer calls it.
+Older mod builds still do, so it stays.
 
 Request and response bodies: `API_DOCUMENTATION.md`. Every route is anonymous,
 because the game sends no credentials. Writes are accepted only for a
@@ -22,6 +27,71 @@ registered, active server GUID; anything else gets
 Responses must stay compact JSON (`JSON.stringify`). The game finds
 `"serverGuid":"` and `"<name>Leaderboard":[` by string search, so a space after
 the colon breaks released builds.
+
+## `GET /leaderboard`
+
+One page of one board in one sort order, plus the asking player's own row. The
+game server asks for a page when a player looks at it, so an answer does not
+grow with the number of players.
+
+| Query | Values | Default |
+| --- | --- | --- |
+| `serverGuid` | the asking server's GUID | required |
+| `board` | `global`, `server`, `servers` | `global` |
+| `sort` | `score`, `kills`, `deaths`, `kd`, `hvt`, `guard`, `obj`, `transport`, `insertions`, `players` | `score` |
+| `dir` | `asc`, `desc` | `desc` |
+| `offset` | rows to skip, 0 to 1000000 | `0` |
+| `limit` | rows wanted, 0 to 100 | `25` |
+| `playerId` | identity id whose own row is wanted, 1 to 64 characters | none |
+
+- The session board is not served here. The game server builds it itself.
+- `server` is the asking server's players. `servers` has one row per active
+  server that has player stats; servers still on a default name are left out.
+- `kd` sorts by kills / max(deaths, 1). A row has no such field.
+- An `offset` or `limit` above its cap is cut to the cap. One that is not a
+  whole number takes the default.
+- `limit=0` returns `total` and `me` with no rows.
+- A `playerId` of any other length is treated as absent. On the `servers`
+  board it is ignored and `me` is the asking server's row.
+
+Response:
+
+```
+{"board","sort","dir","offset","total","rows":[row],"me":[row] or []}
+```
+
+`board`, `sort`, `dir` and `offset` repeat what was asked; the game drops an
+answer that does not match the request it has open. `total` is the number of
+rows on the board. `me` holds one row wherever it ranks, or nothing when no
+`playerId` was sent or the player is not on the board.
+
+A row has one-letter keys, because a page repeats them for every row:
+
+| Key | Meaning |
+| --- | --- |
+| `r` | rank in the requested sort, from 1 |
+| `n` | player name, or server name on `servers`; at most 48 characters |
+| `k` | kills |
+| `d` | deaths |
+| `h` | HVT kills |
+| `g` | HVT guard kills |
+| `o` | objective score |
+| `s` | score |
+| `t` | transport rating: global on `global`, earned on the asking server on `server`, summed over a server's players on `servers` |
+| `i` | insertions |
+| `p` | players: servers the player has stats on (`global`), 1 (`server`), players on the server (`servers`) |
+
+Numbers are capped at 2000000000, since the game reads 32-bit integers. Rows
+carry no player ids. Ties are broken by score, then by id, so a page is the
+same between calls.
+
+Errors, as plain text:
+
+- `403 Invalid or inactive server GUID.` when `serverGuid` is missing, not a
+  UUID, unknown or inactive.
+- `400 board must be one of: global, server, servers.`
+- `400 sort must be one of: score, kills, deaths, kd, hvt, guard, obj, transport, insertions, players.`
+- `400 dir must be asc or desc.`
 
 ## Hosting
 
@@ -33,9 +103,10 @@ the colon breaks released builds.
 
 The app connects straight to Postgres through the Supabase transaction pooler
 as the `ia_game_api` role. That role has no table privileges and can only
-execute the five functions above
-(`backend/supabase/migrations/20260930010000_game_api.sql`). It uses no Supabase
-API key.
+execute the six functions above
+(`backend/supabase/migrations/20260930010000_game_api.sql`, and
+`20261001030000_leaderboard_pages.sql` for `api_get_leaderboard`). It uses no
+Supabase API key.
 
 App settings: `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`.
 

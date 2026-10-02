@@ -8,6 +8,10 @@ modded class SCR_PlayerController
 	protected static const int IA_HELI_PAINT_MIN_GAP_MS = 120;
 	protected int m_iIA_LastHeliPaintMs = -IA_HELI_PAINT_MIN_GAP_MS;
 	protected int m_iIA_LastHeliStateMs = -IA_HELI_PAINT_MIN_GAP_MS;
+	protected static const int IA_BOARD_MIN_GAP_MS = 100;
+	protected static const int IA_STANDING_MIN_GAP_MS = 1000;
+	protected int m_iIA_LastBoardAskMs = -IA_BOARD_MIN_GAP_MS;
+	protected int m_iIA_LastStandingAskMs = -IA_STANDING_MIN_GAP_MS;
 
 	//------------------------------------------------------------------------------------------------
 	void IA_AskUpdateAdminConfig(string packed)
@@ -796,6 +800,160 @@ modded class SCR_PlayerController
 			return;
 
 		IA_GmDirector.GetInstance().ForgetKnownSite(x, z);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Client: ask for the page of a leaderboard that holds one row. The answer reaches
+	//! IA_StatisticsMenu as a head and one or more row chunks.
+	//! \param viewId the menu's tag for this board and sort order, sent back with the answer
+	//! \param board an IA_BoardProtocol.BOARD_ value
+	//! \param sortKey an IA_BoardProtocol.SORT_ value
+	//! \param offset index of a row on the wanted page
+	void IA_AskLeaderboardPage(int viewId, int board, int sortKey, bool descending, int offset)
+	{
+		if (Replication.IsServer())
+		{
+			IA_AnswerLeaderboardPage(viewId, board, sortKey, descending, offset);
+			return;
+		}
+
+		Rpc(RpcAsk_IA_LeaderboardPage, viewId, board, sortKey, descending, offset);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_LeaderboardPage(int viewId, int board, int sortKey, bool descending, int offset)
+	{
+		IA_AnswerLeaderboardPage(viewId, board, sortKey, descending, offset);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_AnswerLeaderboardPage(int viewId, int board, int sortKey, bool descending, int offset)
+	{
+		ref array<string> none = {};
+		int now = System.GetTickCount();
+		if (now - m_iIA_LastBoardAskMs < IA_BOARD_MIN_GAP_MS)
+		{
+			IA_SendLeaderboardPage(viewId, IA_BoardProtocol.STATUS_BUSY, 0, offset, none, "");
+			return;
+		}
+		m_iIA_LastBoardAskMs = now;
+
+		IA_LeaderboardManagerComponent boards = IA_LeaderboardManagerComponent.GetInstance();
+		if (!boards)
+		{
+			IA_SendLeaderboardPage(viewId, IA_BoardProtocol.STATUS_OFFLINE, 0, offset, none, "");
+			return;
+		}
+
+		boards.Request(GetPlayerId(), viewId, board, sortKey, descending, offset);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: send this player one page. The rows go out in chunks short enough for an RPC
+	//! string, so a page's size on the wire never depends on how long the names are.
+	//! \param rows packed IA_BoardRow lines, the first being row number offset
+	//! \param mine the player's own packed line, empty when they are not on the board
+	void IA_SendLeaderboardPage(int viewId, int status, int total, int offset, notnull array<string> rows, string mine)
+	{
+		bool local = GetPlayerId() == SCR_PlayerController.GetLocalPlayerId();
+		if (local)
+			RpcDo_IA_LeaderboardHead(viewId, status, total, offset, mine);
+		else
+			Rpc(RpcDo_IA_LeaderboardHead, viewId, status, total, offset, mine);
+
+		// A refusal has no rows; its head ends the answer.
+		if (status != IA_BoardProtocol.STATUS_OK)
+			return;
+
+		string chunk;
+		int chunkRows;
+		int chunkOffset = offset;
+		int count = rows.Count();
+		for (int i = 0; i < count; i++)
+		{
+			string line = rows[i];
+			if (chunkRows > 0 && chunk.Length() + line.Length() >= IA_BoardProtocol.CHUNK_CHARS)
+			{
+				IA_SendLeaderboardRows(local, viewId, chunkOffset, false, chunk);
+				chunk = "";
+				chunkRows = 0;
+				chunkOffset = offset + i;
+			}
+			if (chunkRows > 0)
+				chunk = chunk + "\n";
+			chunk = chunk + line;
+			chunkRows = chunkRows + 1;
+		}
+		IA_SendLeaderboardRows(local, viewId, chunkOffset, true, chunk);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	protected void IA_SendLeaderboardRows(bool local, int viewId, int offset, bool last, string rows)
+	{
+		if (local)
+		{
+			RpcDo_IA_LeaderboardRows(viewId, offset, last, rows);
+			return;
+		}
+		Rpc(RpcDo_IA_LeaderboardRows, viewId, offset, last, rows);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_LeaderboardHead(int viewId, int status, int total, int offset, string mine)
+	{
+		IA_StatisticsMenu.OnBoardHead(viewId, status, total, offset, mine);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_LeaderboardRows(int viewId, int offset, bool last, string rows)
+	{
+		IA_StatisticsMenu.OnBoardRows(viewId, offset, last, rows);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Client: ask where this player stands on the session board. A hosting player reads it live.
+	void IA_AskSessionStanding()
+	{
+		if (Replication.IsServer())
+			return;
+
+		Rpc(RpcAsk_IA_SessionStanding);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
+	protected void RpcAsk_IA_SessionStanding()
+	{
+		int now = System.GetTickCount();
+		if (now - m_iIA_LastStandingAskMs < IA_STANDING_MIN_GAP_MS)
+			return;
+		m_iIA_LastStandingAskMs = now;
+
+		IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+		if (session)
+			session.SendStanding(GetPlayerId());
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Server: tell this player their own place on the session board.
+	void IA_SendSessionStanding(int place, int total, int rankId, int kills, int deaths, int score)
+	{
+		if (GetPlayerId() == SCR_PlayerController.GetLocalPlayerId())
+			return;
+
+		Rpc(RpcDo_IA_SessionStanding, place, total, rankId, kills, deaths, score);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
+	protected void RpcDo_IA_SessionStanding(int place, int total, int rankId, int kills, int deaths, int score)
+	{
+		IA_SessionRankManagerComponent session = IA_SessionRankManagerComponent.GetInstance();
+		if (session)
+			session.OnLocalStanding(place, total, rankId, kills, deaths, score);
 	}
 
 	protected bool IA_IsAdminCaller()

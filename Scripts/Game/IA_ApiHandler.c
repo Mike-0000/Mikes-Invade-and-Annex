@@ -51,51 +51,6 @@ class IA_ApiSubmitStatsRequest : IA_ApiRequest
     }
 }
 
-// Helper to extract a JSON array string from a larger JSON object.
-// This is needed because the built-in parser is very basic.
-static string _GetJsonArrayForKey(string json, string key)
-{
-    string searchKey = "\"" + key + "\":[";
-    int startIndex = json.IndexOf(searchKey);
-    if (startIndex == -1)
-    {
-        Print("IA API: _GetJsonArrayForKey: Key '" + key + "' not found.", LogLevel.WARNING);
-        return "[]"; // Return an empty JSON array if key not found
-    }
-
-    int valueStartIndex = startIndex + searchKey.Length() - 1; // Position of the opening bracket '['
-    string fromValueStart = json.Substring(valueStartIndex, json.Length() - valueStartIndex);
-
-    int bracketCount = 0;
-    int endIndex = -1;
-
-    for (int i = 0; i < fromValueStart.Length(); i++)
-    {
-        string char = fromValueStart.Get(i);
-        if (char == "[")
-        {
-            bracketCount++;
-        }
-        else if (char == "]")
-        {
-            bracketCount--;
-            if (bracketCount == 0)
-            {
-                endIndex = i;
-                break;
-            }
-        }
-    }
-
-    if (endIndex == -1)
-    {
-        Print("IA API: _GetJsonArrayForKey: Could not find matching closing bracket for key '" + key + "'.", LogLevel.ERROR);
-        return "[]"; // Return empty array if malformed
-    }
-        
-    return fromValueStart.Substring(0, endIndex + 1);
-}
-
 class IA_ApiRegisterServerResponse
 {
     string serverGuid;
@@ -126,7 +81,7 @@ class IA_ApiHandler
 	string m_sApiBaseUrl = "https://invade-annex-api.azurewebsites.net/api";
 	protected ref RestCallback m_registerCallback;
 	protected ref RestCallback m_submitStatsCallback;
-	protected ref RestCallback m_fetchAllLeaderboardsCallback;
+	protected ref RestCallback m_fetchLeaderboardCallback;
 	protected ref RestCallback m_submitTransportCallback;
 	protected ref RestCallback m_fetchTransportRatingsCallback;
 
@@ -150,11 +105,11 @@ class IA_ApiHandler
         }
 		else
 		{
+			// Leaderboards are fetched a page at a time, when a player asks for one.
 			if (IA_Log.IsDebugEnabled())
 			{
-				Print("IA API Handler: Server GUID exists. Fetching initial leaderboard data.", LogLevel.NORMAL);
+				Print("IA API Handler: Server GUID exists.", LogLevel.NORMAL);
 			}
-			FetchAllLeaderboards();
 		}
     }
 
@@ -174,8 +129,6 @@ class IA_ApiHandler
                 config.m_sServerGuid = response.serverGuid;
                 IA_ApiConfigManager.SaveConfig();
                 IA_Log.Info("IA API: Server GUID " + response.serverGuid + " saved to config.");
-
-                FetchAllLeaderboards();
             }
         }
         else
@@ -198,7 +151,10 @@ class IA_ApiHandler
         {
             Print("IA API: Statistics submitted successfully.", LogLevel.NORMAL);
         }
-        GetGame().GetCallqueue().CallLater(FetchAllLeaderboards, 5000, false);
+        // The stored scores moved, so the pages the server kept are out of date.
+        IA_LeaderboardManagerComponent boards = IA_LeaderboardManagerComponent.GetInstance();
+        if (boards)
+            boards.InvalidateCache();
     }
 
     void OnSubmitStatsError(RestCallback cb)
@@ -209,38 +165,33 @@ class IA_ApiHandler
             Print("IA API: Statistics submission failed with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
     }
 
-    void OnFetchAllLeaderboardsSuccess(RestCallback cb)
-    {
-        string data = cb.GetData();
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print("IA API: All leaderboard data received successfully.", LogLevel.NORMAL);
-        }
+	//------------------------------------------------------------------------------------------------
+	void OnFetchLeaderboardSuccess(RestCallback cb)
+	{
+		// An answer to a request that was given up on must not be taken for the one now out.
+		if (cb != m_fetchLeaderboardCallback)
+			return;
 
-        IA_LeaderboardManagerComponent manager = IA_LeaderboardManagerComponent.GetInstance();
-        if (manager)
-        {
-            string globalPlayerData = _GetJsonArrayForKey(data, "globalPlayerLeaderboard");
-            string serverPlayerData = _GetJsonArrayForKey(data, "serverPlayerLeaderboard");
-            string globalServerData = _GetJsonArrayForKey(data, "globalServerLeaderboard");
+		IA_LeaderboardManagerComponent boards = IA_LeaderboardManagerComponent.GetInstance();
+		if (boards)
+			boards.OnPageReceived(cb.GetData());
+	}
 
-            manager.UpdateLeaderboardData(globalPlayerData);
-            manager.UpdateServerLeaderboardData(serverPlayerData);
-            manager.UpdateGlobalServerLeaderboardData(globalServerData);
-        }
-        else
-        {
-            Print("IA API Error: Could not find IA_LeaderboardManagerComponent instance to update data.", LogLevel.ERROR);
-        }
-    }
+	//------------------------------------------------------------------------------------------------
+	void OnFetchLeaderboardError(RestCallback cb)
+	{
+		if (cb != m_fetchLeaderboardCallback)
+			return;
 
-    void OnFetchAllLeaderboardsError(RestCallback cb)
-    {
-        if (cb.GetRestResult() == ERestResult.EREST_ERROR_TIMEOUT)
-            Print("IA API: All leaderboards request TIMED OUT.", LogLevel.ERROR);
-        else
-            Print("IA API: All leaderboards request FAILED with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
-    }
+		if (cb.GetRestResult() == ERestResult.EREST_ERROR_TIMEOUT)
+			Print("[IA][API] Leaderboard page request timed out.", LogLevel.ERROR);
+		else
+			Print("[IA][API] Leaderboard page request failed with error code: " + cb.GetHttpCode(), LogLevel.ERROR);
+
+		IA_LeaderboardManagerComponent boards = IA_LeaderboardManagerComponent.GetInstance();
+		if (boards)
+			boards.OnPageFailed();
+	}
 
     void SubmitStats(string jsonData)
     {
@@ -267,25 +218,38 @@ class IA_ApiHandler
         }
     }
 
-    void FetchAllLeaderboards()
-    {
-        if (!m_Config || m_Config.m_sServerGuid == "")
-        {
-            Print("IA API: Cannot fetch leaderboards, server GUID is missing.", LogLevel.ERROR);
-            return;
-        }
+	//------------------------------------------------------------------------------------------------
+	//! Ask for one page of a leaderboard. The answer goes to IA_LeaderboardManagerComponent.
+	//! \param board "server", "global" or "servers"
+	//! \param sortName a sort key of the /leaderboard route
+	//! \param limit rows wanted; 0 asks only where the player stands
+	//! \param playerId identity whose own line is wanted, empty for none
+	//! \return false when nothing was sent
+	bool FetchLeaderboardPage(string board, string sortName, bool descending, int offset, int limit, string playerId)
+	{
+		if (!m_Config || m_Config.m_sServerGuid == "")
+			return false;
 
-        RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
-        m_fetchAllLeaderboardsCallback = new RestCallback();
-        m_fetchAllLeaderboardsCallback.SetOnSuccess(OnFetchAllLeaderboardsSuccess);
-        m_fetchAllLeaderboardsCallback.SetOnError(OnFetchAllLeaderboardsError);
-        string url = "/getAllLeaderboards?serverGuid=" + m_Config.m_sServerGuid;
-        ctx.GET(m_fetchAllLeaderboardsCallback, url);
-        if (IA_Log.IsDebugEnabled())
-        {
-            Print("IA API: Server is fetching all leaderboards.", LogLevel.NORMAL);
-        }
-    }
+		string dir = "asc";
+		if (descending)
+			dir = "desc";
+
+		string url = "/leaderboard?serverGuid=" + m_Config.m_sServerGuid + "&board=" + board + "&sort=" + sortName;
+		url = url + "&dir=" + dir + "&offset=" + offset.ToString() + "&limit=" + limit.ToString();
+		if (!playerId.IsEmpty())
+			url = url + "&playerId=" + playerId;
+
+		RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
+		m_fetchLeaderboardCallback = new RestCallback();
+		m_fetchLeaderboardCallback.SetOnSuccess(OnFetchLeaderboardSuccess);
+		m_fetchLeaderboardCallback.SetOnError(OnFetchLeaderboardError);
+		ctx.GET(m_fetchLeaderboardCallback, url);
+		if (IA_Log.IsDebugEnabled())
+		{
+			Print(string.Format("[IA][API] Leaderboard page requested: board %1, sort %2, offset %3.", board, sortName, offset), LogLevel.NORMAL);
+		}
+		return true;
+	}
 
 	//------------------------------------------------------------------------------------------------
 	//! Add transport rating to players' global totals. The batch id lets the

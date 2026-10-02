@@ -55,6 +55,7 @@ test('an unknown server is refused with 403 on every guarded route', async () =>
   const handlers = createHandlers(stub(null));
   assert.strictEqual((await handlers.submitStats(post({ serverGuid: GUID, matchData: [] }))).status, 403);
   assert.strictEqual((await handlers.getAllLeaderboards(get({ serverGuid: GUID }))).status, 403);
+  assert.strictEqual((await handlers.getLeaderboard(get({ serverGuid: GUID }))).status, 403);
 
   const raising = createHandlers(stub(new Error('unknown or inactive server ' + GUID)));
   const res = await raising.submitTransport(post({ serverGuid: GUID, batchId: 'b1', entries: [] }));
@@ -65,6 +66,8 @@ test('a malformed GUID never reaches the database', async () => {
   const db = stub({});
   const handlers = createHandlers(db);
   assert.strictEqual((await handlers.getAllLeaderboards(get({ serverGuid: 'nope' }))).status, 403);
+  assert.strictEqual((await handlers.getLeaderboard(get({ serverGuid: 'nope', board: 'global' }))).status, 403);
+  assert.strictEqual((await handlers.getLeaderboard(get({ board: 'global' }))).status, 403);
   assert.strictEqual((await handlers.submitStats(post({ serverGuid: 'nope', matchData: [] }))).status, 403);
   assert.strictEqual((await handlers.getTransportRatings(post({ serverGuid: 'nope', playerIds: [] }))).status, 403);
   assert.strictEqual(db.calls.length, 0);
@@ -77,6 +80,45 @@ test('getAllLeaderboards keeps each array directly after its key', async () => {
   assert.ok(res.body.includes('"globalPlayerLeaderboard":[{"PlayerName":"A","kills":1}]'));
   assert.ok(res.body.includes('"serverPlayerLeaderboard":[]'));
   assert.ok(res.body.includes('"globalServerLeaderboard":[]'));
+});
+
+test('getLeaderboard asks for the first page of the global board by score when nothing is said', async () => {
+  const db = stub({ board: 'global', total: 0, rows: [], me: [] });
+  const res = await createHandlers(db).getLeaderboard(get({ serverGuid: GUID }));
+  assert.strictEqual(res.status, 200);
+  assert.ok(db.calls[0].sql.includes('public.api_get_leaderboard('));
+  assert.deepStrictEqual(db.calls[0].params, [GUID, 'global', 'score', true, 0, 25, null]);
+});
+
+test('getLeaderboard passes the board, sort, direction, page and player through', async () => {
+  const db = stub({ board: 'server', total: 3, rows: [{ r: 51, n: 'A', t: 900 }], me: [{ r: 7, n: 'Me', t: 4200 }] });
+  const res = await createHandlers(db).getLeaderboard(get({
+    serverGuid: GUID, board: 'server', sort: 'transport', dir: 'asc', offset: '50', limit: '10', playerId: 'p1'
+  }));
+  assert.deepStrictEqual(db.calls[0].params, [GUID, 'server', 'transport', false, 50, 10, 'p1']);
+  assert.strictEqual(res.headers['Content-Type'], 'application/json');
+  assert.ok(res.body.includes('"rows":[{"r":51,"n":"A","t":900}]'));
+  assert.ok(res.body.includes('"me":[{"r":7,"n":"Me","t":4200}]'));
+});
+
+test('getLeaderboard caps the page size and ignores numbers it cannot read', async () => {
+  const db = stub({ rows: [], me: [] });
+  const handlers = createHandlers(db);
+  await handlers.getLeaderboard(get({ serverGuid: GUID, limit: '5000', offset: '-3' }));
+  await handlers.getLeaderboard(get({ serverGuid: GUID, limit: '0', offset: '99999999' }));
+  await handlers.getLeaderboard(get({ serverGuid: GUID, limit: '1e3', offset: '12abc', playerId: 'x'.repeat(65) }));
+  assert.deepStrictEqual(db.calls[0].params.slice(4), [0, 100, null]);
+  assert.deepStrictEqual(db.calls[1].params.slice(4), [1000000, 0, null]);
+  assert.deepStrictEqual(db.calls[2].params.slice(4), [0, 25, null]);
+});
+
+test('getLeaderboard refuses a board, sort or direction it does not know without touching the database', async () => {
+  const db = stub({ rows: [], me: [] });
+  const handlers = createHandlers(db);
+  assert.strictEqual((await handlers.getLeaderboard(get({ serverGuid: GUID, board: 'players; DROP' }))).status, 400);
+  assert.strictEqual((await handlers.getLeaderboard(get({ serverGuid: GUID, sort: 'name' }))).status, 400);
+  assert.strictEqual((await handlers.getLeaderboard(get({ serverGuid: GUID, dir: 'up' }))).status, 400);
+  assert.strictEqual(db.calls.length, 0);
 });
 
 test('submitTransport returns the duplicate result as success so the game stops resending', async () => {

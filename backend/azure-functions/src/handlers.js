@@ -9,6 +9,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_BODY_BYTES = 1024 * 1024;
 const MAX_PLAYER_IDS = 256;
 
+// GET /leaderboard. The database function falls back to its defaults for
+// anything it does not know, so an unknown value is refused here instead of
+// answering a different board than the one asked for.
+const BOARDS = ['global', 'server', 'servers'];
+const SORTS = ['score', 'kills', 'deaths', 'kd', 'hvt', 'guard', 'obj', 'transport', 'insertions', 'players'];
+const DEFAULT_PAGE_ROWS = 25;
+const MAX_PAGE_ROWS = 100;
+const MAX_OFFSET = 1000000;
+
 const FORBIDDEN = { status: 403, body: 'Invalid or inactive server GUID.' };
 
 function json(value, status) {
@@ -39,6 +48,13 @@ async function readJson(request) {
 
 function isGuid(value) {
   return typeof value === 'string' && UUID.test(value);
+}
+
+// A query value that is a whole number, capped; anything else is the fallback.
+function wholeNumber(text, fallback, max) {
+  if (typeof text !== 'string' || !/^[0-9]{1,9}$/.test(text))
+    return fallback;
+  return Math.min(Number(text), max);
 }
 
 function createHandlers(db) {
@@ -88,6 +104,38 @@ function createHandlers(db) {
     return json(result);
   }
 
+  // One page of one board in one sort order, plus the asking player's own row.
+  async function getLeaderboard(request) {
+    const query = request.query;
+    const guid = query.get('serverGuid');
+    if (!isGuid(guid))
+      return FORBIDDEN;
+
+    const board = query.get('board') || 'global';
+    if (!BOARDS.includes(board))
+      return badRequest('board must be one of: ' + BOARDS.join(', ') + '.');
+    const sort = query.get('sort') || 'score';
+    if (!SORTS.includes(sort))
+      return badRequest('sort must be one of: ' + SORTS.join(', ') + '.');
+    const dir = query.get('dir') || 'desc';
+    if (dir !== 'asc' && dir !== 'desc')
+      return badRequest('dir must be asc or desc.');
+
+    const offset = wholeNumber(query.get('offset'), 0, MAX_OFFSET);
+    const limit = wholeNumber(query.get('limit'), DEFAULT_PAGE_ROWS, MAX_PAGE_ROWS);
+
+    let playerId = query.get('playerId');
+    if (typeof playerId !== 'string' || playerId.length < 1 || playerId.length > 64)
+      playerId = null;
+
+    const result = await db.scalar(
+      'SELECT public.api_get_leaderboard($1::uuid, $2::text, $3::text, $4::boolean, $5::integer, $6::integer, $7::text) AS value',
+      [guid, board, sort, dir === 'desc', offset, limit, playerId]);
+    if (!result)
+      return FORBIDDEN;
+    return json(result);
+  }
+
   async function submitTransport(request) {
     const body = await readJson(request);
     if (!body || !Array.isArray(body.entries))
@@ -127,7 +175,7 @@ function createHandlers(db) {
     return json(result);
   }
 
-  return { registerServer, submitStats, getAllLeaderboards, submitTransport, getTransportRatings };
+  return { registerServer, submitStats, getAllLeaderboards, getLeaderboard, submitTransport, getTransportRatings };
 }
 
 module.exports = { createHandlers };
