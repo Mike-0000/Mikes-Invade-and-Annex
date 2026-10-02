@@ -27,7 +27,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 	protected static const int LINK_LOST = 2;
 	protected static const int LINK_OFFLINE = 3;
 
-	protected static const string FOOT_LEADERBOARD = "Session board is local to this restart. Set ./profile/MikesInvadeAndAnnex/server_name.txt for the server board";
+	protected static const string FOOT_LEADERBOARD = "Session board is local to this restart. Server name override: ./profile/MikesInvadeAndAnnex/server_name.txt";
 	protected static const string FOOT_OPTIONS = "Stored in ./profile/MikesInvadeAndAnnex/local_options.json  •  This machine only";
 	protected static const string SUB_OPTIONS = "Local HUD settings  •  This machine only";
 	protected static const string TOOL_NOTE = "Pick a column to sort, again to reverse  •  FLIGHT: transport pilot rating  •  LIFTS: insertions flown";

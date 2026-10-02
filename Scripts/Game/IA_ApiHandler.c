@@ -110,6 +110,9 @@ class IA_ApiHandler
 			{
 				Print("IA API Handler: Server GUID exists.", LogLevel.NORMAL);
 			}
+
+			// Worked out at start, so the log shows the name and a live one is kept on a session that sends no statistics.
+			IA_ServerNameResolver.ForStats();
 		}
     }
 
@@ -204,7 +207,8 @@ class IA_ApiHandler
         RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
         ctx.SetHeaders("Content-Type,application/json");
 
-        string serverName = IA_ApiConfigManager.GetServerNameFromFile();
+        // Empty when no name is known yet; the backend then keeps the one it has.
+        string serverName = IA_ServerNameResolver.ForStats();
 
         IA_ApiSubmitStatsRequest requestData = new IA_ApiSubmitStatsRequest(m_Config.m_sServerGuid, serverName, jsonData);
 
@@ -337,7 +341,7 @@ class IA_ApiHandler
         RestContext ctx = GetGame().GetRestApi().GetContext(m_sApiBaseUrl);
         ctx.SetHeaders("Content-Type,application/json");
 
-        string serverName = IA_ApiConfigManager.GetServerNameFromFile();
+        string serverName = IA_ServerNameResolver.ForRegistration();
         IA_ApiRegisterServerRequest requestData = new IA_ApiRegisterServerRequest(serverName, m_Config.m_sOwnerEmail);
 
         if (IA_Log.IsDebugEnabled())

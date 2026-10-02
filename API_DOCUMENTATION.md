@@ -10,7 +10,7 @@ These endpoints connect to the remote statistics server. The API handler is impl
 Source, hosting and deploy steps: `backend/azure-functions/README.md`. Builds released before October 2026 call the original `invadestats-awatbsduh4hngrb6.eastus-01.azurewebsites.net` app, which writes to the same database and has no source.
 
 ### `POST /registerServer`
-Registers the game server with the backend to receive a unique `serverGuid`.
+Registers the game server with the backend to receive a unique `serverGuid`. Sent once, when `api_config.json` holds no GUID. `serverName` must not be blank; see "Server name" below for what the game sends.
 - **Request Body:**
   ```json
   {
@@ -26,7 +26,7 @@ Registers the game server with the backend to receive a unique `serverGuid`.
   ```
 
 ### `POST /submitStats`
-Submits match statistics and player data at the end of a session or periodically.
+Submits match statistics and player data at the end of a session or periodically. A non-empty `serverName` replaces the name on record; an empty one keeps it. The game never sends a name of spaces only.
 - **Request Body:**
   ```json
   {
@@ -35,6 +35,15 @@ Submits match statistics and player data at the end of a session or periodically
     "matchData": { ...JSON Object... }
   }
   ```
+
+### Server name
+A server owner does not have to set a name. `IA_ServerNameResolver` picks the `serverName` for both routes above, in this order:
+1. **Fixed name.** The first line of `$profile:MikesInvadeAndAnnex/server_name.txt`, when the owner has written a name of their own there. A missing or blank file, or one that still holds the text older builds wrote (any line containing `PLEASE RENAME IN server_name.txt`, in any case), is not a fixed name. The game no longer creates this file and never changes it. It is read at server start and again every five minutes.
+2. **Live name.** The name the running server holds, asked of the engine with each batch: `GetGame().GetServerInfo().GetName()`, then `ServerLobbyApi.GetServerConfig().GetName()`, then the `game.name` of `BackendApi.GetRunningDSConfig`.
+3. **Last known name.** The last live name seen, kept in `$profile:MikesInvadeAndAnnex/last_server_name.txt`. The game writes this file only when the live name changes; it is not for owners to edit.
+4. **Nothing known.** `/submitStats` gets `""`, so the name on record stays. `/registerServer` gets `Default Name - PLEASE RENAME IN server_name.txt, in I&A Server Profile Folder`, which the servers board leaves out until a real name arrives with a stats batch.
+
+The name is trimmed, kept to one line and cut to 255 characters. It has no part in which server the statistics belong to: that is the `serverGuid` in `api_config.json`, which the resolver neither reads nor writes. The server log records the name and its source when either changes: `[IA][ServerName] Reporting '<name>' to the statistics service (<source>).` The name reaches the backend only with a stats batch, so a renamed server shows its new name after its next batch that has events.
 
 ### `GET /getAllLeaderboards?serverGuid={guid}`
 Fetches global and server-specific leaderboard data. Legacy: the current build does not call it and uses `GET /leaderboard` instead. Older builds still call it, so the route stays.
@@ -140,7 +149,11 @@ Internal script classes that facilitate game logic, AI control, and inter-system
 ### `IA_ApiConfigManager` (Persistence)
 - `GetConfig()`: Retrieves the current API configuration.
 - `SaveConfig()`: Persists API settings (like `serverGuid`) to `$profile:MikesInvadeAndAnnex/api_config.json`.
-- `GetServerNameFromFile()`: Loads the server name from `server_name.txt`.
+
+### `IA_ServerNameResolver` (Server name)
+- `ForStats()`: The name for `POST /submitStats`; empty when none is known.
+- `ForRegistration()`: The name for `POST /registerServer`; the old default text when none is known.
+- `Pick(fileLine, liveName, lastName, out source)`: The order of precedence on values already read. `IA_ServerNameProbe` (Workbench plugin) checks it and the files.
 
 ---
 
