@@ -157,7 +157,7 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 		int partial = required * 0.62;
 
 		// Stock paint, a rating most of the way to the tan skin.
-		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, partial, false);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, partial);
 		GetGame().GetMenuManager().OpenMenu(ChimeraMenuPreset.IA_HeliPaintMenu);
 		Sleep(2500);
 		if (!IA_HeliPaintMenu.IsBayOpen())
@@ -178,12 +178,12 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 		Shot("refused");
 
 		// Rating unknown.
-		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, IA_TransportPilotRecord.RATING_UNKNOWN, false);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, IA_TransportPilotRecord.RATING_UNKNOWN);
 		Sleep(1800);
 		Shot("syncing");
 
 		// Earned.
-		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, required + 1840, false);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, required + 1840);
 		Sleep(3600);
 		Shot("ready");
 
@@ -194,23 +194,25 @@ class IA_HeliPaintMenuProbe : WorkbenchPlugin
 
 		// What the server's answer does: the channel is painted and the worn skin arrives.
 		IA_HeliSkinPaint.Apply(m_iChannel, tanSkin);
-		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, tanSkin, required + 1840, false);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, tanSkin, required + 1840);
 		Sleep(280);
 		Shot("applied");
 		Sleep(2500);
 		Shot("worn");
 
-		// An admin who has not earned it.
+		// Back on stock paint below the threshold: the livery is locked again, whoever the pilot is.
 		IA_HeliPaintMenu.ProbeFocus(none);
-		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, partial, true);
+		IA_HeliPaintMenu.ProbeSet(true, m_iChannel, none, partial);
 		IA_HeliSkinPaint.Apply(m_iChannel, none);
 		Sleep(600);
 		IA_HeliPaintMenu.ProbeFocus(tanSkin);
-		Sleep(4200);
-		Shot("admin");
+		Sleep(1800);
+		if (IA_HeliPaintMenu.ProbePick(tanSkin) != IA_HeliPaintBay.NO_SKIN)
+			Fail("a livery below its threshold was sent to the server");
+		Shot("relocked");
 
 		// A helicopter with no paint channel.
-		IA_HeliPaintMenu.ProbeSet(false, IA_HeliPaintChannels.CHANNEL_NONE, none, partial, false);
+		IA_HeliPaintMenu.ProbeSet(false, IA_HeliPaintChannels.CHANNEL_NONE, none, partial);
 		Sleep(1800);
 		Shot("norig");
 

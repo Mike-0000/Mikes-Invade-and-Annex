@@ -618,11 +618,9 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		ref MUI_Button allBtn = IA_UplinkButton.Create(runtime, "Play all", "pilotPrevAll");
 		allBtn.MakeAccent();
 		allBtn.GetOnClicked().Insert(OnPilotPreviewAll);
-		ref MUI_Button skinBtn = IA_UplinkButton.Create(runtime, "Cycle nearest heli skin", "pilotPrevSkin");
-		skinBtn.GetOnClicked().Insert(OnSkinPreview);
 
-		// One width for all nine, so the three rows stand as a grid.
-		ref array<MUI_Button> previewBtns = {seatBtn, landingBtn, farBtn, syncBtn, unlockBtn, lateBtn, ownedBtn, allBtn, skinBtn};
+		// One width for all eight, so the three rows stand as a grid.
+		ref array<MUI_Button> previewBtns = {seatBtn, landingBtn, farBtn, syncBtn, unlockBtn, lateBtn, ownedBtn, allBtn};
 		foreach (MUI_Button previewBtn : previewBtns)
 		{
 			previewBtn.SetMinWidth(PREVIEW_BTN_W);
@@ -644,7 +642,6 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		previewRow3.SetGap(10);
 		previewRow3.AddChild(ownedBtn);
 		previewRow3.AddChild(allBtn);
-		previewRow3.AddChild(skinBtn);
 
 		AddCaption(runtime, m_PageHq, "Pilot card preview", "pilotPreviewCap");
 		m_PageHq.AddChild(previewLbl);
@@ -660,7 +657,6 @@ class IA_AdminConfigMenu : MUI_MenuBase
 		m_Hints.AddHint(lateBtn, "Late unlock", "The unlock arriving on a rating card, after points were banked while the total was unknown.");
 		m_Hints.AddHint(ownedBtn, "Unlocked seat", "The rating card of a pilot who already owns the skin.");
 		m_Hints.AddHint(allBtn, "Play all", "Plays every preview in turn; each waits for the previous card to leave.");
-		m_Hints.AddHint(skinBtn, "Cycle nearest heli skin", "Repaints the nearest paintable helicopter with its next livery, for everyone, where it stands. It works from the pilot's seat with the engine running. Press again to step through the liveries and back to stock. No rating is needed or earned.");
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -1774,18 +1770,6 @@ class IA_AdminConfigMenu : MUI_MenuBase
 
 	//------------------------------------------------------------------------------------------------
 	//! Solo test path for helicopter skins; the server repaints the airframe and answers with a hint.
-	protected void OnSkinPreview()
-	{
-		SCR_PlayerController pc = SCR_PlayerController.Cast(GetGame().GetPlayerController());
-		if (pc)
-			pc.IA_AskPreviewHeliSkin();
-
-		MenuManager menus = GetGame().GetMenuManager();
-		menus.CloseMenuByPreset(ChimeraMenuPreset.PauseMenu);
-		menus.CloseMenu(this);
-	}
-
-	//------------------------------------------------------------------------------------------------
 	protected void OnOpenDirector()
 	{
 		GetGame().GetMenuManager().CloseMenu(this);

@@ -48,10 +48,10 @@ class IA_HeliPaintService
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Server: put a skin on the helicopter this player pilots, if they may wear it.
-	//! \param admin an admin may wear any skin, which is how a skin is checked without earning it
+	//! Server: put a skin on the helicopter this player pilots, if they may wear it. The rating
+	//! is the only way to a skin: an admin has no way round it.
 	//! \return one of the RESULT_ values
-	static int TrySetSkin(IEntity pawn, int skinId, int rating, bool admin)
+	static int TrySetSkin(IEntity pawn, int skinId, int rating)
 	{
 		if (!Replication.IsServer())
 			return RESULT_UNAVAILABLE;
@@ -71,14 +71,11 @@ class IA_HeliPaintService
 			IA_HeliSkinDef def = IA_HeliSkinCatalog.FindDef(skinId);
 			if (!def)
 				return RESULT_UNAVAILABLE;
-			if (!admin)
-			{
-				// An unknown rating unlocks nothing.
-				if (rating < 0)
-					return RESULT_SYNCING;
-				if (!IA_HeliSkinCatalog.IsUnlocked(def, rating))
-					return RESULT_LOCKED;
-			}
+			// An unknown rating unlocks nothing.
+			if (rating < 0)
+				return RESULT_SYNCING;
+			if (!IA_HeliSkinCatalog.IsUnlocked(def, rating))
+				return RESULT_LOCKED;
 		}
 
 		if (!skins.SetVehicleSkin(vehicle, skinId, true))

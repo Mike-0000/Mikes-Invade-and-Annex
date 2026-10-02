@@ -59,7 +59,6 @@ class IA_HeliPaintBay : MUI_Surface
 	protected static const string TEXT_NO_RATING = "NO RATING REQUIRED";
 	protected static const string TEXT_LIVE = "ON AIRFRAME";
 	protected static const string TEXT_PREVIEW = "PREVIEW";
-	protected static const string TEXT_ADMIN = "ADMIN OVERRIDE";
 
 	protected ref Color m_Bg;
 	protected ref Color m_Tab;
@@ -90,7 +89,6 @@ class IA_HeliPaintBay : MUI_Surface
 	protected int m_iChannel;
 	protected int m_iWorn;
 	protected int m_iRating = -1;
-	protected bool m_bAdmin;
 	protected int m_iPending = NO_SKIN;
 
 	// The helicopter on the left.
@@ -115,7 +113,6 @@ class IA_HeliPaintBay : MUI_Surface
 	protected string m_sShownName;
 	protected string m_sChip;
 	protected Color m_ChipColor;
-	protected bool m_bAdminChip;
 	protected bool m_bStockShown;
 	protected string m_sRating;
 	protected string m_sGoal;
@@ -126,7 +123,6 @@ class IA_HeliPaintBay : MUI_Surface
 	protected float m_fShownFrac;
 	protected float m_fTabW;
 	protected float m_fChipW;
-	protected float m_fAdminW;
 	protected float m_fRatingW;
 	protected float m_fPctW;
 	protected float m_fPadW;
@@ -265,9 +261,9 @@ class IA_HeliPaintBay : MUI_Surface
 	//! \param paintable false when this helicopter has no paint channel
 	//! \param channel the airframe's paint channel; its family is the helicopter drawn and its number in the family is shown
 	//! \param rating the pilot's global transport rating, negative while it is not known
-	void SetContext(bool paintable, int channel, int wornSkin, int rating, bool admin)
+	void SetContext(bool paintable, int channel, int wornSkin, int rating)
 	{
-		if (m_bContextSet && paintable == m_bPaintable && channel == m_iChannel && wornSkin == m_iWorn && rating == m_iRating && admin == m_bAdmin)
+		if (m_bContextSet && paintable == m_bPaintable && channel == m_iChannel && wornSkin == m_iWorn && rating == m_iRating)
 			return;
 
 		// Another airframe wearing another skin is not a repaint.
@@ -277,7 +273,6 @@ class IA_HeliPaintBay : MUI_Surface
 		m_iChannel = channel;
 		m_iWorn = wornSkin;
 		m_iRating = rating;
-		m_bAdmin = admin;
 		SetFamily(IA_HeliPaintChannels.GetFamily(channel));
 		RefreshTiles();
 
@@ -429,8 +424,6 @@ class IA_HeliPaintBay : MUI_Surface
 	protected bool IsUnlocked(IA_HeliSkinDef def)
 	{
 		if (!def)
-			return true;
-		if (m_bAdmin)
 			return true;
 		return m_iRating >= 0 && IA_HeliSkinCatalog.IsUnlocked(def, m_iRating);
 	}
@@ -633,12 +626,6 @@ class IA_HeliPaintBay : MUI_Surface
 		}
 		m_fChipW = IA_TrackedText.Measure(m_Runtime, m_sChip, FONT_CAP, TRACK_CAP) + 16;
 
-		bool earned = true;
-		if (def)
-			earned = m_iRating >= 0 && IA_HeliSkinCatalog.IsUnlocked(def, m_iRating);
-		m_bAdminChip = m_bAdmin && !earned && state != IA_HeliPaintTile.STATE_OFF;
-		m_fAdminW = IA_TrackedText.Measure(m_Runtime, TEXT_ADMIN, FONT_CAP, TRACK_CAP) + 16;
-
 		// Rating against the threshold.
 		m_sGoal = "";
 		m_sPct = "";
@@ -697,10 +684,6 @@ class IA_HeliPaintBay : MUI_Surface
 		else if (!def)
 		{
 			m_sFooter = "ALWAYS AVAILABLE - SELECT TO REPAINT";
-		}
-		else if (m_bAdminChip)
-		{
-			m_sFooter = "NOT EARNED - ADMINS MAY PAINT IT ANYWAY";
 		}
 		else
 		{
@@ -954,13 +937,11 @@ class IA_HeliPaintBay : MUI_Surface
 		IA_TrackedText.Draw(surface, m_Runtime, x, y + 1, 12, m_sCapLivery, FONT_CAP, TRACK_CAP, MUI_ColorUtil.Fade(m_Muted, op));
 		surface.DrawText(x - 1, y + 14, w, 38, m_sShownName, FONT_NAME, MUI_ColorUtil.Fade(m_White, op), true, false, true, false, true);
 
-		// Chips.
+		// Chip.
 		float chipOp = op;
 		if (m_iPending != NO_SKIN && m_iPending == m_iShown)
 			chipOp = op * (0.6 + 0.4 * MUI_Ease.Pulse(time, 1.6));
 		DrawChip(surface, x, y + 58, m_fChipW, m_sChip, m_ChipColor, chipOp);
-		if (m_bAdminChip)
-			DrawChip(surface, x + m_fChipW + 8, y + 58, m_fAdminW, TEXT_ADMIN, m_Gold, op);
 
 		// Rating.
 		string caption = TEXT_RATING;

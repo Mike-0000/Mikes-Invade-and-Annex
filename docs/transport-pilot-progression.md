@@ -313,11 +313,9 @@ What can go wrong with a modded helicopter, and what the tools say:
 
 ### Looking at a livery alone
 
-Admin menu, **HQ** tab, **Cycle nearest heli skin**. The server
-(`IA_HeliSkinPreview`) repaints the nearest helicopter with a paint channel
-within 75 m with its next livery; press again to step through them and back to
-stock. It works from the pilot's seat with the engine running. Everyone sees
-it. No rating is needed or earned.
+In Workbench only: `IA_HeliSkinLiveProbe` paints a helicopter in play mode and
+`IA_HeliPaintMenuProbe` shows the bay. In a mission nothing puts a livery on a
+helicopter except the rating: there is no admin repaint.
 
 ## Paint bay
 
@@ -341,7 +339,9 @@ closes with Back, with the key again, or when the pilot leaves the seat.
 | LOCKED | Rating below the threshold; the bar and the blueprint show how far |
 | SYNCING | The rating has not arrived from the backend yet; nothing unlocks |
 | UNAVAILABLE | This helicopter has no paint channel (no paint family, not spawned by a pad or the editor, or all twelve of its family were held when it spawned) |
-| ADMIN OVERRIDE | An admin may paint a livery they have not earned |
+
+An admin is treated as any other pilot: a livery below its threshold is locked
+for them too, in the bay and on the server.
 
 How it works:
 
@@ -362,9 +362,10 @@ How it works:
 
 ### Looking at the bay alone
 
-Host a game alone (Workbench play mode or a listen server): the host is admin,
-so every livery is selectable with ADMIN OVERRIDE. Take the pilot's seat of a
-Huey or an Mi-8 from a pad, or place one from the editor, and press **I**.
+Host a game alone (Workbench play mode or a listen server), take the pilot's
+seat of a Huey or an Mi-8 from a pad, or place one from the editor, and press
+**I**. Only the liveries the host's rating has earned are selectable; being the
+host or an admin unlocks nothing.
 
 The Workbench plugin **IA paint bay menu probe** (`IA_HeliPaintMenuProbe`)
 opens the bay over a helicopter in a small world and steps it through every
@@ -443,8 +444,8 @@ both families and the generic silhouette. Not yet seen:
   second mod may still use a material class the tools do not know.
 - **Multiplayer.** The repaint on other clients, on a player who joins
   afterwards, on a dedicated server, and after the helicopter streams out and
-  back in. Check with **Cycle nearest heli skin** from the pilot's seat, with a
-  second helicopter of the same type in view keeping its paint.
+  back in. Check by repainting from the paint bay with a pilot who has earned a
+  livery, with a second helicopter of the same type in view keeping its paint.
 - **The editor in a mission.** The editor's variant pick returned the twin on
   a free channel (`IA_HeliSkinLiveProbe -iaSkinMode 4`). Not yet seen: a
   helicopter placed through the Game Master or build-mode interface, and the

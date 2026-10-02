@@ -17,7 +17,6 @@ class IA_HeliPaintMenu : MUI_MenuBase
 	protected static IA_HeliPaintMenu s_Instance;
 	// The server's last answer, kept between openings so the bay does not open blank.
 	protected static int s_iRating = IA_TransportPilotRecord.RATING_UNKNOWN;
-	protected static bool s_bAdmin;
 
 	protected ref IA_HeliPaintBay m_Bay;
 	protected float m_fPoll;
@@ -42,11 +41,10 @@ class IA_HeliPaintMenu : MUI_MenuBase
 
 	//------------------------------------------------------------------------------------------------
 	//! The server's answer to a paint bay request, from the player controller.
-	static void OnServerReply(int result, int rating, bool admin, int skinId, string thresholds)
+	static void OnServerReply(int result, int rating, int skinId, string thresholds)
 	{
 		IA_HeliSkinCatalog.ApplyPackedThresholds(thresholds);
 		s_iRating = rating;
-		s_bAdmin = admin;
 		if (s_Instance)
 			s_Instance.HandleReply(result, skinId);
 	}
@@ -181,7 +179,7 @@ class IA_HeliPaintMenu : MUI_MenuBase
 		{
 			if (m_iPending != IA_HeliPaintBay.NO_SKIN && s_iProbeWorn == m_iPending)
 				ClearPending();
-			m_Bay.SetContext(s_bProbePaintable, s_iProbeChannel, s_iProbeWorn, s_iRating, s_bAdmin);
+			m_Bay.SetContext(s_bProbePaintable, s_iProbeChannel, s_iProbeWorn, s_iRating);
 			return;
 		}
 #endif
@@ -202,7 +200,7 @@ class IA_HeliPaintMenu : MUI_MenuBase
 
 		if (m_iPending != IA_HeliPaintBay.NO_SKIN && worn == m_iPending)
 			ClearPending();
-		m_Bay.SetContext(paintable, channel, worn, s_iRating, s_bAdmin);
+		m_Bay.SetContext(paintable, channel, worn, s_iRating);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -290,14 +288,13 @@ class IA_HeliPaintMenu : MUI_MenuBase
 #ifdef WORKBENCH
 	//------------------------------------------------------------------------------------------------
 	//! Probe: feed the bay a state in place of a seat, a skin manager and a server.
-	static void ProbeSet(bool paintable, int channel, int worn, int rating, bool admin)
+	static void ProbeSet(bool paintable, int channel, int worn, int rating)
 	{
 		s_bProbe = true;
 		s_bProbePaintable = paintable;
 		s_iProbeChannel = channel;
 		s_iProbeWorn = worn;
 		s_iRating = rating;
-		s_bAdmin = admin;
 		if (s_Instance && s_Instance.m_Bay)
 			s_Instance.Refresh();
 	}
@@ -307,7 +304,6 @@ class IA_HeliPaintMenu : MUI_MenuBase
 	{
 		s_bProbe = false;
 		s_iRating = IA_TransportPilotRecord.RATING_UNKNOWN;
-		s_bAdmin = false;
 	}
 
 	//------------------------------------------------------------------------------------------------

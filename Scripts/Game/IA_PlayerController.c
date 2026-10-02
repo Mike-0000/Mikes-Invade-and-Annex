@@ -96,19 +96,6 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! Admin solo test: repaint the nearest helicopter with its next skin, where it stands.
-	void IA_AskPreviewHeliSkin()
-	{
-		if (Replication.IsServer())
-		{
-			IA_PreviewHeliSkinIfAdmin();
-			return;
-		}
-
-		Rpc(RpcAsk_IA_PreviewHeliSkin);
-	}
-
-	//------------------------------------------------------------------------------------------------
 	//! Paint bay: ask the server for this player's rating and the thresholds in force.
 	void IA_AskHeliPaintState()
 	{
@@ -195,20 +182,6 @@ modded class SCR_PlayerController
 
 	//------------------------------------------------------------------------------------------------
 	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
-	protected void RpcAsk_IA_PreviewHeliSkin()
-	{
-		IA_PreviewHeliSkinIfAdmin();
-	}
-
-	//------------------------------------------------------------------------------------------------
-	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
-	protected void RpcDo_IA_HeliSkinPreviewResult(string message)
-	{
-		SCR_HintManagerComponent.ShowCustomHint(message, "Skin preview", 6);
-	}
-
-	//------------------------------------------------------------------------------------------------
-	[RplRpc(RplChannel.Reliable, RplRcver.Server)]
 	protected void RpcAsk_IA_HeliPaintState()
 	{
 		IA_AnswerHeliPaint(false, IA_HeliSkinCatalog.SKIN_NONE);
@@ -223,9 +196,9 @@ modded class SCR_PlayerController
 
 	//------------------------------------------------------------------------------------------------
 	[RplRpc(RplChannel.Reliable, RplRcver.Owner)]
-	protected void RpcDo_IA_HeliPaintReply(int result, int rating, bool admin, int skinId, string thresholds)
+	protected void RpcDo_IA_HeliPaintReply(int result, int rating, int skinId, string thresholds)
 	{
-		IA_HeliPaintMenu.OnServerReply(result, rating, admin, skinId, thresholds);
+		IA_HeliPaintMenu.OnServerReply(result, rating, skinId, thresholds);
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -355,27 +328,9 @@ modded class SCR_PlayerController
 	}
 
 	//------------------------------------------------------------------------------------------------
-	protected void IA_PreviewHeliSkinIfAdmin()
-	{
-		if (!IA_IsAdminCaller())
-		{
-			Print("[IA] Heli skin preview rejected: caller is not admin (player " + GetPlayerId().ToString() + ")", LogLevel.WARNING);
-			return;
-		}
-
-		string message = IA_HeliSkinPreview.CycleNearest(GetControlledEntity());
-		if (GetPlayerId() == SCR_PlayerController.GetLocalPlayerId())
-		{
-			RpcDo_IA_HeliSkinPreviewResult(message);
-			return;
-		}
-
-		Rpc(RpcDo_IA_HeliSkinPreviewResult, message);
-	}
-
-	//------------------------------------------------------------------------------------------------
 	//! Server: answer a paint bay request. The client only names a skin; the seat, the paint
-	//! channel and the unlock are all checked here.
+	//! channel and the unlock are all checked here. Nobody is let past the unlock: an admin
+	//! earns a livery like any other pilot.
 	protected void IA_AnswerHeliPaint(bool apply, int skinId)
 	{
 		// A paint bay waits for its answer before it asks again; anything faster is not one.
@@ -394,11 +349,10 @@ modded class SCR_PlayerController
 		}
 
 		int rating = IA_HeliPaintService.ReadRating(GetPlayerId());
-		bool admin = IA_IsAdminCaller();
 		int result = IA_HeliPaintService.RESULT_STATE;
 		if (apply)
 		{
-			result = IA_HeliPaintService.TrySetSkin(GetControlledEntity(), skinId, rating, admin);
+			result = IA_HeliPaintService.TrySetSkin(GetControlledEntity(), skinId, rating);
 			if (result == IA_HeliPaintService.RESULT_APPLIED)
 				IA_HeliSkinPadService.RememberChoice(GetPlayerId(), skinId);
 			if (IA_Log.IsDebugEnabled())
@@ -410,11 +364,11 @@ modded class SCR_PlayerController
 		string thresholds = IA_HeliSkinCatalog.PackThresholds();
 		if (GetPlayerId() == SCR_PlayerController.GetLocalPlayerId())
 		{
-			RpcDo_IA_HeliPaintReply(result, rating, admin, skinId, thresholds);
+			RpcDo_IA_HeliPaintReply(result, rating, skinId, thresholds);
 			return;
 		}
 
-		Rpc(RpcDo_IA_HeliPaintReply, result, rating, admin, skinId, thresholds);
+		Rpc(RpcDo_IA_HeliPaintReply, result, rating, skinId, thresholds);
 	}
 
 	//------------------------------------------------------------------------------------------------
