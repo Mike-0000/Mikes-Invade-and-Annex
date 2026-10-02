@@ -472,11 +472,14 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		CheckTunables();
 		CheckSplit();
 		CheckDefaultAllowance();
-		// These two count on a minute buying a request, so they run on five times the default allowance.
+		// These two count on a minute buying a request and on a burst small enough to spend in a
+		// few pages, so they run on an allowance of their own.
 		IA_ApiTunables.SetBudget(60, 20);
 		CheckSharing();
 		CheckAllowance();
 		IA_ApiTunables.Reset();
+		// The menu is watched running out of requests, so its allowance is a small one too.
+		IA_ApiTunables.SetBudget(12, 20);
 		CheckMenuBudget();
 		IA_ApiTunables.Reset();
 
@@ -533,8 +536,8 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		Expect(IA_ApiTunables.SyncIntervalS() == IA_ApiTunables.SYNC_INTERVAL_MIN_S, "the sync interval has a floor");
 
 		IA_ApiTunables.Reset();
-		Expect(IA_ApiTunables.BudgetPerHour() == 12 && IA_ApiTunables.BudgetBurst() == 20, "default budget");
-		Expect(IA_ApiTunables.PlayerPerHour() == 6 && IA_ApiTunables.PlayerBurst() == 10, "default share of one player");
+		Expect(IA_ApiTunables.BudgetPerHour() == 120 && IA_ApiTunables.BudgetBurst() == 200, "default budget");
+		Expect(IA_ApiTunables.PlayerPerHour() == 60 && IA_ApiTunables.PlayerBurst() == 100, "default share of one player");
 		Expect(IA_ApiTunables.BoardLifeS(IA_BoardProtocol.BOARD_SERVER) == 120 && IA_ApiTunables.BoardLifeS(IA_BoardProtocol.BOARD_GLOBAL) == 300, "default lifetimes");
 		Expect(IA_ApiTunables.SyncIntervalS() == 60, "default sync interval");
 		Mark("tunables checked");
@@ -811,6 +814,7 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		MarkCounts("menu left open across one lifetime", svc);
 		Expect(Fetches(svc) == 2 && IA_StatisticsMenu.ProbeAsks() == asks + 1, "an open menu asks once when the lifetime is over, and that is one request");
 		IA_ApiTunables.Reset();
+		IA_ApiTunables.SetBudget(12, 20);
 
 		// Hammered: a sort or a scroll every 150 ms.
 		ref array<int> sorts = {IA_BoardProtocol.SORT_KILLS, IA_BoardProtocol.SORT_DEATHS, IA_BoardProtocol.SORT_KD};
@@ -848,8 +852,11 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		Expect(IA_StatisticsMenu.ProbeRankAt(0) == 1 && !IA_StatisticsMenu.ProbeWaiting(), "with the allowance back the board loads again");
 
 		// Rows on screen stay while the menu waits; the wait goes under the status chip. With a
-		// quicker allowance the wait is short enough to watch it end.
+		// quicker allowance the wait is short enough to watch it end. Another player's request
+		// first leaves the server holding a page this menu has never shown.
 		IA_ApiTunables.SetBudget(600, 20);
+		svc.Request(77, 1, server, IA_BoardProtocol.SORT_SCORE, true, 500);
+		WaitIdle(svc);
 		svc.ProbeDrain();
 		IA_StatisticsMenu.ProbeScroll(912);
 		Sleep(1500);
@@ -857,6 +864,16 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		Expect(IA_StatisticsMenu.ProbeWaiting() && IA_StatisticsMenu.ProbeRankAt(0) == 1, "rows already shown stay while the menu waits");
 		Expect(IA_StatisticsMenu.ProbeRankAt(912) == 0, "the page the server may not ask for is not there yet");
 		Shot("board_busy_rows");
+
+		// The wait is for the page that was refused. A scroll to a page the server holds is answered at once.
+		fetches = Fetches(svc);
+		IA_StatisticsMenu.ProbeScroll(512);
+		Sleep(1200);
+		Mark(string.Format("menu scrolled during the wait: row 512 holds place %1, hold=%2 s", IA_StatisticsMenu.ProbeRankAt(512), IA_StatisticsMenu.ProbeHold()));
+		Expect(IA_StatisticsMenu.ProbeRankAt(512) == 513 && Fetches(svc) == fetches, "a page the server holds is shown during the wait, with no request");
+		Expect(IA_StatisticsMenu.ProbeWaiting(), "and the wait for the refused page goes on");
+		IA_StatisticsMenu.ProbeScroll(912);
+		Sleep(300);
 
 		asks = IA_StatisticsMenu.ProbeAsks();
 		fetches = Fetches(svc);
@@ -877,8 +894,9 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 	}
 
 	//------------------------------------------------------------------------------------------------
-	//! The allowance as it stands with nothing changed: twelve requests an hour for the server
-	//! after twenty at once, and half of each for one player.
+	//! The allowance as it stands with nothing changed: 120 requests an hour for the server
+	//! after 200 at once, and half of each for one player. The allowance fills on the real clock
+	//! too, so the waits are checked loosely.
 	protected void CheckDefaultAllowance()
 	{
 		int global = IA_BoardProtocol.BOARD_GLOBAL;
@@ -887,36 +905,36 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 
 		IA_ApiTunables.Reset();
 		ref IA_BoardService svc = new IA_BoardService();
-		svc.ProbeBegin(5000);
+		svc.ProbeBegin(10000);
 		svc.Open();
 
 		int i;
-		for (i = 0; i < 30; i++)
+		for (i = 0; i < 130; i++)
 		{
 			svc.Request(31, 1, global, kills, true, i * 25);
 			WaitIdle(svc);
 		}
 		Mark(string.Format("default allowance: one player sent=%1 wait=%2 s", Fetches(svc), svc.ProbeAnswerTotal(31)));
-		Expect(Fetches(svc) == 10 && svc.ProbeStatus(31) == limited, "by default one player gets ten requests at once");
-		Expect(svc.ProbeAnswerTotal(31) > 540 && svc.ProbeAnswerTotal(31) <= 600, "and then one every ten minutes");
+		Expect(Fetches(svc) == 100 && svc.ProbeStatus(31) == limited, "by default one player gets a hundred requests at once");
+		Expect(svc.ProbeAnswerTotal(31) > 30 && svc.ProbeAnswerTotal(31) <= 60, "and then one a minute");
 
-		for (i = 0; i < 30; i++)
+		for (i = 0; i < 130; i++)
 		{
-			svc.Request(32, 1, global, kills, true, 1000 + i * 25);
+			svc.Request(32, 1, global, kills, true, 4000 + i * 25);
 			WaitIdle(svc);
 		}
-		svc.Request(33, 1, global, kills, true, 3000);
+		svc.Request(33, 1, global, kills, true, 9000);
 		WaitIdle(svc);
 		Mark(string.Format("default allowance: server sent=%1 wait=%2 s", Fetches(svc), svc.ProbeAnswerTotal(33)));
-		Expect(Fetches(svc) == 20 && svc.ProbeStatus(33) == limited, "by default the server sends twenty requests at once and no more");
-		Expect(svc.ProbeAnswerTotal(33) > 240 && svc.ProbeAnswerTotal(33) <= 300, "and then one every five minutes");
+		Expect(Fetches(svc) == 200 && svc.ProbeStatus(33) == limited, "by default the server sends two hundred requests at once and no more");
+		Expect(svc.ProbeAnswerTotal(33) >= 1 && svc.ProbeAnswerTotal(33) <= 30, "and then one every half minute");
 
-		svc.ProbeAdvance(301000);
-		svc.Request(33, 1, global, kills, true, 3000);
+		svc.ProbeAdvance(30500);
+		svc.Request(33, 1, global, kills, true, 9000);
 		WaitIdle(svc);
-		svc.Request(33, 1, global, kills, true, 3025);
+		svc.Request(33, 1, global, kills, true, 9025);
 		WaitIdle(svc);
-		Expect(Fetches(svc) == 21 && svc.ProbeStatus(33) == limited, "five minutes buy one request");
+		Expect(Fetches(svc) == 201 && svc.ProbeStatus(33) == limited, "half a minute buys one request");
 		svc.Close();
 
 		// One player asking for a new page every five seconds, for an hour of the server's clock.
@@ -930,7 +948,7 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 			hour.ProbeAdvance(5000);
 		}
 		MarkCounts("default allowance, one player asking every five seconds for an hour", hour);
-		Expect(Fetches(hour) >= 10 && Fetches(hour) <= 17, "one player hammering for an hour causes their ten requests and six more");
+		Expect(Fetches(hour) >= 155 && Fetches(hour) <= 162, "one player hammering for an hour causes their hundred requests and sixty more");
 		hour.Close();
 	}
 
@@ -1389,6 +1407,8 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		Expect(api.ProbeCaptured(routeSync) == sent + 1 && svc.ProbeEtag(servers) == "s1", "when the stats service cannot read the boards the rows held are kept");
 
 		// With the allowance spent, a board the exchange will bring is waited for only until then.
+		// The allowance here is a slow one, so its wait is plainly longer than an exchange away.
+		IA_ApiTunables.SetBudget(12, 20);
 		svc.ProbeDrain();
 		svc.Request(13, 1, global, score, true, 0);
 		WaitIdle(svc);
@@ -1398,6 +1418,7 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		WaitIdle(svc);
 		Mark(string.Format("exchange: refused wait for the opening view=%1 s, for another order=%2 s", soon, svc.ProbeAnswerTotal(13)));
 		Expect(svc.ProbeStatus(13) == limited && svc.ProbeAnswerTotal(13) > IA_ApiTunables.SyncIntervalS() + 3, "another order waits for the allowance");
+		IA_ApiTunables.SetBudget(IA_ApiTunables.BUDGET_PER_HOUR, IA_ApiTunables.BUDGET_BURST);
 
 		svc.Close();
 	}
@@ -1426,9 +1447,9 @@ class IA_UplinkMenuProbe : WorkbenchPlugin
 		QueueKills("probe-a", "Probe A", 1);
 		sync.ProbeAdvance(60000);
 		sync.ProbeTick();
-		hints = "\"statsStatus\":\"accepted\",\"nextSyncSeconds\":60,\"pageBudgetPerHour\":12,\"pageBudgetBurst\":20,";
+		hints = "\"statsStatus\":\"accepted\",\"nextSyncSeconds\":60,\"pageBudgetPerHour\":120,\"pageBudgetBurst\":200,";
 		sync.OnAnswer(SyncBody(hints + "\"serverPageSeconds\":120,\"globalPageSeconds\":300"));
-		Expect(IA_ApiTunables.SyncIntervalS() == 60 && IA_ApiTunables.BudgetPerHour() == 12 && IA_ApiTunables.BudgetBurst() == 20, "today's suggestions are this server's defaults");
+		Expect(IA_ApiTunables.SyncIntervalS() == 60 && IA_ApiTunables.BudgetPerHour() == 120 && IA_ApiTunables.BudgetBurst() == 200, "today's suggestions are this server's defaults");
 		Expect(IA_ApiTunables.BoardLifeS(server) == 120 && IA_ApiTunables.BoardLifeS(global) == 300, "for the lifetimes too");
 
 		// An answer without suggestions changes nothing.

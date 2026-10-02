@@ -18,14 +18,14 @@ class IA_ApiTunables
 	static const int LIFE_WIDE_MAX_S = 3600;
 
 	//! /leaderboard requests this server may send in an hour once the burst is spent.
-	static const int BUDGET_PER_HOUR = 12;
+	static const int BUDGET_PER_HOUR = 120;
 	static const int BUDGET_PER_HOUR_MIN = 6;
-	static const int BUDGET_PER_HOUR_MAX = 600;
+	static const int BUDGET_PER_HOUR_MAX = 6000;
 
 	//! /leaderboard requests it may send at once after a quiet spell.
-	static const int BUDGET_BURST = 20;
+	static const int BUDGET_BURST = 200;
 	static const int BUDGET_BURST_MIN = 1;
-	static const int BUDGET_BURST_MAX = 60;
+	static const int BUDGET_BURST_MAX = 600;
 
 	//! The part of the hourly budget and of the burst one player may use, in percent.
 	static const int PLAYER_SHARE = 50;

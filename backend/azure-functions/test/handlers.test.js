@@ -406,7 +406,7 @@ test('sync with only a GUID sends nothing else and answers with the hints', asyn
     '{"status":"ok","statsStatus":"none","statsPlayers":0,"transportStatus":"none","transportPlayers":0,'
     + '"ratingsStatus":"none","ratings":[],"skins":[],"boardsStatus":"none","boards":[],'
     + '"serverRows":[],"globalRows":[],"serversRows":[],"own":[],"snapshotRows":100,'
-    + '"nextSyncSeconds":60,"pageBudgetPerHour":12,"pageBudgetBurst":20,"serverPageSeconds":120,"globalPageSeconds":300}');
+    + '"nextSyncSeconds":60,"pageBudgetPerHour":120,"pageBudgetBurst":200,"serverPageSeconds":120,"globalPageSeconds":300}');
 });
 
 test('sync answers with the hints it was configured with', async () => {

@@ -68,6 +68,8 @@ class IA_StatisticsMenu : MUI_MenuBase
 	// The server has said how long to wait before asking again; the seconds left are on screen.
 	protected bool m_bWaiting;
 	protected int m_iWaitShown;
+	// The page that wait is for. Any other page may still be asked for.
+	protected int m_iRefusedPage = -1;
 
 #ifdef WORKBENCH
 	// A Workbench probe fills the boards in a world with no game mode and no stats service.
@@ -386,6 +388,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 		m_iAskedPage = -1;
 		m_fHold = 0;
 		m_bWaiting = false;
+		m_iRefusedPage = -1;
 		m_fRefresh = RefreshPeriod();
 		m_Board.SetNotice("", EmptyText(m_iBoard));
 		m_Frame.SetNote("");
@@ -519,13 +522,22 @@ class IA_StatisticsMenu : MUI_MenuBase
 		if (m_fHold > 0)
 		{
 			m_fHold = m_fHold - dt;
-			if (m_bWaiting)
+			if (!m_bWaiting)
+				return;
+			if (m_fHold <= 0)
 			{
-				if (m_fHold > 0)
-					ShowWait();
-				else
-					EndWait();
+				EndWait();
+				return;
 			}
+			ShowWait();
+
+			// The wait is for the page the server refused. The player may have scrolled to another,
+			// and one the server holds costs it nothing to send.
+			if (m_fSinceAsk < ASK_GAP_S)
+				return;
+			int other = m_Model.FirstWanted(m_Board.GetFirstVisible(), m_Board.GetLastVisible(), false);
+			if (other >= 0 && other != m_iRefusedPage)
+				Ask(other);
 			return;
 		}
 		if (m_fSinceAsk < ASK_GAP_S)
@@ -562,6 +574,7 @@ class IA_StatisticsMenu : MUI_MenuBase
 	protected void EndWait()
 	{
 		m_bWaiting = false;
+		m_iRefusedPage = -1;
 		m_Board.SetNotice("", EmptyText(m_iBoard));
 		if (m_Model.HasRows())
 			ShowTotal();
@@ -634,12 +647,14 @@ class IA_StatisticsMenu : MUI_MenuBase
 		}
 
 		// A refusal has no rows; the page is asked for again after a wait.
+		int refused = m_iAskedPage;
 		m_Model.Fail(m_iAskedPage);
 		m_iAskedPage = -1;
 		if (status == IA_BoardProtocol.STATUS_LIMITED)
 		{
 			// The total of this answer is the wait the server asks for. Asking sooner gains nothing,
 			// so the page is left alone for at least that long.
+			m_iRefusedPage = refused;
 			m_fHold = Math.ClampInt(total, 1, WAIT_MAX_S) + WAIT_MARGIN_S;
 			m_bWaiting = true;
 			m_iWaitShown = -1;
@@ -675,6 +690,12 @@ class IA_StatisticsMenu : MUI_MenuBase
 
 		m_iAskedPage = -1;
 		m_Board.SetNotice("", EmptyText(m_iBoard));
+		if (m_bWaiting)
+		{
+			// Another page came while one is still refused: the wait stays on show, now under the chip.
+			m_iWaitShown = -1;
+			return;
+		}
 		ShowLink(LINK_LIVE);
 		ShowTotal();
 	}

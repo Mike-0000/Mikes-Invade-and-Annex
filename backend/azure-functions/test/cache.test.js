@@ -92,8 +92,8 @@ test('settings take their defaults when nothing is set', () => {
     pageCacheEntries: 500,
     activeServerSeconds: 60,
     syncSeconds: 60,
-    pageBudgetPerHour: 12,
-    pageBudgetBurst: 20,
+    pageBudgetPerHour: 120,
+    pageBudgetBurst: 200,
     serverPageSeconds: 120,
     globalPageSeconds: 300
   });
@@ -104,7 +104,7 @@ test('a setting outside its range is brought to the nearest end, and one that is
   const config = readConfig({
     PAGE_CACHE_SECONDS: '100000',
     SYNC_INTERVAL_SECONDS: '1',
-    PAGE_BUDGET_PER_HOUR: ' 120 ',
+    PAGE_BUDGET_PER_HOUR: ' 240 ',
     PAGE_BUDGET_BURST: '-5',
     SERVER_PAGE_CACHE_SECONDS: '12.5',
     GLOBAL_PAGE_CACHE_SECONDS: 'soon',
@@ -112,8 +112,8 @@ test('a setting outside its range is brought to the nearest end, and one that is
   });
   assert.strictEqual(config.pageCacheSeconds, SETTINGS.pageCacheSeconds.max);
   assert.strictEqual(config.syncSeconds, SETTINGS.syncSeconds.min);
-  assert.strictEqual(config.pageBudgetPerHour, 120);
-  assert.strictEqual(config.pageBudgetBurst, 20);
+  assert.strictEqual(config.pageBudgetPerHour, 240);
+  assert.strictEqual(config.pageBudgetBurst, 200);
   assert.strictEqual(config.serverPageSeconds, 120);
   assert.strictEqual(config.globalPageSeconds, 300);
   assert.strictEqual(config.activeServerSeconds, 0);

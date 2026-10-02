@@ -213,7 +213,7 @@ Request and response, shortened:
  "own":[{"d":0,"g":0,"h":0,"i":1,"k":1,"n":"One","o":0,"p":1,"r":1,"s":1,"t":20,"id":"p1","board":"server"},
  {"d":0,"g":0,"h":0,"i":1,"k":1,"n":"One","o":0,"p":1,"r":9120,"s":1,"t":20,"id":"p1","board":"global"},
  {"d":4,"g":0,"h":0,"i":1,"k":9,"n":"My Server","o":0,"p":3,"r":61,"s":9,"t":20,"id":"","board":"servers"}],
- "snapshotRows":100,"nextSyncSeconds":60,"pageBudgetPerHour":12,"pageBudgetBurst":20,"serverPageSeconds":120,"globalPageSeconds":300}
+ "snapshotRows":100,"nextSyncSeconds":60,"pageBudgetPerHour":120,"pageBudgetBurst":200,"serverPageSeconds":120,"globalPageSeconds":300}
 ```
 
 Errors, as plain text:
@@ -265,8 +265,8 @@ default; one outside its range is brought to the nearest end.
 | `PAGE_CACHE_ENTRIES` | 500 | 0 to 5000 | pages held per instance |
 | `ACTIVE_SERVER_CACHE_SECONDS` | 60 | 0 to 300 | how long an active GUID is trusted for a held page |
 | `SYNC_INTERVAL_SECONDS` | 60 | 30 to 3600 | hint `nextSyncSeconds`: seconds between syncs |
-| `PAGE_BUDGET_PER_HOUR` | 12 | 0 to 3600 | hint `pageBudgetPerHour`: `/leaderboard` calls a server may make an hour |
-| `PAGE_BUDGET_BURST` | 20 | 0 to 500 | hint `pageBudgetBurst`: calls it may save up |
+| `PAGE_BUDGET_PER_HOUR` | 120 | 0 to 6000 | hint `pageBudgetPerHour`: `/leaderboard` calls a server may make an hour |
+| `PAGE_BUDGET_BURST` | 200 | 0 to 600 | hint `pageBudgetBurst`: calls it may save up |
 | `SERVER_PAGE_CACHE_SECONDS` | 120 | 30 to 3600 | hint `serverPageSeconds`: how long the game holds a page of its own board |
 | `GLOBAL_PAGE_CACHE_SECONDS` | 300 | 60 to 3600 | hint `globalPageSeconds`: how long it holds a `global` or `servers` page |
 
@@ -275,9 +275,14 @@ within a minute of the app setting changing, with no mod release. The game
 obeys them within its own limits.
 
 Budget, from 4,123 active server-minutes a day: about 125,000 syncs a month,
-plus at most 12 pages an hour over about 2,090 active server-hours, 25,000.
-That is 150,000 executions against the 250,000 of the free plan. Every 12 added
-to `PAGE_BUDGET_PER_HOUR` allows 25,000 more.
+plus at most 120 pages an hour over about 2,090 active server-hours, 251,000.
+That ceiling is 376,000 executions, above the 250,000 of the free plan. It is
+reached only if every server spends its whole allowance in every active hour;
+a hundred looks at the boards in an hour cost four or five pages. Every 12
+taken off `PAGE_BUDGET_PER_HOUR` lowers the ceiling by 25,000, and at 60 it is
+the free plan's 250,000. A game build takes these hints only from a `/sync`
+answer; until it has one it uses its own defaults, which are the same numbers
+(`IA_ApiTunables`).
 
 ## Hosting
 

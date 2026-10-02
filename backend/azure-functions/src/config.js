@@ -11,8 +11,8 @@ const SETTINGS = {
 
   // Hints sent with every /sync answer. The game obeys them within its own limits.
   syncSeconds:         { env: 'SYNC_INTERVAL_SECONDS',       fallback: 60,  min: 30, max: 3600 },
-  pageBudgetPerHour:   { env: 'PAGE_BUDGET_PER_HOUR',        fallback: 12,  min: 0,  max: 3600 },
-  pageBudgetBurst:     { env: 'PAGE_BUDGET_BURST',           fallback: 20,  min: 0,  max: 500 },
+  pageBudgetPerHour:   { env: 'PAGE_BUDGET_PER_HOUR',        fallback: 120, min: 0,  max: 6000 },
+  pageBudgetBurst:     { env: 'PAGE_BUDGET_BURST',           fallback: 200, min: 0,  max: 600 },
   serverPageSeconds:   { env: 'SERVER_PAGE_CACHE_SECONDS',   fallback: 120, min: 30, max: 3600 },
   globalPageSeconds:   { env: 'GLOBAL_PAGE_CACHE_SECONDS',   fallback: 300, min: 60, max: 3600 }
 };
