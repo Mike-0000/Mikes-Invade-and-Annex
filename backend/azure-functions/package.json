@@ -10,5 +10,8 @@
   "dependencies": {
     "@azure/functions": "^4.5.0",
     "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8"
   }
 }

@@ -67,9 +67,10 @@ function createHandlers(db) {
     if (typeof body.ownerEmail === 'string' && body.ownerEmail !== '')
       email = body.ownerEmail.slice(0, 255);
 
+    // A placeholder name is fine here: a new row has no better name to lose.
     const guid = await db.scalar(
       'SELECT public.register_server($1::varchar, $2::varchar) AS value',
-      [body.serverName.slice(0, 255), email]);
+      [body.serverName.trim().slice(0, 255), email]);
     return json({ serverGuid: guid });
   }
 
@@ -80,6 +81,8 @@ function createHandlers(db) {
     if (!isGuid(body.serverGuid))
       return FORBIDDEN;
 
+    // The name only relabels the row the GUID selects. api_submit_stats decides
+    // whether it replaces the stored one; an absent name keeps it.
     let name = '';
     if (typeof body.serverName === 'string')
       name = body.serverName;

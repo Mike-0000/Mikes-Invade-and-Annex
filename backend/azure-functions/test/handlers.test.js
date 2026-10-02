@@ -43,6 +43,46 @@ test('registerServer rejects a missing name without touching the database', asyn
   assert.strictEqual(db.calls.length, 0);
 });
 
+test('registerServer rejects a blank name without touching the database', async () => {
+  const db = stub(GUID);
+  const res = await createHandlers(db).registerServer(post({ serverName: ' \t\r\n', ownerEmail: '' }));
+  assert.strictEqual(res.status, 400);
+  assert.strictEqual(db.calls.length, 0);
+});
+
+test('registerServer trims the name and bounds it to 255 characters', async () => {
+  const db = stub(GUID);
+  await createHandlers(db).registerServer(post({ serverName: '  ' + 'n'.repeat(300) + '\r\n' }));
+  assert.deepStrictEqual(db.calls[0].params, ['n'.repeat(255), null]);
+});
+
+test('registerServer accepts the placeholder name a new server starts with', async () => {
+  const db = stub(GUID);
+  const placeholder = 'Default Name - PLEASE RENAME IN server_name.txt, in I&A Server Profile Folder';
+  const res = await createHandlers(db).registerServer(post({ serverName: placeholder, ownerEmail: '' }));
+  assert.strictEqual(res.status, 200);
+  assert.deepStrictEqual(db.calls[0].params, [placeholder, null]);
+});
+
+test('submitStats sends a name that is absent or not a string as empty, which keeps the stored one', async () => {
+  const db = stub({ players: 0 });
+  const handlers = createHandlers(db);
+  await handlers.submitStats(post({ serverGuid: GUID, matchData: [] }));
+  await handlers.submitStats(post({ serverGuid: GUID, serverName: 7, matchData: [] }));
+  await handlers.submitStats(post({ serverGuid: GUID, serverName: null, matchData: [] }));
+  assert.deepStrictEqual(db.calls.map(c => c.params[1]), ['', '', '']);
+});
+
+test('submitStats writes to the GUID it was given, whatever the name says', async () => {
+  const db = stub({ players: 0 });
+  const other = '9d2b8c1e-3f4a-4b5c-8d6e-7f8091a2b3c4';
+  await createHandlers(db).submitStats(post({ serverGuid: GUID, serverName: other, matchData: [] }));
+  assert.strictEqual(db.calls.length, 1);
+  assert.ok(db.calls[0].sql.includes('public.api_submit_stats($1::uuid, $2::text, $3::jsonb)'));
+  assert.strictEqual(db.calls[0].params[0], GUID);
+  assert.strictEqual(db.calls[0].params[1], other);
+});
+
 test('submitStats passes the event array through and reports success', async () => {
   const db = stub({ players: 1 });
   const events = [{ eventType: 'PlayerKill', killerPlayerId: 'p1', killerPlayerName: 'One' }];

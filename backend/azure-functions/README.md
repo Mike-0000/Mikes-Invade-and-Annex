@@ -28,6 +28,41 @@ Responses must stay compact JSON (`JSON.stringify`). The game finds
 `"serverGuid":"` and `"<name>Leaderboard":[` by string search, so a space after
 the colon breaks released builds.
 
+## Server name
+
+`servers.name` is the last real name a server reported. The server GUID alone
+selects the row a request writes; the name only labels that row and can never
+redirect a write.
+
+- `POST /registerServer` makes a new row with the name it is given, trimmed and
+  cut to 255 characters. A blank name is refused with `400`. The game's
+  placeholder is accepted here: a new row has no better name to lose.
+- `POST /submitStats` carries `serverName` with every batch, and
+  `api_submit_stats` decides what to keep
+  (`backend/supabase/migrations/20261002000000_server_name_retention.sql`):
+
+| `serverName` in the batch | Stored name |
+| --- | --- |
+| absent, not a string, empty or only whitespace | kept |
+| a placeholder, while the stored name is a real one | kept |
+| a placeholder, while the stored name is also a placeholder | replaced |
+| anything else | replaced, trimmed and cut to 255 characters |
+
+A placeholder is any name containing `PLEASE RENAME IN server_name.txt`, in any
+letter case. Both defaults the game has written into `server_name.txt` carry
+it, and so does a name whose owner replaced only the first words.
+
+`last_seen` moves on every accepted batch, whether or not the name does.
+
+The original `invadestats` app (see Older builds) updates `servers.name` itself
+on every batch and does not go through this rule, so a server on an old build
+still stores whatever its file says.
+
+On the `servers` board a name is cut to 48 characters, and a server whose name
+is exactly one of the defaults is left out. A half-replaced placeholder is
+still shown: it is a real server with real stats, and its live name replaces
+the placeholder once it runs a build that sends one.
+
 ## `GET /leaderboard`
 
 One page of one board in one sort order, plus the asking player's own row. The
@@ -104,9 +139,10 @@ Errors, as plain text:
 The app connects straight to Postgres through the Supabase transaction pooler
 as the `ia_game_api` role. That role has no table privileges and can only
 execute the six functions above
-(`backend/supabase/migrations/20260930010000_game_api.sql`, and
-`20261001030000_leaderboard_pages.sql` for `api_get_leaderboard`). It uses no
-Supabase API key.
+(`backend/supabase/migrations/20260930010000_game_api.sql`,
+`20261001030000_leaderboard_pages.sql` for `api_get_leaderboard`, and
+`20261002000000_server_name_retention.sql` for the current `api_submit_stats`).
+It uses no Supabase API key.
 
 App settings: `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`.
 
@@ -125,17 +161,35 @@ npm install
 npm test
 ```
 
+`test/handlers.test.js` runs the handlers against a stubbed database.
+`test/server-name.test.js` applies every file in `backend/supabase/migrations`
+to an in-process Postgres (PGlite, a dev dependency) and calls the real
+functions through the handlers. It builds the two tables and `register_server`
+itself, because those were made by hand in the Supabase project and have no
+migration. Without dev dependencies that suite is skipped.
+
 ## Deploy
 
-Zip `host.json`, `package.json`, `src/` and `node_modules/` (production
-dependencies only, forward-slash paths), then:
+The database and the function app are deployed separately, and either order
+works: each version of one runs against each version of the other.
+
+Database: run the new file from `backend/supabase/migrations` in the Supabase
+SQL editor of the project, as it is. Each file is one transaction and can be
+run again. `20261002000000_server_name_retention.sql` replaces
+`api_submit_stats` in place and keeps its grants. To roll it back, run the
+`CREATE OR REPLACE FUNCTION public.api_submit_stats` statement from
+`20260930010000_game_api.sql`.
+
+Function app: leave the dev dependencies out, then zip `host.json`,
+`package.json`, `src/` and `node_modules/` (forward-slash paths):
 
 ```
+npm ci --omit=dev
 az functionapp deployment source config-zip -g rg-invade-annex-api -n invade-annex-api --src api.zip
 ```
 
-To roll back, check out the previous commit of this folder and deploy it the
-same way.
+Run `npm install` afterwards to get the test dependencies back. To roll back,
+check out the previous commit of this folder and deploy it the same way.
 
 ## Older builds
 
