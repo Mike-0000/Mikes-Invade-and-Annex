@@ -1448,6 +1448,21 @@ class IA_MissionInitializer : GenericEntity
         if (!Replication.IsServer())
             return;
 
+        string name = marker.GetAreaName();
+        IA_Game game = IA_Game.Instantiate();
+        if (game && !name.IsEmpty())
+        {
+            IA_AreaInstance existing = game.GetAreaInstance(name);
+            if (existing)
+            {
+                if (IA_Log.IsDebugEnabled())
+                {
+                    Print(string.Format("[IA_MissionInitializer] Live site '%1' is already spawned.", name), LogLevel.NORMAL);
+                }
+                return;
+            }
+        }
+
         IA_GmDirector dir = IA_GmDirector.GetInstance();
         dir.EnsureStarted();
 
@@ -1464,7 +1479,6 @@ class IA_MissionInitializer : GenericEntity
 		marker.ResetForNewCapture();
         marker.SetAreaGroup(liveGroup);
 
-        string name = marker.GetAreaName();
         vector origin = marker.GetOrigin();
         dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], liveGroup, marker.GetRadius(), name);
 
@@ -1479,20 +1493,6 @@ class IA_MissionInitializer : GenericEntity
 
 		if (marker.GetAreaType() == IA_AreaType.RadioTower)
 			marker.EnsureRadioTowerSpawned();
-
-        IA_Game game = IA_Game.Instantiate();
-        if (game && !name.IsEmpty())
-        {
-            IA_AreaInstance existing = game.GetAreaInstance(name);
-            if (existing)
-            {
-                if (IA_Log.IsDebugEnabled())
-                {
-                    Print(string.Format("[IA_MissionInitializer] Live site '%1' is already spawned.", name), LogLevel.NORMAL);
-                }
-                return;
-            }
-        }
 
         if (!groupsArray)
             groupsArray = new array<int>();
