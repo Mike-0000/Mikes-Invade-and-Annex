@@ -36,7 +36,7 @@ subsystem.
 | Piece | Change |
 |---|---|
 | `IA_BaseDesignLibrary` | `Select` is unchanged. New `SelectDesign(seed, hqChancePct)` rolls the style, and HQ variants are encoded as `HQ_BASE (100) + v`. New `CreateLayout(size, variant)` dispatches to either recipe class. `Committed` routes HQ variants into a separate history, so the scrappy rotation is untouched. |
-| `IA_HeadquartersRecipes` (generated) | 6 sizes × 12 variants = 72 recipes. |
+| `IA_HeadquartersRecipes` (generated) | 6 sizes × 12 variants = 72 recipes. The recipes are data in `Configs/IA/IA_HeadquartersRecipes.conf` (scrappy: `IA_BaseDesignRecipes.conf`); the script only loads that book once and replays one recipe through `IA_SiteRecipe`, so servers no longer compile ~35,000 generated lines. |
 | `IA_HeadquartersCatalog` (generated) | Measured HQ scenery assets, with the same asset/socket type as the scrappy catalog. |
 | `IA_HeadquartersSiteLayout : IA_ComposedSiteLayout` | Resolves keys from the HQ catalog before the scrappy one. Adds `AddWallRun` (upright stepped concrete or slope-following camo sandbags, collective coverage), `AddDressingItem` (planned gates, roads and vignettes) and `AddObstacle` (outer belt dressing). |
 | `IA_ComposedSiteLayout` | A single virtual `ResolveAsset(key)` hook is extracted from `AddComposition`. Scrappy behaviour is byte-for-byte the same code path. |
@@ -489,7 +489,7 @@ from files this change does not touch.
 
 Results from the iteration 4 tree, 2026-09-26, supersede the earlier rows.
 
-**Workbench CLI** (Steam must be running, `-wbModule=ResourceManager -plugin=... -run`):
+**Workbench CLI** (Steam must be running, `-wbModule=ResourceManager -plugin=... -run`). `IA_BaseGarrisonTest`, `IA_BaseSelectionTest` and `IA_BaseEmplacementTest` now run from the test addon (`F:/Mikes-Invade-and-Annex-Tests`; its README has the command); the design and headquarters plugins are still in this addon:
 
 | Plugin | Log | Result |
 |---|---|---|

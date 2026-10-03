@@ -35,7 +35,7 @@ Infrastructure uses the existing optional Dressing role. It adds no survey trace
 - The Kolguyev group-0, seed-12345 audit returns the exact same 31 unique layout/center/heading results as the previous interior pass. Its final pass used 3,302 callbacks and 16.158 seconds of survey work, comparable to the prior 3,300 / 15.934 seconds. This is a survey audit, not a client/server frame-time comparison.
 - All five Workbench script validation configurations pass.
 
-Rebuild with `python tools/author_base_interiors.py D:/ReforgerGameSources/data/data007`. Re-measure using `IA_BaseInteriorProbe`, import its script log with the author tool's `--import-measurement` option, then run `tools/check_dynamic_base_layouts.py` and `tools/validate_dynamic_base_assets.py` (the latter takes the same source directory). `tools/draw_dynamic_base_interiors.py` regenerates the review sheet. Run `IA_BaseInfrastructureTest` and `IA_BaseSelectionTest` through Workbench ResourceManager and `IA_BaseTerrainAudit` through WorldEditor.
+Rebuild with `python tools/author_base_interiors.py D:/ReforgerGameSources/data/data007`. Re-measure using `IA_BaseInteriorProbe` (written into and run from the test addon (`F:/Mikes-Invade-and-Annex-Tests`; its README has the command)), import its script log with the author tool's `--import-measurement` option, then run `tools/check_dynamic_base_layouts.py` and `tools/validate_dynamic_base_assets.py` (the latter takes the same source directory). `tools/draw_dynamic_base_interiors.py` regenerates the review sheet. Run `IA_BaseInfrastructureTest` and `IA_BaseSelectionTest` through Workbench ResourceManager and `IA_BaseTerrainAudit` through WorldEditor.
 
 ## Required live verification
 

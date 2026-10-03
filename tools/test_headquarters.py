@@ -8,7 +8,7 @@ import sys
 import unittest
 
 sys.dont_write_bytecode=True
-from author_base_compositions import REF,parse
+from author_base_compositions import REF,parse,output_path
 from author_base_designs import CAPS,RECIPE_EXPANDED_BUDGET,box,overlap
 from author_base_designs import SHELTERS,SHELTER_POST_REACH,shelter_box,shelter_entrance,gun_reserves
 import author_headquarters as hq
@@ -18,7 +18,7 @@ BASE=Path('D:/ReforgerGameSources/data/data007')
 
 
 def read(path):
-    return (ROOT/path).read_text(encoding='utf-8-sig')
+    return output_path(path).read_text(encoding="utf-8-sig")
 
 
 class HeadquartersTests(unittest.TestCase):
@@ -251,8 +251,8 @@ class HeadquartersTests(unittest.TestCase):
                 p=d['position']
                 self.assertLess(abs(p[0]),r['wall_half_width'],(name,d['key']))
                 self.assertLess(abs(p[2]),r['wall_half_depth'],(name,d['key']))
-        recipes=read('Scripts/Game/IA_HeadquartersRecipes.c')
-        self.assertIn('AddDressingItem("HQChicane"',recipes)
+        recipes=read('Configs/IA/IA_HeadquartersRecipes.conf')
+        self.assertIn('"D|HQChicane|',recipes)
         layout=read('Scripts/Game/IA_HeadquartersSiteLayout.c')
         self.assertIn('m_bPlannedClearance = true',layout)
 
@@ -306,11 +306,33 @@ class HeadquartersTests(unittest.TestCase):
                 # Cover posts (local +Z) face away from the capture point.
                 yaw=math.radians(s['yaw'])
                 self.assertGreater((x-capture[0])*math.sin(yaw)+(z-capture[2])*math.cos(yaw),0,(name,s))
-        text=read('Scripts/Game/IA_HeadquartersRecipes.c')
-        self.assertEqual(text.count('layout.AddAirRaidBunker('),sum(SHELTERS)*hq.HQ_VARIANTS)
-        for build in text.split('protected static void Build')[1:]:
-            dressing=[i for i in (build.find('layout.AddObstacle('),build.find('layout.AddDressingItem(')) if i>=0]
-            self.assertLess(build.rfind('layout.AddAirRaidBunker('),min(dressing))
+        text=read('Configs/IA/IA_HeadquartersRecipes.conf')
+        self.assertEqual(text.count('    "S|'),sum(SHELTERS)*hq.HQ_VARIANTS)
+        books=text.split('  IA_SiteRecipe "')[1:]
+        self.assertEqual(len(books),len(self.recipes))
+        for book in books:
+            dressing=[i for i in (book.find('"O|'),book.find('"D|')) if i>=0]
+            self.assertLess(book.rfind('"S|'),min(dressing))
+
+    def test_recipes_ship_as_data(self):
+        """Recipes are a .conf the server reads, not script it compiles."""
+        loader=read('Scripts/Game/IA_HeadquartersRecipes.c')
+        self.assertLess(len(loader.splitlines()),60)
+        self.assertNotIn('AddWallRun',loader)
+        meta=read('Configs/IA/IA_HeadquartersRecipes.conf.meta')
+        guid=re.search(r'Name "(\{[0-9A-F]{16}\}Configs/IA/IA_HeadquartersRecipes\.conf)"',meta)[1]
+        self.assertIn(f'RECIPES = "{guid}"',loader)
+        self.assertIn('IA_BaseDesignLibrary.HQ_BASE',loader)
+        books=read('Configs/IA/IA_HeadquartersRecipes.conf').split('  IA_SiteRecipe "')[1:]
+        self.assertEqual(len(books),6*hq.HQ_VARIANTS)
+        for r,book in zip(self.recipes,books):
+            ops=re.findall(r'^    "([^"]*)"$',book,re.M)
+            kinds='IK'+'C'*len(r['modules'])+'R'*len(r['walls'])+'S'*len(r['shelters'])+'O'*len(r['belt'])+'D'*len(r['dressing'])+'G'*len(r['posts'])
+            self.assertEqual(''.join(o[0] for o in ops),kinds,r['name'])
+            self.assertEqual(ops[0].split('|')[2],str(r['variant']),r['name'])
+        replay=read('Scripts/Game/IA_SiteRecipe.c')
+        for call in ('AddWallRun','AddObstacle','AddDressingItem'):
+            self.assertIn(call,replay)
 
     def test_runtime_selection_wiring(self):
         placer=read('Scripts/Game/IA_DynamicSitePlacer.c')

@@ -214,6 +214,15 @@ the addon the twins are written into. `addon.gproj` is the developer's to edit.
 For a helicopter that should stay optional, put the family in a small
 compatibility addon that depends on both (last step).
 
+The Workbench plugins named below (`IA_HeliPaintSurvey`, `IA_HeliSkinAssetCheck`,
+`IA_HeliSkinLiveProbe`, `IA_HeliPaintMenuProbe`, `IA_HeliCamoProbe`) live in the
+test addon `F:\Mikes-Invade-and-Annex-Tests`, never published. Run them with
+`-gproj "F:/Mikes-Invade-and-Annex-Tests/addon.gproj"` and put
+`F:/Mikes-Invade-and-Annex-Exp` in `-addonsDir` (the test addon's README has
+the full command). For a modded helicopter the project Workbench opens must
+also load the mod and its compatibility addon: add them to `-addonsDir` and,
+locally only, to the test addon's dependencies.
+
 1. **Survey.** Run the Workbench plugin `IA_HeliPaintSurvey` from the command
    line with `-iaSurveyPrefab <stock prefab>[,<variant>...]` and
    `-iaSurveyOut <name>.json`. It reads the prefabs' ids, mesh slots, slotted

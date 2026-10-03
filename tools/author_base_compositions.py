@@ -7,12 +7,21 @@ are deliberately not inherited. Run with data007 and optionally --check.
 from pathlib import Path
 from functools import lru_cache
 import argparse
+import os
 import copy
 import json
 import re
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
+# Workbench probes ship in the separate test addon, never in the production addon.
+TESTS_ADDON = Path(os.environ.get('IA_TESTS_ADDON', ROOT.parent / 'Mikes-Invade-and-Annex-Tests'))
+
+
+def output_path(path):
+    if path.startswith('Scripts/WorkbenchGame/'):
+        return TESTS_ADDON/path
+    return ROOT/path
 OUT = 'Prefabs/BaseCompositions/'
 SLOTTED = 'Prefabs/Compositions/Slotted/'
 SUB = 'Prefabs/Compositions/Misc/SubCompositions/'
@@ -367,7 +376,7 @@ def main():
     args=parser.parse_args()
     outputs=Author(args.data).generate()
     for path,content in outputs.items():
-        target=ROOT/path
+        target=output_path(path)
         if args.check:
             assert target.read_text(encoding='utf-8')==content,path
         else:

@@ -5,6 +5,7 @@ Usage: python tools/author_base_interiors.py D:/ReforgerGameSources/data/data007
 """
 from pathlib import Path
 import json
+import os
 import math
 import re
 import sys
@@ -13,6 +14,8 @@ import subprocess
 from functools import cache
 
 REPO = Path(__file__).resolve().parents[1]
+# Workbench probes live in the separate test addon (never published).
+TESTS_ADDON = Path(os.environ.get('IA_TESTS_ADDON', REPO.parent / 'Mikes-Invade-and-Annex-Tests'))
 BASE = Path(sys.argv[1])
 ASSETS = {
     'board': 'Prefabs/Structures/Civilian/MessageBoard/Filled/MessageBoard_USSR_01_RedStarNews_filled_V1.et',
@@ -116,7 +119,7 @@ ITEMS
 }
 #endif
 '''.replace('ITEMS', items).replace('EXPECTED', ', '.join(map(str, expected)))
-    (REPO / 'Scripts/WorkbenchGame/IA_BaseInteriorProbe.c').write_text(code)
+    (TESTS_ADDON / 'Scripts/WorkbenchGame/IA_BaseInteriorProbe.c').write_text(code)
 
 
 if '--import-measurement' in sys.argv:

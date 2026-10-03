@@ -183,7 +183,7 @@ Internal script classes that facilitate game logic, AI control, and inter-system
 ### `IA_ServerNameResolver` (Server name)
 - `ForStats()`: The name for `POST /sync` and `POST /submitStats`; empty when none is known.
 - `ForRegistration()`: The name for `POST /registerServer`; the old default text when none is known.
-- `Pick(fileLine, liveName, lastName, out source)`: The order of precedence on values already read. `IA_ServerNameProbe` (Workbench plugin) checks it and the files.
+- `Pick(fileLine, liveName, lastName, out source)`: The order of precedence on values already read. `IA_ServerNameProbe` (Workbench plugin in the test addon `F:/Mikes-Invade-and-Annex-Tests`) checks it and the files.
 
 ---
 

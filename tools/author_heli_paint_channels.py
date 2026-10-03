@@ -38,8 +38,10 @@ A surface's "paint" says what a livery does to each parameter it names:
     --root <folder>    the addon the files are written into (default: this one)
 
 After writing, open Workbench once so it imports the files, then run the
-IA_HeliSkinAssetCheck plugin. docs/transport-pilot-progression.md has the whole
-procedure for adding a helicopter.
+IA_HeliSkinAssetCheck plugin. That plugin and IA_HeliPaintSurvey live in the
+test addon (F:/Mikes-Invade-and-Annex-Tests, see its README for the command).
+docs/transport-pilot-progression.md has the whole procedure for adding a
+helicopter.
 """
 import hashlib
 import json
