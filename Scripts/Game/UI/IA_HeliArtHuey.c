@@ -3,37 +3,39 @@
 //------------------------------------------------------------------------------------------------
 class IA_HeliArtHuey : IA_HeliArt
 {
-	protected static const ref array<float> FUSELAGE = {5, 23, 8, 18.5, 15, 15.2, 26, 14, 72, 14, 78, 17, 80, 21.5, 75, 28.5, 64, 31, 18, 31, 9, 28.5, 5.5, 25.5};
-	protected static const ref array<float> COWL = {40, 14, 43, 9.5, 64, 9.5, 71, 14};
-	protected static const ref array<float> BOOM = {76, 16, 112, 12, 112, 15.5, 78, 22.5};
-	protected static const ref array<float> FIN = {107, 15, 113.5, 2, 117.5, 2, 113.5, 15.6};
-	protected static const ref array<float> STAB = {92, 15.2, 103, 14, 103, 16, 92, 17.4};
-	protected static const ref array<float> WINDSHIELD = {9.5, 21.5, 11.5, 18.3, 16.5, 16.2, 22, 15.6, 22, 21.5};
-	protected static const ref array<float> DOOR_FRONT = {26, 16, 39, 16, 39, 21.5, 26, 21.5};
-	protected static const ref array<float> DOOR_REAR = {43, 16, 54, 16, 54, 21.5, 43, 21.5};
-	protected static const ref array<float> CHIN = {8.6, 25.4, 13.5, 24.6, 15.5, 28.6, 11.2, 28.4};
-	protected static const ref array<float> EXHAUST = {66.5, 10.3, 73.5, 10.8, 73.5, 13.2, 69.5, 14};
-
 	//------------------------------------------------------------------------------------------------
 	void IA_HeliArtHuey()
 	{
-		m_aHull.Insert(BOOM);
-		m_aHull.Insert(FIN);
-		m_aHull.Insert(STAB);
-		m_aHull.Insert(COWL);
-		m_aHull.Insert(FUSELAGE);
+		// Built here, not as static members: every static initializer in every loaded
+		// mod shares one engine init function with a fixed instruction cap.
+		ref array<float> fuselage = {5, 23, 8, 18.5, 15, 15.2, 26, 14, 72, 14, 78, 17, 80, 21.5, 75, 28.5, 64, 31, 18, 31, 9, 28.5, 5.5, 25.5};
+		ref array<float> cowl = {40, 14, 43, 9.5, 64, 9.5, 71, 14};
+		ref array<float> boom = {76, 16, 112, 12, 112, 15.5, 78, 22.5};
+		ref array<float> fin = {107, 15, 113.5, 2, 117.5, 2, 113.5, 15.6};
+		ref array<float> stab = {92, 15.2, 103, 14, 103, 16, 92, 17.4};
+		ref array<float> windshield = {9.5, 21.5, 11.5, 18.3, 16.5, 16.2, 22, 15.6, 22, 21.5};
+		ref array<float> doorFront = {26, 16, 39, 16, 39, 21.5, 26, 21.5};
+		ref array<float> doorRear = {43, 16, 54, 16, 54, 21.5, 43, 21.5};
+		ref array<float> chin = {8.6, 25.4, 13.5, 24.6, 15.5, 28.6, 11.2, 28.4};
+		ref array<float> exhaust = {66.5, 10.3, 73.5, 10.8, 73.5, 13.2, 69.5, 14};
 
-		m_aGlass.Insert(WINDSHIELD);
-		m_aGlass.Insert(DOOR_FRONT);
-		m_aGlass.Insert(DOOR_REAR);
+		m_aHull.Insert(boom);
+		m_aHull.Insert(fin);
+		m_aHull.Insert(stab);
+		m_aHull.Insert(cowl);
+		m_aHull.Insert(fuselage);
 
-		m_aDark.Insert(CHIN);
-		m_aDark.Insert(EXHAUST);
+		m_aGlass.Insert(windshield);
+		m_aGlass.Insert(doorFront);
+		m_aGlass.Insert(doorRear);
 
-		AddShade(FUSELAGE, 0, 1, 18.2, true);
-		AddShade(COWL, 0, 1, 11.2, true);
-		AddShade(FUSELAGE, 0, -1, -26.4, false);
-		AddShade(BOOM, -0.206, -1, -37.3, false);
+		m_aDark.Insert(chin);
+		m_aDark.Insert(exhaust);
+
+		AddShade(fuselage, 0, 1, 18.2, true);
+		AddShade(cowl, 0, 1, 11.2, true);
+		AddShade(fuselage, 0, -1, -26.4, false);
+		AddShade(boom, -0.206, -1, -37.3, false);
 
 		// Skids.
 		AddRecord(m_aGear, 13, 36.5, 66, 36.5, 1);

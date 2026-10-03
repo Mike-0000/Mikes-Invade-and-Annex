@@ -84,15 +84,17 @@ class IA_PilotHud : MUI_Surface
 	protected static const string TEXT_UNLOCKED = "UNLOCKED";
 	protected static const string TEXT_RATING_WORD = "RATING";
 
-	// Huey, side view, nose left, in a 120x40 box. Every piece is convex.
-	protected static const ref array<float> FUSELAGE = {5, 23, 8, 18.5, 15, 15.2, 26, 14, 72, 14, 78, 17, 80, 21.5, 75, 28.5, 64, 31, 18, 31, 9, 28.5, 5.5, 25.5};
-	protected static const ref array<float> COWL = {40, 14, 43, 9.5, 64, 9.5, 71, 14};
-	protected static const ref array<float> BOOM = {76, 16, 112, 12, 112, 15.5, 78, 22.5};
-	protected static const ref array<float> FIN = {107, 15, 113.5, 2, 117.5, 2, 113.5, 15.6};
-	protected static const ref array<float> STAB = {92, 15.2, 103, 14, 103, 16, 92, 17.4};
-	protected static const ref array<float> WINDSHIELD = {9.5, 21.5, 11.5, 18.3, 16.5, 16.2, 22, 15.6, 22, 21.5};
-	protected static const ref array<float> DOOR_FRONT = {26, 16, 39, 16, 39, 21.5, 26, 21.5};
-	protected static const ref array<float> DOOR_REAR = {43, 16, 54, 16, 54, 21.5, 43, 21.5};
+	// Huey, side view, nose left, in a 120x40 box. Every piece is convex. Built in
+	// BuildSilhouette, not as static members: every static initializer in every loaded
+	// mod shares one engine init function with a fixed instruction cap.
+	protected ref array<float> m_aFuselage;
+	protected ref array<float> m_aCowl;
+	protected ref array<float> m_aBoom;
+	protected ref array<float> m_aFin;
+	protected ref array<float> m_aStab;
+	protected ref array<float> m_aWindshield;
+	protected ref array<float> m_aDoorFront;
+	protected ref array<float> m_aDoorRear;
 
 	protected IA_PilotHudAnim m_eAnim;
 	protected ref IA_PilotDropoffPayload m_Data;
@@ -172,8 +174,30 @@ class IA_PilotHud : MUI_Surface
 	protected ref array<float> m_aSparkLife;
 
 	//------------------------------------------------------------------------------------------------
+	protected void BuildSilhouette()
+	{
+		ref array<float> fuselage = {5, 23, 8, 18.5, 15, 15.2, 26, 14, 72, 14, 78, 17, 80, 21.5, 75, 28.5, 64, 31, 18, 31, 9, 28.5, 5.5, 25.5};
+		m_aFuselage = fuselage;
+		ref array<float> cowl = {40, 14, 43, 9.5, 64, 9.5, 71, 14};
+		m_aCowl = cowl;
+		ref array<float> boom = {76, 16, 112, 12, 112, 15.5, 78, 22.5};
+		m_aBoom = boom;
+		ref array<float> fin = {107, 15, 113.5, 2, 117.5, 2, 113.5, 15.6};
+		m_aFin = fin;
+		ref array<float> stab = {92, 15.2, 103, 14, 103, 16, 92, 17.4};
+		m_aStab = stab;
+		ref array<float> windshield = {9.5, 21.5, 11.5, 18.3, 16.5, 16.2, 22, 15.6, 22, 21.5};
+		m_aWindshield = windshield;
+		ref array<float> doorFront = {26, 16, 39, 16, 39, 21.5, 26, 21.5};
+		m_aDoorFront = doorFront;
+		ref array<float> doorRear = {43, 16, 54, 16, 54, 21.5, 43, 21.5};
+		m_aDoorRear = doorRear;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	void IA_PilotHud()
 	{
+		BuildSilhouette();
 		m_Style.m_WidthMode = MUI_SizeMode.Exact;
 		m_Style.m_HeightMode = MUI_SizeMode.Exact;
 		m_Style.m_fWidth = CARD_W;
@@ -941,31 +965,31 @@ class IA_PilotHud : MUI_Surface
 		if (full)
 		{
 			Color whole = MUI_ColorUtil.Fade(m_HudHull, op);
-			FillPiece(surface, FUSELAGE, x, y, whole);
-			FillPiece(surface, COWL, x, y, whole);
-			FillPiece(surface, BOOM, x, y, whole);
-			FillPiece(surface, FIN, x, y, whole);
-			FillPiece(surface, STAB, x, y, whole);
+			FillPiece(surface, m_aFuselage, x, y, whole);
+			FillPiece(surface, m_aCowl, x, y, whole);
+			FillPiece(surface, m_aBoom, x, y, whole);
+			FillPiece(surface, m_aFin, x, y, whole);
+			FillPiece(surface, m_aStab, x, y, whole);
 		}
 		else
 		{
 			Color bare = MUI_ColorUtil.Fade(m_HudOlive, op * 0.9);
-			FillPiece(surface, FUSELAGE, x, y, bare);
-			FillPiece(surface, COWL, x, y, bare);
-			FillPiece(surface, BOOM, x, y, bare);
-			FillPiece(surface, FIN, x, y, bare);
-			FillPiece(surface, STAB, x, y, bare);
+			FillPiece(surface, m_aFuselage, x, y, bare);
+			FillPiece(surface, m_aCowl, x, y, bare);
+			FillPiece(surface, m_aBoom, x, y, bare);
+			FillPiece(surface, m_aFin, x, y, bare);
+			FillPiece(surface, m_aStab, x, y, bare);
 
 			if (m_fPaint > 0.001)
 			{
 				// Painted side of a slanted front, parallel to the pips.
 				float limit = front + SKEW * SIL_H * 0.5;
 				Color painted = MUI_ColorUtil.Fade(m_HudHull, op);
-				FillPainted(surface, FUSELAGE, limit, x, y, painted);
-				FillPainted(surface, COWL, limit, x, y, painted);
-				FillPainted(surface, BOOM, limit, x, y, painted);
-				FillPainted(surface, FIN, limit, x, y, painted);
-				FillPainted(surface, STAB, limit, x, y, painted);
+				FillPainted(surface, m_aFuselage, limit, x, y, painted);
+				FillPainted(surface, m_aCowl, limit, x, y, painted);
+				FillPainted(surface, m_aBoom, limit, x, y, painted);
+				FillPainted(surface, m_aFin, limit, x, y, painted);
+				FillPainted(surface, m_aStab, limit, x, y, painted);
 			}
 		}
 
@@ -974,17 +998,17 @@ class IA_PilotHud : MUI_Surface
 			float s = m_fSweepClock / SWEEP_DUR;
 			float from = SPAN_LO - 12 + (SPAN_HI - SPAN_LO + 24) * s + SKEW * SIL_H * 0.5;
 			Color shine = MUI_ColorUtil.Fade(m_HudWhite, op * 0.75 * Math.Sin(s * Math.PI));
-			FillBand(surface, FUSELAGE, from, x, y, shine);
-			FillBand(surface, COWL, from, x, y, shine);
-			FillBand(surface, BOOM, from, x, y, shine);
-			FillBand(surface, FIN, from, x, y, shine);
-			FillBand(surface, STAB, from, x, y, shine);
+			FillBand(surface, m_aFuselage, from, x, y, shine);
+			FillBand(surface, m_aCowl, from, x, y, shine);
+			FillBand(surface, m_aBoom, from, x, y, shine);
+			FillBand(surface, m_aFin, from, x, y, shine);
+			FillBand(surface, m_aStab, from, x, y, shine);
 		}
 
 		Color glass = MUI_ColorUtil.Fade(m_HudGlass, op * 0.92);
-		FillPiece(surface, WINDSHIELD, x, y, glass);
-		FillPiece(surface, DOOR_FRONT, x, y, glass);
-		FillPiece(surface, DOOR_REAR, x, y, glass);
+		FillPiece(surface, m_aWindshield, x, y, glass);
+		FillPiece(surface, m_aDoorFront, x, y, glass);
+		FillPiece(surface, m_aDoorRear, x, y, glass);
 
 		if (!full && m_Data.m_iRating >= 0)
 		{
