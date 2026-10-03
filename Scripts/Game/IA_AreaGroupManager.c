@@ -1142,7 +1142,7 @@ class IA_AreaGroupManager
         if (!vehicle) return;
         SCR_EditableVehicleComponent editableVehicle = SCR_EditableVehicleComponent.Cast(vehicle.FindComponent(SCR_EditableVehicleComponent));
         if (!editableVehicle) return;
-        string prefabPath = editableVehicle.GetPrefab();
+        string prefabPath = IA_HeliPaintChannels.FindStockPrefab(editableVehicle.GetPrefab());
         if (prefabPath == string.Empty) return;
 
         SCR_FactionManager factionManager = SCR_FactionManager.Cast(GetGame().GetFactionManager());
