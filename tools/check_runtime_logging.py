@@ -2,7 +2,8 @@
 
 Runtime NORMAL/DEBUG Print calls must be inside IA_Log.IsDebugEnabled() blocks.
 Use IA_Log.Info for intentional production audit records. Warnings/errors remain
-unfiltered. Explicit Workbench test helpers are excluded, not gameplay code.
+unfiltered. Workbench test helpers (placers, fixtures) live in the separate test
+addon F:/Mikes-Invade-and-Annex-Tests; any left here can be listed in TEST_HELPERS.
 """
 from __future__ import annotations
 
@@ -10,7 +11,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TEST_HELPERS = {"IA_SelectionTestPlacer.c", "IA_InfrastructureTestPlacer.c"}
+TEST_HELPERS: set[str] = set()
 LITERALS_COMMENTS = re.compile(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*[\s\S]*?\*/')
 
 

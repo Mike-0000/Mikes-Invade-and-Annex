@@ -8,7 +8,7 @@ A team qualifies for arrival only when every living member is on foot, within th
 
 If outdoor spawning fails, the existing navigation-load retry still applies; the team is skipped after the retry fails. Teams cannot be rescued by teleportation when a building has no usable entrance or navigation links. Defend can select cover within its radius, so choose a small radius for a single room/building.
 
-Validation: run `python -m unittest discover -s tools -p test_building_garrisons.py` and Workbench ResourceManager with `-plugin=IA_BuildingGarrisonTest -run`. These cover source wiring, policy and native waypoint settings, not live movement.
+Validation: run `python -m unittest discover -s tools -p test_building_garrisons.py` and Workbench ResourceManager with `-plugin=IA_BuildingGarrisonTest -run` on the test addon (`F:/Mikes-Invade-and-Annex-Tests`; its README has the command). These cover source wiring, policy and native waypoint settings, not live movement.
 
 2026-09-08 validation: Game and WorkbenchGame compiled; the native policy/prefab check completed with zero failures (`logs_2026-09-08_20-53-22/script.log`). All six building source checks, the logging-policy scan and eight logging tests passed. The broader emplacement source suite still has two pre-existing failures: it references the absent `IA_StaticGunCombat.c` and expects a retired `m_bAccepted || now < m_iNextAttemptMs` expression. Its test file and `IA_StaticGunAssignment.c` match HEAD, and the missing file is also absent from HEAD.
 

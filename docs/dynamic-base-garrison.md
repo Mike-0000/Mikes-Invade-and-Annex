@@ -16,7 +16,7 @@ The previous per-post radius clipping also produced a 0.599803 m radius and seve
 
 ## Verification
 
-`IA_BaseGarrisonTest` runs through Workbench ResourceManager (`-wbModule=ResourceManager -plugin=IA_BaseGarrisonTest -run`). It exercises native `AIActionBase.Evaluate()` and checks the 15% radius reduction, shared centres, outside-spawn rejection, every authored/fallback guard post, and 24 headings for all six layouts.
+`IA_BaseGarrisonTest` runs through Workbench ResourceManager (`-wbModule=ResourceManager -plugin=IA_BaseGarrisonTest -run`) on the test addon (`F:/Mikes-Invade-and-Annex-Tests`; its README has the command). It exercises native `AIActionBase.Evaluate()` and checks the 15% radius reduction, shared centres, outside-spawn rejection, every authored/fallback guard post, and 24 headings for all six layouts.
 
 Before the radius reduction, on 2026-09-05, the native test logged `oldDefend=81 newDefend=61 attack=70 observe=69` and completed with zero failures. The existing selection regression and six-layout source checks also passed. Script validation succeeded for WORKBENCH, PC, XBOX, PS4 and PS5. These checks prove the priority arithmetic and area configuration, **not** live movement or firing.
 

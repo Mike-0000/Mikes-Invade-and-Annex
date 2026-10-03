@@ -9,7 +9,7 @@ import sys
 import unittest
 
 sys.dont_write_bytecode=True
-from author_base_compositions import Author,REF,parse
+from author_base_compositions import Author,REF,parse,output_path
 from author_base_designs import generate,box,overlap,CAPS,perimeter_walls,mesh_box,connection_box,WALL_INSET,weighted_cover_order,GUNNED_COVER_WEIGHT,fighting_face_z,APRON_ALLOW,RECIPE_EXPANDED_BUDGET
 from author_base_designs import SHELTERS,SHELTER_ALLOWANCE,SHELTER_HALF,SHELTER_EXPANDED,SHELTER_POST_REACH,shelter_box,shelter_entrance,gun_reserves
 
@@ -18,7 +18,7 @@ BASE=Path('D:/ReforgerGameSources/data/data007')
 
 
 def read(path):
-    return (ROOT/path).read_text(encoding='utf-8-sig')
+    return output_path(path).read_text(encoding="utf-8-sig")
 
 
 class CompositionTests(unittest.TestCase):
@@ -31,6 +31,28 @@ class CompositionTests(unittest.TestCase):
     def test_reproducible_designs(self):
         for path,content in generate().items():
             self.assertEqual(read(path),content,path)
+
+    def test_recipes_ship_as_data(self):
+        """Recipes are a .conf the server reads, not script it compiles: the
+        generated script once crossed the Game module's limits on a modded server."""
+        loader=read('Scripts/Game/IA_BaseDesignRecipes.c')
+        self.assertLess(len(loader.splitlines()),60)
+        self.assertNotIn('AddPerimeterWall',loader)
+        conf=read('Configs/IA/IA_BaseDesignRecipes.conf')
+        guid=re.search(r'Name "(\{[0-9A-F]{16}\}Configs/IA/IA_BaseDesignRecipes\.conf)"',read('Configs/IA/IA_BaseDesignRecipes.conf.meta'))[1]
+        self.assertIn(f'RECIPES = "{guid}"',loader)
+        self.assertIn(f'COUNT = {len(self.recipes)};',loader)
+        books=conf.split('  IA_SiteRecipe "')[1:]
+        self.assertEqual(len(books),len(self.recipes))
+        for r,book in zip(self.recipes,books):
+            ops=re.findall(r'^    "([^"]*)"$',book,re.M)
+            expected=2+len(r['modules'])+len(r['walls'])+len(r['shelters'])+len(r['posts'])
+            self.assertEqual(len(ops),expected,r['name'])
+            self.assertEqual(ops[0].split('|')[3],r['name'])
+            self.assertEqual([o[0] for o in ops],list('IK'+'C'*len(r['modules'])+'W'*len(r['walls'])+'S'*len(r['shelters'])+'G'*len(r['posts'])))
+        replay=read('Scripts/Game/IA_SiteRecipe.c')
+        for call in ('AddComposition','AddPerimeterWall','AddAirRaidBunker','m_aGuardPosts.Insert','Initialize','m_vCaptureLocal'):
+            self.assertIn(call,replay)
 
     @unittest.skipUnless(BASE.exists(),'requires extracted vanilla data007')
     def test_reproducible_assets_and_clean_inheritance(self):
@@ -172,8 +194,8 @@ class CompositionTests(unittest.TestCase):
         composed=read('Scripts/Game/IA_ComposedSiteLayout.c')
         self.assertIn('void AddAirRaidBunker(vector position, float yaw)',composed)
         self.assertIn('module.m_bPlannedClearance = true;',composed)
-        recipes=read('Scripts/Game/IA_BaseDesignRecipes.c')
-        self.assertEqual(recipes.count('layout.AddAirRaidBunker('),sum(SHELTERS)*20)
+        recipes=read('Configs/IA/IA_BaseDesignRecipes.conf')
+        self.assertEqual(recipes.count('    "S|'),sum(SHELTERS)*20)
 
     def test_wall_infill_gates_and_accounting(self):
         for r in self.recipes:

@@ -67,7 +67,7 @@ and completion. Confirm there is no base warning/regroup pause or false failure.
 
 A subsequent hillside test exhausted 2,048 anchors / 81,920 poses. Of those, 80,818 failed pad height checks. The mandatory HQ was still being tested as if its entire 24 × 20 m reserved area needed to be a flat foundation. Increasing search size could not resolve that mismatch.
 
-`Scripts/WorkbenchGame/IA_BaseFoundationProbe.c` measures the installed game models in an isolated preview world. Measured local bounds:
+`IA_BaseFoundationProbe` (test addon `F:\Mikes-Invade-and-Annex-Tests`) measures the installed game models in an isolated preview world. Measured local bounds:
 
 | Asset | Minimum XYZ (m) | Maximum XYZ (m) |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ The smaller fallback is a 36 × 48 m authored fortification: one full-size HQ te
 
 A repeatable World Editor audit loaded the actual IA_Kolguyev world and ran the production terrain, obstruction and AO-boundary checks against group 0 with seed 12345 and 2,048 sampled anchors. The original five layouts produced **2** shortlisted fits. Including Rally post produced **27**. Terrain tolerances, foundation lift limits, reserved HQ clearance and AO bounds were identical between these runs. This is a static map audit, not a measurement of live mission success rate: player visibility/distance, access routes, constructed geometry and navigation still have to pass during gameplay.
 
-`Scripts/WorkbenchGame/IA_BaseTerrainAudit.c` repeats the comparison using a separate Workbench process with `-wbModule=WorldEditor -plugin=IA_BaseTerrainAudit -run`. The default world is Worlds/IA_Kolguyev.ent; `-iaAuditWorld` can override its path. It reads the world without saving or starting the mission. The editor-world injection is compiled only for Workbench; normal placement uses the current game world. Rejection keys now include module IDs, distinguishing HQ screening failures from later supply, barracks or parapet failures.
+`IA_BaseTerrainAudit` (in the test addon (`F:/Mikes-Invade-and-Annex-Tests`; its README has the command)) repeats the comparison using a separate Workbench process with `-wbModule=WorldEditor -plugin=IA_BaseTerrainAudit -run`. The default world is Worlds/IA_Kolguyev.ent; `-iaAuditWorld` can override its path. It reads the world without saving or starting the mission. The editor-world injection is compiled only for Workbench; normal placement uses the current game world. Rejection keys now include module IDs, distinguishing HQ screening failures from later supply, barracks or parapet failures.
 
 The layout checker includes Rally post's pad containment/overlap, three routes and guard scatter at its maximum garrison. The asset checker includes its 49 roots and 89-entity scenery estimate. The updated SVG shows all four smaller layouts.
 
@@ -145,8 +145,8 @@ apply. This prioritizes the largest legal sampled design; it is not an exhaustiv
 geometric proof over every possible position in the fields.
 
 `IA_BaseSelectionTest` runs synthetic terrain cases against the production survey
-and candidate validator in a separate Workbench process. Use the usual project
-and addon arguments with `-wbModule=ResourceManager -plugin=IA_BaseSelectionTest -run`.
+and candidate validator in a separate Workbench process. It lives in the test addon (`F:/Mikes-Invade-and-Annex-Tests`; its README has the command);
+run it with `-wbModule=ResourceManager -plugin=IA_BaseSelectionTest -run`.
 It checks a small first clearing versus a larger second clearing, construction
 retry size, candidate exhaustion before downgrade, smaller fallback and forced
 Full failure. The test fixture is compiled only under `WORKBENCH`.
