@@ -19,6 +19,8 @@ class IA_HeliPaintChannels
 	// Path of a channel prefab -> its channel; path of a stock airframe -> family index * STOCK_STRIDE + airframe.
 	protected static ref map<string, int> s_mChannels;
 	protected static ref map<string, int> s_mStock;
+	// Path of a channel prefab -> the stock airframe it is a twin of.
+	protected static ref map<string, ResourceName> s_mTwinStock;
 	protected static const int STOCK_STRIDE = 1000;
 
 	//------------------------------------------------------------------------------------------------
@@ -30,6 +32,7 @@ class IA_HeliPaintChannels
 		s_aFamilies = {};
 		s_mChannels = new map<string, int>();
 		s_mStock = new map<string, int>();
+		s_mTwinStock = new map<string, ResourceName>();
 		IA_HeliPaintManifest.Register();
 
 		IA_HeliPaintFamily family;
@@ -49,8 +52,10 @@ class IA_HeliPaintChannels
 				for (local = 1; local <= CHANNEL_COUNT; local++)
 				{
 					twin = family.GetChannelPrefab(airframe, local);
-					if (!twin.IsEmpty())
-						s_mChannels.Set(twin.GetPath(), f * CHANNEL_COUNT + local);
+					if (twin.IsEmpty())
+						continue;
+					s_mChannels.Set(twin.GetPath(), f * CHANNEL_COUNT + local);
+					s_mTwinStock.Set(twin.GetPath(), family.m_aStockPrefabs[airframe]);
 				}
 			}
 		}
@@ -170,6 +175,22 @@ class IA_HeliPaintChannels
 		if (!s_mStock.Find(prefab.GetPath(), entry))
 			return null;
 		return s_aFamilies[entry / STOCK_STRIDE];
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Channel twins are not in any faction catalog, so look up catalog data (labels, budgets,
+	//! role restrictions) with the stock airframe this returns.
+	//! \return the stock airframe a channel prefab is a twin of; the prefab itself for everything else
+	static ResourceName FindStockPrefab(ResourceName prefab)
+	{
+		EnsureFamilies();
+		if (prefab.IsEmpty())
+			return prefab;
+
+		ResourceName stock;
+		if (s_mTwinStock.Find(prefab.GetPath(), stock))
+			return stock;
+		return prefab;
 	}
 
 	//------------------------------------------------------------------------------------------------

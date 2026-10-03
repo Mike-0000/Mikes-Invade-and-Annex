@@ -1797,6 +1797,8 @@ class IA_VehicleManager: GenericEntity
                     }
 
                     SCR_EntityCatalogEntry catalogEntry;
+                    // A paint-channel twin is not in any catalog; its stock airframe is.
+                    ResourceName catalogPrefab = IA_HeliPaintChannels.FindStockPrefab(editableVehicle.GetPrefab());
                     array<Faction> arrayOfFactions = {};
                     factionManager.GetFactionsList(arrayOfFactions);
                     foreach(Faction thisFaction : arrayOfFactions)
@@ -1805,7 +1807,9 @@ class IA_VehicleManager: GenericEntity
                         if(!scrFaction)
                             continue;
                         SCR_EntityCatalog entityCatalog = scrFaction.GetFactionEntityCatalogOfType(EEntityCatalogType.VEHICLE, true);
-                        catalogEntry = entityCatalog.GetEntryWithPrefab(editableVehicle.GetPrefab());
+                        if (!entityCatalog)
+                            continue;
+                        catalogEntry = entityCatalog.GetEntryWithPrefab(catalogPrefab);
                         if(catalogEntry)
                         {
                             break;
