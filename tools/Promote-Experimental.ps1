@@ -1,4 +1,4 @@
-# Merges experimental -> main in UI, HALO, and I&A.
+# Merges experimental -> main in UI, HALO, I&A, and the I&A GM Sandbox addon.
 # Always restores production addon.gproj so live Workshop GUIDs are not retargeted.
 # Restores Workbench resourceDatabase.rdb dirt in production and *-Exp folders.
 # Does not push. Does not merge or commit in *-Exp worktrees.
@@ -30,6 +30,13 @@ $Repos = @(
 		ExpPath = "F:\Mikes-Invade-and-Annex-Exp"
 		ProductionGuid = "6556458885927F2F"
 		ProductionId = "MikesInvadeandAnnex"
+	}
+	@{
+		Name = "Mikes Invade and Annex - GM Sandbox"
+		Path = "F:\Mikes-Invade-and-Annex-GM-Sandbox"
+		ExpPath = "F:\Mikes-Invade-and-Annex-GM-Sandbox-Exp"
+		ProductionGuid = "93987638A15D929F"
+		ProductionId = "MikesInvadeandAnnexGMSandbox"
 	}
 )
 
@@ -242,5 +249,5 @@ foreach ($repo in $Repos)
 }
 
 Write-Host ""
-Write-Host "Done. Open the production folders in Workbench and publish in order: UI, HALO, I&A."
+Write-Host "Done. Open the production folders in Workbench and publish in order: UI, HALO, I&A, GM Sandbox."
 Write-Host "Engine dependency remains $EngineGuid."

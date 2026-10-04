@@ -1,6 +1,6 @@
 ---
 name: promote-experimental
-description: Merges experimental into main for Mike's UI, HALO Jump, and Invade and Annex while keeping production Workshop GUIDs. Restores Workbench rdb dirt and resolves experimental/main conflicts in the Exp worktrees, then reruns, so one /promote-experimental finishes. Use when the user runs /promote-experimental or asks to promote experimental to production.
+description: Merges experimental into main for Mike's UI, HALO Jump, Invade and Annex, and the I&A GM Sandbox addon while keeping production Workshop GUIDs. Restores Workbench rdb dirt and resolves experimental/main conflicts in the Exp worktrees, then reruns, so one /promote-experimental finishes. Use when the user runs /promote-experimental or asks to promote experimental to production.
 disable-model-invocation: true
 ---
 
@@ -29,6 +29,7 @@ The script restores `resourceDatabase.rdb` in production and `*-Exp` folders, th
 | `F:\Mikes-UI` | `F:\Mikes-UI-Exp` |
 | `F:\Mikes-HALO-Jump` | `F:\Mikes-HALO-Jump-Exp` |
 | `F:\Mikes-Invade-and-Annex` | `F:\Mikes-Invade-and-Annex-Exp` |
+| `F:\Mikes-Invade-and-Annex-GM-Sandbox` | `F:\Mikes-Invade-and-Annex-GM-Sandbox-Exp` |
 
 For each conflicted addon:
 
@@ -53,5 +54,6 @@ Confirm each production `addon.gproj`:
 - Mike's UI: ID `MikesUI`, GUID `B3F91C6A4E275D08`
 - HALO: ID `MikesHALOJump`, GUID `C4E8A27B1F906D53`
 - I&A: ID `MikesInvadeandAnnex`, GUID `6556458885927F2F`
+- GM Sandbox: ID `MikesInvadeandAnnexGMSandbox`, GUID `93987638A15D929F`, depending on the production I&A GUID `6556458885927F2F`
 
-Tell the user the merge is done and they should publish from the **production** Workbench projects in order: UI, then HALO, then I&A. Do not publish from `*-Exp` folders.
+Tell the user the merge is done and they should publish from the **production** Workbench projects in order: UI, then HALO, then I&A, then GM Sandbox. The GM Sandbox addon mods a class of I&A, so it does not compile against an I&A published before it. Do not publish from `*-Exp` folders.

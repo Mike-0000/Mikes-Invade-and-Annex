@@ -23,6 +23,7 @@ $Allowed = @{
 	"F:\Mikes-UI-Exp" = "experimental"
 	"F:\Mikes-HALO-Jump-Exp" = "experimental"
 	"F:\Mikes-Invade-and-Annex-Exp" = "experimental"
+	"F:\Mikes-Invade-and-Annex-GM-Sandbox-Exp" = "experimental"
 	"F:\Mikes-Invade-and-Annex" = "main"
 }
 

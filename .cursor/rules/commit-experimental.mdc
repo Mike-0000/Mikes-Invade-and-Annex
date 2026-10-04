@@ -14,6 +14,7 @@ This workspace overrides “only commit when asked” **and** the six-step statu
 | `F:\Mikes-UI-Exp` | that folder | `experimental` |
 | `F:\Mikes-HALO-Jump-Exp` | that folder | `experimental` |
 | `F:\Mikes-Invade-and-Annex-Exp` | that folder | `experimental` |
+| `F:\Mikes-Invade-and-Annex-GM-Sandbox-Exp` | that folder | `experimental` |
 
 Never `git checkout experimental` in a production folder. Never commit `addon.gproj`. Skip `resourceDatabase.rdb`.
 
