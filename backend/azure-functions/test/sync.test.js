@@ -105,6 +105,26 @@ test('sync', { skip: SKIP }, async (t) => {
     assert.strictEqual((await sync({ serverGuid: guid, statsBatchId: 'empty', matchData: [] })).statsStatus, 'duplicate');
   });
 
+  await t.test('submitStats after /sync applied the same events counts them twice', async () => {
+    // /submitStats has no batch id. A lost /sync answer dumped there records
+    // the events again; retrying /sync with the same id does not.
+    const guid = await register('Lost answer');
+    const events = kills('lost-p1', 'One', 4);
+    const synced = await sync({ serverGuid: guid, statsBatchId: 'lost-1', matchData: events });
+    assert.strictEqual(synced.statsStatus, 'accepted');
+    assert.strictEqual(await killsOf(guid, 'lost-p1'), 4);
+
+    const dumped = await handlers.submitStats(post({
+      serverGuid: guid, serverName: 'Lost answer', matchData: events
+    }));
+    assert.strictEqual(dumped.status, 200);
+    assert.strictEqual(await killsOf(guid, 'lost-p1'), 8);
+
+    const retry = await sync({ serverGuid: guid, statsBatchId: 'lost-1', matchData: events });
+    assert.strictEqual(retry.statsStatus, 'duplicate');
+    assert.strictEqual(await killsOf(guid, 'lost-p1'), 8);
+  });
+
   await t.test('it stores what /submitStats stores', async () => {
     const a = await register('Route A');
     const b = await register('Route B');

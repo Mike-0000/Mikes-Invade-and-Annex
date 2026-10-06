@@ -8,7 +8,10 @@
 //!
 //! A batch goes again unchanged, under the same id, until the stats service says it has it, so
 //! an answer that is lost costs nothing twice. A stats service without /sync is served through
-//! the separate routes as before, and is asked again once in a long while.
+//! the separate routes as before, and is asked again once in a long while. A reprobe that
+//! fails for any reason other than a missing route keeps that same id and retries /sync:
+//! /submitStats has no id, so sending the batch there after /sync has already counted it
+//! records the events twice.
 //------------------------------------------------------------------------------------------------
 class IA_ApiSync
 {
@@ -223,8 +226,11 @@ class IA_ApiSync
 			return;
 		Settle();
 
-		// Nothing was looked at, so nothing failed: the separate routes take over.
-		if (missing || m_iMode == MODE_SEPARATE)
+		// A missing route never applied the batch, so the separate routes take over.
+		// Any other failure, including a lost answer while we are still in
+		// MODE_SEPARATE and probing /sync again, may already have counted it.
+		// Keep the same id and send /sync again; /submitStats has no id.
+		if (missing)
 		{
 			GoSeparate();
 			return;
@@ -408,11 +414,6 @@ class IA_ApiSync
 
 		IA_ApiHandler.GetInstance().AbandonSync();
 		Settle();
-		if (m_iMode == MODE_SEPARATE)
-		{
-			GoSeparate();
-			return;
-		}
 		Fail(0, true);
 	}
 
