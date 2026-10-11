@@ -80,6 +80,29 @@ class DynamicBaseFlowTests(unittest.TestCase):
         self.assertNotIn("m_iRemainingSec", hud)
         self.assertIn('ApplyServer("", IA_CaptureHudState.Hidden, m_fServerProgress)', hud)
 
+    def test_defend_qrf_is_not_blocked_when_host_town_is_us(self):
+        qrf = source("IA_AreaGroupManager.c")
+        spawn = method(qrf, "SpawnQRFForTarget")
+        self.assertIn("GetOwningFaction() == IA_Faction.US", spawn)
+        self.assertIn("!forDefendMission", spawn)
+        self.assertRegex(
+            spawn,
+            r"GetOwningFaction\(\) == IA_Faction\.US\s*&&\s*!forDefendMission",
+        )
+        self.assertIn(
+            "SpawnQRFForTarget(type, defendPoint, areaInst, enemyFaction, true, false)",
+            method(qrf, "SpawnDefendDoctrineBeat"),
+        )
+        self.assertIn(
+            "SpawnQRFForTarget(type, defendPoint, areaInst, enemyFaction, true, false)",
+            method(qrf, "SpawnDefendVehicleBeat"),
+        )
+        assault = method(source("IA_EnhancedDefendDirector.c"), "FireAssaultBeat")
+        self.assertIn("SpawnDoctrineBeat(IA_QRFType.Mechanized)", assault)
+        self.assertIn("SpawnDoctrineBeat(IA_QRFType.Armoured)", assault)
+        breakthrough = assault.split("IA_DefendDoctrine.Breakthrough")[1]
+        self.assertNotIn("SpawnDirectorWave", breakthrough.split("if (m_eDoctrine")[0])
+
     def test_retired_wire_values_remain_reserved(self):
         enums = source("IA_DynamicObjectiveTypes.c")
         enum = re.search(r"enum IA_BaseObjectivePhase\s*\{([^}]+)\}", enums).group(1)

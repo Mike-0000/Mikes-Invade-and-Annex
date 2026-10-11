@@ -585,7 +585,9 @@ class IA_AreaGroupManager
             return false;
         if (!targetAreaInst)
             return false;
-        if (targetAreaInst.GetOwningFaction() == IA_Faction.US)
+        // Capture-phase QRF must not reinforce a taken town. Hold-phase
+        // doctrine and vehicle beats target that same town after it flips US.
+        if (targetAreaInst.GetOwningFaction() == IA_Faction.US && !forDefendMission)
         {
             if (IA_Log.IsDebugEnabled())
             {
