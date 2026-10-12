@@ -102,6 +102,14 @@ class IA_VehicleRespawner : SCR_VehicleSpawner
 			needsRespawn = true;
 			//Print(string.Format("IA_VehicleRespawner %1: Spawned entity %2 is not alive. Needs respawn.", m_RespawnerOwnerEntity, m_RespawnerSpawnedVehicle), LogLevel.DEBUG);
 		}
+		else if (vector.Distance(m_RespawnerSpawnedVehicle.GetOrigin(), m_RespawnerOwnerEntity.GetOrigin()) >= MIN_DISTANCE_ALIVE_VEHICLE_NO_RESPAWN)
+		{
+			// Departed fleet vehicle: stop tracking it so PerformSpawn can put a
+			// replacement on the pad. PerformSpawn already refuses to stack when
+			// the tracked vehicle is still within MIN_DISTANCE.
+			m_RespawnerSpawnedVehicle = null;
+			needsRespawn = true;
+		}
 
 		if (needsRespawn)
 		{

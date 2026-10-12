@@ -297,8 +297,10 @@ class IA_GmDirector
 			return "{7ADD348E46715524}Prefabs/IA_AreaMarkers/IA_SmallMilitary.et";
 		if (type == IA_AreaType.RadioTower)
 			return "{4CE72B528FB4853C}Prefabs/RadioTower.et";
+		// IA_MortarPit.et has no registered .meta in the addon; spawn the same
+		// Area_Marker GUID MortarPitPlacer uses and let ConfigureRuntime set the type.
 		if (type == IA_AreaType.MortarPit)
-			return "Prefabs/IA_AreaMarkers/IA_MortarPit.et";
+			return "{61B9AD559D2CE12D}Components/Area_Marker.et";
 		if (type == IA_AreaType.DefendObjective)
 			return "{B66EE4ECE753F16C}Prefabs/IA_AreaMarkers/IA_DefendObjective.et";
 		if (type == IA_AreaType.Assassination)
