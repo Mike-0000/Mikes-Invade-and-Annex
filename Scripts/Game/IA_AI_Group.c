@@ -702,6 +702,11 @@ class IA_AiGroup
             grp.SetHoldPost(holdAt, searchState.m_holdRadius);
         }
 
+        // CreateMilitaryGroupAtPosition skips SpawnNextUnit when keepAltitude is set.
+        // Mortar exact spawn uses that flag with holdPost false; start stagger here.
+        if (grp && searchState.m_keepAltitude)
+            grp.SpawnNextUnit();
+
         if (searchState.m_callbackInstance && searchState.m_callbackMethod != "")
         {
             searchState.m_callbackInstance.OnAsyncGroupCreated(grp, searchState.m_roadFound);
