@@ -1449,32 +1449,7 @@ class IA_MissionInitializer : GenericEntity
         if (!Replication.IsServer())
             return;
 
-        IA_GmDirector dir = IA_GmDirector.GetInstance();
-        dir.EnsureStarted();
-
-        int liveGroup = dir.GetLiveGroupId();
-        bool startingLive = false;
-        if (liveGroup < 0)
-        {
-            startingLive = true;
-            liveGroup = dir.BeginLiveGroup();
-        }
-
-        marker.SetAreaGroup(liveGroup);
-
         string name = marker.GetAreaName();
-        vector origin = marker.GetOrigin();
-        dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], liveGroup, marker.GetRadius(), name);
-
-        if (marker.GetAreaType() == IA_AreaType.DefendObjective)
-        {
-            if (IA_Log.IsDebugEnabled())
-            {
-                Print(string.Format("[IA_MissionInitializer] Attached DefendObjective '%1' to Live group %2", name, liveGroup), LogLevel.NORMAL);
-            }
-            return;
-        }
-
         IA_Game game = IA_Game.Instantiate();
         if (game && !name.IsEmpty())
         {
@@ -1488,6 +1463,37 @@ class IA_MissionInitializer : GenericEntity
                 return;
             }
         }
+
+        IA_GmDirector dir = IA_GmDirector.GetInstance();
+        dir.EnsureStarted();
+
+        int liveGroup = dir.GetLiveGroupId();
+        bool startingLive = false;
+        if (liveGroup < 0)
+        {
+            startingLive = true;
+            liveGroup = dir.BeginLiveGroup();
+        }
+
+		// Map markers keep stale capture/destroy state after an earlier AO.
+		// Without this, HotAdd can make CheckCurrentZoneComplete skip the fight.
+		marker.ResetForNewCapture();
+        marker.SetAreaGroup(liveGroup);
+
+        vector origin = marker.GetOrigin();
+        dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], liveGroup, marker.GetRadius(), name);
+
+        if (marker.GetAreaType() == IA_AreaType.DefendObjective)
+        {
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print(string.Format("[IA_MissionInitializer] Attached DefendObjective '%1' to Live group %2", name, liveGroup), LogLevel.NORMAL);
+            }
+            return;
+        }
+
+		if (marker.GetAreaType() == IA_AreaType.RadioTower)
+			marker.EnsureRadioTowerSpawned();
 
         if (!groupsArray)
             groupsArray = new array<int>();
