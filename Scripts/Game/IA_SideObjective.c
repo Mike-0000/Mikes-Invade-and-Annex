@@ -650,19 +650,7 @@ class IA_AssassinationObjective : IA_SideObjective
         IA_Log.Info(string.Format("Assassination objective at %1 completed.", m_Position.ToString()));
         
         CompletePlayerTask();
-
-        // Use the private area instance to clean up all its managed units
-        if (m_ObjectiveAreaInstance)
-        {
-			GetGame().GetCallqueue().CallLater(S_CleanupAssassinationObjective, OBJECTIVE_COOLDOWN_MILLASECONDS, false, m_ObjectiveAreaInstance);
-			m_ObjectiveAreaInstance = null;
-        }
-
-        // Clean up the transient area definition
-        if (m_TransientArea)
-        {
-            delete m_TransientArea;
-        }
+		FinishObjectiveArea();
         
         // Clean up generator
         if (m_Generator)
@@ -694,6 +682,22 @@ class IA_AssassinationObjective : IA_SideObjective
             m_EscapeTask = null;
         }
     }
+
+	//! Stop defense waves / RunNextTask immediately. Delayed S_Cleanup only despawns leftovers away from players.
+	protected void FinishObjectiveArea()
+	{
+		if (m_ObjectiveAreaInstance)
+		{
+			m_ObjectiveAreaInstance.SetEscapeSequenceActive(false);
+			if (!m_ObjectiveAreaInstance.IsShutDown())
+				m_ObjectiveAreaInstance.ForceFinish();
+			GetGame().GetCallqueue().CallLater(S_CleanupAssassinationObjective, OBJECTIVE_COOLDOWN_MILLASECONDS, false, m_ObjectiveAreaInstance);
+			m_ObjectiveAreaInstance = null;
+		}
+
+		// AreaInstance still holds the area ref until delayed cleanup; do not delete it here.
+		m_TransientArea = null;
+	}
     
     override void Update(float timeSlice)
     {
@@ -1007,14 +1011,7 @@ class IA_AssassinationObjective : IA_SideObjective
             }
         }
 
-		if (m_ObjectiveAreaInstance)
-        {
-			GetGame().GetCallqueue().CallLater(S_CleanupAssassinationObjective, OBJECTIVE_COOLDOWN_MILLASECONDS, false, m_ObjectiveAreaInstance);
-			m_ObjectiveAreaInstance = null;
-        }
-
-        if (m_TransientArea)
-            delete m_TransientArea;
+		FinishObjectiveArea();
         
         if (m_Generator)
         {
