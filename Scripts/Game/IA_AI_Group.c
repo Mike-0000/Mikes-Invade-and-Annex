@@ -3933,6 +3933,12 @@ class IA_AiGroup
             UnpinInboundSimulation();
             return;
         }
+        if (m_StaticGunAssignment && m_StaticGunAssignment.ShouldDeferGroupDespawn())
+        {
+            GetGame().GetCallqueue().Remove(this.CheckDangerEvents);
+            UnpinInboundSimulation();
+            return;
+        }
         if (!IsSpawned())
         {
             return;

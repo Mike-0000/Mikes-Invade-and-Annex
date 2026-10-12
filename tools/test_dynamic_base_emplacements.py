@@ -79,11 +79,34 @@ class EmplacementTests(unittest.TestCase):
         self.assertIn('m_Seat.IsReservedBy(m_Pawn)', assignment)
         self.assertIn('AllowMaxLOD()', assignment)
         self.assertIn('GetReloadDuration() * 1000', assignment)
+        self.assertIn('EGetOutType.TELEPORT', assignment)
+        self.assertIn('GetOutVehicle_NoDoor', assignment)
+        self.assertIn('ShouldDeferGroupDespawn', assignment)
+        self.assertNotIn('Never force a pawn pose', assignment)
+        self.assertNotIn('Normal host cleanup owns the remaining AI', assignment)
+
+    def test_exit_timeout_force_ejects_instead_of_abandoning_the_seat(self):
+        assignment = text('Scripts/Game/IA_StaticGunAssignment.c')
+        finish = assignment.split('protected void FinishExit(int now)', 1)[1]
+        self.assertIn('EGetOutType.ANIMATED', finish)
+        self.assertLess(finish.index('EGetOutType.ANIMATED'), finish.index('RequestAiEject'))
+        self.assertIn('RequestAiEject(access, character)', finish)
+        # Timeout must keep ticking until the pawn is unbound; do not drop restore just because ANIMATED failed.
+        after_animated = finish.split('EGetOutType.ANIMATED', 1)[1]
+        self.assertNotIn('m_bRestoreDefense = false', after_animated)
 
     def test_site_ownership_and_budget_exclude_occupants(self):
         site = text('Scripts/Game/IA_DynamicSiteInstance.c')
         self.assertIn('ChimeraCharacter.Cast(ent)', site)
         self.assertIn('HasEmplacementPlayerOccupant()', site)
+        self.assertIn('HasEmplacementOccupant()', site)
+        delete_roots = site.split('bool DeleteRoots()', 1)[1].split('protected void RequestSavedNavRebuild', 1)[0]
+        self.assertIn('HasEmplacementOccupant()', delete_roots)
+        group = text('Scripts/Game/IA_AI_Group.c')
+        despawn = group.split('void Despawn()', 1)[1].split('void SetTacticalState', 1)[0]
+        self.assertIn('ShouldDeferGroupDespawn()', despawn)
+        record = text('Scripts/Game/IA_StaticGunRecord.c')
+        self.assertIn('bool HasOccupant()', record)
         builder = text('Scripts/Game/IA_EmplacementBuilder.c')
         self.assertIn('m_Site.AddEmplacement(m_Record)', builder)
         self.assertIn('remainingEntities + m_Profile.m_iExpanded', builder)
