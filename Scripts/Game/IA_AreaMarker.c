@@ -254,19 +254,60 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	{
 		// Get all entities within radius
 		m_entitiesInZone.Clear();
-		IA_DictStringInt factionCounts = new IA_DictStringInt();
-		CaptureZoneQueryCallback callback = new CaptureZoneQueryCallback(factionCounts, m_entitiesInZone);
+		ref IA_DictStringInt factionCounts = new IA_DictStringInt();
+		ref CaptureZoneQueryCallback callback = new CaptureZoneQueryCallback(factionCounts, m_entitiesInZone);
 		GetGame().GetWorld().QueryEntitiesBySphere(m_origin, m_radius, callback.OnEntityFound, null, EQueryEntitiesFlags.DYNAMIC);
-	
-		// Update the cached counts
-		m_iUSCountInZone = factionCounts.Get("US");
-		m_iUSSRCountInZone = factionCounts.Get("USSR");
+
+		ApplyCapturePresenceFromLiveEntities();
 
 		// Only demand restoration when a live friendly could capture. Scanning an
 		// empty distant zone must not wake its entire cached garrison every second.
 		m_bCaptureRosterReady = true;
 		if (m_iUSCountInZone > 0)
 			m_bCaptureRosterReady = IA_DynamicAISpawning.EnsureReadyInRadius(m_origin, m_radius);
+	}
+
+	//------------------------------------------------------------------------------------------------
+	//! Town/city/military flags must contest any US-enemy garrison, not only the
+	//! "USSR" key. Admin FIA and auto-detected modded enemies share this census.
+	protected void ApplyCapturePresenceFromLiveEntities()
+	{
+		m_iUSCountInZone = 0;
+		m_iUSSRCountInZone = 0;
+
+		FactionManager fm = GetGame().GetFactionManager();
+		if (!fm)
+			return;
+
+		Faction us = fm.GetFactionByKey("US");
+		if (!us)
+			return;
+
+		int count = m_entitiesInZone.Count();
+		int i;
+		for (i = 0; i < count; i++)
+		{
+			IEntity ent = m_entitiesInZone[i];
+			if (!ent)
+				continue;
+
+			SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(ent);
+			if (!character)
+				continue;
+
+			Faction fac = character.GetFaction();
+			if (!fac)
+				continue;
+
+			if (us.IsFactionEnemy(fac))
+			{
+				m_iUSSRCountInZone = m_iUSSRCountInZone + 1;
+				continue;
+			}
+
+			if (fac == us)
+				m_iUSCountInZone = m_iUSCountInZone + 1;
+		}
 	}
 
 	//------------------------------------------------------------------------------------------------
