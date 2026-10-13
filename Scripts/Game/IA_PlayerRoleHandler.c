@@ -183,6 +183,15 @@ class IA_PlayerRoleHandler
         {
             Print(string.Format("Player %1 (GUID: %2) reconnected within grace period. Restoring role...", playerId, playerGuid), LogLevel.NORMAL);
         }
+
+        // Disconnect before the delayed Rifleman assign left them with no stored role.
+        // Re-run init; it no-ops when a role is already reserved for this GUID.
+        IA_RoleManager roleManager = IA_RoleManager.GetInstance();
+        if (roleManager.GetPlayerRole(playerId) == IA_PlayerRole.NONE)
+        {
+            GetGame().GetCallqueue().CallLater(InitializePlayerRole, 1500, false, playerId);
+            return;
+        }
         
         // The role is still stored in the role manager, so we just need to reapply it to the character
         CheckAndReapplyPlayerRole(playerId, playerGuid);
@@ -270,6 +279,17 @@ class IA_PlayerRoleHandler
         PlayerManager playerManager = GetGame().GetPlayerManager();
         if (!playerManager)
             return;
+
+        // CallLater keeps the numeric playerId. If they disconnected, stop — do not
+        // retry forever, and do not assign Rifleman to whoever later reuses the id.
+        if (!IsConnectedPlayerId(playerManager, playerId))
+            return;
+
+        IA_RoleManager roleManager = IA_RoleManager.GetInstance();
+        // They may already have taken Pilot (etc.) at the role switcher during the
+        // delay or a prior retry. Never demote a chosen role back to Rifleman.
+        if (roleManager.GetPlayerRole(playerId) != IA_PlayerRole.NONE)
+            return;
             
         IEntity playerEntity = playerManager.GetPlayerControlledEntity(playerId);
         if (!playerEntity)
@@ -294,8 +314,23 @@ class IA_PlayerRoleHandler
         }
         
         // Initialize with default role (Rifleman)
-        IA_RoleManager roleManager = IA_RoleManager.GetInstance();
         roleManager.TryAssignRole(playerId, IA_PlayerRole.RIFLEMAN);
+    }
+
+    //------------------------------------------------------------------------------------------------
+    private static bool IsConnectedPlayerId(PlayerManager playerManager, int playerId)
+    {
+        if (!playerManager || playerId <= 0)
+            return false;
+
+        array<int> currentPlayers = {};
+        playerManager.GetPlayers(currentPlayers);
+        foreach (int connectedId : currentPlayers)
+        {
+            if (connectedId == playerId)
+                return true;
+        }
+        return false;
     }
     
     // Handle player disconnection event
