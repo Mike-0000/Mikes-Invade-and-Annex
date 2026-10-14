@@ -6623,11 +6623,12 @@ class IA_AiGroup
             return "initialization";
         if (ShouldKeepVehicleOccupantsPhysical())
             return "vehicle";
-		// Assassination HVT/guards must stay physical. Escape sends the HVT
-		// 500–750 m away; budget eviction deleted that pawn, nulled m_HVT, and
-		// left IA_AssassinationObjective.Update early-returning while logical
-		// alive stayed > 0, so the objective never completed or failed.
-		if (IsObjectiveUnit() || m_HVTGroup)
+		// Assassination HVT must stay physical. Escape sends it 500–750 m
+		// away (default release 400 m); budget eviction deleted that pawn,
+		// nulled m_HVT, and left Update early-returning while logical alive
+		// stayed > 0, so the objective never completed or failed. Guards
+		// still cache: OnDynamicAIUnitCached only clears the HVT pointer.
+		if (m_HVTGroup)
 			return "side objective";
         return "";
     }
