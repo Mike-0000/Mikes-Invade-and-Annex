@@ -6623,6 +6623,13 @@ class IA_AiGroup
             return "initialization";
         if (ShouldKeepVehicleOccupantsPhysical())
             return "vehicle";
+		// Assassination HVT must stay physical. Escape sends it 500–750 m
+		// away (default release 400 m); budget eviction deleted that pawn,
+		// nulled m_HVT, and left Update early-returning while logical alive
+		// stayed > 0, so the objective never completed or failed. Guards
+		// still cache: OnDynamicAIUnitCached only clears the HVT pointer.
+		if (m_HVTGroup)
+			return "side objective";
         return "";
     }
 
@@ -6879,7 +6886,7 @@ class IA_AiGroup
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "elite patrols qualify for caching", failures);
 		group.m_bEliteProfile = false;
 		group.m_HVTGroup = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "HVT groups qualify while remaining logically alive", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "side objective", "HVT groups stay physical so assassination cannot stall Active", failures);
 		group.m_HVTGroup = false;
 		group.m_isCivilian = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "civilians qualify for a separate cache pool", failures);
