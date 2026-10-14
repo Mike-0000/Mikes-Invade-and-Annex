@@ -690,17 +690,22 @@ class IA_AssassinationObjective : IA_SideObjective
 		// stays Active forever after the HVT dies.
 		if (!m_bHVTSpawned)
 			TryBindHVTFromGroup();
+		else if (!m_HVT)
+			RebindHVTFromGroup();
 
-		if(m_bHVTSpawned && !m_HVT)
+		if (m_bHVTSpawned && !m_HVT)
 		{
-			if (m_HVTGroup && m_HVTGroup.GetAliveCount() > 0)
-				return;
-			if (IA_Log.IsDebugEnabled())
+			// Logical alive > 0 means the pawn is missing (e.g. was virtualized),
+			// not dead. Keep running escape/attack logic; do not early-return.
+			if (!m_HVTGroup || m_HVTGroup.GetAliveCount() <= 0)
 			{
-				Print("[IA_AssassinationObjective] HVT entity is null after being spawned, assuming objective complete.", LogLevel.NORMAL);
+				if (IA_Log.IsDebugEnabled())
+				{
+					Print("[IA_AssassinationObjective] HVT entity is null after being spawned, assuming objective complete.", LogLevel.NORMAL);
+				}
+				_CleanupObjective(true);
+				return;
 			}
-            _CleanupObjective(true);
-            return; 
 		}
 
 		if (!m_bHVTSpawned && m_HVTGroup && m_HVTGroup.IsSpawned() && !m_HVTGroup.HasPendingUnitSpawns() && m_HVTGroup.GetAliveCount() <= 0)
@@ -759,10 +764,10 @@ class IA_AssassinationObjective : IA_SideObjective
             }
         }
 
-        // Monitor HVT reaching escape point
-        if (m_EscapePoint != vector.Zero && m_HVT && m_State == IA_SideObjectiveState.Active)
+        // Monitor HVT reaching escape point (group origin if the pawn pointer is gone)
+        vector hvPos = ResolveHVTWorldPos();
+        if (m_EscapePoint != vector.Zero && hvPos != vector.Zero && m_State == IA_SideObjectiveState.Active)
         {
-            vector hvPos = m_HVT.GetOrigin();
             bool hvtAtEscapePoint = vector.DistanceSq(hvPos, m_EscapePoint) < (12*12);
 
             if (hvtAtEscapePoint && !m_bHVTEscaping)
@@ -1075,11 +1080,29 @@ class IA_AssassinationObjective : IA_SideObjective
 		if (m_bHVTSpawned || !m_HVTGroup)
 			return;
 
+		RebindHVTFromGroup();
+	}
+
+	//! Bind (or re-bind) the HVT pawn from the live group roster.
+	protected void RebindHVTFromGroup()
+	{
+		if (!m_HVTGroup)
+			return;
+
 		array<SCR_ChimeraCharacter> chars = m_HVTGroup.GetGroupCharacters();
 		if (!chars || chars.IsEmpty())
 			return;
 
 		BindHVTEntity(chars[0]);
+	}
+
+	protected vector ResolveHVTWorldPos()
+	{
+		if (m_HVT)
+			return m_HVT.GetOrigin();
+		if (m_HVTGroup)
+			return m_HVTGroup.GetOrigin();
+		return vector.Zero;
 	}
 
     // --- NEW: Generates a random escape point a good distance from the objective center ---
