@@ -6627,7 +6627,7 @@ class IA_AiGroup
 		// 500–750 m away; budget eviction deleted that pawn, nulled m_HVT, and
 		// left IA_AssassinationObjective.Update early-returning while logical
 		// alive stayed > 0, so the objective never completed or failed.
-		if (IsObjectiveUnit())
+		if (IsObjectiveUnit() || m_HVTGroup)
 			return "side objective";
         return "";
     }
@@ -6885,7 +6885,7 @@ class IA_AiGroup
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "elite patrols qualify for caching", failures);
 		group.m_bEliteProfile = false;
 		group.m_HVTGroup = true;
-		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "HVT groups qualify while remaining logically alive", failures);
+		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "side objective", "HVT groups stay physical so assassination cannot stall Active", failures);
 		group.m_HVTGroup = false;
 		group.m_isCivilian = true;
 		DynamicAIRegressionCheck(group.GetDynamicAIRoleBlockReason() == "", "civilians qualify for a separate cache pool", failures);
