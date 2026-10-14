@@ -439,18 +439,7 @@ class IA_AssassinationObjective : IA_SideObjective
             // Give the defend order after a short delay
             GetGame().GetCallqueue().CallLater(GiveHVTDefendOrder, 3000, false, hvtGroup, hvtSpawnPos);
 
-            array<SCR_ChimeraCharacter> chars = hvtGroup.GetGroupCharacters();
-            if (!chars.IsEmpty())
-            {
-                m_HVT = chars[0];
-				m_bHVTSpawned = true;
-                
-                SCR_CharacterControllerComponent ccc = SCR_CharacterControllerComponent.Cast(m_HVT.FindComponent(SCR_CharacterControllerComponent));
-                if (ccc)
-                {
-                    ccc.GetOnPlayerDeathWithParam().Insert(OnHVTKilled);
-                }
-            }
+            TryBindHVTFromGroup();
         }
 
         vector guardOrigin = IA_SpawnPlacement.FindHoldInfantryOrigin(hvtSpawnPos);
@@ -679,12 +668,7 @@ class IA_AssassinationObjective : IA_SideObjective
             m_GeneratorTask = null;
         }
 
-        // --- NEW: Cleanup escape vehicle ---
-        if (m_EscapeVehicle)
-        {
-            IA_Game.AddEntityToGc(m_EscapeVehicle);
-            m_EscapeVehicle = null;
-        }
+        DiscardEscapeVehicle();
 
         if (m_EscapeTask)
         {
@@ -700,6 +684,13 @@ class IA_AssassinationObjective : IA_SideObjective
         if (m_State != IA_SideObjectiveState.Active)
             return;
 
+		// Staggered AddAIEntityToGroup can defer the HVT past constructor bind.
+		// RetryAddSpawnedUnit never calls BindHVTEntity, and OnMemberDeath
+		// deliberately skips HVT kills, so without a late bind the objective
+		// stays Active forever after the HVT dies.
+		if (!m_bHVTSpawned)
+			TryBindHVTFromGroup();
+
 		if(m_bHVTSpawned && !m_HVT)
 		{
 			if (m_HVTGroup && m_HVTGroup.GetAliveCount() > 0)
@@ -710,6 +701,16 @@ class IA_AssassinationObjective : IA_SideObjective
 			}
             _CleanupObjective(true);
             return; 
+		}
+
+		if (!m_bHVTSpawned && m_HVTGroup && m_HVTGroup.IsSpawned() && !m_HVTGroup.HasPendingUnitSpawns() && m_HVTGroup.GetAliveCount() <= 0)
+		{
+			if (IA_Log.IsDebugEnabled())
+			{
+				Print("[IA_AssassinationObjective] HVT group wiped before bind; completing objective.", LogLevel.NORMAL);
+			}
+			_CleanupObjective(true);
+			return;
 		}
 
         // If the area comes under attack and we haven't activated reinforcement waves yet,
@@ -1035,11 +1036,7 @@ class IA_AssassinationObjective : IA_SideObjective
             m_GeneratorTask = null;
         }
 
-        if (m_EscapeVehicle)
-        {
-            IA_Game.AddEntityToGc(m_EscapeVehicle);
-            m_EscapeVehicle = null;
-        }
+        DiscardEscapeVehicle();
 
         if (m_EscapeTask)
         {
@@ -1053,6 +1050,36 @@ class IA_AssassinationObjective : IA_SideObjective
             }
             m_EscapeTask = null;
         }
+	}
+
+	//! Do not delete an occupied escape vehicle — players (or AI still boarding)
+	//! would be deleted with it. Drop the tracking pointer and leave the entity.
+	protected void DiscardEscapeVehicle()
+	{
+		if (!m_EscapeVehicle)
+			return;
+
+		Vehicle veh = Vehicle.Cast(m_EscapeVehicle);
+		if (veh && IA_VehicleManager.IsVehicleOccupied(veh))
+		{
+			m_EscapeVehicle = null;
+			return;
+		}
+
+		IA_Game.AddEntityToGc(m_EscapeVehicle);
+		m_EscapeVehicle = null;
+	}
+
+	protected void TryBindHVTFromGroup()
+	{
+		if (m_bHVTSpawned || !m_HVTGroup)
+			return;
+
+		array<SCR_ChimeraCharacter> chars = m_HVTGroup.GetGroupCharacters();
+		if (!chars || chars.IsEmpty())
+			return;
+
+		BindHVTEntity(chars[0]);
 	}
 
     // --- NEW: Generates a random escape point a good distance from the objective center ---
@@ -1094,6 +1121,17 @@ class IA_AssassinationObjective : IA_SideObjective
         if (!spawned)
             return false;
         if (hasEntity)
+            return false;
+        return logicalAlive <= 0;
+    }
+
+    static bool ShouldCompleteUnboundWipedHVTForTest(bool spawned, bool groupSpawned, bool pendingSpawns, int logicalAlive)
+    {
+        if (spawned)
+            return false;
+        if (!groupSpawned)
+            return false;
+        if (pendingSpawns)
             return false;
         return logicalAlive <= 0;
     }
