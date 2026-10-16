@@ -358,8 +358,9 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	        return;
 	    }
 	    
-	    // Mortar pits still spawn from the first active-group frame. Radio towers spawn
-	    // from IA_MissionInitializer via EnsureRadioTowersForGroup.
+	    // Mortar pits and radio-tower compositions spawn on the first
+	    // active-group frame. Initializer/HotAdd also call EnsureRadioTowerSpawned
+	    // immediately; this covers any path that only sets the live group.
 	    if (!m_prefabSpawned && !m_isDestroyed)
 	    {
 	        if (GetAreaType() == IA_AreaType.MortarPit)
@@ -367,6 +368,10 @@ class IA_AreaMarker : ScriptedGameTriggerEntity
 	            SpawnMortarPitComposition();
 	            if (m_spawnedEntity)
 	                m_prefabSpawned = true;
+	        }
+	        else if (GetAreaType() == IA_AreaType.RadioTower)
+	        {
+	            EnsureRadioTowerSpawned();
 	        }
 	    }
 
