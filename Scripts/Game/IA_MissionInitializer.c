@@ -426,15 +426,18 @@ class IA_MissionInitializer : GenericEntity
 	    IA_Game.SetActiveGroupID(currentGroup);
 	    // --- END ADDED ---
 
-    // Map-authored AOs still get classic mortar/radio support in GM fallback.
+    // Auto Support only auto-places extra mortar-pit *markers*. Radio-tower
+    // compositions must still spawn for every RadioTower marker already in
+    // the group — otherwise a GM-placed Destroy task has no tower and the
+    // required zone can never reach score 1000.
     bool placeSupport = IA_GmDirector.IsAutoSupportOn();
     if (!IA_GmDirector.IsDirectorGroup(currentGroup))
         placeSupport = true;
     if (placeSupport)
     {
 	    IA_MortarPitPlacer.EnsureForGroup(currentGroup);
-	    IA_AreaMarker.EnsureRadioTowersForGroup(currentGroup);
     }
+    IA_AreaMarker.EnsureRadioTowersForGroup(currentGroup);
 	    
 	    // m_currentAreaInstances.Clear(); // Clear for the new zone group - MOVED LATER
 	    // array<IA_AreaMarker> markersInGroup = {}; - MOVED LATER
@@ -1514,6 +1517,9 @@ class IA_MissionInitializer : GenericEntity
         }
 
         SpawnAreaFromMarker(marker, GetRandomEnemyFaction(), liveGroup);
+        // HotAdd never goes through ProceedToNextZone, so spawn the
+        // destroyable composition here. No-op for non-RadioTower sites.
+        marker.EnsureRadioTowerSpawned();
 
         if (!m_currentAreaGroupManager && m_currentAreaInstances)
             m_currentAreaGroupManager = new IA_AreaGroupManager(m_currentAreaInstances);
