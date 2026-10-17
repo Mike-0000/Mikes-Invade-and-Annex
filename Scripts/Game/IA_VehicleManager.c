@@ -361,6 +361,65 @@ class IA_VehicleManager: GenericEntity
             return false;
         return vehicle.IsOccupied();
     }
+
+    //! True if a connected player is seated, parented, or mid GetIn/GetOut on this hull.
+    //! CleanupInactiveGroupVehicles already skips occupied vehicles; AO/QRF ForceFinish
+    //! cleanup must use this so a stolen truck is not GC-deleted under the driver.
+    static bool IsOccupiedByPlayer(Vehicle vehicle)
+    {
+        if (!vehicle)
+            return false;
+
+        if (!GetGame())
+            return vehicle.IsOccupied();
+
+        PlayerManager pm = GetGame().GetPlayerManager();
+        if (!pm)
+            return vehicle.IsOccupied();
+
+        array<BaseCompartmentSlot> occupied = {};
+        CollectOccupiedCompartmentSlots(vehicle, occupied);
+        int n = occupied.Count();
+        int i;
+        for (i = 0; i < n; i++)
+        {
+            BaseCompartmentSlot slot = occupied[i];
+            if (!slot)
+                continue;
+            IEntity occupant = slot.GetOccupant();
+            if (!occupant)
+                continue;
+            if (pm.GetPlayerIdFromControlledEntity(occupant) > 0)
+                return true;
+        }
+
+        array<int> playerIds = {};
+        pm.GetPlayers(playerIds);
+        int idCount = playerIds.Count();
+        int p;
+        for (p = 0; p < idCount; p++)
+        {
+            IEntity pawn = pm.GetPlayerControlledEntity(playerIds[p]);
+            if (!pawn)
+                continue;
+
+            IEntity parent = pawn.GetParent();
+            while (parent)
+            {
+                if (parent == vehicle)
+                    return true;
+                parent = parent.GetParent();
+            }
+
+            SCR_ChimeraCharacter character = SCR_ChimeraCharacter.Cast(pawn);
+            if (!character)
+                continue;
+            if (GetCharacterVehicle(character) == vehicle)
+                return true;
+        }
+
+        return false;
+    }
     
     static SCR_ChimeraCharacter GetVehicleDriver(Vehicle vehicle)
     {
@@ -381,16 +440,21 @@ class IA_VehicleManager: GenericEntity
         return Vehicle.Cast(access.GetCompartment().GetOwner());
     }
     
-    static void DespawnVehicle(Vehicle vehicle)
+    //! Returns false when the hull is left in the world (null or a player is aboard).
+    static bool DespawnVehicle(Vehicle vehicle)
     {
         if (!vehicle)
-            return;
+            return false;
+
+        if (IsOccupiedByPlayer(vehicle))
+            return false;
             
         int idx = m_vehicles.Find(vehicle);
         if (idx != -1)
             m_vehicles.Remove(idx);
             
         IA_Game.AddEntityToGc(vehicle);
+        return true;
     }
     
     // Spawn a vehicle randomly within the area group's bounds

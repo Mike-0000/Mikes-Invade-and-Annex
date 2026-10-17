@@ -767,18 +767,23 @@ class IA_AreaInstance
             if (vehicle)
             {
                 IA_VehicleManager.ReleaseVehicleReservation(vehicle);
-                IA_VehicleManager.DespawnVehicle(vehicle);
-                if (m_areaVehicles)
+                // Dumped QRF/garrison crews keep IsDriving and the hull pointer.
+                // Group origin is the AI on foot, so a stolen truck 600 m away
+                // would otherwise be GC-deleted under the player.
+                if (IA_VehicleManager.DespawnVehicle(vehicle))
                 {
-                    int milIdx = m_areaVehicles.Find(vehicle);
-                    if (milIdx != -1)
-                        m_areaVehicles.Remove(milIdx);
-                }
-                if (m_areaCivVehicles)
-                {
-                    int civIdx = m_areaCivVehicles.Find(vehicle);
-                    if (civIdx != -1)
-                        m_areaCivVehicles.Remove(civIdx);
+                    if (m_areaVehicles)
+                    {
+                        int milIdx = m_areaVehicles.Find(vehicle);
+                        if (milIdx != -1)
+                            m_areaVehicles.Remove(milIdx);
+                    }
+                    if (m_areaCivVehicles)
+                    {
+                        int civIdx = m_areaCivVehicles.Find(vehicle);
+                        if (civIdx != -1)
+                            m_areaCivVehicles.Remove(civIdx);
+                    }
                 }
             }
         }
@@ -874,8 +879,11 @@ class IA_AreaInstance
 
             if (checkPlayers && ShouldKeepNearPlayers(vehicle.GetOrigin(), players))
                 continue;
+            if (IA_VehicleManager.IsOccupiedByPlayer(vehicle))
+                continue;
+            if (!IA_VehicleManager.DespawnVehicle(vehicle))
+                continue;
 
-            IA_VehicleManager.DespawnVehicle(vehicle);
             vehicles.Remove(i);
         }
     }
@@ -3632,10 +3640,11 @@ class IA_AreaInstance
                 // 5% chance to remove each cycle
                 if (IA_Game.rng.RandInt(0, 100) < 5)
                 {
-                    //////Print("[DEBUG] ManageCivilianVehicles: Removing abandoned civilian vehicle", LogLevel.DEBUG);
-                    IA_VehicleManager.DespawnVehicle(vehicle);
-                    m_areaCivVehicles.Remove(i);
-                    i--;
+                    if (IA_VehicleManager.DespawnVehicle(vehicle))
+                    {
+                        m_areaCivVehicles.Remove(i);
+                        i--;
+                    }
                 }
             }
         }
@@ -5471,15 +5480,11 @@ class IA_AreaInstance
 
                     // Release reservation first (if any)
                     IA_VehicleManager.ReleaseVehicleReservation(associatedVehicle);
-                    // Despawn the vehicle (this adds to GC and removes from IA_VehicleManager.m_vehicles)
-                    IA_VehicleManager.DespawnVehicle(associatedVehicle);
-
-                    // Remove this vehicle from this AreaInstance's civilian vehicle tracking list
-                    int vehIdx = m_areaCivVehicles.Find(associatedVehicle);
-                    if (vehIdx != -1)
+                    if (IA_VehicleManager.DespawnVehicle(associatedVehicle))
                     {
-                        m_areaCivVehicles.Remove(vehIdx);
-                        //Print(string.Format("[AreaInstance %1] Removed vehicle %2 from m_areaCivVehicles.", m_area.GetName(), associatedVehicle), LogLevel.DEBUG);
+                        int vehIdx = m_areaCivVehicles.Find(associatedVehicle);
+                        if (vehIdx != -1)
+                            m_areaCivVehicles.Remove(vehIdx);
                     }
                 }
 
