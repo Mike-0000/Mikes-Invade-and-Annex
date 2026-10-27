@@ -738,8 +738,9 @@ class IA_SpawnPlacement
 
 	//! Occupying ring is 80–250 m. PLAYER_MIN is 280 m, so a player already on
 	//! the flag makes every annulus sample fail the player floor (250 < 280).
-	//! Prefer the strict floor, then relax, then open past the ring so a rushed
-	//! AO still gets defenders instead of OnAsyncGroupCreated(null).
+	//! Keep that floor (no 100 m pop-in) and open past the ring, matching the
+	//! production defend-wave helper, so a rushed AO still gets defenders
+	//! instead of OnAsyncGroupCreated(null).
 	static vector FindOccupyingInfantryOrigin(vector center, int sectorIndex = -1)
 	{
 		if (center == vector.Zero)
@@ -749,11 +750,7 @@ class IA_SpawnPlacement
 		if (found != vector.Zero)
 			return found;
 
-		found = FindSafeInfantryOrigin(center, OCCUPY_MIN_M, OCCUPY_MAX_M, REINF_PLAYER_MIN_M, sectorIndex);
-		if (found != vector.Zero)
-			return found;
-
-		found = FindSafeInfantryOrigin(center, OCCUPY_MIN_M, OCCUPY_MAX_M, REINF_PLAYER_MIN_M, -1);
+		found = FindSafeInfantryOrigin(center, OCCUPY_MIN_M, OCCUPY_MAX_M, PLAYER_MIN_M, -1);
 		if (found != vector.Zero)
 			return found;
 
@@ -761,7 +758,7 @@ class IA_SpawnPlacement
 		if (found != vector.Zero)
 			return found;
 
-		found = FindSafeInfantryOrigin(center, OCCUPY_MIN_M, HARD_CAP_FROM_CENTER_M, REINF_PLAYER_MIN_M, -1);
+		found = FindSafeInfantryOrigin(center, OCCUPY_MIN_M, HARD_CAP_FROM_CENTER_M, PLAYER_MIN_M, -1);
 		if (found != vector.Zero)
 			return found;
 

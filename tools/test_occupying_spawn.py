@@ -21,7 +21,7 @@ def const_float(name: str) -> float:
 
 class OccupyingSpawnGeometry(unittest.TestCase):
     def test_constants_still_conflict_on_flag(self):
-        # The bug is the hard floor vs ring max. Relaxation must exist because
+        # The bug is the hard floor vs ring max. Expansion must exist because
         # a player at the AO origin makes every 80-250 sample < PLAYER_MIN.
         occupy_max = const_float("OCCUPY_MAX_M")
         player_min = const_float("PLAYER_MIN_M")
@@ -50,17 +50,18 @@ class OccupyingSpawnGeometry(unittest.TestCase):
                 x = center[0] + math.cos(ang) * radius
                 z = center[1] + math.sin(ang) * radius
                 dist = math.hypot(x - player[0], z - player[1])
-                if player_min <= dist <= hard_cap and dist >= player_min:
+                if player_min <= dist <= hard_cap:
                     expanded_hits += 1
         self.assertGreater(expanded_hits, 0)
 
-    def test_occupying_origin_relaxes_then_expands(self):
+    def test_occupying_origin_expands_without_relaxing_player_floor(self):
         body = SOURCE.split("static vector FindOccupyingInfantryOrigin", 1)[1]
         body = body.split("static vector FindHoldInfantryOrigin", 1)[0]
         self.assertIn("OCCUPY_MIN_M, OCCUPY_MAX_M, PLAYER_MIN_M", body)
-        self.assertIn("OCCUPY_MIN_M, OCCUPY_MAX_M, REINF_PLAYER_MIN_M", body)
         self.assertIn("PLAYER_MIN_M, HARD_CAP_FROM_CENTER_M, PLAYER_MIN_M", body)
-        self.assertIn("OCCUPY_MIN_M, HARD_CAP_FROM_CENTER_M, REINF_PLAYER_MIN_M", body)
+        self.assertIn("OCCUPY_MIN_M, HARD_CAP_FROM_CENTER_M, PLAYER_MIN_M", body)
+        # Do not pop-in at REINF_PLAYER_MIN (100 m) inside the occupying ring.
+        self.assertNotIn("REINF_PLAYER_MIN_M", body)
         # Still not the defend-wave helper (different callers / ring).
         self.assertNotIn("FindDefendWaveInfantryOrigin", body)
 
