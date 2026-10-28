@@ -741,6 +741,12 @@ class IA_SpawnPlacement
 		return FindSafeInfantryOrigin(center, OCCUPY_MIN_M, OCCUPY_MAX_M, PLAYER_MIN_M, sectorIndex);
 	}
 
+	//! Building / CoverPost holds prefer a 15–80 m outdoor ring. When a player
+	//! is already within PLAYER_MIN of the post, that ring cannot satisfy the
+	//! floor (80 < 280) and GenerateRandomAiGroups CoverPost slots plus
+	//! SpawnBuildingGarrisonGroups all call OnAsyncGroupCreated(null). Keep the
+	//! floor and open past the ring — same expand pattern as occupying / defend
+	//! waves — so the team still walks to holdTarget from a legal origin.
 	static vector FindHoldInfantryOrigin(vector holdPos)
 	{
 		if (holdPos == vector.Zero)
@@ -753,7 +759,25 @@ class IA_SpawnPlacement
 		if (IsNearAnyPlayer(holdPos, players, PLAYER_MIN_M))
 			playerMin = PLAYER_MIN_M;
 
-		return FindSafeInfantryOrigin(holdPos, HOLD_ORIGIN_MIN_M, HOLD_ORIGIN_MAX_M, playerMin, -1);
+		vector found = FindSafeInfantryOrigin(holdPos, HOLD_ORIGIN_MIN_M, HOLD_ORIGIN_MAX_M, playerMin, -1);
+		if (found != vector.Zero)
+			return found;
+
+		// No player floor: miss is navmesh/terrain, not geometry. Fail closed
+		// after the existing 400 ms retry, matching building-garrison docs.
+		if (playerMin <= 0)
+			return vector.Zero;
+
+		found = FindSafeInfantryOrigin(holdPos, PLAYER_MIN_M, HARD_CAP_FROM_CENTER_M, PLAYER_MIN_M, -1);
+		if (found != vector.Zero)
+			return found;
+
+		found = FindSafeInfantryOrigin(holdPos, HOLD_ORIGIN_MIN_M, HARD_CAP_FROM_CENTER_M, PLAYER_MIN_M, -1);
+		if (found != vector.Zero)
+			return found;
+
+		Print(string.Format("[IA][SpawnPlacement] miss hold origin anchor=%1", holdPos.ToString()), LogLevel.WARNING);
+		return vector.Zero;
 	}
 
 	static vector FindReinforcementInfantryOrigin(vector fightPos, int sectorIndex = -1)
