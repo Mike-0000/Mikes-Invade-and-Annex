@@ -743,10 +743,11 @@ class IA_SpawnPlacement
 
 	//! Building / CoverPost holds prefer a 15–80 m outdoor ring. When a player
 	//! is already within PLAYER_MIN of the post, that ring cannot satisfy the
-	//! floor (80 < 280) and GenerateRandomAiGroups CoverPost slots plus
-	//! SpawnBuildingGarrisonGroups all call OnAsyncGroupCreated(null). Keep the
-	//! floor and open past the ring — same expand pattern as occupying / defend
-	//! waves — so the team still walks to holdTarget from a legal origin.
+	//! floor (80 < 280) and GenerateRandomAiGroups CoverPost slots,
+	//! SpawnBuildingGarrisonGroups, and GM Director PlaceHoldPost in a live AO
+	//! all call OnAsyncGroupCreated(null). Keep the floor and open past the ring
+	//! — same expand pattern as occupying / defend waves — so the team still
+	//! walks to holdTarget from a legal origin.
 	static vector FindHoldInfantryOrigin(vector holdPos)
 	{
 		if (holdPos == vector.Zero)

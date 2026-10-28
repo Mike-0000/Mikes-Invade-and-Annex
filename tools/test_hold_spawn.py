@@ -86,6 +86,11 @@ class HoldSpawnGeometry(unittest.TestCase):
         building = building.split("private void _SpawnSingleAiGroupAndAddToArea", 1)[0]
         self.assertIn("_SpawnSingleAiGroupAndAddToArea", building)
 
+        director = (ROOT / "Scripts/Game/IA_GmDirector.c").read_text(encoding="utf-8-sig")
+        place = director.split("IA_GmHoldPost PlaceHoldPost", 1)[1]
+        place = place.split("IA_SideObjectiveMarker FindNearestSideMarker", 1)[0]
+        self.assertIn("liveArea.TrySpawnHoldPost(post)", place)
+
         search = GROUP.split("static void PerformNextRoadSearch", 1)[1]
         search = search.split("static void CompleteAsyncGroupCreation", 1)[0]
         self.assertIn("FindHoldInfantryOrigin(holdAt)", search)
