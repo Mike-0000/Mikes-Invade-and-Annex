@@ -1,4 +1,4 @@
-"""Defend-only AO must start the hold instead of stalling forever.
+"""Defend-only AO must start the authored hold instead of stalling forever.
 
 Run: python -m unittest discover -s tools -p "test_defend_only_ao.py"
 """
@@ -37,23 +37,23 @@ class DefendOnlyAoTests(unittest.TestCase):
     def test_zero_capture_zones_with_defend_starts_hold(self):
         body = method(source("IA_MissionInitializer.c"), "CheckCurrentZoneComplete")
         zero = body.index("if(amountOfZones == 0)")
-        self.assertIn("HasDefendObjectiveForGroup(currentGroup)", body[zero:])
-        self.assertIn("m_bForceAuthoredOnFallback = true", body[zero:])
-        self.assertIn("ContinueWithoutDynamicBase(m_iAoActivationSerial, currentGroup)", body[zero:])
-        self.assertIn("TryBeginTerminalObjective(false)", body[zero:])
-        # Must not be a bare return for the defend-only case.
-        fragment = body[zero : zero + 900]
-        self.assertIn("if (!HasDefendObjectiveForGroup(currentGroup))", fragment)
+        after = body.index("////Print(\"Running CheckCurrentZoneComplete 3\"", zero)
+        fragment = body[zero:after]
+        self.assertIn("HasDefendObjectiveForGroup(currentGroup)", fragment)
+        self.assertIn("m_bForceAuthoredOnFallback = true", fragment)
+        self.assertIn("ContinueWithoutDynamicBase(m_iAoActivationSerial, currentGroup)", fragment)
+        # Empty primary circles make dynamic-base placement fail into admin-wait.
+        self.assertNotIn("TryBeginTerminalObjective", fragment)
 
-    def test_hotadd_defend_only_starts_completion_poll(self):
+    def test_hotadd_defend_does_not_hijack_live_group(self):
         body = method(source("IA_MissionInitializer.c"), "ServerAppendLiveSite")
         defend = body.index("IA_AreaType.DefendObjective")
-        fragment = body[defend:]
-        self.assertIn("CallLater(CheckCurrentZoneComplete", fragment)
-        self.assertIn("BeginDynamicObjectiveAo(liveGroup)", fragment)
-        # Group registration must happen before the defend early-return.
         insert = body.index("groupsArray.Insert(liveGroup)")
-        self.assertLess(insert, defend)
+        self.assertLess(defend, insert)
+        fragment = body[defend:insert]
+        self.assertIn("return;", fragment)
+        self.assertNotIn("BeginDynamicObjectiveAo", fragment)
+        self.assertNotIn("CallLater(CheckCurrentZoneComplete", fragment)
 
 
 if __name__ == "__main__":

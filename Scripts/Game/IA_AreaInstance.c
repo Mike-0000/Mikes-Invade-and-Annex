@@ -3619,9 +3619,8 @@ class IA_AreaInstance
             DamageManagerComponent civDamage = vehicle.GetDamageManager();
             if (civDamage && civDamage.IsDestroyed())
             {
-                // Drop the wreck so CheckCiviliansInVehicle cannot keep GetIn
-                // on a hull that will never accept a remount.
-                IA_VehicleManager.DespawnVehicle(vehicle);
+                // Leave the wreck in the world (a player may still be in it).
+                // CheckCiviliansInVehicle stops remount on IsDestroyed.
                 m_areaCivVehicles.Remove(i);
                 i--;
                 continue;

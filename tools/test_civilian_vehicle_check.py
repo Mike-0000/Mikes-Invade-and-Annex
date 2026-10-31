@@ -52,10 +52,12 @@ class CivilianVehicleCheckTests(unittest.TestCase):
         driveable = method(mgr, "IsCivilianVehicleDriveable")
         self.assertIn("IsDestroyed()", driveable)
 
-    def test_destroyed_civilian_vehicles_are_despawned(self):
+    def test_destroyed_civilian_vehicles_are_untracked_not_gc_deleted(self):
         body = method(source("IA_AreaInstance.c"), "ManageCivilianVehicles")
-        self.assertIn("DespawnVehicle(vehicle)", body)
-        self.assertIn("IsDestroyed()", body)
+        destroyed = body.index("IsDestroyed()")
+        fragment = body[destroyed:destroyed + 400]
+        self.assertIn("m_areaCivVehicles.Remove(i)", fragment)
+        self.assertNotIn("DespawnVehicle(vehicle)", fragment)
 
 
 if __name__ == "__main__":

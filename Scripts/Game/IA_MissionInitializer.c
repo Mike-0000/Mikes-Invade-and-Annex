@@ -829,6 +829,9 @@ class IA_MissionInitializer : GenericEntity
 		// capture holds, not seize sites). A group that only has DefendObjective
 		// therefore reports amountOfZones == 0 and used to return forever here,
 		// so CheckAndStartDefendMission never ran and the AO never advanced.
+		// Do not ask the dynamic-base placer: it has no primary circles and
+		// fails into admin-wait. Force the authored hold so the 80% roll
+		// cannot empty-advance a defend-only AO.
 		if(amountOfZones == 0)
 		{
 			if (!HasDefendObjectiveForGroup(currentGroup))
@@ -837,15 +840,7 @@ class IA_MissionInitializer : GenericEntity
 				return;
 			}
 
-			if (m_DynamicObjectives && m_DynamicObjectives.TryBeginTerminalObjective(false))
-			{
-				GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
-				IA_Log.Info("[IA_MissionInitializer] Dynamic base accepted for defend-only group " + currentGroup + ".");
-				return;
-			}
-
-			// Force the authored hold: the 80% defend roll would empty-advance a
-			// defend-only AO with no fight.
+			IA_Log.Info("[IA_MissionInitializer] Defend-only group " + currentGroup + " has no capture sites; starting authored hold.");
 			m_bForceAuthoredOnFallback = true;
 			ContinueWithoutDynamicBase(m_iAoActivationSerial, currentGroup);
 			return;
@@ -1486,41 +1481,13 @@ class IA_MissionInitializer : GenericEntity
         vector origin = marker.GetOrigin();
         dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], liveGroup, marker.GetRadius(), name);
 
-        if (!groupsArray)
-            groupsArray = new array<int>();
-        if (groupsArray.Find(liveGroup) == -1)
-        {
-            groupsArray.Insert(liveGroup);
-            startingLive = true;
-        }
-        m_currentIndex = groupsArray.Find(liveGroup);
-        if (m_currentIndex < 0)
-            m_currentIndex = 0;
-
-        IA_VehicleManager.SetActiveGroup(liveGroup);
-        IA_Game.SetActiveGroupID(liveGroup);
-
-        if (startingLive)
-        {
-            IA_SessionRankManagerComponent sessionRanks = IA_SessionRankManagerComponent.GetInstance();
-            if (sessionRanks)
-                sessionRanks.BeginAoXpWindow();
-        }
-
-        // DefendObjective is not a seize site. Attach it for the post-capture
-        // hold, and if this is the first Live content start the completion
-        // poll so a defend-only Live group can begin the hold (see
-        // CheckCurrentZoneComplete amountOfZones == 0 path).
+        // Attach only. Do not insert into groupsArray or retarget m_currentIndex:
+        // map AOs report GetLiveGroupId() < 0, so a HotAdd hold would otherwise
+        // hijack the live fight into a new 1001+ group (see PR #23).
+        // Activate Staging with only DefendObjective still reaches the
+        // amountOfZones == 0 hold path via ProceedToNextZone.
         if (marker.GetAreaType() == IA_AreaType.DefendObjective)
         {
-            if (startingLive)
-            {
-                if (!m_currentAreaInstances)
-                    m_currentAreaInstances = new array<ref IA_AreaInstance>();
-                GetGame().GetCallqueue().Remove(CheckCurrentZoneComplete);
-                GetGame().GetCallqueue().CallLater(CheckCurrentZoneComplete, 5000, true);
-                BeginDynamicObjectiveAo(liveGroup);
-            }
             if (IA_Log.IsDebugEnabled())
             {
                 Print(string.Format("[IA_MissionInitializer] Attached DefendObjective '%1' to Live group %2", name, liveGroup), LogLevel.NORMAL);
@@ -1542,8 +1509,29 @@ class IA_MissionInitializer : GenericEntity
             }
         }
 
+        if (!groupsArray)
+            groupsArray = new array<int>();
+        if (groupsArray.Find(liveGroup) == -1)
+        {
+            groupsArray.Insert(liveGroup);
+            startingLive = true;
+        }
+        m_currentIndex = groupsArray.Find(liveGroup);
+        if (m_currentIndex < 0)
+            m_currentIndex = 0;
+
         if (!m_currentAreaInstances)
             m_currentAreaInstances = new array<ref IA_AreaInstance>();
+
+        IA_VehicleManager.SetActiveGroup(liveGroup);
+        IA_Game.SetActiveGroupID(liveGroup);
+
+        if (startingLive)
+        {
+            IA_SessionRankManagerComponent sessionRanks = IA_SessionRankManagerComponent.GetInstance();
+            if (sessionRanks)
+                sessionRanks.BeginAoXpWindow();
+        }
 
         SpawnAreaFromMarker(marker, GetRandomEnemyFaction(), liveGroup);
 
