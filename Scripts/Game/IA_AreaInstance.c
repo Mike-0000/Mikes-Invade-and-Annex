@@ -3610,9 +3610,18 @@ class IA_AreaInstance
         for (int i = 0; i < m_areaCivVehicles.Count(); i++)
         {
             Vehicle vehicle = m_areaCivVehicles[i];
-            if (!vehicle || vehicle.GetDamageManager().IsDestroyed())
+            if (!vehicle)
             {
-                // Remove from tracking array
+                m_areaCivVehicles.Remove(i);
+                i--;
+                continue;
+            }
+            DamageManagerComponent civDamage = vehicle.GetDamageManager();
+            if (civDamage && civDamage.IsDestroyed())
+            {
+                // Drop the wreck so CheckCiviliansInVehicle cannot keep GetIn
+                // on a hull that will never accept a remount.
+                IA_VehicleManager.DespawnVehicle(vehicle);
                 m_areaCivVehicles.Remove(i);
                 i--;
                 continue;
