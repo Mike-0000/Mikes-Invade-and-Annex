@@ -3610,9 +3610,17 @@ class IA_AreaInstance
         for (int i = 0; i < m_areaCivVehicles.Count(); i++)
         {
             Vehicle vehicle = m_areaCivVehicles[i];
-            if (!vehicle || vehicle.GetDamageManager().IsDestroyed())
+            if (!vehicle)
             {
-                // Remove from tracking array
+                m_areaCivVehicles.Remove(i);
+                i--;
+                continue;
+            }
+            DamageManagerComponent civDamage = vehicle.GetDamageManager();
+            if (civDamage && civDamage.IsDestroyed())
+            {
+                // Leave the wreck in the world (a player may still be in it).
+                // CheckCiviliansInVehicle stops remount on IsDestroyed.
                 m_areaCivVehicles.Remove(i);
                 i--;
                 continue;

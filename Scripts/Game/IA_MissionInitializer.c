@@ -825,9 +825,24 @@ class IA_MissionInitializer : GenericEntity
 		}
 		
 		////Print("Running CheckCurrentZoneComplete 2",LogLevel.NORMAL);
-		// If no markers found for this group, this is an issue based on original logic.
-		if(amountOfZones == 0) { // Consistent with original check on zoneCompletionStatus.Count()
-			//Print("[ERROR] No markers found for group " + currentGroup + ". Cannot check completion.", LogLevel.ERROR);
+		// DefendObjective markers are excluded from amountOfZones (they are post-
+		// capture holds, not seize sites). A group that only has DefendObjective
+		// therefore reports amountOfZones == 0 and used to return forever here,
+		// so CheckAndStartDefendMission never ran and the AO never advanced.
+		// Do not ask the dynamic-base placer: it has no primary circles and
+		// fails into admin-wait. Force the authored hold so the 80% roll
+		// cannot empty-advance a defend-only AO.
+		if(amountOfZones == 0)
+		{
+			if (!HasDefendObjectiveForGroup(currentGroup))
+			{
+				//Print("[ERROR] No markers found for group " + currentGroup + ". Cannot check completion.", LogLevel.ERROR);
+				return;
+			}
+
+			IA_Log.Info("[IA_MissionInitializer] Defend-only group " + currentGroup + " has no capture sites; starting authored hold.");
+			m_bForceAuthoredOnFallback = true;
+			ContinueWithoutDynamicBase(m_iAoActivationSerial, currentGroup);
 			return;
 		}
 		
@@ -1466,6 +1481,11 @@ class IA_MissionInitializer : GenericEntity
         vector origin = marker.GetOrigin();
         dir.RememberPlacedSite(marker.GetAreaType(), origin[0], origin[2], liveGroup, marker.GetRadius(), name);
 
+        // Attach only. Do not insert into groupsArray or retarget m_currentIndex:
+        // map AOs report GetLiveGroupId() < 0, so a HotAdd hold would otherwise
+        // hijack the live fight into a new 1001+ group (see PR #23).
+        // Activate Staging with only DefendObjective still reaches the
+        // amountOfZones == 0 hold path via ProceedToNextZone.
         if (marker.GetAreaType() == IA_AreaType.DefendObjective)
         {
             if (IA_Log.IsDebugEnabled())

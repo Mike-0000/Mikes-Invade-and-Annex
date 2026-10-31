@@ -15,6 +15,7 @@ class IA_VehicleManager: GenericEntity
     static private IA_VehicleManager m_instance;
     static private const float DEFAULT_INITIAL_ROAD_SEARCH_RADIUS = 30.0;
     static private const float VEHICLE_SPAWN_MIN_SPACING_M = 22.0;
+    static private const int CIV_VEHICLE_CHECK_MS = 5000;
     
     // Group-specific vehicles
     static private ref array<ref array<IEntity>> m_groupVehicles = {};
@@ -1577,7 +1578,9 @@ class IA_VehicleManager: GenericEntity
             if (crewGroup.GetFaction() == IA_Faction.CIV)
             {
                 crewGroup.ForceDrivingState(true);
-                GetGame().GetCallqueue().CallLater(CheckCiviliansInVehicle, 5000, true, vehicle, crewGroup, destination);
+                // One-shot chain: a repeating CallLater + Remove(func) would
+                // cancel every civilian remount when any one car died.
+                ScheduleCivilianVehicleCheck(vehicle, crewGroup, destination);
             }
 
             crewGroup.DriveAfterGetInClear(vehicle, destination);
@@ -1618,33 +1621,48 @@ class IA_VehicleManager: GenericEntity
         crewGroup.DriveAfterGetInClear(vehicle, destination);
     }
     
+    // One-shot chain so each car owns its own timer. Do not use a repeating
+    // CallLater + Remove(func): Remove without args cancels every civilian
+    // remount when any one vehicle dies or is GC'd.
+    private static void ScheduleCivilianVehicleCheck(Vehicle vehicle, IA_AiGroup aiGroup, vector destination)
+    {
+        if (!vehicle || !aiGroup)
+            return;
+        GetGame().GetCallqueue().CallLater(CheckCiviliansInVehicle, CIV_VEHICLE_CHECK_MS, false, vehicle, aiGroup, destination);
+    }
+
+    private static bool IsCivilianVehicleDriveable(Vehicle vehicle)
+    {
+        if (!vehicle)
+            return false;
+        DamageManagerComponent damageManager = vehicle.GetDamageManager();
+        if (damageManager && damageManager.IsDestroyed())
+            return false;
+        return true;
+    }
+
     // Helper method to periodically check if civilians are still in their vehicle and order them back in if not
     private static void CheckCiviliansInVehicle(Vehicle vehicle, IA_AiGroup aiGroup, vector destination)
     {
-        // Stop checking if the vehicle or group is gone
+        // Stop the chain when the car is gone, wrecked, or the group is finished.
+        // Do not callqueue-Remove this method by name — that cancelled every other car.
         if (!vehicle || !aiGroup || !aiGroup.IsSpawned())
-        {
-            // Cancel this recurring check
-            GetGame().GetCallqueue().Remove(CheckCiviliansInVehicle);
             return;
-        }
-        
-        // Only process for civilian groups
         if (aiGroup.GetFaction() != IA_Faction.CIV)
             return;
-
-        if (aiGroup.IsPendingSeatTeleport())
+        if (!IsCivilianVehicleDriveable(vehicle))
             return;
 
-        if (aiGroup.IsDynamicAICached() || aiGroup.IsDynamicAIPaused())
+        if (aiGroup.IsPendingSeatTeleport() || aiGroup.IsDynamicAICached() || aiGroup.IsDynamicAIPaused())
+        {
+            ScheduleCivilianVehicleCheck(vehicle, aiGroup, destination);
             return;
-        
-        // Get all characters in the group
+        }
+
         array<SCR_ChimeraCharacter> characters = aiGroup.GetGroupCharacters();
         if (characters.IsEmpty())
             return;
-        
-        // Check if any are outside the vehicle
+
         bool anyOutside = false;
         foreach (SCR_ChimeraCharacter character : characters)
         {
@@ -1654,26 +1672,29 @@ class IA_VehicleManager: GenericEntity
                 break;
             }
         }
-        
-        // If anyone is outside, tell them to get back in
+
         if (anyOutside)
         {
-            // Make sure driving state is still correct
-            aiGroup.ForceDrivingState(true);
-            
-            // Clear orders and create a GetInVehicle order
-            aiGroup.RemoveAllOrders();
-            aiGroup.AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
-            
-            // After a delay, update the waypoint again so they continue to their destination
-            GetGame().GetCallqueue().CallLater(UpdateWaypointAfterEntry, 5000, false, vehicle, aiGroup, destination);
+            // Wrecks and full/inaccessible hulls must not plant GetInNearest —
+            // that tree never completes and re-orders forever.
+            if (VehicleHasEmptyAccessibleSeat(vehicle))
+            {
+                aiGroup.ForceDrivingState(true);
+                aiGroup.RemoveAllOrders();
+                aiGroup.AddOrder(vehicle.GetOrigin(), IA_AiOrder.GetInVehicle, true);
+                GetGame().GetCallqueue().CallLater(UpdateWaypointAfterEntry, CIV_VEHICLE_CHECK_MS, false, vehicle, aiGroup, destination);
+            }
         }
+
+        ScheduleCivilianVehicleCheck(vehicle, aiGroup, destination);
     }
     
     // After civilians re-enter the vehicle, restore their waypoint
     private static void UpdateWaypointAfterEntry(Vehicle vehicle, IA_AiGroup aiGroup, vector destination)
     {
         if (!vehicle || !aiGroup || !aiGroup.IsSpawned())
+            return;
+        if (!IsCivilianVehicleDriveable(vehicle))
             return;
         
         // Ensure they're still flagged as driving
