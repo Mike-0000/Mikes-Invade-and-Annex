@@ -1824,10 +1824,10 @@ class IA_VehicleManager: GenericEntity
                             
                     array<EEditableEntityLabel> vehicleLabels = {}; 
                     catalogEntry.GetEditableEntityLabels(vehicleLabels);
-                    // Match IA_AreaGroupManager.DetermineVehicleClass: APCs and
-                    // TRAIT_ARMOR hulls are both armour. The old loop broke on
-                    // VEHICLE_APC only and never saw TRAIT_ARMOR, so tanks that
-                    // catalog as armor-only skipped the Crewman gate.
+                    // HQ armor pads (IA_HQArmor) and US/FIA QRF armor filter
+                    // TRAIT_ARMOR; HQ APC pads filter VEHICLE_APC. Both are
+                    // Crewman seats. Do not break out of the label loop: a hull
+                    // can carry more than one of these.
                     bool isHelicopter = false;
 					bool isArmor = false;
                     foreach (EEditableEntityLabel label : vehicleLabels)

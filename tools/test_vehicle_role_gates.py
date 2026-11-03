@@ -39,7 +39,9 @@ class VehicleRoleGateTests(unittest.TestCase):
         self.assertIn("EEditableEntityLabel.VEHICLE_APC", body)
         self.assertIn("EEditableEntityLabel.TRAIT_ARMOR", body)
         self.assertIn("EEditableEntityLabel.VEHICLE_HELICOPTER", body)
-        # Early break on APC alone would skip TRAIT_ARMOR on later labels.
+        # HQ armor pads include TRAIT_ARMOR without VEHICLE_APC. Breaking out
+        # of the label loop after APC would still miss those hulls if APC is
+        # absent, and would skip a later TRAIT_ARMOR if APC were listed first.
         self.assertNotRegex(
             body,
             r"VEHICLE_APC\)\s*\{\s*isArmor\s*=\s*true;\s*break;",
