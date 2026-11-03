@@ -43,6 +43,20 @@ class TransportPilotTests(unittest.TestCase):
         result = method(store, "OnSubmitResult")
         self.assertLess(result.index("if (!ok)"), result.index('m_sSentEntries = ""'))
 
+    def test_rating_fetch_waits_for_unacked_batch(self):
+        # SEPARATE soft-error keeps m_sSentEntries while clearing in-flight. A
+        # ratings snapshot that lands then already includes the batch;
+        # OnSubmitResult(true) on the duplicate ack would fold m_iSentPoints into
+        # m_iGlobalRating again (early skin unlocks). /sync is safe: transport
+        # folds before ratings in the same answer.
+        store = source("IA_TransportPilotStore.c")
+        queued = method(store, "SendQueuedRequests")
+        self.assertIn("HasUnackedBatch()", queued)
+        self.assertLess(queued.index("UsesSync()"), queued.index("HasUnackedBatch()"))
+        self.assertIn("!m_sSentEntries.IsEmpty()", method(store, "HasUnackedBatch"))
+        fold = method(store, "OnSubmitResult")
+        self.assertIn("m_iGlobalRating + record.m_iSentPoints", fold)
+
     def test_passenger_is_credited_once(self):
         tracker = source("IA_TransportPilotTracker.c")
         credit = method(tracker, "CreditRide")

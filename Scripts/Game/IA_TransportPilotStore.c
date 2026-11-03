@@ -112,6 +112,13 @@ class IA_TransportPilotStore
 	}
 
 	//------------------------------------------------------------------------------------------------
+	//! \return true while a batch awaits acknowledgement (in flight or kept after a soft error)
+	protected bool HasUnackedBatch()
+	{
+		return !m_sSentEntries.IsEmpty();
+	}
+
+	//------------------------------------------------------------------------------------------------
 	//! Send queued fetches now; called once per tracker tick so joins batch together.
 	void SendQueuedRequests()
 	{
@@ -127,7 +134,9 @@ class IA_TransportPilotStore
 		}
 
 		// One request at a time, so a ratings snapshot never predates an acknowledged batch.
-		if (m_bFetchInFlight || m_bSubmitInFlight || IsBackingOff())
+		// After a soft submit error the batch is kept but not in flight; fetching then would
+		// fold the same points again when the duplicate ack runs OnSubmitResult(true).
+		if (m_bFetchInFlight || m_bSubmitInFlight || HasUnackedBatch() || IsBackingOff())
 			return;
 
 		string ids = "[";
