@@ -1824,23 +1824,30 @@ class IA_VehicleManager: GenericEntity
                             
                     array<EEditableEntityLabel> vehicleLabels = {}; 
                     catalogEntry.GetEditableEntityLabels(vehicleLabels);
+                    // Match IA_AreaGroupManager.DetermineVehicleClass: APCs and
+                    // TRAIT_ARMOR hulls are both armour. The old loop broke on
+                    // VEHICLE_APC only and never saw TRAIT_ARMOR, so tanks that
+                    // catalog as armor-only skipped the Crewman gate.
                     bool isHelicopter = false;
 					bool isArmor = false;
                     foreach (EEditableEntityLabel label : vehicleLabels)
                     {
                         if (label == EEditableEntityLabel.VEHICLE_HELICOPTER)
-                        {
                             isHelicopter = true;
-                            break;
-                        } else if (label == EEditableEntityLabel.VEHICLE_APC)
-                        {
+                        if (label == EEditableEntityLabel.VEHICLE_APC)
                             isArmor = true;
-                            break;
-                        }
+                        if (label == EEditableEntityLabel.TRAIT_ARMOR)
+                            isArmor = true;
                     }
 
                     if (isHelicopter || isArmor)
                     {
+                        if (!chimeraCharacter)
+                        {
+                            reason = "Internal error: Character missing for role check.";
+                            return false;
+                        }
+
                         PlayerManager playerManager = GetGame().GetPlayerManager();
                         if (!playerManager)
                         {
@@ -1870,7 +1877,7 @@ class IA_VehicleManager: GenericEntity
 	                            if (playerRole != IA_PlayerRole.CREWMAN)
 	                            {
 	                                reason = "Must be a Crewman to Drive Armored Vehicles!";
-	                                return false; // Not a pilot, cannot enter helicopter pilot seat
+	                                return false; // Not a crewman, cannot drive armored vehicles
 	                            }
 							}
                         }
