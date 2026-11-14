@@ -3618,21 +3618,13 @@ class IA_AreaInstance
                 continue;
             }
             
-            // Also check for abandoned civilian vehicles (no occupants)
-            bool hasDriver = false;
-            SCR_ChimeraCharacter driver = IA_VehicleManager.GetVehicleDriver(vehicle);
-            if (driver)
-            {
-                hasDriver = true;
-            }
-            
-            // If no driver and not recently spawned (10+ minutes), remove the civilian vehicle
-            if (!hasDriver)
+            // Abandoned means empty. Driver-only misses cargo/passenger seats,
+            // so a player in the back after the AI driver dies would be GC-deleted.
+            if (!IA_VehicleManager.IsVehicleOccupied(vehicle))
             {
                 // 5% chance to remove each cycle
                 if (IA_Game.rng.RandInt(0, 100) < 5)
                 {
-                    //////Print("[DEBUG] ManageCivilianVehicles: Removing abandoned civilian vehicle", LogLevel.DEBUG);
                     IA_VehicleManager.DespawnVehicle(vehicle);
                     m_areaCivVehicles.Remove(i);
                     i--;
