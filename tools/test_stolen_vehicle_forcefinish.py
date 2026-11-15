@@ -39,6 +39,34 @@ class StolenVehicleForceFinishTests(unittest.TestCase):
         self.assertIn("DespawnGroupAndPassengers(group, players, checkPlayers)", attackers)
         self.assertIn("DespawnGroupAndPassengers(group, players, checkPlayers)", groups)
 
+    def test_qrf_fill_does_not_register_area_vehicles(self):
+        # PlaceUnitsInVehicle is the QRF/defend-convoy crew path. It adds the
+        # crew to m_military but never m_areaVehicles, so group cleanup is the
+        # only ForceFinish GC for those hulls.
+        place = method(source("IA_VehicleManager.c"), "PlaceUnitsInVehicle")
+        self.assertIn("areaInstance.AddMilitaryGroup(crewGroup)", place)
+        self.assertNotIn("RegisterVehicleWithMilitary", place)
+
+    def test_dumped_crew_keeps_driving_hull_pointer(self):
+        group = source("IA_AI_Group.c")
+        skip = method(group, "ShouldSkipCrewRemount")
+        self.assertIn("if (!m_isVehicleCrewGroup)", skip)
+        update = method(group, "UpdateVehicleOrders")
+        self.assertIn("if (ShouldSkipCrewRemount())", update)
+        skip_branch = update[update.index("if (ShouldSkipCrewRemount())") :]
+        skip_branch = skip_branch[: skip_branch.index("return;") + len("return;")]
+        self.assertNotIn("ClearVehicleReference", skip_branch)
+        self.assertNotIn("m_isDriving = false", skip_branch)
+
+    def test_forcefinish_vehicle_list_runs_after_group_cleanup(self):
+        # Kept QRF hulls are inserted into m_areaVehicles during group cleanup
+        # so the later vehicle-origin pass can retire them once players leave.
+        cleanup = method(source("IA_AreaInstance.c"), "DespawnAssetsAwayFromPlayers")
+        self.assertLess(
+            cleanup.index("DespawnGroupListAwayFromPlayers(m_military"),
+            cleanup.index("DespawnVehicleListAwayFromPlayers(m_areaVehicles"),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
