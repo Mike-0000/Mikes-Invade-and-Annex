@@ -756,7 +756,11 @@ class IA_AreaInstance
         return false;
     }
 
-    protected void DespawnGroupAndPassengers(IA_AiGroup group)
+    //! ForceFinish AI cleanup. Dumped crews keep IsDriving + the hull pointer while
+    //! on foot at the old AO; QRF trucks are never in m_areaVehicles, so this path
+    //! is their only GC. Do not delete a hull that is occupied or still inside the
+    //! player safe radius — hand it to vehicle-list cleanup instead.
+    protected void DespawnGroupAndPassengers(IA_AiGroup group, array<vector> players, bool checkPlayers)
     {
         if (!group)
             return;
@@ -767,18 +771,39 @@ class IA_AreaInstance
             if (vehicle)
             {
                 IA_VehicleManager.ReleaseVehicleReservation(vehicle);
-                IA_VehicleManager.DespawnVehicle(vehicle);
-                if (m_areaVehicles)
+
+                bool keepHull = false;
+                if (IA_VehicleManager.IsVehicleOccupied(vehicle))
+                    keepHull = true;
+                else if (checkPlayers && ShouldKeepNearPlayers(vehicle.GetOrigin(), players))
+                    keepHull = true;
+
+                if (keepHull)
                 {
-                    int milIdx = m_areaVehicles.Find(vehicle);
-                    if (milIdx != -1)
-                        m_areaVehicles.Remove(milIdx);
+                    // QRF / defend convoy trucks are not registered in m_areaVehicles.
+                    // Park them there so DespawnVehicleListAwayFromPlayers can retire
+                    // the hull later from vehicle origin once players leave.
+                    if (m_areaVehicles && m_areaVehicles.Find(vehicle) == -1)
+                    {
+                        if (!m_areaCivVehicles || m_areaCivVehicles.Find(vehicle) == -1)
+                            m_areaVehicles.Insert(vehicle);
+                    }
                 }
-                if (m_areaCivVehicles)
+                else
                 {
-                    int civIdx = m_areaCivVehicles.Find(vehicle);
-                    if (civIdx != -1)
-                        m_areaCivVehicles.Remove(civIdx);
+                    IA_VehicleManager.DespawnVehicle(vehicle);
+                    if (m_areaVehicles)
+                    {
+                        int milIdx = m_areaVehicles.Find(vehicle);
+                        if (milIdx != -1)
+                            m_areaVehicles.Remove(milIdx);
+                    }
+                    if (m_areaCivVehicles)
+                    {
+                        int civIdx = m_areaCivVehicles.Find(vehicle);
+                        if (civIdx != -1)
+                            m_areaCivVehicles.Remove(civIdx);
+                    }
                 }
             }
         }
@@ -816,7 +841,7 @@ class IA_AreaInstance
             if (checkPlayers && ShouldKeepGroupNearPlayers(group, players))
                 continue;
 
-            DespawnGroupAndPassengers(group);
+            DespawnGroupAndPassengers(group, players, checkPlayers);
             attackerGroups.Remove(i);
         }
 
@@ -852,7 +877,7 @@ class IA_AreaInstance
             if (checkPlayers && ShouldKeepGroupNearPlayers(group, players))
                 continue;
 
-            DespawnGroupAndPassengers(group);
+            DespawnGroupAndPassengers(group, players, checkPlayers);
             groups.Remove(i);
         }
     }
