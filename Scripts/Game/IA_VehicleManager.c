@@ -100,10 +100,11 @@ class IA_VehicleManager: GenericEntity
     }
     
     // Clean up vehicles from inactive groups after AO advance (SetActiveGroup).
-    // Occupancy alone is not enough: ForceFinish already keeps empty stolen
-    // garrison/QRF hulls within DESPAWN_PLAYER_SAFE_M, and ProceedToNextZone
-    // calls this next. Deleting those empty hulls with no proximity check
-    // undoes that keep and GC-deletes a truck parked beside the player.
+    // Occupancy alone is not enough. Empty stolen hulls stay in m_groupVehicles
+    // after ForceFinish when garrison trucks are kept by vehicle-origin cleanup
+    // or QRF/convoy crews are already dead (group cleanup then skips
+    // DespawnVehicle). ProceedToNextZone used to GC-delete those parked trucks
+    // beside the player.
     static void CleanupInactiveGroupVehicles()
     {
         // Skip if the active group hasn't changed
