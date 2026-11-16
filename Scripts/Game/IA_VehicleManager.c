@@ -99,66 +99,57 @@ class IA_VehicleManager: GenericEntity
         return m_currentActiveGroup;
     }
     
-    // Clean up vehicles from inactive groups
+    // Clean up vehicles from inactive groups after AO advance (SetActiveGroup).
+    // Occupancy alone is not enough: ForceFinish already keeps empty stolen
+    // garrison/QRF hulls within DESPAWN_PLAYER_SAFE_M, and ProceedToNextZone
+    // calls this next. Deleting those empty hulls with no proximity check
+    // undoes that keep and GC-deletes a truck parked beside the player.
     static void CleanupInactiveGroupVehicles()
     {
-      //  // Print(("[VEHICLE_DEBUG] CleanupInactiveGroupVehicles called", LogLevel.NORMAL);
-        
         // Skip if the active group hasn't changed
         if (m_currentActiveGroup == m_previousActiveGroup)
-        {
-            //// Print(("[VEHICLE_DEBUG] Skipping cleanup - active group unchanged: " + m_currentActiveGroup, LogLevel.NORMAL);
             return;
-        }
-        
-        // Print(("[VEHICLE_DEBUG] Active group changed from " + m_previousActiveGroup + " to " + m_currentActiveGroup + ". Starting cleanup.", LogLevel.NORMAL);
-        
+
         int inactiveGroup = m_previousActiveGroup;
-        
+
         // Get vehicles in the inactive group
         array<Vehicle> inactiveGroupVehicles = GetVehiclesInAreaGroup(inactiveGroup);
-        
+
         if (inactiveGroupVehicles.IsEmpty())
-        {
-            //// Print(("[VEHICLE_DEBUG] No vehicles found in inactive group " + inactiveGroup, LogLevel.NORMAL);
             return;
-        }
-        
-        // Print(("[VEHICLE_DEBUG] Found " + inactiveGroupVehicles.Count() + " vehicles in inactive group " + inactiveGroup, LogLevel.NORMAL);
-        
+
+        ref array<vector> players = new array<vector>();
+        IA_SpawnPlacement.CollectPlayerPositions(players);
+        bool checkPlayers = players && !players.IsEmpty();
+
         // Handle each vehicle in the inactive group
         foreach (Vehicle vehicle : inactiveGroupVehicles)
         {
+            if (!vehicle)
+                continue;
+
             // Check if the vehicle is reserved
             if (IsVehicleReserved(vehicle))
             {
                 IA_AiGroup reservingGroup = m_vehicleReservations[vehicle];
-                
+
                 // If it's reserved and the group is still active, leave it alone
                 if (reservingGroup && reservingGroup.IsSpawned() && reservingGroup.GetAliveCount() > 0)
-                {
-                    // Print(("[VEHICLE_DEBUG] Vehicle " + vehicle + " has active group " + reservingGroup + " - preserving", LogLevel.NORMAL);
                     continue;
-                }
-                
+
                 // Otherwise release the reservation
-                //// Print(("[VEHICLE_DEBUG] Vehicle " + vehicle + " has inactive group - releasing reservation", LogLevel.NORMAL);
                 ReleaseVehicleReservation(vehicle);
             }
-            
-            // If the vehicle is not occupied by players, despawn it
-            if (!IsVehicleOccupied(vehicle))
-            {
-                // Print(("[VEHICLE_DEBUG] Despawning unoccupied vehicle " + vehicle + " from inactive group", LogLevel.NORMAL);
-                DespawnVehicle(vehicle);
-            }
-            else
-            {
-                // Print(("[VEHICLE_DEBUG] Vehicle " + vehicle + " is occupied - not despawning", LogLevel.NORMAL);
-            }
+
+            // Keep occupied hulls and empty ones still next to a player
+            // (stolen AO trucks parked at HQ / the next flag during RTB).
+            if (IsVehicleOccupied(vehicle))
+                continue;
+            if (checkPlayers && IA_SpawnPlacement.IsNearAnyPlayer(vehicle.GetOrigin(), players, IA_SpawnPlacement.DESPAWN_PLAYER_SAFE_M))
+                continue;
+
+            DespawnVehicle(vehicle);
         }
-        
-        // Print(("[VEHICLE_DEBUG] Inactive group cleanup complete", LogLevel.NORMAL);
     }
     
     static string GetVehicleResourceName(IA_Faction faction, Faction AreaFaction)
