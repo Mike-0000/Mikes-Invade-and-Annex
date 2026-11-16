@@ -61,8 +61,10 @@ class IA_DynamicAISpawning
 		return IA_Config.ClampDynamicAIBudget(IA_MissionInitializer.GetInstance().GetConfig().m_iDynamicAIBudget);
 	}
 
-	// Shared cost is sampled, not recomputed per soldier: a spawn burst asks this
-	// question once per created soldier and every answer walks the whole registry.
+	// Shared military cost is sampled, not recomputed per soldier: a spawn burst
+	// asks this question once per created soldier and every answer walks the
+	// whole registry. Civilians and vehicle crews use separate pools and must
+	// not fill the inbound infantry gate (QRF / reinforce / defend waves).
 	static int GetManagedCost()
 	{
 		int now = System.GetTickCount();
@@ -73,6 +75,8 @@ class IA_DynamicAISpawning
 		{
 			ref IA_DynamicAIBudgetCache budgetCache = IA_DynamicAIBudgetCache.Cast(cache);
 			if (!budgetCache || !budgetCache.IsOwnerLive() || budgetCache.IsFinished())
+				continue;
+			if (budgetCache.IsCivilianCache() || budgetCache.IsVehicleCache())
 				continue;
 			if (budgetCache.IsBudgetActive())
 				total += budgetCache.GetBudgetCost();
