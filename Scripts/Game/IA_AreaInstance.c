@@ -3046,7 +3046,7 @@ class IA_AreaInstance
             return;
         }
 
-        IA_AreaMarker marker = IA_AreaMarker.GetMortarPitMarkerForGroup(m_areaGroup);
+        IA_AreaMarker marker = ResolveOwnMortarPitMarker();
         if (!marker)
         {
             GetGame().GetCallqueue().CallLater(this.SpawnMortarPitAiAtGuns, 2000, false);
@@ -5597,15 +5597,7 @@ class IA_AreaInstance
             return;
         }
 
-        IA_AreaMarker marker = IA_AreaMarker.GetMortarPitMarkerForGroup(m_areaGroup);
-        if (!marker)
-        {
-            // Fallback: find by area name
-            array<IA_AreaMarker> markers = IA_AreaMarker.GetAreaMarkersForArea(m_area.GetName());
-            if (markers && !markers.IsEmpty())
-                marker = markers[0];
-        }
-
+        IA_AreaMarker marker = ResolveOwnMortarPitMarker();
         if (!marker)
         {
             Print(string.Format("[IA_AreaInstance] SetupMortarPitCrew: no marker for %1", m_area.GetName()), LogLevel.WARNING);
@@ -5886,18 +5878,35 @@ class IA_AreaInstance
         return m_area && m_area.GetAreaType() == IA_AreaType.MortarPit;
     }
 
+    //! This pit's marker by area name. Group-first lookup is wrong when an AO
+    //! has two mortar pits: capture and crew setup would bind every instance to
+    //! whichever marker was registered first.
+    protected IA_AreaMarker ResolveOwnMortarPitMarker()
+    {
+        if (!m_area)
+            return null;
+
+        string name = m_area.GetName();
+        if (!name.IsEmpty())
+        {
+            array<IA_AreaMarker> byName = IA_AreaMarker.GetAreaMarkersForArea(name);
+            if (byName && !byName.IsEmpty())
+            {
+                IA_AreaMarker named = byName[0];
+                if (named && named.GetAreaType() == IA_AreaType.MortarPit)
+                    return named;
+            }
+        }
+
+        return IA_AreaMarker.GetMortarPitMarkerForGroup(m_areaGroup);
+    }
+
     bool IsMortarPitCaptured()
     {
         if (!IsMortarPitArea())
             return false;
 
-        IA_AreaMarker marker = IA_AreaMarker.GetMortarPitMarkerForGroup(m_areaGroup);
-        if (!marker)
-        {
-            array<IA_AreaMarker> markers = IA_AreaMarker.GetAreaMarkersForArea(m_area.GetName());
-            if (markers && !markers.IsEmpty())
-                marker = markers[0];
-        }
+        IA_AreaMarker marker = ResolveOwnMortarPitMarker();
         if (!marker)
             return false;
         return marker.IsCaptured();
