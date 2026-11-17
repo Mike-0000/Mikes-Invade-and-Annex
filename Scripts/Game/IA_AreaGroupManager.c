@@ -1183,6 +1183,11 @@ class IA_AreaGroupManager
             return;
         if (!vehicle || !group || !areaInst || areaInst.IsShutDown())
             return;
+        if (IA_VehicleManager.IsVehicleUnusable(vehicle))
+        {
+            group.AbandonUnusableVehicleAndContinueOnFoot(areaOrigin);
+            return;
+        }
         // If arrived, dismount and schedule defend
         if (IA_VehicleManager.HasVehicleReachedDestination(vehicle, driveTarget))
         {

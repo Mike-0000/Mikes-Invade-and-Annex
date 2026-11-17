@@ -2273,6 +2273,12 @@ class IA_AiGroup
             }
             // --- END MODIFICATION FOR RESILIENCE ---
         }
+
+        if (IA_VehicleManager.IsVehicleUnusable(vehicle))
+        {
+            AbandonUnusableVehicleAndContinueOnFoot();
+            return;
+        }
         
         array<SCR_ChimeraCharacter> characters = GetGroupCharacters();
         if (characters.IsEmpty())
@@ -2394,6 +2400,57 @@ class IA_AiGroup
         m_isDriving = false;
         m_referencedEntity = null;
         m_drivingTarget = vector.Zero;
+    }
+
+    // Leave a wrecked/immobile hull and assault on foot. QRF trucks are not in
+    // m_areaVehicles, so HandleDestroyedVehicle never does this for them.
+    void AbandonUnusableVehicleAndContinueOnFoot(vector assaultOverride = vector.Zero)
+    {
+        vector assault = assaultOverride;
+        if (assault == vector.Zero)
+            assault = m_drivingTarget;
+        if (assault == vector.Zero)
+            assault = GetOrigin();
+
+        IA_AiGroup passengers = m_linkedPassengerGroup;
+        if (passengers && !passengers.HasDumpedPassengers())
+            passengers.DumpPassengersAndAssault(assault);
+
+        bool hadGetIn = IsCurrentWaypointGetInNearest();
+        ClearVehicleReference();
+        m_isVehicleCrewGroup = false;
+        m_pendingSeatTeleport = false;
+
+        m_tacticalState = IA_GroupTacticalState.Attacking;
+        m_tacticalStateTarget = assault;
+        m_isStateManagedByAuthority = true;
+
+        RemoveAllOrders(false);
+        if (hadGetIn)
+        {
+            GetGame().GetCallqueue().CallLater(this.FinishCrewWreckAssault, TYPED_WP_TREE_CLEAR_MS, false);
+            return;
+        }
+
+        FinishCrewWreckAssault();
+    }
+
+    protected void FinishCrewWreckAssault()
+    {
+        if (!m_isSpawned || !m_group)
+            return;
+        if (m_referencedEntity)
+            return;
+
+        vector assault = m_tacticalStateTarget;
+        if (assault == vector.Zero)
+            assault = GetOrigin();
+
+        if (IsAnyMemberInVehicle())
+            ForceEjectSeatedMembers();
+
+        RemoveAllOrders(false);
+        AddOrder(assault, IA_AiOrder.SearchAndDestroy, true);
     }
 
     IEntity GetReferencedEntity()
@@ -2940,6 +2997,12 @@ class IA_AiGroup
     {
         if (!vehicle)
             return;
+
+        if (IA_VehicleManager.IsVehicleUnusable(vehicle))
+        {
+            AbandonUnusableVehicleAndContinueOnFoot(destination);
+            return;
+        }
 
         m_referencedEntity = vehicle;
         m_drivingTarget = destination;
