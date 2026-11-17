@@ -977,6 +977,27 @@ class IA_VehicleManager: GenericEntity
         return !slots.IsEmpty();
     }
 
+    // QRF/defend-convoy hulls are not in m_areaVehicles, so HandleDestroyedVehicle
+    // never clears them. A wreck still reports empty accessible seats and GetIn
+    // (Autocomplete 0) never completes.
+    static bool IsVehicleUnusable(Vehicle vehicle)
+    {
+        if (!vehicle)
+            return true;
+
+        if (SCR_AIVehicleUsability.VehicleIsOnFire(vehicle))
+            return true;
+
+        if (!SCR_AIVehicleUsability.VehicleCanMove(vehicle))
+            return true;
+
+        DamageManagerComponent damage = vehicle.GetDamageManager();
+        if (damage && damage.IsDestroyed())
+            return true;
+
+        return false;
+    }
+
     protected static void CollectVehicleCrewSeatsRecursive(IEntity ent, notnull array<BaseCompartmentSlot> pilots, notnull array<BaseCompartmentSlot> turrets, notnull array<BaseCompartmentSlot> cargo, bool skipOccupied)
     {
         if (!ent)
@@ -1557,6 +1578,14 @@ class IA_VehicleManager: GenericEntity
     {
         if (!vehicle || !crewGroup)
             return;
+
+        if (IsVehicleUnusable(vehicle))
+        {
+            if (passengerGroup)
+                passengerGroup.SetPendingSeatTeleport(false);
+            crewGroup.AbandonUnusableVehicleAndContinueOnFoot(destination);
+            return;
+        }
 
         array<SCR_ChimeraCharacter> crewCharacters = crewGroup.GetGroupCharacters();
         if (crewCharacters.IsEmpty())
