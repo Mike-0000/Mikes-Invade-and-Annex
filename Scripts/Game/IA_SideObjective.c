@@ -679,12 +679,7 @@ class IA_AssassinationObjective : IA_SideObjective
             m_GeneratorTask = null;
         }
 
-        // --- NEW: Cleanup escape vehicle ---
-        if (m_EscapeVehicle)
-        {
-            IA_Game.AddEntityToGc(m_EscapeVehicle);
-            m_EscapeVehicle = null;
-        }
+        DiscardEscapeVehicle();
 
         if (m_EscapeTask)
         {
@@ -1035,11 +1030,7 @@ class IA_AssassinationObjective : IA_SideObjective
             m_GeneratorTask = null;
         }
 
-        if (m_EscapeVehicle)
-        {
-            IA_Game.AddEntityToGc(m_EscapeVehicle);
-            m_EscapeVehicle = null;
-        }
+        DiscardEscapeVehicle();
 
         if (m_EscapeTask)
         {
@@ -1053,6 +1044,37 @@ class IA_AssassinationObjective : IA_SideObjective
             }
             m_EscapeTask = null;
         }
+	}
+
+	//! Escape hulls are spawned outside VehicleManager / m_areaVehicles, so
+	//! ForceFinish and SetActiveGroup never see them. On objective end, keep
+	//! occupied hulls and empty stolen ones still next to a player; GC only
+	//! abandoned empties far from everyone.
+	protected void DiscardEscapeVehicle()
+	{
+		if (!m_EscapeVehicle)
+			return;
+
+		Vehicle veh = Vehicle.Cast(m_EscapeVehicle);
+		if (veh)
+		{
+			if (IA_VehicleManager.IsVehicleOccupied(veh))
+			{
+				m_EscapeVehicle = null;
+				return;
+			}
+
+			ref array<vector> players = new array<vector>();
+			IA_SpawnPlacement.CollectPlayerPositions(players);
+			if (players && !players.IsEmpty() && IA_SpawnPlacement.IsNearAnyPlayer(veh.GetOrigin(), players, IA_SpawnPlacement.DESPAWN_PLAYER_SAFE_M))
+			{
+				m_EscapeVehicle = null;
+				return;
+			}
+		}
+
+		IA_Game.AddEntityToGc(m_EscapeVehicle);
+		m_EscapeVehicle = null;
 	}
 
     // --- NEW: Generates a random escape point a good distance from the objective center ---
