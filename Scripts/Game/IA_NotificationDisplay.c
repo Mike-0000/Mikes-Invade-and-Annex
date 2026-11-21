@@ -132,6 +132,16 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	//------------------------------------------------------------------------------------------------
 	protected void CloseMikesUI()
 	{
+		// Toast finish / legacy hide schedule ProcessNotificationQueue after a gap.
+		// DisplayStopDraw unmounts before that fires; without Remove the callback
+		// runs on a torn-down HUD and NPEs in the legacy SetText path.
+		m_notificationQueue.Clear();
+		m_bIsDisplaying = false;
+		m_bSuppressFinish = true;
+		GetGame().GetCallqueue().Remove(this.ProcessNotificationQueue);
+		GetGame().GetCallqueue().Remove(this.HideCurrentAndProcessNext);
+		GetGame().GetCallqueue().Remove(this.FlushPilotLine);
+
 		m_Runtime = null;
 		if (m_PaintHotkey)
 		{
@@ -148,7 +158,6 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		StopPilotPreview();
 		m_PilotHud = null;
 		m_PendingPilotLine = null;
-		GetGame().GetCallqueue().Remove(this.FlushPilotLine);
 		IA_LocalOptions.Get().GetOnChanged().Remove(this.ApplyLocalOptions);
 		if (m_RankHud)
 		{
@@ -163,6 +172,7 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		}
 		m_Toast = null;
 		m_ObjectiveHud = null;
+		m_bSuppressFinish = false;
 	}
 
 	//------------------------------------------------------------------------------------------------
@@ -306,6 +316,12 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	{
 		if (m_bIsDisplaying || m_notificationQueue.IsEmpty())
 			return;
+		if (!CanPresentNotification())
+		{
+			m_notificationQueue.Clear();
+			m_bIsDisplaying = false;
+			return;
+		}
 
 		IA_NotificationInfo info;
 		while (!m_notificationQueue.IsEmpty())
@@ -324,6 +340,16 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	}
 
 	//------------------------------------------------------------------------------------------------
+	protected bool CanPresentNotification()
+	{
+		if (m_Runtime && m_Toast)
+			return true;
+		if (m_RedText || m_wInfoText || m_YellowText)
+			return true;
+		return false;
+	}
+
+	//------------------------------------------------------------------------------------------------
 	protected void _InternalShowNotification(string message, bool show, string color, IA_NotificationKind kind, int durationMs)
 	{
 		if (m_Runtime && m_Toast)
@@ -336,15 +362,31 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 			return;
 		}
 
+		if (!m_RedText && !m_wInfoText && !m_YellowText)
+		{
+			m_bIsDisplaying = false;
+			return;
+		}
+
 		if (color == "red")
-			m_RedText.SetText(message);
+		{
+			if (m_RedText)
+				m_RedText.SetText(message);
+		}
 		else if (color == "")
-			m_wInfoText.SetText(message);
+		{
+			if (m_wInfoText)
+				m_wInfoText.SetText(message);
+		}
 		else if (color == "yellow")
-			m_YellowText.SetText(message);
+		{
+			if (m_YellowText)
+				m_YellowText.SetText(message);
+		}
 		else
 		{
-			m_YellowText.SetText(message);
+			if (m_YellowText)
+				m_YellowText.SetText(message);
 			ShowHUD(show, "yellow");
 			m_bIsEnabled = show;
 			if (show)
@@ -363,6 +405,8 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 		if (m_bSuppressFinish)
 			return;
 		m_bIsDisplaying = false;
+		if (!m_Runtime || !m_Toast)
+			return;
 		GetGame().GetCallqueue().CallLater(this.ProcessNotificationQueue, QUEUE_GAP_MS);
 	}
 
@@ -371,6 +415,8 @@ class IA_NotificationDisplay : SCR_InfoDisplayExtended
 	{
 		_InternalShowNotification("", false, "", IA_NotificationKind.Generic, 0);
 		m_bIsDisplaying = false;
+		if (!CanPresentNotification())
+			return;
 		GetGame().GetCallqueue().CallLater(this.ProcessNotificationQueue, 1000);
 	}
 
