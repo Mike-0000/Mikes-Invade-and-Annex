@@ -2421,6 +2421,28 @@ class IA_AiGroup
         m_pendingSeatTeleport = pending;
     }
 
+    void AbortPendingSeatTeleport(vector assaultTarget)
+    {
+        m_pendingSeatTeleport = false;
+
+        if (m_isVehiclePassengerGroup)
+        {
+            DumpPassengersAndAssault(assaultTarget);
+            return;
+        }
+
+        RemoveAllOrders(false);
+        ClearVehicleReference();
+        m_isVehicleCrewGroup = false;
+        if (GetFaction() == IA_Faction.CIV)
+            return;
+
+        vector assault = assaultTarget;
+        if (assault == vector.Zero)
+            assault = GetOrigin();
+        SetTacticalState(IA_GroupTacticalState.Attacking, assault, null, true);
+    }
+
     bool IsPendingSeatTeleport()
     {
         return m_pendingSeatTeleport;
