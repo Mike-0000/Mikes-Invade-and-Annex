@@ -361,6 +361,65 @@ class IA_VehicleManager: GenericEntity
             return false;
         return vehicle.IsOccupied();
     }
+
+    //! True when a player is seated, parented, or boarding this hull.
+    //! Fail closed if PlayerManager is missing so delayed teleports cannot
+    //! drop AI into a stolen vehicle without an independent occupancy check.
+    static bool VehicleHasPlayerOccupantOrTransition(Vehicle vehicle)
+    {
+        if (!vehicle)
+            return false;
+
+        PlayerManager pm = GetGame().GetPlayerManager();
+        if (!pm)
+            return true;
+
+        ref array<BaseCompartmentSlot> occupied = new array<BaseCompartmentSlot>();
+        CollectOccupiedCompartmentSlots(vehicle, occupied);
+        int n = occupied.Count();
+        int i;
+        for (i = 0; i < n; i++)
+        {
+            BaseCompartmentSlot slot = occupied[i];
+            if (!slot)
+                continue;
+            IEntity occupant = slot.GetOccupant();
+            if (occupant && pm.GetPlayerIdFromControlledEntity(occupant) > 0)
+                return true;
+        }
+
+        array<int> ids = {};
+        pm.GetPlayers(ids);
+        int idCount = ids.Count();
+        int idIdx;
+        for (idIdx = 0; idIdx < idCount; idIdx++)
+        {
+            IEntity pawn = pm.GetPlayerControlledEntity(ids[idIdx]);
+            if (!pawn)
+                continue;
+
+            IEntity parent = pawn.GetParent();
+            while (parent)
+            {
+                if (parent == vehicle)
+                    return true;
+                parent = parent.GetParent();
+            }
+
+            ChimeraCharacter character = ChimeraCharacter.Cast(pawn);
+            if (!character)
+                continue;
+            CompartmentAccessComponent access = character.GetCompartmentAccessComponent();
+            if (!access)
+                continue;
+            if (!access.IsGettingIn() && !access.IsGettingOut())
+                continue;
+            if (vector.Distance(pawn.GetOrigin(), vehicle.GetOrigin()) < 10)
+                return true;
+        }
+
+        return false;
+    }
     
     static SCR_ChimeraCharacter GetVehicleDriver(Vehicle vehicle)
     {
@@ -1564,6 +1623,18 @@ class IA_VehicleManager: GenericEntity
             crewGroup.SetPendingSeatTeleport(false);
             if (passengerGroup)
                 passengerGroup.SetPendingSeatTeleport(false);
+            return;
+        }
+
+        if (VehicleHasPlayerOccupantOrTransition(vehicle))
+        {
+            if (IA_Log.IsDebugEnabled())
+            {
+                Print("[IA][Vehicle] Aborting delayed seat teleport; a player occupies the hull.", LogLevel.NORMAL);
+            }
+            if (passengerGroup)
+                passengerGroup.AbortPendingSeatTeleport(destination);
+            crewGroup.AbortPendingSeatTeleport(destination);
             return;
         }
 
